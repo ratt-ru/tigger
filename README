@@ -3,9 +3,13 @@ Installing Tigger
 
 1. Prerequisites
 
-* Assorted python packages: PyQt4, PyQwt5, pyfits, numpy, scipy, astLib. With the exception of astLib, these are already present in most Linux distros. astLib may be downloaded here: http://astlib.sourceforge.net/
+* Assorted python packages: PyQt4, PyQwt5, pyfits, numpy, scipy, astLib.
+With the exception of astLib, these are already present in most Linux
+distros.  astLib may be downloaded here: http://astlib.sourceforge.net/
 
-* Purr/Kittens. Easiest to install the purr package from a MeqTrees binary distribution (see http://www.astron.nl/meqwiki/Downloading). Alternatively, check it out from svn:
+* Purr/Kittens. Easiest to install the purr package from a MeqTrees binary
+distribution (see http://www.astron.nl/meqwiki/Downloading). 
+Alternatively, check it out from svn:
 
   svn co svn://lofar9.astron.nl/var/svn/repos/trunk/Purr/Kittens
 
@@ -15,7 +19,8 @@ Installing Tigger
 
   svn co svn://lofar9.astron.nl/var/svn/repos/trunk/Tigger
 
-  This retrieves the latest version from svn. If the need arises, I'll switch to some kind of semi-official release system later.
+  This retrieves the latest version from svn. If the need arises, I'll
+  switch to some kind of semi-official release system later.
 
 3. Running Tigger
 
@@ -26,7 +31,8 @@ Installing Tigger
 
   http://www.astron.nl/meqwiki-data/users/oms/3C147/3C147-2006obs.purrlog/index.html
 
-  This will contain an .MDL file you can download (see the first or second entry), and also a bunch of FITS files of the same area of the sky.
+  This will contain an .MDL file you can download (see the first or second
+  entry), and also a bunch of FITS files of the same area of the sky.
 
 4. Questions or problems?
 
