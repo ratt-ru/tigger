@@ -449,14 +449,14 @@ class LiveProfile (ToolDialog):
     lo1.addWidget(self._wprofile_axis,0);
     lo1.addStretch(1);
     # add profile plot
-    font = QApplication.font();
+    self._font = font = QApplication.font();
     self._profplot = QwtPlot(self);
     self._profplot.setMargin(0);
     self._profplot.enableAxis(QwtPlot.xBottom);
     self._profplot.enableAxis(QwtPlot.yLeft);
     self._profplot.setAxisFont(QwtPlot.xBottom,font);
     self._profplot.setAxisFont(QwtPlot.yLeft,font);
-    self._profplot.setAxisMaxMajor(QwtPlot.xBottom,3);
+#    self._profplot.setAxisMaxMajor(QwtPlot.xBottom,3);
     self._profplot.setAxisAutoScale(QwtPlot.yLeft);
     self._profplot.setAxisMaxMajor(QwtPlot.yLeft,3);
     self._profplot.axisWidget(QwtPlot.yLeft).setMinBorderDist(16,16);
@@ -488,7 +488,7 @@ class LiveProfile (ToolDialog):
     self._axes = [];
     for n,label in enumerate(("X","Y")):
       iaxis,np = image.getSkyAxis(n);
-      self._axes.append((label,iaxis,range(np)));
+      self._axes.append((label,iaxis,range(np),"pixels"));
     self._xaxis = self._axes[0][1];
     self._yaxis = self._axes[1][1];
     # then, extra axes
@@ -496,9 +496,10 @@ class LiveProfile (ToolDialog):
       iaxis,name,labels = image.extraAxisNumberNameLabels(i);
       if len(labels) > 1 and name.upper() not in ("STOKES","COMPLEX"):
         values = image.extraAxisValues(i);
-        self._axes.append((name,iaxis,values));
+        unit,scale = image.extraAxisUnitScale(i);
+        self._axes.append((name,iaxis,[x/scale for x in values],unit));
     # put them into the selector
-    names = [ name for name,iaxis,vals in self._axes ];
+    names = [ name for name,iaxis,vals,unit in self._axes ];
     self._wprofile_axis.addItems(names);
     if self._lastsel in names:
       axis = names.index(self._lastsel);
@@ -511,9 +512,12 @@ class LiveProfile (ToolDialog):
 
   def selectAxis (self,i,remember=True):
     if i < len(self._axes):
-      name,iaxis,values = self._axes[i];
+      name,iaxis,values,unit = self._axes[i];
       self._selaxis = iaxis,values;
       self._profplot.setAxisScale(QwtPlot.xBottom,min(values),max(values));
+      title = QwtText("%s, %s"%(name,unit) if unit else name);
+      title.setFont(self._font);
+      self._profplot.setAxisTitle(QwtPlot.xBottom,title);
       # save selection
       if remember:
         self._lastsel = name;

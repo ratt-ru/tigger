@@ -237,6 +237,21 @@ class SkyImagePlotItem (QwtPlotItem,QObject):
     painter.drawImage(xp1,yp2,qimg);
     dprint(2,"drawing took",time.time()-t0,"secs");
 
+ScalePrefixes = [ "p","n",u"\u03bc","m","","K","M","G","T" ];
+
+def getScalePrefix (*values):
+  """Helper method to get the optimal scale and SI prefix for a given range of values""";
+  # take log10. If all values are zero, use prefix of 1.
+  log10 = numpy.ma.log10(numpy.ma.abs(values));
+  if log10.mask.all():
+    return 1,"";
+  # find appropriate prefix
+  # Add 1 to log10(min) (so that >=.1 unit is reported as unit), divide by 3, take floor, look up unit prefix
+  m = int(math.floor((log10.min()+1)/3)) + 4;
+  m = max(m,0);
+  m = min(m,len(ScalePrefixes)-1);
+  return 10**((m-4)*3),ScalePrefixes[m];
+
 class SkyCubePlotItem (SkyImagePlotItem):
   """Extends SkyImagePlotItem with a hypercube containing extra slices.""";
   def __init__ (self,data=None,ndim=None):
@@ -293,8 +308,17 @@ class SkyCubePlotItem (SkyImagePlotItem):
     return self._skyaxes[n][:2];
 
   def setExtraAxis (self,iaxis,name,labels,values,units):
-    """Sets additional hypercube axis. labels is an array of strings, one per each axis element""";
-    self._extra_axes.append((iaxis,name,labels,values,units));
+    """Sets additional hypercube axis. labels is an array of strings, one per each axis element, for labelled axes, or None if axis should be labelled with values/units.
+    values is an array of axis values, and units are the units in which values are expressed.
+    """;
+    if units:
+      scale,prefix = getScalePrefix(values);
+      units = prefix+units;
+      if labels is None:
+        labels = [ "%d: %g %s"%(i,val/scale,units) for i,val in enumerate(values) ];
+    else:
+      scale = 1;
+    self._extra_axes.append((iaxis,name,labels,values,units,scale));
 
   def numExtraAxes (self):
     return len(self._extra_axes);
@@ -304,6 +328,9 @@ class SkyCubePlotItem (SkyImagePlotItem):
 
   def extraAxisValues (self,i):
     return self._extra_axes[i][3];
+
+  def extraAxisUnitScale (self,i):
+    return self._extra_axes[i][4:6];
 
   def setPlotProjection (self,proj=None):
     """Sets the projection of the plot. Must be called before image is drawn. If None is given, the default
@@ -331,13 +358,13 @@ class SkyCubePlotItem (SkyImagePlotItem):
 
   def _setupSlice (self):
     index = tuple(self.imgslice);
-    key = tuple([ index[iaxis] for iaxis,name,labels,values,units in self._extra_axes ]);
+    key = tuple([ index[iaxis] for iaxis,name,labels,values,units,scale in self._extra_axes ]);
     self.setImage(self._data[index],key=key);
 
   def selectSlice (self,*indices):
     if len(indices) != len(self._extra_axes):
       raise ValueError,"number of indices does not match number of extra axes""";
-    for i,(iaxis,name,labels,values,units) in enumerate(self._extra_axes):
+    for i,(iaxis,name,labels,values,units,scale) in enumerate(self._extra_axes):
       self.imgslice[iaxis] = indices[i];
     self._setupSlice();
     self.emit(SIGNAL("slice"),indices);
@@ -394,6 +421,7 @@ class FITSImagePlotItem (SkyCubePlotItem):
       else:
         # values becomes a list of axis values
         values = list(crval + numpy.arange(crpix,crpix+npix)*cdelt);
+        unit = unit.lower().capitalize();
         # FITS knows of two enumerable axes: STOKES and COMPLEX. For these two, replace values with proper names
         if name == "STOKES":
           labels = [ (self.StokesNames[int(i)] if i>0 and i<len(self.StokesNames) else "%d"%i) for i in values ];
@@ -401,12 +429,13 @@ class FITSImagePlotItem (SkyCubePlotItem):
           labels = [ (self.ComplexNames[int(i)] if i>0 and i<len(self.ComplexNames) else "%d"%i) for i in values ];
         else:
           name = name.split("-")[0];
-          # if values are not a simple sequence startying at 0 or 1, make labels like "#i:x", else just use value as label
-          if cdelt != 1 or values[0] not in (0.,1.):
-            labels = [ ("%d:"%i)+str(val) for i,val in enumerate(values) ];
+          # if values are a simple sequence startying at 0 or 1, make simple labels
+          if cdelt == 1 and values[0] in (0.,1.):
+            labels = [ "%d%s"%(val,unit) for val in values ];
+          # else set labels to None: setExtraAxis() will figure it out
           else:
-            labels = map(str,values);
-        self.setExtraAxis(iaxis,name,labels,values,unit );
+            labels = None;
+        self.setExtraAxis(iaxis,name,labels,values,unit);
     if nx is None or ny is None:
       raise ValueError,"FITS file does not appear to contain a RA and/or DEC axis";
     self.setSkyAxis(0,iaxis_ra,nx,proj.ra0,-proj.xscale,proj.xpix0);
