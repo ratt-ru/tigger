@@ -52,6 +52,12 @@ class ImageControlDialog (QDialog):
     self._rc = rc;
     self._imgman = imgman;
     self._currier = PersistentCurrier();
+
+    # init internal state
+    self._prev_range = self._display_range = None,None;
+    self._hist = None;
+    self._geometry = None;
+
     # create layouts
     lo0 = QVBoxLayout(self);
 #    lo0.setContentsMargins(0,0,0,0);
@@ -279,9 +285,6 @@ class ImageControlDialog (QDialog):
     self._updateIntensityMap(rc.currentIntensityMap(),rc.currentIntensityMapNumber());
     self._updateDisplayRange(*self._rc.displayRange());
 
-    # init other state
-    self._geometry = None;
-
   def makeButton (self,label,callback=None,width=None,icon=None):
     btn = QToolButton(self);
 #    btn.setAutoRaise(True);
@@ -456,6 +459,7 @@ class ImageControlDialog (QDialog):
     """Recomputes histogram. If no arguments, computes full histogram for
     data subset. If hmin/hmax is specified, computes zoomed-in histogram.""";
     busy = BusyIndicator();
+    self._prev_range = self._display_range;
     dmin,dmax = self._subset_range;
     hmin0,hmax0 = dmin,dmax;
     if hmin0 >= hmax0:
@@ -558,10 +562,14 @@ class ImageControlDialog (QDialog):
     self._wrange[0].setText(DataValueFormat%dmin);
     self._wrange[1].setText(DataValueFormat%dmax);
     self._wrangeleft0.setEnabled(dmin!=0);
+    self._display_range = dmin,dmax;
     # if auto-zoom is on, zoom the histogram
-    if self._wautozoom.isChecked():
-      margin = (dmax - dmin)/4;
-      self._updateHistogram(dmin-margin,dmax+margin);
+    # try to be a little clever about this. Zoom only if (a) both limits have changed (so that adjusting one end of the range
+    # does not cause endless rezooms), or (b) display range is < 1/10 of the histogram range
+    if self._wautozoom.isChecked() and self._hist  is not None:
+      if (dmax - dmin)/(self._hist_range[1] - self._hist_range[0]) < .1 or (dmin != self._prev_range[0] and dmax != self._prev_range[1]):
+        margin = (dmax-dmin)/8;
+        self._updateHistogram(dmin-margin,dmax+margin);
     self._updateITF();
     self._histplot.replot();
 

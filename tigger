@@ -53,7 +53,7 @@ if __name__ == "__main__":
   import Tigger.MainWindow
   dprint(1,"imported Tigger.MainWindow");
   import Tigger.Tools
-  from Tigger.Tools import export_karma,make_brick
+  from Tigger.Tools import export_karma,add_brick,make_brick
   dprint(1,"imported Tigger.Tools");
 
 
@@ -89,6 +89,9 @@ if __name__ == "__main__":
   # start updating the plot
   mainwin.enableUpdates();
   dprint(1,"started plot updates");
+
+  # flush app event queue, so windows get resized , etc.
+  app.processEvents();
 
   # handle SIGINT
   def sigint_handler (sig,stackframe):

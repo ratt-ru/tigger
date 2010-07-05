@@ -170,21 +170,29 @@ class MainWindow (QMainWindow):
 
   def _getFilenamesFromDropEvent (self,event):
     """Checks if drop event is valid (i.e. contains a local URL to a FITS file), and returns list of filenames contained therein.""";
+    dprint(1,"drop event:",event.mimeData().text());
     if not event.mimeData().hasUrls():
+      dprint(1,"drop event: no urls");
       return None;
     filenames = [];
     for url in event.mimeData().urls():
       name = str(url.toLocalFile());
+      dprint(2,"drop event: name is",name);
       if name and Images.isFITS(name):
         filenames.append(name);
+    dprint(2,"drop event: filenames are",filenames);
     return filenames;
 
   def dragEnterEvent (self,event):
     if self._getFilenamesFromDropEvent(event):
+      dprint(1,"drag-enter accepted");
       event.acceptProposedAction();
+    else:
+      dprint(1,"drag-enter rejected");
 
   def dropEvent (self,event):
     filenames = self._getFilenamesFromDropEvent(event);
+    dprint(1,"dropping",filenames);
     if filenames:
       event.acceptProposedAction();
       busy = BusyIndicator();

@@ -235,8 +235,9 @@ class LiveImageZoom (ToolDialog):
   def __init__ (self,parent,radius=10,factor=12):
     ToolDialog.__init__(self,parent,configname="livezoom");
     self.setWindowTitle("Zoom & Cross-sections");
+    radius = Config.getint("livezoom-radius",radius);
     # add plots
-    lo0 = QVBoxLayout(self);
+    self._lo0 = lo0 = QVBoxLayout(self);
     lo1 = QHBoxLayout();
     lo1.setContentsMargins(0,0,0,0);
     lo1.setSpacing(0);
@@ -254,8 +255,10 @@ class LiveImageZoom (ToolDialog):
     lo1.addStretch(1);
     self._smaller = QToolButton(self);
     self._smaller.setIcon(pixmaps.window_smaller.icon());
+    QObject.connect(self._smaller,SIGNAL("clicked()"),self._shrink);
     self._larger = QToolButton(self);
     self._larger.setIcon(pixmaps.window_larger.icon());
+    QObject.connect(self._larger,SIGNAL("clicked()"),self._enlarge);
     lo1.addWidget(self._smaller);
     lo1.addWidget(self._larger);
     self._has_zoom = self._has_xcs = self._has_ycs = False;
@@ -318,18 +321,6 @@ class LiveImageZoom (ToolDialog):
     self.setPlotSize(radius,factor);
     self.initGeometry();
 
-  class ImageItem (QwtPlotItem):
-    def __init__ (self):
-      QwtPlotItem.__init__(self);
-      self._qimg = None;
-
-    def setImage (self,qimg):
-      self._qimg = qimg;
-
-    def draw (self,painter,xmap,ymap,rect):
-      """Implements QwtPlotItem.draw(), to render the image on the given painter.""";
-      self._qimg and painter.drawImage(QRect(xmap.p1(),ymap.p2(),xmap.pDist(),ymap.pDist()),self._qimg);
-
   def _showZoom (self,show):
     if not show:
       self._zi.setVisible(False);
@@ -341,8 +332,19 @@ class LiveImageZoom (ToolDialog):
       self._xcs.setVisible(False);
       self._ycs.setVisible(False);
 
+  def _enlarge (self):
+    self.setPlotSize(self._radius*2,self._magfac);
+
+  def _shrink (self):
+    self.setPlotSize(self._radius/2,self._magfac);
+
   def setPlotSize (self,radius,factor):
+    Config.set('livezoom-radius',radius);
     self._radius = radius;
+    # enable smaller/larger buttons based on radius
+    self._smaller.setEnabled(radius>5);
+    self._larger.setEnabled(radius<40);
+    # compute other sizes
     self._npix = radius*2+1;
     self._magfac = factor;
     width = height = self._npix*self._magfac;
@@ -350,6 +352,9 @@ class LiveImageZoom (ToolDialog):
     self._zoomplot.setMinimumWidth(width+80);
     # set data array
     self._data = numpy.ma.masked_array(numpy.zeros((self._npix,self._npix),float),numpy.zeros((self._npix,self._npix),bool));
+    # reset window size
+    self._lo0.update();
+    self.resize(self._lo0.minimumSize());
 
   def _getZoomSlice (self,ix,nx):
     ix0,ix1 = ix - self._radius,ix + self._radius + 1;
@@ -358,6 +363,20 @@ class LiveImageZoom (ToolDialog):
     zx1 = self._npix - max(ix1,nx-1) + (nx-1)
     ix1 = min(ix1,nx-1);
     return ix0,ix1,zx0,zx1;
+
+  class ImageItem (QwtPlotItem):
+    """ImageItem subclass used by LiveZoomer to display zoomed-in images""";
+    def __init__ (self):
+      QwtPlotItem.__init__(self);
+      self._qimg = None;
+
+    def setImage (self,qimg):
+      self._qimg = qimg;
+
+    def draw (self,painter,xmap,ymap,rect):
+      """Implements QwtPlotItem.draw(), to render the image on the given painter.""";
+      self._qimg and painter.drawImage(QRect(xmap.p1(),ymap.p2(),xmap.pDist(),ymap.pDist()),self._qimg);
+
 
   def trackImage (self,image,ix,iy):
     if not self.isVisible():
@@ -423,7 +442,7 @@ class LiveProfile (ToolDialog):
     lo1 = QHBoxLayout();
     lo1.setContentsMargins(0,0,0,0);
     lo0.addLayout(lo1);
-    lab = QLabel("Profile axis:",self);
+    lab = QLabel("Profile axis: ",self);
     self._wprofile_axis = QComboBox(self);
     QObject.connect(self._wprofile_axis,SIGNAL("activated(int)"),self.selectAxis);
     lo1.addWidget(lab,0);
@@ -437,6 +456,7 @@ class LiveProfile (ToolDialog):
     self._profplot.enableAxis(QwtPlot.yLeft);
     self._profplot.setAxisFont(QwtPlot.xBottom,font);
     self._profplot.setAxisFont(QwtPlot.yLeft,font);
+    self._profplot.setAxisMaxMajor(QwtPlot.xBottom,3);
     self._profplot.setAxisAutoScale(QwtPlot.yLeft);
     self._profplot.setAxisMaxMajor(QwtPlot.yLeft,3);
     self._profplot.axisWidget(QwtPlot.yLeft).setMinBorderDist(16,16);
@@ -507,12 +527,25 @@ class LiveProfile (ToolDialog):
       # check if image has changed
       self.setImage(image);
       # make profile slice
-      iaxis,values = self._selaxis;
+      iaxis,xval = self._selaxis;
       slicer = image.currentSlice();
       slicer[self._xaxis] = ix;
       slicer[self._yaxis] = iy;
       slicer[iaxis] = slice(None);
-      self._profcurve.setData(values,image.data()[tuple(slicer)]);
+      yval = image.data()[tuple(slicer)];
+      i0,i1 = 0,len(xval);
+      # if X or Y profile, set axis scale to match that of window
+      if iaxis == 0:
+        rect = image.currentRectPix();
+        i0 = rect.topLeft().x();
+        i1 = i0 + rect.width();
+        self._profplot.setAxisScale(QwtPlot.xBottom,xval[i0],xval[i1-1]);
+      elif iaxis == 1:
+        rect = image.currentRectPix();
+        i0 = rect.topLeft().y();
+        i1 = i0 + rect.height();
+        self._profplot.setAxisScale(QwtPlot.xBottom,xval[i0],xval[i1-1]);
+      self._profcurve.setData(xval[i0:i1],yval[i0:i1]);
     self._profcurve.setVisible(inrange);
     # update plots
     self._profplot.replot();
@@ -593,7 +626,9 @@ class SkyModelPlotter (QWidget):
     def updateLayout (self):
       dprint(5,"updateLayout");
       self.clearCaches();
-      return QwtPlot.updateLayout(self);
+      res = QwtPlot.updateLayout(self);
+      self.emit(SIGNAL("updateLayout"));
+      return res;
 
     def setDrawingKey (self,key=None):
       """Sets the current drawing key. If key is set to not None, then drawCanvas() will look in the draw cache
@@ -618,6 +653,49 @@ class SkyModelPlotter (QWidget):
         self._label = QwtText(label);
       else:
         self._label = QwtText("");
+      self._fixed_aspect = False;
+      # maintain a separate stack of  "desired" (as opposed to actual) zoom rects. When a resize of the plot happens,
+      # we recompute the actual zoom rect based on the aspect ratio and the desired rect.
+      self._zoomrects = [];
+      # watch plot for changes: if resized, aspect ratios need to be checked
+      QObject.connect(self.plot(),SIGNAL("updateLayout"),self._checkAspects);
+
+    def isFixedAspect (self):
+      return self._fixed_aspect;
+
+    def setFixedAspect (self,fixed):
+      self._fixed_aspect = fixed;
+      self._checkAspects();
+
+    def _checkAspects (self):
+      """If fixed-aspect mode is in effect, goes through zoom rects and adjusts them to the plot aspect""";
+      if self._fixed_aspect:
+        dprint(2,"plot canvas size is",self.plot().size());
+        dprint(2,"zoom rects are",self._zoomrects);
+        stack = map(self.adjustRect,self._zoomrects);
+        self.setZoomStack(stack,self.zoomRectIndex());
+        dprint(2,"new zoom stack is",stack);
+
+    def setZoomBase (self,zbase):
+      QwtPlotZoomer.setZoomBase(self);
+      # init list of desired zoom rects
+      self._zoomrects = [ QRectF(zbase) ];
+      dprint(2,"zoom base is",self._zoomrects);
+
+    def adjustRect (self,rect):
+      """Adjusts rectangle w.r.t. aspect ratio settings. That is, if a fixed aspect ratio is in effect, adjusts the rectangle to match
+      the aspect ratio of the plot canvas. Returns adjusted version."""
+      if self._fixed_aspect:
+        aspect0 = self.canvas().width()/float(self.canvas().height());
+        aspect = rect.width()/float(rect.height());
+        # increase rectangle, if needed to match the aspect
+        if aspect < aspect0:
+          dx = rect.width()*(aspect0/aspect-1)/2;
+          return rect.adjusted(-dx,0,dx,0);
+        elif aspect > aspect0:
+          dy = rect.height()*(aspect/aspect0-1)/2;
+          return rect.adjusted(0,-dy,0,dy);
+      return rect;
 
     def rescale (self):
       self.plot().clearCaches();
@@ -625,8 +703,13 @@ class SkyModelPlotter (QWidget):
 
     def zoom (self,rect):
       if isinstance(rect,int) or rect.intersected(self.zoomBase()) == rect:
-        dprint(2,"zooming to",rect);
+        dprint(2,"zoom",rect);
+        if not isinstance(rect,int):
+          self._zoomrects[self.zoomRectIndex()+1:] = [ QRectF(rect) ];
+          rect = self.adjustRect(rect);
+          dprint(2,"zooming to",rect);
         QwtPlotZoomer.zoom(self,rect);
+        dprint(2,"zoom stack is now",self.zoomStack());
       else:
         dprint(2,"invalid zoom selected, ignoring");
 
@@ -778,6 +861,12 @@ class SkyModelPlotter (QWidget):
     QObject.connect(qa,SIGNAL("toggled(bool)"),self._liveprofile.setVisible);
     QObject.connect(self._liveprofile,SIGNAL("isVisible"),qa.setChecked);
     self._menu.addAction(qa);
+    # fixed aspect
+    qa = self._menu.addAction("Fix aspect ratio");
+    qa.setCheckable(True);
+    qa.setChecked(True);
+    QObject.connect(qa,SIGNAL("toggled(bool)"),self._zoomer.setFixedAspect);
+    self._zoomer.setFixedAspect(True);
     # save as PNG file
     self._menu.addAction("Export plot to PNG file...",self._exportPlotToPNG);
 
@@ -1019,11 +1108,16 @@ class SkyModelPlotter (QWidget):
         extent[i][1] = max(extent[i][1],ext[i][1]);
     dprint(2,"plot extents for model & images",extent);
     (lmin,lmax),(mmin,mmax) = extent;
-    # reset plot limits
+    # adjust plot limits, if a fixed ratio is in effect. This also sets the zoom base.
+    zbase = QRectF(QPointF(lmin,mmin),QPointF(lmax,mmax));
+    rect = self._zoomer.adjustRect(zbase);
+    lmin,lmax,mmin,mmax = rect.left(),rect.right(),rect.top(),rect.bottom();
+    dprint(2,"adjusted for aspect ratio",lmin,lmax,mmin,mmax);
+    # reset plot limits   -- X axis inverted (L increases to left)
     self.plot.setAxisScale(QwtPlot.yLeft,mmin,mmax);
-    # X axis inverted (L increases to left)
     self.plot.setAxisScale(QwtPlot.xBottom,lmax,lmin);
     self.plot.axisScaleEngine(QwtPlot.xBottom).setAttribute(QwtScaleEngine.Inverted, True);
+    self._zoomer.setZoomBase(zbase);
     dprint(5,"drawing grid");
     # add grid lines
     self._grid = [ QwtPlotCurve(),QwtPlotCurve() ];
@@ -1083,7 +1177,6 @@ class SkyModelPlotter (QWidget):
       dprint(5,"attaching images");
       self._imgman.attachImagesToPlot(self.plot);
     # update the plot
-    self._zoomer.setZoomBase();
     self._qa_unzoom.setEnabled(False);
     self.plot.replot();
 

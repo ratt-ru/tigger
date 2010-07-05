@@ -44,9 +44,9 @@ class TiggerSkyModel (object):
         TDLOption("filename","Tigger LSM file",
                    TDLFileSelect("*.lsm.html",default=self.filename,exist=True),
                    namespace=self),
-        TDLOption('lsm_subset_tag',"Restrict sources by tag",[None],more=str,namespace=self,
-                    doc="""If you specify a tag name, only sources with that tag will be loaded. Use '!tag'
-                      to load sources without the specified tag. Use 'None' to load all sources."""),
+        TDLOption('lsm_subset',"Source subset",["all"],more=str,namespace=self,
+                  doc="""<P>You can enter source names separated by space. "all" selects all sources. "=<i>tagname</i>"
+                  selects all sources with a given tag. "-<i>name</i>" deselects the named sources. "-=<i>tagname</i>" deselects sources by tag,</P>"""),
         TDLMenu("Make solvable source parameters",
           TDLOption('lsm_solvable_tag',"Solvable source tag",[None,"solvable"],more=str,namespace=self,
                     doc="""If you specify a tagname, only sources bearing that tag will be made solvable. Use 'None' to make all sources solvable."""),
@@ -83,12 +83,26 @@ class TiggerSkyModel (object):
 
     # extract subset, if specified
     sources = self.lsm.sources;
-    if self.lsm_subset_tag:
-      if self.lsm_subset_tag[0] == '!':
-        tag = self.lsm_subset_tag[1:]
-        sources = [ src for src in sources if getattr(src,tag,False) in (None,False) ];
-      else:
-        sources = [ src for src in sources if getattr(src,self.lsm_subset_tag,False) not in (None,False) ];
+
+    if self.lsm_subset != "all":
+      all = set([src.name for src in sources]);
+      srcs = set();
+      for ispec,spec in enumerate(self.lsm_subset.split()):
+        spec = spec.strip();
+        if spec:
+          # if first spec is a negation, then implictly select all sources first
+          if not ispec and spec[0] == "-":
+              srcs = all;
+          if spec == "all":
+            srcs = all;
+          elif spec.startswith("="):
+            srcs.update([ src.name for src in sources if getattr(src,spec[1:],False) ]);
+          elif spec.startswith("-="):
+            srcs.difference_update([ src.name for src in sources if getattr(src,spec[2:],False) ]);
+          elif spec.startswith("-"):
+            srcs.discard(spec[1:]);
+      # make list
+      sources = [ src for src in sources if src.name in srcs ];
 
     parm = Meow.Parm(tags="source solvable");
     # make copy of kw dict to be used for sources not in solvable set
