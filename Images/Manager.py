@@ -66,13 +66,15 @@ class ImageManager (QWidget):
             dialog = self._load_image_dialog = QFileDialog(self,"Load FITS image",".","FITS images (%s);;All files (*)"%(" ".join(["*"+ext for ext in FITS_ExtensionList])));
             dialog.setFileMode(QFileDialog.ExistingFile);
             dialog.setModal(True);
-            QObject.connect(dialog,SIGNAL("fileSelected(const QString&)"),self.loadImage);
+            QObject.connect(dialog,SIGNAL("filesSelected(const QStringList &)"),self.loadImage);
         self._load_image_dialog.exec_();
         return None;
+    if isinstance(filename,QStringList):
+      filename = filename[0];
     filename = str(filename);
     # report error if image does not exist
     if not os.path.exists(filename):
-      self.showErrorMessage("""FITS image %s does not exist"""%filename);
+      self.showErrorMessage("""FITS image %s does not exist."""%filename);
       return None;
     # see if image is already loaded
     if not duplicate:

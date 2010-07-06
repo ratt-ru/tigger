@@ -65,10 +65,11 @@ class AddBrickDialog (QDialog):
       return;
     # if filename is not in model already, enable the "add to model" control
     for src in self.model.sources:
-      if isinstance(getattr(src,'shape',None),ModelClasses.FITSImage) and os.path.samefile(src.shape.filename,filename):
-        QMessageBox.warning(self,"Already in model","This FITS brick is already present in the model.");
-        self.wokbtn.setEnabled(False);
-        return;
+      if isinstance(getattr(src,'shape',None),ModelClasses.FITSImage):
+        if os.path.exists(src.shape.filename) and os.path.samefile(src.shape.filename,filename):
+          QMessageBox.warning(self,"Already in model","This FITS brick is already present in the model.");
+          self.wokbtn.setEnabled(False);
+          return;
     self.wname.setText(os.path.splitext(os.path.basename(str(filename)))[0]);
     self.wokbtn.setEnabled(True);
 
@@ -86,7 +87,7 @@ class AddBrickDialog (QDialog):
     # check name
     name = str(self.wname.text()) or os.path.splitext(os.path.basename(str(filename)))[0];
     if name in set([src.name for src in self.model.sources]):
-        QMessageBox.warning(self,"Already in model","<p>The model already contains a source named '%s'. Please select a different name.</p>");
+        QMessageBox.warning(self,"Already in model","<p>The model already contains a source named '%s'. Please select a different name.</p>"%name);
         return;
     # get image parameters
     hdr = input_hdu.header;

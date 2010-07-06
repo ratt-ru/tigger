@@ -374,13 +374,16 @@ class MainWindow (QMainWindow):
             dialog = self._open_file_dialog = QFileDialog(self,"Open sky model",".",filters);
             dialog.setFileMode(QFileDialog.ExistingFile);
             dialog.setModal(True);
-            QObject.connect(dialog,SIGNAL("fileSelected(const QString&)"),self.openFile);
+            QObject.connect(dialog,SIGNAL("filesSelected(const QStringList &)"),self.openFile);
         self._open_file_dialog.exec_();
         return;
     from Models import ModelHTML,Import,ModelClasses
     # check that we can close existing model
     if not self._canCloseExistingModel():
       return False;
+    if isinstance(filename,QStringList):
+      filename = filename[0];
+    filename = str(filename);
     # try to determine the file type
     for filetype,patterns,loadfunc in self._file_types:
       if [ patt for patt in patterns if fnmatch.fnmatch(filename,patt) ]:
@@ -391,7 +394,6 @@ class MainWindow (QMainWindow):
       self.showErrorMessage("""Error loading model file %s: unknown file format"""%filename);
       return;
     # try to load the specified file
-    filename = str(filename);
     busy = BusyIndicator();
     self.showMessage("""Reading %s file %s"""%(filetype,filename),3000);
     QApplication.flush();
@@ -462,6 +464,8 @@ class MainWindow (QMainWindow):
     to open dialog and get a filename.
     Returns True if saving succeeded, False on error (or if cancelled by user).
     """;
+    if isinstance(filename,QStringList):
+      filename = filename[0];
     filename = ( filename and str(filename) ) or self.filename;
     if filename is None:
       return self._saveFileAs();
@@ -494,7 +498,7 @@ class MainWindow (QMainWindow):
           dialog.setFileMode(QFileDialog.AnyFile);
           dialog.setAcceptMode(QFileDialog.AcceptSave);
           dialog.setModal(True);
-          QObject.connect(dialog,SIGNAL("fileSelected(const QString&)"),self.saveFileAs);
+          QObject.connect(dialog,SIGNAL("filesSelected(const QStringList &)"),self.saveFileAs);
       return self._save_as_dialog.exec_() == QDialog.Accepted;
     # filename supplied, so save
     return self.saveFile(filename,confirm=False);
@@ -509,9 +513,11 @@ class MainWindow (QMainWindow):
           dialog.setFileMode(QFileDialog.AnyFile);
           dialog.setAcceptMode(QFileDialog.AcceptSave);
           dialog.setModal(True);
-          QObject.connect(dialog,SIGNAL("fileSelected(const QString&)"),self.saveSelectionAs);
+          QObject.connect(dialog,SIGNAL("filesSelected(const QStringList &)"),self.saveSelectionAs);
       return self._save_sel_as_dialog.exec_() == QDialog.Accepted;
     # save selection
+    if isinstance(filename,QStringList):
+      filename = filename[0];
     filename= str(filename);
     selmodel = self.model.copy();
     selmodel.setSources([src for src in self.model.sources if src.selected]);

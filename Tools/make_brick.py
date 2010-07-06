@@ -67,7 +67,9 @@ class MakeBrickDialog (QDialog):
     self.wokbtn.setEnabled(bool(filename));
     # if filename is not in model already, enable the "add to model" control
     for src in self.model.sources:
-      if isinstance(getattr(src,'shape',None),ModelClasses.FITSImage) and os.path.samefile(src.shape.filename,filename):
+      if isinstance(getattr(src,'shape',None),ModelClasses.FITSImage) \
+          and os.path.exists(src.shape.filename) and os.path.exists(filename) \
+          and os.path.samefile(src.shape.filename,filename):
         self.wadd.setChecked(True);
         self.wadd.setEnabled(False);
         self.wadd.setText("image already in sky model");

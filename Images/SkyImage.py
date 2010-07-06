@@ -311,13 +311,11 @@ class SkyCubePlotItem (SkyImagePlotItem):
     """Sets additional hypercube axis. labels is an array of strings, one per each axis element, for labelled axes, or None if axis should be labelled with values/units.
     values is an array of axis values, and units are the units in which values are expressed.
     """;
-    if units:
-      scale,prefix = getScalePrefix(values);
-      units = prefix+units;
-      if labels is None:
-        labels = [ "%d: %g %s"%(i,val/scale,units) for i,val in enumerate(values) ];
-    else:
-      scale = 1;
+    units = units or "";
+    scale,prefix = getScalePrefix(values);
+    units = prefix+units;
+    if labels is None:
+      labels = [ "%d: %g %s"%(i,val/scale,units) for i,val in enumerate(values) ];
     self._extra_axes.append((iaxis,name,labels,values,units,scale));
 
   def numExtraAxes (self):
@@ -421,7 +419,7 @@ class FITSImagePlotItem (SkyCubePlotItem):
       else:
         # values becomes a list of axis values
         values = list(crval + numpy.arange(crpix,crpix+npix)*cdelt);
-        unit = unit.lower().capitalize();
+        unit = unit and unit.lower().capitalize();
         # FITS knows of two enumerable axes: STOKES and COMPLEX. For these two, replace values with proper names
         if name == "STOKES":
           labels = [ (self.StokesNames[int(i)] if i>0 and i<len(self.StokesNames) else "%d"%i) for i in values ];

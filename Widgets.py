@@ -120,10 +120,12 @@ class FileSelector (QWidget):
         dialog.setDefaultSuffix(self._default_suffix);
       dialog.setFileMode(self._file_mode);
       dialog.setModal(True);
-      QObject.connect(dialog,SIGNAL("fileSelected(const QString&)"),self.setFilename);
+      QObject.connect(dialog,SIGNAL("filesSelected(const QStringList &)"),self.setFilename);
     return self._file_dialog.exec_();
 
   def setFilename (self,filename):
+    if isinstance(filename,QStringList):
+      filename = filename[0];
     filename = (filename and str(filename) ) or '';
     self.wfname.setText(filename);
     self.emit(SIGNAL("valid"),bool(filename));

@@ -167,7 +167,8 @@ class ImageSourceMarker (SourceMarker):
       return;
     symbol_color = QColor(style.symbol_color);
     label_color = QColor(style.label_color);
-    self.imagecon.setPlotBorderStyle(border_color=symbol_color,label_color=label_color);
+    if self.imagecon:
+      self.imagecon.setPlotBorderStyle(border_color=symbol_color,label_color=label_color);
 
 
 def makeSourceMarker (src,l,m,size,model,imgman):
@@ -1206,9 +1207,11 @@ class SkyModelPlotter (QWidget):
           dialog.setFileMode(QFileDialog.AnyFile);
           dialog.setAcceptMode(QFileDialog.AcceptSave);
           dialog.setModal(True);
-          QObject.connect(dialog,SIGNAL("fileSelected(const QString&)"),self._exportPlotToPNG);
+          QObject.connect(dialog,SIGNAL("filesSelected(const QStringList &)"),self._exportPlotToPNG);
       return self._export_png_dialog.exec_() == QDialog.Accepted;
     busy = BusyIndicator();
+    if isinstance(filename,QStringList):
+      filename = filename[0];
     filename = str(filename);
     # make QPixmap
     pixmap = QPixmap(self.plot.width(),self.plot.height());
