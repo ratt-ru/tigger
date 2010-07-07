@@ -13,7 +13,7 @@ DEG = math.pi/180;
 from astLib.astWCS import WCS
 
 class AddBrickDialog (QDialog):
-  def __init__ (self,parent,modal=True,flags=0):
+  def __init__ (self,parent,modal=True,flags=Qt.WindowFlags()):
     QDialog.__init__(self,parent,Qt.WindowFlags(flags));
     self.setModal(modal);
     self.setWindowTitle("Add FITS brick");

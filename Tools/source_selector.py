@@ -33,8 +33,8 @@ NonSortingTags = set(["name","typecode"]);
 
 
 class SourceSelectorDialog (QDialog):
-  def __init__ (self,parent,flags=0):
-    QDialog.__init__(self,parent,Qt.WindowFlags(flags));
+  def __init__ (self,parent,flags=Qt.WindowFlags()):
+    QDialog.__init__(self,parent,flags);
     self.setModal(False);
     self.setWindowTitle("Select sources by...");
     lo = QVBoxLayout(self);

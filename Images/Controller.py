@@ -55,6 +55,8 @@ class ImageController (QFrame):
     self._wraise.setAutoRaise(True);
     self._can_raise = False;
     QObject.connect(self._wraise,SIGNAL("clicked()"),self._raiseButtonPressed);
+    self._wraise.setToolTip("""<P>Click here to raise this image above other images. Click on the down-arrow to
+      show a menu of image operations.</P>""");
     # center label
     self._wcenter = QLabel(self);
     self._wcenter.setPixmap(pixmaps.center_image.pm());
@@ -79,6 +81,7 @@ class ImageController (QFrame):
       slicer = QComboBox(self);
       lo.addWidget(slicer);
       slicer.addItems(labels);
+      slicer.setToolTip("""<P>Selects current slice along the %s axis.</P>"""%axisname);
       QObject.connect(slicer,SIGNAL("currentIndexChanged(int)"),self._currier.curry(self.changeSlice,i));
       self._wslicers[i] = slicer;
       # hide slicer if axis <2
@@ -111,9 +114,11 @@ class ImageController (QFrame):
     self._wfullrange.setIcon(pixmaps.colours.icon());
     self._wfullrange.setAutoRaise(True);
     self._wfullrange.setToolTip("""<P>Click for colourmap and intensity policy options.</P>""");
+    self._wraise.setToolTip("""<P>Click here to show render controls for this image.</P>""");
     QObject.connect(self._wfullrange,SIGNAL("clicked()"),self.showRenderControls);
     if not self._has_slicing:
-      tooltip = """<TABLE>
+      tooltip = """<P>You can change the currently displayed intensity range by entering low and high limits here.</P>
+      <TABLE>
         <TR><TD><NOBR>Image min:</NOBR></TD><TD>%g</TD><TD>max:</TD><TD>%g</TD></TR>
         </TABLE>"""%self.image.imageMinMax();
       for w in self._wmin,self._wmax,self._wrangelbl:

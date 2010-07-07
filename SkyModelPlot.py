@@ -443,7 +443,7 @@ class LiveProfile (ToolDialog):
     lo1 = QHBoxLayout();
     lo1.setContentsMargins(0,0,0,0);
     lo0.addLayout(lo1);
-    lab = QLabel("Profile axis: ",self);
+    lab = QLabel("Axis: ",self);
     self._wprofile_axis = QComboBox(self);
     QObject.connect(self._wprofile_axis,SIGNAL("activated(int)"),self.selectAxis);
     lo1.addWidget(lab,0);
@@ -833,6 +833,7 @@ class SkyModelPlotter (QWidget):
     lo.insertWidget(0,self._wtoolbar);
     self._qag_mousemode = QActionGroup(self);
     self._qa_unzoom = self._wtoolbar.addAction(pixmaps.zoom_out.icon(),"Unzoom plot",self._currier.curry(self._zoomer.zoom,0));
+    self._qa_unzoom.setToolTip("""<P>Click to unzoom the plot all the way out to its full size.</P>""");
     self._qa_unzoom.setShortcut(Qt.ALT+Qt.Key_Minus);
     self._wtoolbar.addSeparator();
     self._menu.addAction(self._qa_unzoom);
@@ -843,6 +844,19 @@ class SkyModelPlotter (QWidget):
       mouse_menu.addAction(pixmaps.zoom_colours.icon(),"Select image subset",self._currier.curry(self.setMouseMode,self.MouseSubset)),
       mouse_menu.addAction(pixmaps.big_plus.icon(),"Select objects",self._currier.curry(self.setMouseMode,self.MouseSelect)),
       mouse_menu.addAction(pixmaps.big_minus.icon(),"Deselect objects",self._currier.curry(self.setMouseMode,self.MouseDeselect)) ];
+    self._qa_mm[0].setToolTip("""<P>Puts the mouse in zoom mode. In this mode, hold the left mouse button and drag a rectangle
+        on the plot to zoom in. Middle-click to zoom back out one step, and right-click to zoom out all the way. Hold down
+        CTRL and left-click to select individual model sources.</P>""");
+    self._qa_mm[1].setToolTip("""<P>Puts the mouse in image selection mode. In this mode, hold the left mouse button and drag a
+        rectangle on the current image to select a window on the image. The current intensity range
+        (and histogram) will be set to the data range of the selected window. Hold down
+        CTRL and left-click to select individual model sources.</P>""");
+    self._qa_mm[2].setToolTip("""<P>Puts the mouse in source selection mode. In this mode, hold the left mouse button and drag a
+        rectangle on the plot to select all sources within the rectangle. Hold down SHIFT while you drag to extend to
+        a previous selection. Hold down CTRL and left-click to select individual model sources.</P>""");
+    self._qa_mm[3].setToolTip("""<P>Puts the mouse in source deselection mode. In this mode, hold the left mouse button and drag a
+        rectangle on the plot to deselect all sources within the rectangle. Hold down CTRL and left-click to deselect
+        individual model sources.</P>""");
     for qa in self._qa_mm:
       self._qag_mousemode.addAction(qa);
       qa.setCheckable(True);
@@ -854,6 +868,8 @@ class SkyModelPlotter (QWidget):
     qa.setCheckable(True);
     qa.setChecked(True);
     qa.setVisible(False);
+    qa.setToolTip("""<P>The quick zoom & cross-sections window shows a zoom of the current image area
+      under the mose pointer, and X/Y cross-sections through that area.</P>""");
     QObject.connect(qa,SIGNAL("toggled(bool)"),self._livezoom.setVisible);
     QObject.connect(self._livezoom,SIGNAL("isVisible"),qa.setChecked);
     self._menu.addAction(qa);
@@ -863,6 +879,8 @@ class SkyModelPlotter (QWidget):
     qa.setCheckable(True);
     qa.setChecked(False);
     qa.setVisible(False);
+    qa.setToolTip("""<P>The profiles window shows a cross-section through the current image (through any axis)
+      at the current mouse position.</P>""");
     QObject.connect(qa,SIGNAL("toggled(bool)"),self._liveprofile.setVisible);
     QObject.connect(self._liveprofile,SIGNAL("isVisible"),qa.setChecked);
     self._menu.addAction(qa);
