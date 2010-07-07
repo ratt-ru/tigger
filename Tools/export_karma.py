@@ -9,7 +9,7 @@ DEG = math.pi/180;
 
 class ExportKarmaDialog (QDialog):
   def __init__ (self,parent,modal=True,flags=Qt.WindowFlags()):
-    QDialog.__init__(self,parent,Qt.WindowFlags(flags));
+    QDialog.__init__(self,parent,flags);
     self.setModal(modal);
     self.setWindowTitle("Export Karma annotations");
     lo = QVBoxLayout(self);

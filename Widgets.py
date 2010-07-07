@@ -141,7 +141,7 @@ class FileSelector (QWidget):
 
 class AddTagDialog (QDialog):
   def __init__ (self,parent,modal=True,flags=Qt.WindowFlags()):
-    QDialog.__init__(self,parent,Qt.WindowFlags(flags));
+    QDialog.__init__(self,parent,flags);
     self.setModal(modal);
     self.setWindowTitle("Add Tag");
     lo = QVBoxLayout(self);
@@ -199,8 +199,10 @@ class AddTagDialog (QDialog):
     return str(self.wtagsel.currentText()),self.valedit.getValue();
 
 class SelectTagsDialog (QDialog):
-  def __init__ (self,parent,modal=True,flags=Qt.WindowFlags(),caption="Select Tags",ok_button="Select"):
-    QDialog.__init__(self,parent,Qt.WindowFlags(flags));
+  def __init__ (self,parent,modal=True,flags=Qt.WindowFlags()
+
+                ,caption="Select Tags",ok_button="Select"):
+    QDialog.__init__(self,parent,flags);
     self.setModal(modal);
     self.setWindowTitle(caption);
     lo = QVBoxLayout(self);
@@ -246,4 +248,3 @@ class SelectTagsDialog (QDialog):
 
   def getSelectedTags (self):
     return [ tag for i,tag in enumerate(self._tagnames) if self.wtagsel.item(i).isSelected() ];
-

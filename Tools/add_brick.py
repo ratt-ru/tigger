@@ -14,7 +14,7 @@ from astLib.astWCS import WCS
 
 class AddBrickDialog (QDialog):
   def __init__ (self,parent,modal=True,flags=Qt.WindowFlags()):
-    QDialog.__init__(self,parent,Qt.WindowFlags(flags));
+    QDialog.__init__(self,parent,flags);
     self.setModal(modal);
     self.setWindowTitle("Add FITS brick");
     lo = QVBoxLayout(self);
