@@ -16,6 +16,7 @@ from Kittens.utils import PersistentCurrier
 from Models import ModelClasses
 from Models import SkyModel
 from Models import ModelHTML
+from Models import ModelBBS
 from Models import Import
 import Widgets
 from SkyModelTreeWidget import *
@@ -325,12 +326,18 @@ class MainWindow (QMainWindow):
   def mergeFile (self,filename=None,format=None):
     return self.openFile(filename,format=format,merge=True);
 
-  _file_types = (
+  _load_file_types = (
     ("Native model",("*.lsm.html",),ModelHTML.loadModel),
     ("NEWSTAR model",("*.mdl","*.MDL"),Import.importNEWSTAR),
+    ("LOFAR BBS model",("*.cat","*.catalog"),ModelBBS.loadModel),
     ("All files",("*",),None),
   );
 
+  _save_file_types = (
+    ("Native model",("*.lsm.html",),ModelHTML.saveModel),
+    ("LOFAR BBS model",("*.cat","*.catalog"),ModelBBS.saveModel),
+  );
+  
   def showMessage (self,msg,time=3000):
     self.statusBar().showMessage(msg,3000);
 
@@ -370,7 +377,7 @@ class MainWindow (QMainWindow):
   def openFile (self,filename=None,format=None,merge=False,show=True):
     if filename is None:
         if not self._open_file_dialog:
-            filters = ";;".join([  "%s (%s)"%(name," ".join(patterns)) for name,patterns,func in self._file_types ]);
+            filters = ";;".join([  "%s (%s)"%(name," ".join(patterns)) for name,patterns,func in self._load_file_types ]);
             dialog = self._open_file_dialog = QFileDialog(self,"Open sky model",".",filters);
             dialog.setFileMode(QFileDialog.ExistingFile);
             dialog.setModal(True);
@@ -385,7 +392,7 @@ class MainWindow (QMainWindow):
       filename = filename[0];
     filename = str(filename);
     # try to determine the file type
-    for filetype,patterns,loadfunc in self._file_types:
+    for filetype,patterns,loadfunc in self._load_file_types:
       if [ patt for patt in patterns if fnmatch.fnmatch(filename,patt) ]:
         break;
     else:
@@ -475,8 +482,14 @@ class MainWindow (QMainWindow):
                 QMessageBox.Save|QMessageBox.Cancel,QMessageBox.Save) != QMessageBox.Save:
           return False;
       busy = BusyIndicator();
+      # try to determine the file type
+      for filetype,patterns,savefunc in self._save_file_types:
+        if [ patt for patt in patterns if fnmatch.fnmatch(filename,patt) ]:
+          break;
+      else:
+        savefunc = None;
       try:
-        ModelHTML.saveModel(filename,self.model);
+        savefunc(filename,self.model);
         self.model.setFilename(filename);
       except:
           busy = None;
@@ -493,7 +506,8 @@ class MainWindow (QMainWindow):
     """;
     if filename is None:
       if not self._save_as_dialog:
-          dialog = self._save_as_dialog = QFileDialog(self,"Save sky model",".","*.lsm.html");
+          filters = ";;".join([  "%s (%s)"%(name," ".join(patterns)) for name,patterns,func in self._save_file_types ]);
+          dialog = self._save_as_dialog = QFileDialog(self,"Save sky model",".",filters);
           dialog.setDefaultSuffix("lsm.html");
           dialog.setFileMode(QFileDialog.AnyFile);
           dialog.setAcceptMode(QFileDialog.AcceptSave);
@@ -508,7 +522,8 @@ class MainWindow (QMainWindow):
       return;
     if filename is None:
       if not self._save_sel_as_dialog:
-          dialog = self._save_sel_as_dialog = QFileDialog(self,"Save sky model",".","*.lsm.html");
+          filters = ";;".join([  "%s (%s)"%(name," ".join(patterns)) for name,patterns,func in self._save_file_types ]);
+          dialog = self._save_sel_as_dialog = QFileDialog(self,"Save sky model",".",filters);
           dialog.setDefaultSuffix("lsm.html");
           dialog.setFileMode(QFileDialog.AnyFile);
           dialog.setAcceptMode(QFileDialog.AcceptSave);
@@ -522,8 +537,14 @@ class MainWindow (QMainWindow):
     selmodel = self.model.copy();
     selmodel.setSources([src for src in self.model.sources if src.selected]);
     busy = BusyIndicator();
+    # try to determine the file type
+    for filetype,patterns,savefunc in self._save_file_types:
+      if [ patt for patt in patterns if fnmatch.fnmatch(filename,patt) ]:
+        break;
+    else:
+      savefunc = None;
     try:
-      ModelHTML.saveModel(filename,selmodel);
+      savefunc(filename,selmodel);
     except:
         busy = None;
         self.showErrorMessage("""Error saving selection to model file %s: %s"""%(filename,str(sys.exc_info()[1])));
