@@ -31,6 +31,7 @@ if __name__ == "__main__":
   import sys
   import os.path
   # Tigger lives here for now. Add it to include path so that "import Tigger" works
+  sys.modules['TiggerMain'] = __name__;
   try:
     import Tigger
   except:

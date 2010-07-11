@@ -3,12 +3,11 @@ Version = "0.1";
 
 import sys
 
-if 'Timba.TDL' in sys.modules:
-  # These functions are used for startup timings, and initialized properly by the main "tigger" script.
-  # If running in TDL mode, provide dummy versions
+# These functions are used for startup timings, and initialized properly by the main "tigger" script.
+# If imported as a module from elsewhere, provide dummy versions
+if 'TiggerMain' not in sys.modules:
   startup_dprint = startup_dprintf = lambda *dum:None;
-
-# else normal standalone mode
+# else init as standalone app
 else:
   # init debug printing
   import Kittens.utils
@@ -24,3 +23,9 @@ else:
   Config = Kittens.config.SectionParser(ConfigFile,"Tigger");
 
   from Kittens.widgets import BusyIndicator
+
+# provide some convenience methods
+def load (filename):
+  """Loads and returns a native-format sky model."""
+  import Models.ModelHTML
+  return Models.ModelHTML.loadModel(filename);

@@ -310,4 +310,9 @@ class SkyModel (ModelItem):
       self.dec0 = reduce(lambda x,y:x+y,[ src.pos.dec for src in self.sources ])/len(self.sources);
     return self.ra0,self.dec0;
 
+  def save (self,filename):
+    """Convenience function, saves model to file in native HTML format""";
+    import ModelHTML
+    ModelHTML.saveModel(filename,self);
+
 SkyModel.registerClass();
