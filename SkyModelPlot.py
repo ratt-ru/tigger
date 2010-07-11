@@ -678,8 +678,15 @@ class SkyModelPlotter (QWidget):
         dprint(2,"plot canvas size is",self.plot().size());
         dprint(2,"zoom rects are",self._zoomrects);
         stack = map(self.adjustRect,self._zoomrects);
+        if stack:
+          zs = stack[0];
+          self.plot().setAxisScale(QwtPlot.yLeft,zs.top(),zs.bottom());
+          self.plot().setAxisScale(QwtPlot.xBottom,zs.right(),zs.left());
+          QwtPlotZoomer.setZoomBase(self);
+          dprint(2,"reset zoom base, zoom stack is now",self.zoomStack());
         self.setZoomStack(stack,self.zoomRectIndex());
-        dprint(2,"new zoom stack is",stack);
+        dprint(2,"setting zoom stack",stack);
+        dprint(2,"zoom stack is now",self.zoomStack());
 
     def setZoomBase (self,zbase):
       QwtPlotZoomer.setZoomBase(self);
@@ -691,6 +698,7 @@ class SkyModelPlotter (QWidget):
       """Adjusts rectangle w.r.t. aspect ratio settings. That is, if a fixed aspect ratio is in effect, adjusts the rectangle to match
       the aspect ratio of the plot canvas. Returns adjusted version."""
       if self._fixed_aspect:
+        dprint(2,"adjusting zoom rect to canvas size:",self.canvas().size());
         aspect0 = self.canvas().width()/float(self.canvas().height());
         aspect = rect.width()/float(rect.height());
         # increase rectangle, if needed to match the aspect
