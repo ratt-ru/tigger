@@ -54,7 +54,7 @@ if __name__ == "__main__":
   import Tigger.MainWindow
   dprint(1,"imported Tigger.MainWindow");
   import Tigger.Tools
-  from Tigger.Tools import export_karma,add_brick,make_brick
+  from Tigger.Tools import export_karma,add_brick,make_brick,restore_image
   dprint(1,"imported Tigger.Tools");
 
 

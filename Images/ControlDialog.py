@@ -118,8 +118,49 @@ class ImageControlDialog (QDialog):
     lo2.addWidget(self._whistunzoom,0);
     self._zooming_histogram = False;
 
+    sliced_axes = rc.slicedAxes();
+    dprint(1,"sliced axes are",sliced_axes);
+    self._stokes_axis = None;
+
     # subset indication
     lo0.addWidget(Separator(self,"Data subset"));
+    # sliced axis selectors
+    self._wslicers = [];
+    if sliced_axes:
+      lo1 = QHBoxLayout();
+      lo1.setContentsMargins(0,0,0,0);
+      lo1.setSpacing(2);
+      lo0.addLayout(lo1);
+      lo1.addWidget(QLabel("Current slice:  ",self));
+      for i,(number,name,labels) in enumerate(sliced_axes):
+        lo1.addWidget(QLabel("%s:"%name,self));
+        if name == "STOKES":
+          self._stokes_axis = number;
+        # add controls
+        wslicer = QComboBox(self);
+        wslicer.addItems(labels);
+        wslicer.setToolTip("""<P>Selects current slice along the %s axis.</P>"""%name);
+        QObject.connect(wslicer,SIGNAL("currentIndexChanged(int)"),self._currier.curry(self._changeSlice,i));
+        lo2 = QVBoxLayout();
+        lo1.addLayout(lo2);
+        lo2.setContentsMargins(0,0,0,0);
+        lo2.setSpacing(0);
+        wminus = QToolButton(self);
+        wminus.setArrowType(Qt.UpArrow);
+        wplus = QToolButton(self);
+        wplus.setArrowType(Qt.DownArrow);
+        wminus.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Fixed);
+        wplus.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Fixed);
+        sz = QSize(12,8);
+        wminus.setMinimumSize(sz);
+        wplus.setMinimumSize(sz);
+        wminus.resize(sz);
+        wplus.resize(sz);
+        lo2.addWidget(wminus);
+        lo2.addWidget(wplus);
+        lo1.addWidget(wslicer);
+      lo1.addStretch(1);
+    # subset indicator
     lo1 = QHBoxLayout();
     lo1.setContentsMargins(0,0,0,0);
     lo1.setSpacing(2);
@@ -127,23 +168,14 @@ class ImageControlDialog (QDialog):
     self._wlab_subset = QLabel("Subset: xxx",self);
     lo1.addWidget(self._wlab_subset,1);
 #    lo1.addWidget(QLabel("Reset to:",self),0);
-    sliced_axes = rc.slicedAxes();
-    dprint(1,"sliced axes are",sliced_axes);
     reset_menu = QMenu(self);
     self._wreset = QToolButton(self);
     self._wreset.setText("Reset to");
     lo1.addWidget(self._wreset);
     self._qa_reset_full = reset_menu.addAction("Full datacube" if sliced_axes else "Full image",self._rc.setFullSubset);
-    # do we have >1 extra axes, and one of them is Stokes? Add a "reset to current stokes slice" button
-    self._stokes_axis = None;
     if sliced_axes:
-      if len(sliced_axes) > 1:
-        for number,name,labels in sliced_axes:
-          if name == "STOKES":
-            self._stokes_axis = number;
-            break;
-      # add reset button for stokes plane
-      if self._stokes_axis is not None:
+      # do we have >1 extra axes, and one of them is Stokes? Add a "reset to current stokes slice" button
+      if self._stokes_axis is not None and len(sliced_axes)>1:
         self._qa_reset_stokes = reset_menu.addAction("Stokes plane",self._rc.setFullSubset);
       self._qa_reset_slice = reset_menu.addAction("Current plane",self._rc.setSliceSubset);
     self._qa_reset_window = reset_menu.addAction("Current window",self._rc.setWindowSubset);
@@ -613,6 +645,9 @@ class ImageControlDialog (QDialog):
 
   def _setHistDisplayRange (self):
     self._rc.setDisplayRange(*self._hist_range);
+
+  def _changeSlice (self,axis,value=None,delta=None):
+    pass;
 
   def _changeDisplayRangeToPercent (self,percent):
     busy = BusyIndicator();

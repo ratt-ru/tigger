@@ -95,17 +95,17 @@ class FileSelector (QWidget):
     lo.setSpacing(5);
     # label
     lab = QLabel(label,self);
-    lo.addWidget(lab);
+    lo.addWidget(lab,0);
     # text field
     self.wfname = QLineEdit(self);
     self.wfname.setReadOnly(True);
     self.setFilename(filename);
-    lo.addWidget(self.wfname);
+    lo.addWidget(self.wfname,1);
     # selector
     wsel = QToolButton(self);
     wsel.setText("Choose...");
     QObject.connect(wsel,SIGNAL("clicked()"),self._chooseFile);
-    lo.addWidget(wsel);
+    lo.addWidget(wsel,0);
     # other init
     self._file_dialog = None;
     self._dialog_label = dialog_label or label;
@@ -199,9 +199,7 @@ class AddTagDialog (QDialog):
     return str(self.wtagsel.currentText()),self.valedit.getValue();
 
 class SelectTagsDialog (QDialog):
-  def __init__ (self,parent,modal=True,flags=Qt.WindowFlags()
-
-                ,caption="Select Tags",ok_button="Select"):
+  def __init__ (self,parent,modal=True,flags=Qt.WindowFlags(),caption="Select Tags",ok_button="Select"):
     QDialog.__init__(self,parent,flags);
     self.setModal(modal);
     self.setWindowTitle(caption);

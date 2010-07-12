@@ -7,6 +7,7 @@ import math
 import numpy
 
 from Tigger.Coordinates import Projection
+from scipy.ndimage.filters import convolve
 
 # init debug printing
 import Kittens.utils
@@ -18,6 +19,7 @@ dprintf = _verbosity.dprintf;
 DEG = 180/math.pi;
 ARCMIN = DEG*60;
 ARCSEC = ARCMIN*60;
+FWHM = 2.3548;
 
 def fitPsf (filename,cropsize=64):
   # read PSF from file
@@ -49,10 +51,17 @@ def fitPsf (filename,cropsize=64):
   proj = Projection.FITSWCS(hdr);
   xscale,yscale = proj.xscale,proj.yscale;
 
-  sx_rad = sx * proj.xscale;
-  sy_rad = sy * proj.yscale;
-  fwhm = 2.3548;
-  dprintf(1,"Fitted gaussian PSF FWHM of %f x %f pixels (%f x %f arcsec), p.a. %f deg\n",sx*fwhm,sy*fwhm,sx_rad*fwhm*ARCSEC,sy_rad*fwhm*ARCSEC,rot);
+  sx_rad = abs(sx * proj.xscale);
+  sy_rad = abs(sy * proj.yscale);
+  if sx_rad < sy_rad:
+    sx_rad,sy_rad = sy_rad,sx_rad;
+    rot -= 90;
+  while rot > 180:
+    rot -= 360;
+  while rot < -180:
+    rot += 360;
+
+  dprintf(1,"Fitted gaussian PSF FWHM of %f x %f pixels (%f x %f arcsec), p.a. %f deg\n",sx*FWHM,sy*FWHM,sx_rad*FWHM*ARCSEC,sy_rad*FWHM*ARCSEC,rot);
 
   return sx_rad,sy_rad,rot/DEG;
 
@@ -116,48 +125,92 @@ def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0):
   if gmaj > 0:
     if gmin == 0:
       gmin = gmaj;
-    box_radius = 5*(max(gmaj,gmin))/min(abs(proj.xscale,proj.yscale));
+    box_radius = 5*(max(gmaj,gmin))/min(abs(proj.xscale),abs(proj.yscale));
     dprintf(2,"Will use a box of radius %f pixels for restoration\n",box_radius);
     cos_rot = math.cos(grot);
     sin_rot = math.sin(grot);
+  conv_kernel = None;
   # loop over sources in model
   for src in sources:
-    # skip non-points
-    if src.typecode != 'pnt':
-      return;
-    # pixel coordinates of source
-    xsrc,ysrc = proj.lm(src.pos.ra,src.pos.dec);
-    # form up stokes vector
-    for i,st in enumerate(stokes):
-       stokes_vec[i] = getattr(src.flux,st,-1);
-    dprintf(3,"Source %s, %s Jy, at pixel %f,%f\n",src.name,stokes_vec,xsrc,ysrc);
-    # gmaj != 0: use gaussian.
-    if gmaj > 0:
-      # pixel coordinates of box around source in which we evaluate the gaussian
-      i1 = max(0,int(math.floor(xsrc-box_radius)));
-      i2 = min(nx,int(math.ceil(xsrc+box_radius)));
-      j1 = max(0,int(math.floor(ysrc-box_radius)));
-      j2 = min(ny,int(math.ceil(ysrc+box_radius)));
-      # skip sources if box doesn't overlap image
-      if i1>=i2 or j1>=j2:
-        continue;
-      # now we convert pixel indices within the box into world coordinates, relative to source position
-      xi = (numpy.arange(i1,i2) - xsrc)*proj.xscale;
-      yj = (numpy.arange(j1,j2) - ysrc)*proj.yscale;
-      # work out rotated coordinates
-      xi1 = (xi*cos_rot)[x_indexer] - (yj*sin_rot)[y_indexer];
-      yi1 = (xi*sin_rot)[x_indexer] + (yj*cos_rot)[y_indexer];
-      # evaluate gaussian at these, scale up by stokes vector
-      gg = stokes_vec[stokes_indexer]*numpy.exp(-((xi1/gmaj)**2+(yi1/gmin)**2)/2.);
-      # add into data
-      data[...,j1:j2,i1:i2] += gg;
-    # else gmaj=0: use delta functions
-    else:
-      xsrc = int(round(xsrc));
-      ysrc = int(round(ysrc));
-      # skip sources outside image
-      if xsrc < 0 or xsrc >= nx or ysrc < 0 or ysrc >= ny:
-        continue;
-      xdum = numpy.array([1]);
-      ydum = numpy.array([1]);
-      data[...,ysrc:ysrc+1,xsrc:xsrc+1] += stokes_vec[stokes_indexer]*xdum[x_indexer]*ydum[y_indexer];
+    # process point sources
+    if src.typecode == 'pnt':
+      # pixel coordinates of source
+      xsrc,ysrc = proj.lm(src.pos.ra,src.pos.dec);
+      # form up stokes vector
+      for i,st in enumerate(stokes):
+         stokes_vec[i] = getattr(src.flux,st,-1);
+      dprintf(3,"Source %s, %s Jy, at pixel %f,%f\n",src.name,stokes_vec,xsrc,ysrc);
+      # gmaj != 0: use gaussian.
+      if gmaj > 0:
+        # pixel coordinates of box around source in which we evaluate the gaussian
+        i1 = max(0,int(math.floor(xsrc-box_radius)));
+        i2 = min(nx,int(math.ceil(xsrc+box_radius)));
+        j1 = max(0,int(math.floor(ysrc-box_radius)));
+        j2 = min(ny,int(math.ceil(ysrc+box_radius)));
+        # skip sources if box doesn't overlap image
+        if i1>=i2 or j1>=j2:
+          continue;
+        # now we convert pixel indices within the box into world coordinates, relative to source position
+        xi = (numpy.arange(i1,i2) - xsrc)*proj.xscale;
+        yj = (numpy.arange(j1,j2) - ysrc)*proj.yscale;
+        # work out rotated coordinates
+        xi1 = (xi*cos_rot)[x_indexer] - (yj*sin_rot)[y_indexer];
+        yj1 = (xi*sin_rot)[x_indexer] + (yj*cos_rot)[y_indexer];
+        # evaluate gaussian at these, scale up by stokes vector
+        gg = stokes_vec[stokes_indexer]*numpy.exp(-((xi1/gmaj)**2+(yj1/gmin)**2)/2.);
+        # add into data
+        data[...,j1:j2,i1:i2] += gg;
+      # else gmaj=0: use delta functions
+      else:
+        xsrc = int(round(xsrc));
+        ysrc = int(round(ysrc));
+        # skip sources outside image
+        if xsrc < 0 or xsrc >= nx or ysrc < 0 or ysrc >= ny:
+          continue;
+        xdum = numpy.array([1]);
+        ydum = numpy.array([1]);
+        data[...,ysrc:ysrc+1,xsrc:xsrc+1] += stokes_vec[stokes_indexer]*xdum[x_indexer]*ydum[y_indexer];
+    # procvess model images -- convolve with PSF and add to data
+    elif src.typecode == "FITS":
+      imgff = pyfits.open(src.shape.filename);
+      img = imgff[0].data
+      # projection had better match
+      imgproj = Projection.FITSWCSpix(imgff[0].header);
+      if img.shape[-2:] != data.shape[-2:] or img.ndim > data.ndim or imgproj != proj:
+        raise RuntimeError,"coordinates or shape of model image %s don't match those of output image"%src.shape.filename;
+      # evaluate convolution kernel first time we need it
+      if conv_kernel is None:
+        radius = int(round(box_radius));
+        # convert pixel coordinates into world coordinates relative to 0
+        xi = numpy.arange(-radius,radius+1)*proj.xscale
+        yj = numpy.arange(-radius,radius+1)*proj.yscale
+        # work out rotated coordinates
+        # (rememeber that X is last axis, Y is second-last)
+        xi1 = (xi*cos_rot)[numpy.newaxis,:] - (yj*sin_rot)[:,numpy.newaxis];
+        yj1 = (xi*sin_rot)[numpy.newaxis,:] + (yj*cos_rot)[:,numpy.newaxis];
+        # evaluate convolution kernel
+        conv_kernel = numpy.exp(-((xi1/gmaj)**2+(yj1/gmin)**2)/2.);
+      # work out data slices that we need to loop over
+      slices = [([Ellipsis],[Ellipsis])];
+      for axis in range(2,data.ndim):
+        # list of data indices to iterate over for this axis
+        indices = [[x] for x in range(data.shape[-1-axis])];
+        # list of image indices to iterate over
+        if axis < img.ndim:
+          # shape-1: use 0 throughout
+          if img.shape[-1-axis] == 1:
+            img_indices = [[0]]*len(indices);
+          # shape-n: must be same as data
+          elif img.shape[-1-axis] == data.shape[-1-axis]:
+            img_indices = indices;
+          # else error
+          else:
+            raise RuntimeError,"axis %d of model image %s doesn't match those of output image"%(axis,src.shape.filename);
+        # no such axis in uimage -- no index
+        else:
+          img_indices = [[]]*range(indices);
+        # update list of slices
+        slices =[ (sd+sd0,si+si0) for sd0,si0 in slices for sd,si in zip(indices,img_indices) ];
+      # now loop over slices and assign
+      for sd,si in slices:
+        data[tuple(sd)] += convolve(img[tuple(si)],conv_kernel);

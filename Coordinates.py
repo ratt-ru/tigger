@@ -53,6 +53,9 @@ class _Projector (object):
       """By default, two projections are the same if their classes match, and their ra0/dec0 match."""
       return type(self) is type(other) and self.ra0 == other.ra0 and self.dec0 == other.dec0;
 
+    def __ne__ (self,other):
+      return not self == other;
+
     @classmethod
     def radec_lm (cls,ra,dec,ra0,dec0):
       return cls(ra0,dec0).lm(ra,dec);
@@ -103,6 +106,10 @@ class Projection (object):
 
     def offset (self,dra,ddec):
       return self.xpix0 - dra/self.xscale,self.ypix0 + ddec/self.xscale;
+
+    def __eq__ (self,other):
+      """By default, two projections are the same if their classes match, and their ra0/dec0 match."""
+      return type(self) is type(other) and (self.ra0,self.dec0,self.xpix0,self.ypix0,self.xscale,self.yscale)  == (other.ra0,other.dec0,other.xpix0,other.ypix0,other.xscale,other.yscale);
 
   class FITSWCS (FITSWCSpix):
     """FITS WCS projection, as determined by a FITS header. lm is renormalized to radians, l is reversed, 0,0 is at reference pixel."""

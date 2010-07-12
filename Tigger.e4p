@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE Project SYSTEM "Project-4.6.dtd">
 <!-- eric4 project file for project Tigger -->
-<!-- Saved: 2010-07-04, 22:32:07 -->
+<!-- Saved: 2010-07-12, 21:21:34 -->
 <!-- Copyright (C) 2010 ,  -->
 <Project version="4.6">
   <Language></Language>
@@ -43,6 +43,7 @@
     <Source>SiameseInterface.py</Source>
     <Source>Images/ControlDialog.py</Source>
     <Source>Tools/add_brick.py</Source>
+    <Source>Tools/restore_image.py</Source>
   </Sources>
   <Forms>
   </Forms>
