@@ -12,7 +12,9 @@ if __name__ == '__main__':
   # setup some standard command-line option parsing
   #
   from optparse import OptionParser
-  parser = OptionParser(usage="""%prog: [options] input_image sky_model [output_image]""");
+  parser = OptionParser(usage="""%prog: [options] input_image sky_model [output_image]""",
+                        description="""Restores sources from sky model into an input image, writes result to output image. If
+an output image is not specified, makes a name for it automatically.""");
   parser.add_option("-n","--num-sources",dest="nsrc",type="int",action="store",
                     help="Only restore the NSRC brightest sources");
   parser.add_option("-s","--scale",dest="fluxscale",metavar="FLUXSCALE[,N]",action="store",
@@ -41,19 +43,21 @@ if __name__ == '__main__':
 
   # check for overwritten output
   if os.path.exists(output_image) and not options.force:
-    print "File %s already exists, use the -f option to overwrite."%output_image;
-    sys.exit(1);
+    parser.error("File %s already exists, use the -f option to overwrite."%output_image);
 
   # find Tigger
   try:
-    import Tigger 
-  except ImportError:
-    sys.path.append(os.getenv("HOME"));
     import Tigger
+  except ImportError:
+    sys.path.append(os.path.dirname(os.path.dirname(__file__)));
+    try:
+      import Tigger
+    except:
+      parser.error("Unable to import the Tigger package. Please check your installation and PYTHONPATH.");
 
   from Tigger.Tools import Imaging
   from Tigger.Models import Import,ModelHTML
-  
+
   Imaging._verbosity.set_verbose(options.verbose);
 
   # read model and sort by apparent brightness
