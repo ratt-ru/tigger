@@ -327,17 +327,17 @@ class MainWindow (QMainWindow):
     return self.openFile(filename,format=format,merge=True);
 
   _load_file_types = (
-    ("Native model",("*.lsm.html",),ModelHTML.loadModel),
+    ("Native model",("*."+ModelHTML.DefaultExtension,),ModelHTML.loadModel),
     ("NEWSTAR model",("*.mdl","*.MDL"),Import.importNEWSTAR),
     ("LOFAR BBS model",("*.cat","*.catalog"),ModelBBS.loadModel),
     ("All files",("*",),None),
   );
 
   _save_file_types = (
-    ("Native model",("*.lsm.html",),ModelHTML.saveModel),
+    ("Native model",("*."+ModelHTML.DefaultExtension,),ModelHTML.saveModel),
     ("LOFAR BBS model",("*.cat","*.catalog"),ModelBBS.saveModel),
   );
-  
+
   def showMessage (self,msg,time=3000):
     self.statusBar().showMessage(msg,3000);
 
@@ -508,7 +508,7 @@ class MainWindow (QMainWindow):
       if not self._save_as_dialog:
           filters = ";;".join([  "%s (%s)"%(name," ".join(patterns)) for name,patterns,func in self._save_file_types ]);
           dialog = self._save_as_dialog = QFileDialog(self,"Save sky model",".",filters);
-          dialog.setDefaultSuffix("lsm.html");
+          dialog.setDefaultSuffix(ModelHTML.DefaultExtension);
           dialog.setFileMode(QFileDialog.AnyFile);
           dialog.setAcceptMode(QFileDialog.AcceptSave);
           dialog.setModal(True);
@@ -524,7 +524,7 @@ class MainWindow (QMainWindow):
       if not self._save_sel_as_dialog:
           filters = ";;".join([  "%s (%s)"%(name," ".join(patterns)) for name,patterns,func in self._save_file_types ]);
           dialog = self._save_sel_as_dialog = QFileDialog(self,"Save sky model",".",filters);
-          dialog.setDefaultSuffix("lsm.html");
+          dialog.setDefaultSuffix(ModelHTML.DefaultExtension);
           dialog.setFileMode(QFileDialog.AnyFile);
           dialog.setAcceptMode(QFileDialog.AcceptSave);
           dialog.setModal(True);

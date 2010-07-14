@@ -315,9 +315,3 @@ def importNEWSTAR (filename,import_src=True,import_cc=True,**kw):
 
 
 
-if __name__ == "__main__":
-  import ModelHTML
-
-  model2 = importNEWSTAR('BAND0.MDL');
-  ModelHTML.saveModel('lsm0.lsm.html',model2);
-

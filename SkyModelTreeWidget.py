@@ -172,6 +172,7 @@ class SkyModelTreeWidget (Kittens.widgets.ClickableTreeWidget):
       if item._src.selected:
         selection.append(QItemSelectionRange(self.indexFromItem(item,0),self.indexFromItem(item,self.columnCount()-1)));
     self.selectionModel().select(selection,QItemSelectionModel.ClearAndSelect);
+    self.changeGroupingVisibility(None,origin=origin);
     self._updating_selection = False;
 
   def _refreshSelectedItems (self,origin=None):

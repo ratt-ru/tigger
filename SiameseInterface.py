@@ -42,7 +42,7 @@ class TiggerSkyModel (object):
     if not self._compile_opts:
       self._compile_opts = [
         TDLOption("filename","Tigger LSM file",
-                   TDLFileSelect("*.lsm.html",default=self.filename,exist=True),
+                   TDLFileSelect("*."+ModelHTML.DefaultExtension,default=self.filename,exist=True),
                    namespace=self),
         TDLOption('lsm_subset',"Source subset",["all"],more=str,namespace=self,
                   doc="""<P>You can enter source names separated by space. "all" selects all sources. "=<i>tagname</i>"

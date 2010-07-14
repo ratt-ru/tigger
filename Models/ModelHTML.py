@@ -12,6 +12,8 @@ dprintf = _verbosity.dprintf;
 import ModelClasses
 import SkyModel
 
+DefaultExtension = "lsm.html";
+
 def saveModel (filename,model):
   fobj = file(filename,'w');
   fobj.write("""<HTML><BODY mdltype=SkyModel>\n""");

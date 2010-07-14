@@ -49,11 +49,12 @@ an output image is not specified, makes a name for it automatically.""");
   try:
     import Tigger
   except ImportError:
-    sys.path.append(os.path.dirname(os.path.dirname(__file__)));
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))));
     try:
       import Tigger
     except:
-      parser.error("Unable to import the Tigger package. Please check your installation and PYTHONPATH.");
+      print "Unable to import the Tigger package. Please check your installation and PYTHONPATH.";
+      sys.exit(1);
 
   from Tigger.Tools import Imaging
   from Tigger.Models import Import,ModelHTML
