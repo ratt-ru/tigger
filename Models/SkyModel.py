@@ -178,9 +178,12 @@ class SkyModel (ModelItem):
       self.emit("changeGroupingStyle",group,origin);
       self.emitUpdate(SkyModel.UpdateGroupStyle,origin);
 
+  def findSource (self,name):
+    return self._src_by_name[name];
 
   def setSources (self,sources,origin=None):
     self.sources = list(sources);
+    self._src_by_name = dict([(src.name,src) for src in self.sources]);
     self.scanTags();
     self.initGroupings();
 
@@ -258,9 +261,9 @@ class SkyModel (ModelItem):
     # else if at least one group is hiding explicitly, hide
     # else use default setting
     show = [ st.show_plot for st in styles ];
-    if max(show) == PlotStyles.ShowAlways:
+    if show and max(show) == PlotStyles.ShowAlways:
       show = True;
-    elif min(show) == PlotStyles.ShowNot:
+    elif show and min(show) == PlotStyles.ShowNot:
       show = False;
     else:
       show = bool(style0.show_plot);
