@@ -189,13 +189,34 @@ def makeDualColorPen (color1,color2,width=3):
   return QPen(QBrush(texture),width);
 
 class ToolDialog (QDialog):
-  def __init__ (self,parent,configname):
+  def __init__ (self,parent,configname,menuname,show_shortcut=None):
     QDialog.__init__(self,parent);
     self.setModal(False);
     self.setFocusPolicy(Qt.NoFocus);
     self.hide();
     self._configname = configname;
     self._geometry = None;
+    # make hide/show qaction
+    self._qa_show = qa = QAction("Show %s"%menuname.replace("&","&&"),self);
+    if show_shortcut:
+      qa.setShortcut(show_shortcut);
+    qa.setCheckable(True);
+    qa.setChecked(Config.getbool("%s-show"%configname,False));
+    qa.setVisible(False);
+    qa.setToolTip("""<P>The quick zoom & cross-sections window shows a zoom of the current image area
+      under the mose pointer, and X/Y cross-sections through that area.</P>""");
+    QObject.connect(qa,SIGNAL("triggered(bool)"),self.setVisible);
+    self._write_config = curry(Config.set,"%s-show"%configname);
+    QObject.connect(qa,SIGNAL("triggered(bool)"),self._write_config);
+    QObject.connect(self,SIGNAL("isVisible"),qa.setChecked);
+
+  def getShowQAction (self):
+    return self._qa_show;
+
+  def makeAvailable (self,available=True):
+    """Makes the tool available (or unavailable)-- shows/hides the "show" control, and shows/hides the dialog according to this control.""";
+    self._qa_show.setVisible(available);
+    self.setVisible(self._qa_show.isChecked() if available else False);
 
   def initGeometry (self):
     x0 = Config.getint('%s-x0'%self._configname,0);
@@ -234,7 +255,7 @@ class ToolDialog (QDialog):
 
 class LiveImageZoom (ToolDialog):
   def __init__ (self,parent,radius=10,factor=12):
-    ToolDialog.__init__(self,parent,configname="livezoom");
+    ToolDialog.__init__(self,parent,configname="livezoom",menuname="live zoom & cross-sections",show_shortcut=Qt.Key_F2);
     self.setWindowTitle("Zoom & Cross-sections");
     radius = Config.getint("livezoom-radius",radius);
     # add plots
@@ -321,6 +342,7 @@ class LiveImageZoom (ToolDialog):
     # init geometry
     self.setPlotSize(radius,factor);
     self.initGeometry();
+
 
   def _showZoom (self,show):
     if not show:
@@ -435,7 +457,7 @@ class LiveImageZoom (ToolDialog):
 
 class LiveProfile (ToolDialog):
   def __init__ (self,parent):
-    ToolDialog.__init__(self,parent,configname="liveprofile");
+    ToolDialog.__init__(self,parent,configname="liveprofile",menuname="profiles",show_shortcut=Qt.Key_F3);
     self.setWindowTitle("Profiles");
     # add plots
     lo0 = QVBoxLayout(self);
@@ -870,34 +892,17 @@ class SkyModelPlotter (QWidget):
       qa.setCheckable(True);
       self._wtoolbar.addAction(qa);
     self.setMouseMode(self.MouseZoom);
-    # hide/show zoomer
-    self._qa_showlivezoom = qa = QAction("Show quick zoom && cross-sections",self);
-    qa.setShortcut(Qt.Key_F2);
-    qa.setCheckable(True);
-    qa.setChecked(True);
-    qa.setVisible(False);
-    qa.setToolTip("""<P>The quick zoom & cross-sections window shows a zoom of the current image area
-      under the mose pointer, and X/Y cross-sections through that area.</P>""");
-    QObject.connect(qa,SIGNAL("toggled(bool)"),self._livezoom.setVisible);
-    QObject.connect(self._livezoom,SIGNAL("isVisible"),qa.setChecked);
-    self._menu.addAction(qa);
-    # hide/show profile
-    self._qa_showliveprof = qa = QAction("Show profiles",self);
-    qa.setShortcut(Qt.Key_F3);
-    qa.setCheckable(True);
-    qa.setChecked(False);
-    qa.setVisible(False);
-    qa.setToolTip("""<P>The profiles window shows a cross-section through the current image (through any axis)
-      at the current mouse position.</P>""");
-    QObject.connect(qa,SIGNAL("toggled(bool)"),self._liveprofile.setVisible);
-    QObject.connect(self._liveprofile,SIGNAL("isVisible"),qa.setChecked);
-    self._menu.addAction(qa);
+    # hide/show tools
+    self._menu.addAction(self._liveprofile.getShowQAction());
+    self._menu.addAction(self._livezoom.getShowQAction());
     # fixed aspect
     qa = self._menu.addAction("Fix aspect ratio");
     qa.setCheckable(True);
-    qa.setChecked(True);
+    qa.setChecked(Config.getbool("fix-aspect-ratio",True));
     QObject.connect(qa,SIGNAL("toggled(bool)"),self._zoomer.setFixedAspect);
-    self._zoomer.setFixedAspect(True);
+    QObject.connect(qa,SIGNAL("triggered(bool)"),self._currier.curry(Config.set,"fix-aspect-ratio"));
+    self._zoomer.setFixedAspect(qa.isChecked());
+    qa.setToolTip("""<P>Enable this to maintain a fixed aspect ratio in the plot.</P>""");
     # save as PNG file
     self._menu.addAction("Export plot to PNG file...",self._exportPlotToPNG);
 
@@ -1090,15 +1095,8 @@ class SkyModelPlotter (QWidget):
     self._image = self._imgman and self._imgman.getCenterImage();
     # show/hide live zoomer with image
     if self._image:
-      self._qa_showlivezoom.setVisible(True);
-      self._qa_showliveprof.setVisible(True);
-      self._livezoom.setVisible(self._qa_showlivezoom.isChecked());
-      self._liveprofile.setVisible(self._qa_showliveprof.isChecked());
-    else:
-      self._livezoom.setVisible(False,emit=False);
-      self._qa_showlivezoom.setVisible(False);
-      self._liveprofile.setVisible(False,emit=False);
-      self._qa_showliveprof.setVisible(False);
+      for tool in self._livezoom,self._liveprofile:
+        tool.makeAvailable(bool(self._image));
     # enable or disable mouse modes as appropriate
     self.enableMouseMode(self.MouseSubset,bool(self._image));
     self.enableMouseMode(self.MouseSelect,bool(self.model));
@@ -1126,6 +1124,8 @@ class SkyModelPlotter (QWidget):
         xmax = extent[iext][1] = max([lm[iext] for lm in self._source_lm.itervalues()]);
         # add 5% on either side
         margin = .05*(xmax - xmin);
+        if not margin:
+          margin = DEG*0.5;
         extent[iext][0] -= margin;
         extent[iext][1] += margin;
         dprint(2,"plot extents for model",extent);
