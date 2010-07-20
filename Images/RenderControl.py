@@ -29,12 +29,15 @@ class RenderControl (QObject):
     self.image = image;
 
     # figure out the slicing -- find extra axes with size > 1
+    # self._current_slice contains all extra axis, including the size-1 ones
+    # self._sliced_axes is a list of (iextra,axisname,labels) tuples for size>1 axes
+    # where iextra is an index into self._current_slice.
     self._current_slice = [0]*image.numExtraAxes();
     self._sliced_axes = [];
     for i in range(image.numExtraAxes()):
       iaxis,axisname,labels = image.extraAxisNumberNameLabels(i);
       if len(labels) > 1:
-        self._sliced_axes.append((iaxis,axisname,labels));
+        self._sliced_axes.append((i,axisname,labels));
 
     # set the full image range (i.e. mix/max) and current slice range
     self._fullrange = self._slicerange = image.dataMinMax()[:2];
@@ -155,7 +158,7 @@ class RenderControl (QObject):
     if not self._sliced_axes:
       return "full image";
     descs = [];
-    for iextra,(iaxis,name,labels) in enumerate(self._sliced_axes):
+    for iextra,name,labels in self._sliced_axes:
       if name.upper() not in ["STOKES","COMPLEX"]:
         descs.append("%s=%s"%(name,labels[self._current_slice[iextra]]));
       else:

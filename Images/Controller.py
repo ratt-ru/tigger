@@ -67,32 +67,22 @@ class ImageController (QFrame):
     self._wlabel = QLabel(self.name,self);
     self._wlabel.setToolTip("%s %s"%(image.filename,u"\u00D7".join(map(str,image.data().shape))));
     lo.addWidget(self._wlabel,1);
+    # render control
+    self._rc = RenderControl(image,self);
     # selectors for extra axes
-    self._wslicers = [None]*image.numExtraAxes();
-    self._current_slice = [0]*image.numExtraAxes();
-    self._has_slicing = False;
-    for i in range(image.numExtraAxes()):
-      iaxis,axisname,labels = image.extraAxisNumberNameLabels(i);
+    self._wslicers = [];
+    for iextra,axisname,labels in self._rc. slicedAxes():
       if axisname.upper() not in ["STOKES","COMPLEX"]:
         lbl = QLabel("%s:"%axisname,self);
         lo.addWidget(lbl);
       else:
         lbl = None;
       slicer = QComboBox(self);
+      self._wslicers.append(slicer);
       lo.addWidget(slicer);
       slicer.addItems(labels);
       slicer.setToolTip("""<P>Selects current slice along the %s axis.</P>"""%axisname);
-      QObject.connect(slicer,SIGNAL("currentIndexChanged(int)"),self._currier.curry(self.changeSlice,i));
-      self._wslicers[i] = slicer;
-      # hide slicer if axis <2
-      if len(labels) < 2:
-        lbl and lbl.hide();
-        slicer.hide();
-      else:
-        self._has_slicing = True;
-    # render control
-    self._rc = RenderControl(image,self);
-    QObject.connect(self._rc,SIGNAL("displayRangeChanged"),self._updateDisplayRange);
+      QObject.connect(slicer,SIGNAL("currentIndexChanged(int)"),self._currier.curry(self.changeSlice,iextra));
     # min/max display ranges
     lo.addSpacing(5);
     self._wrangelbl = QLabel(self);
@@ -116,7 +106,7 @@ class ImageController (QFrame):
     self._wfullrange.setToolTip("""<P>Click for colourmap and intensity policy options.</P>""");
     self._wraise.setToolTip("""<P>Click here to show render controls for this image.</P>""");
     QObject.connect(self._wfullrange,SIGNAL("clicked()"),self.showRenderControls);
-    if not self._has_slicing:
+    if not self._rc.hasSlicing():
       tooltip = """<P>You can change the currently displayed intensity range by entering low and high limits here.</P>
       <TABLE>
         <TR><TD><NOBR>Image min:</NOBR></TD><TD>%g</TD><TD>max:</TD><TD>%g</TD></TR>
@@ -136,6 +126,10 @@ class ImageController (QFrame):
     self._menu.addAction("Unload image",self._currier.curry(self.image.emit,SIGNAL("unload")));
     self._wraise.setMenu(self._menu);
     self._wraise.setPopupMode(QToolButton.MenuButtonPopup);
+
+    # connect updates from renderControl and image
+    self.image.connect(SIGNAL("slice"),self._updateImageSlice);
+    QObject.connect(self._rc,SIGNAL("displayRangeChanged"),self._updateDisplayRange);
 
     # init image for plotting
     self._image_border = self._image_label = None;
@@ -233,15 +227,20 @@ class ImageController (QFrame):
   def currentSlice (self):
     return self._rc.currentSlice();
 
-  def changeSlice (self,iaxis,index):
-    sl = list(self._rc.currentSlice());
-    sl[iaxis] = index;
-    self._rc.selectSlice(sl);
+  def _updateImageSlice (self,slice):
+    for i,(iextra,name,labels) in enumerate(self._rc.slicedAxes()):
+      self._wslicers[i].setCurrentIndex(slice[iextra]);
 
-  def incrementSlice (self,iaxis,incr):
+  def changeSlice (self,iaxis,index):
     sl = self._rc.currentSlice();
-    slicer = self._wslicers[iaxis];
-    slicer.setCurrentIndex((sl[iaxis]+incr)%slicer.count());
+    if sl[iaxis] != index:
+      sl = list(sl);
+      sl[iaxis] = index;
+      self._rc.selectSlice(sl);
+
+  def incrementSlice (self,isliced_axis,incr):
+    slicer = self._wslicers[isliced_axis];
+    slicer.setCurrentIndex((slicer.currentIndex()+incr)%slicer.count());
 
   def setZ (self,z,top=False,depthlabel=None,can_raise=True):
     for i,elem in enumerate((self.image,self._image_border,self._image_label)):

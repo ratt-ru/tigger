@@ -132,23 +132,35 @@ class ImageControlDialog (QDialog):
       lo1.setSpacing(2);
       lo0.addLayout(lo1);
       lo1.addWidget(QLabel("Current slice:  ",self));
-      for i,(number,name,labels) in enumerate(sliced_axes):
+      for i,(iextra,name,labels) in enumerate(sliced_axes):
         lo1.addWidget(QLabel("%s:"%name,self));
         if name == "STOKES":
-          self._stokes_axis = number;
+          self._stokes_axis = iextra;
         # add controls
         wslicer = QComboBox(self);
+        self._wslicers.append(wslicer);
         wslicer.addItems(labels);
         wslicer.setToolTip("""<P>Selects current slice along the %s axis.</P>"""%name);
-        QObject.connect(wslicer,SIGNAL("currentIndexChanged(int)"),self._currier.curry(self._changeSlice,i));
+        wslicer.setCurrentIndex(self._rc.currentSlice()[iextra]);
+        QObject.connect(wslicer,SIGNAL("currentIndexChanged(int)"),self._currier.curry(self._changeSlice,iextra));
         lo2 = QVBoxLayout();
         lo1.addLayout(lo2);
         lo2.setContentsMargins(0,0,0,0);
         lo2.setSpacing(0);
         wminus = QToolButton(self);
         wminus.setArrowType(Qt.UpArrow);
+        QObject.connect(wminus,SIGNAL("clicked()"),self._currier.curry(self._incrementSlice,i,-1));
+        if i == 0:
+          wminus.setShortcut(Qt.SHIFT+Qt.Key_F7);
+        elif i == 1:
+          wminus.setShortcut(Qt.SHIFT+Qt.Key_F8);
         wplus = QToolButton(self);
         wplus.setArrowType(Qt.DownArrow);
+        QObject.connect(wplus,SIGNAL("clicked()"),self._currier.curry(self._incrementSlice,i,1));
+        if i == 0:
+          wplus.setShortcut(Qt.Key_F7);
+        elif i == 1:
+          wplus.setShortcut(Qt.Key_F8);
         wminus.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Fixed);
         wplus.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Fixed);
         sz = QSize(12,8);
@@ -159,6 +171,7 @@ class ImageControlDialog (QDialog):
         lo2.addWidget(wminus);
         lo2.addWidget(wplus);
         lo1.addWidget(wslicer);
+        lo1.addSpacing(5);
       lo1.addStretch(1);
     # subset indicator
     lo1 = QHBoxLayout();
@@ -304,7 +317,8 @@ class ImageControlDialog (QDialog):
     lo1.addWidget(self._wcolmaps);
     QObject.connect(self._wcolmaps,SIGNAL("activated(int)"),self._changeColormap);
 
-    # connect updates from renderControl
+    # connect updates from renderControl and image
+    self.image.connect(SIGNAL("slice"),self._updateImageSlice);
     QObject.connect(self._rc,SIGNAL("intensityMapChanged"),self._updateIntensityMap);
     QObject.connect(self._rc,SIGNAL("colorMapChanged"),self._updateColorMap);
     QObject.connect(self._rc,SIGNAL("dataSubsetChanged"),self._updateDataSubset);
@@ -646,8 +660,20 @@ class ImageControlDialog (QDialog):
   def _setHistDisplayRange (self):
     self._rc.setDisplayRange(*self._hist_range);
 
-  def _changeSlice (self,axis,value=None,delta=None):
-    pass;
+  def _updateImageSlice (self,slice):
+    for i,(iextra,name,labels) in enumerate(self._rc.slicedAxes()):
+      self._wslicers[i].setCurrentIndex(slice[iextra]);
+
+  def _changeSlice (self,iaxis,index):
+    sl = self._rc.currentSlice();
+    if sl[iaxis] != index:
+      sl = list(sl);
+      sl[iaxis] = index;
+      self._rc.selectSlice(sl);
+
+  def _incrementSlice (self,iaxis,value):
+    ws = self._wslicers[iaxis];
+    ws.setCurrentIndex((ws.currentIndex()+value)%ws.count());
 
   def _changeDisplayRangeToPercent (self,percent):
     busy = BusyIndicator();
