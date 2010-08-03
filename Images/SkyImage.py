@@ -128,12 +128,14 @@ class SkyImagePlotItem (QwtPlotItem,QObject):
     """Returns currently visible rectange, in pixel coordinates. Pixel coordinates are bounded to 0,0 and nx-1,ny-1.""";
     return self._current_rect_pix;
 
-  def setImage (self,image,key=None,minmax=None):
+  def setImage (self,image,image_iter=None,key=None,minmax=None):
     """Sets image array.
+    If image_iter is not None, uses image_iter as the iterator for global operations over the image
     If key is not None, sets this as the image key (for use with the pixmap cache.)
     If minmax is not None, then stores this as the (presumably cached or precomputed) min/max values.
     """;
     self._image = image;
+    self._image_iter = image_iter if image_iter is not None else image;
     self._imgminmax = minmax;
     self._image_key = key;
     # clear intermediate caches
@@ -148,7 +150,7 @@ class SkyImagePlotItem (QwtPlotItem,QObject):
 
   def imageMinMax (self):
     if not self._imgminmax:
-      self._imgminmax = measurements.extrema(self._image)[:2];
+      self._imgminmax = measurements.extrema(self._image_iter)[:2];
     return self._imgminmax;
 
   def draw (self,painter,xmap,ymap,rect):
@@ -270,18 +272,31 @@ class SkyCubePlotItem (SkyImagePlotItem):
     elif ndim:
       self.setNumAxes(ndim);
 
-  def setData (self,data):
-    """Sets the datacube.""";
+  def setData (self,data,fortran_order=False):
+    """Sets the datacube. fortran_order is a hint, which makes iteration over fortran-order arrays faster when computing min/max and such.""";
     self._data = data;
+    self._data_fortran_order = fortran_order;
+    if fortran_order:
+      self._data_iter = numpy.ravel(data,order='F');
+    else:
+      self._data_iter = numpy.ravel(data,order='C');
     self._dataminmax = None;
     self.setNumAxes(data.ndim);
 
   def data (self):
+    """Returns datacube""";
     return self._data;
+
+  def dataIter (self):
+    """Returns iterator for datacube (usually just a 1D array)""";
+    return self._data_iter;
+
+  def isDataInFortranOrder (self):
+    return self._data_fortran_order;
 
   def dataMinMax (self):
     if not self._dataminmax:
-      self._dataminmax = measurements.extrema(self.data());
+      self._dataminmax = measurements.extrema(self.dataIter());
     return self._dataminmax;
 
   def setNumAxes (self,ndim):
@@ -357,7 +372,12 @@ class SkyCubePlotItem (SkyImagePlotItem):
   def _setupSlice (self):
     index = tuple(self.imgslice);
     key = tuple([ index[iaxis] for iaxis,name,labels,values,units,scale in self._extra_axes ]);
-    self.setImage(self._data[index],key=key);
+    image = self._data[index];
+    if self.isDataInFortranOrder():
+      image_iter = numpy.ravel(image,order='F');
+    else:
+      image_iter=None;
+    self.setImage(self._data[index],image_iter=image_iter,key=key);
 
   def selectSlice (self,*indices):
     if len(indices) != len(self._extra_axes):
@@ -389,11 +409,19 @@ class FITSImagePlotItem (SkyCubePlotItem):
     self.filename = filename;
     self.name = self.name or os.path.basename(filename);
     # read FITS file
+    dprint(3,"opening",filename);
     ff = pyfits.open(filename);
     ff[0].verify('silentfix');
     hdr = ff[0].header;
     # copying transposed data (thus into C order) somehow speeds up all subsequent operations
-    self.setData(numpy.transpose(ff[0].data).copy());
+    dprint(3,"reading data");
+    data = ff[0].data;
+    # NB: all-data operations (such as getting global min/max or computing of histograms) are much faster (almost x2) when data is iterated
+    # over in the proper order. After a transpose(), data is in fortran order. Tell this to setData().
+    data = numpy.transpose(ff[0].data);  # .copy()
+    dprint(3,"setting data");
+    self.setData(data,fortran_order=True);
+    dprint(3,"reading header");
     ndim = hdr['NAXIS'];
     # setup projection
     proj = Projection.FITSWCS(hdr);
@@ -439,5 +467,6 @@ class FITSImagePlotItem (SkyCubePlotItem):
     self.setSkyAxis(0,iaxis_ra,nx,proj.ra0,-proj.xscale,proj.xpix0);
     self.setSkyAxis(1,iaxis_dec,ny,proj.dec0,proj.yscale,proj.ypix0);
     self.setDefaultProjection(proj);
+    dprint(3,"setting initial slice");
     self._setupSlice();
 

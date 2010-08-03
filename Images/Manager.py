@@ -86,6 +86,7 @@ class ImageManager (QWidget):
           return ic;
     # load the FITS image
     busy = BusyIndicator();
+    dprint(2,"reading FITS image",filename);
     self.showMessage("""Reading FITS image %s"""%filename,3000);
     QApplication.flush();
     try:
@@ -96,6 +97,7 @@ class ImageManager (QWidget):
         self.showErrorMessage("""Error loading FITS image %s: %s"""%(filename,str(sys.exc_info()[1])));
         return None;
     # create control bar, add to widget stack
+    dprint(2,"creating ImageController");
     ic = ImageController(image,self,self,name=(model and "model source '%s'"%model));
     self._imagecons.insert(0,ic);
     self._imagecon_loadorder.append(ic);
@@ -115,6 +117,7 @@ class ImageManager (QWidget):
     QObject.connect(ic.renderControl(),SIGNAL("displayRangeChanged"),self._currier.curry(self._updateDisplayRange,ic.renderControl()));
     self._plot = None;
     # add to menus
+    dprint(2,"repopulating menus");
     self._repopulateMenu();
     # center and raise to top of stack
     self.raiseImage(ic);
@@ -122,6 +125,7 @@ class ImageManager (QWidget):
     # signal
     self.emit(SIGNAL("imagesChanged"));
     self.showMessage("""Loaded FITS image %s"""%filename,3000);
+    dprint(2,"image loaded");
     return ic;
 
   def showMessage (self,message,time=None):
@@ -246,17 +250,16 @@ class ImageManager (QWidget):
       self._imagecons[0].setImageVisible(True);
     # update slice menus
     img = imagecon.image;
-    naxes = img.numExtraAxes();
+    axes = imagecon.renderControl().slicedAxes();
     for i,(next,prev) in enumerate(self._qa_slices):
       next.setVisible(False);
       prev.setVisible(False);
-      if i < naxes:
-        iaxis,name,labels = img.extraAxisNumberNameLabels(i);
-        if len(labels) > 1:
-          next.setVisible(True);
-          prev.setVisible(True);
-          next.setText("Show next slice along %s axis"%name);
-          prev.setText("Show previous slice along %s axis"%name);
+      if i < len(axes):
+        iaxis,name,labels = axes[i];
+        next.setVisible(True);
+        prev.setVisible(True);
+        next.setText("Show next slice along %s axis"%name);
+        prev.setText("Show previous slice along %s axis"%name);
     # emit signasl
     self.emit(SIGNAL("imageRaised"),img);
 

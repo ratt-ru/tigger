@@ -40,7 +40,9 @@ class RenderControl (QObject):
         self._sliced_axes.append((i,axisname,labels));
 
     # set the full image range (i.e. mix/max) and current slice range
+    dprint(2,"getting data min/max");
     self._fullrange = self._slicerange = image.dataMinMax()[:2];
+    dprint(2,"done");
     # create dict of intensity maps
     self._imap_list = (
       ( 'Linear',   Colormaps.LinearIntensityMap()    ),
@@ -139,9 +141,11 @@ class RenderControl (QObject):
     return self._displaydata,self._displaydata_minmax,self._displaydata_desc;
 
   def _resetDisplaySubset (self,subset,desc,range=None,set_display_range=True):
+    dprint(4,"setting display subset");
     self._displaydata = subset;
     self._displaydata_desc = desc;
     self._displaydata_minmax = range = range or measurements.extrema(subset)[:2];
+    dprint(4,"range set");
     self.image.intensityMap().setDataSubset(self._displaydata,minmax=range);
     self.image.setIntensityMap(emit=False);
     self.emit(SIGNAL("dataSubsetChanged"),subset,range,desc);

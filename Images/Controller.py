@@ -68,7 +68,9 @@ class ImageController (QFrame):
     self._wlabel.setToolTip("%s %s"%(image.filename,u"\u00D7".join(map(str,image.data().shape))));
     lo.addWidget(self._wlabel,1);
     # render control
+    dprint(2,"creating RenderControl");
     self._rc = RenderControl(image,self);
+    dprint(2,"done");
     # selectors for extra axes
     self._wslicers = [];
     for iextra,axisname,labels in self._rc. slicedAxes():

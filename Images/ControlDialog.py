@@ -511,10 +511,13 @@ class ImageControlDialog (QDialog):
     hmin0,hmax0 = dmin,dmax;
     if hmin0 >= hmax0:
       hmax0 = hmin0+1;
+    subset = self._subset;
+    if self.image.isDataInFortranOrder():
+      subset = numpy.ravel(subset,order='F');
     # compute full-subset hi-res histogram, if we don't have one (for percentile stats)
     if self._hist_hires is None:
       dprint(1,"computing histogram for full subset range",hmin0,hmax0);
-      self._hist_hires = measurements.histogram(self._subset,hmin0,hmax0,self.NumHistBinsHi);
+      self._hist_hires = measurements.histogram(subset,hmin0,hmax0,self.NumHistBinsHi);
       self._hist_bins_hires = hmin0 + (hmax0-hmin0)*(numpy.arange(self.NumHistBinsHi)+0.5)/float(self.NumHistBinsHi);
     # if hist limits not specified, then compute lo-res histogram based on the hi-res one
     if hmin is None:
@@ -528,7 +531,7 @@ class ImageControlDialog (QDialog):
       if hmin >= hmax:
         hmax = hmin+1;
       dprint(1,"computing histogram for",self._subset.shape,self._subset.dtype,hmin,hmax);
-      self._hist = measurements.histogram(self._subset,hmin,hmax,self.NumHistBins);
+      self._hist = measurements.histogram(subset,hmin,hmax,self.NumHistBins);
     dprint(1,"histogram computed");
     # compute bins
     self._itf_bins = hmin + (hmax-hmin)*(numpy.arange(self.NumItfBins))/(float(self.NumItfBins)-1);
