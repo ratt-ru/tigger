@@ -206,6 +206,7 @@ class ToolDialog (QDialog):
     qa.setToolTip("""<P>The quick zoom & cross-sections window shows a zoom of the current image area
       under the mose pointer, and X/Y cross-sections through that area.</P>""");
     QObject.connect(qa,SIGNAL("triggered(bool)"),self.setVisible);
+    self._closing = False;
     self._write_config = curry(Config.set,"%s-show"%configname);
     QObject.connect(qa,SIGNAL("triggered(bool)"),self._write_config);
     QObject.connect(self,SIGNAL("isVisible"),qa.setChecked);
@@ -234,6 +235,15 @@ class ToolDialog (QDialog):
     Config.set('%s-y0'%self._configname,self.pos().y());
     Config.set('%s-width'%self._configname,self.width());
     Config.set('%s-height'%self._configname,self.height());
+
+  def close (self):
+    self._closing = True;
+    QDialog.close(self);
+
+  def closeEvent (self,event):
+    QDialog.closeEvent(self,event);
+    if not self._closing:
+      self._write_config(False);
 
   def moveEvent (self,event):
     self._saveGeometry();
