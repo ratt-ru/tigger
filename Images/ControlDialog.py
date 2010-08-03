@@ -79,7 +79,8 @@ class ImageControlDialog (QDialog):
     self._wautozoom =QCheckBox("autozoom",self);
     self._wautozoom.setChecked(True);
     self._wlogy = QCheckBox("log Y",self);
-    self._ylogscale = False;
+    self._wlogy.setChecked(True);
+    self._ylogscale = True;
     QObject.connect(self._wlogy,SIGNAL("toggled(bool)"),self._setHistLogScale);
     self._whistunzoom = self.makeButton("",self._unzoomHistogram,icon=pixmaps.full_range.icon());
     self._whistzoomout= self.makeButton("-",self._currier.curry(self._zoomHistogramByFactor,math.sqrt(.1)));
