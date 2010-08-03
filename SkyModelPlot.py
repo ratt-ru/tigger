@@ -710,13 +710,14 @@ class SkyModelPlotter (QWidget):
         dprint(2,"plot canvas size is",self.plot().size());
         dprint(2,"zoom rects are",self._zoomrects);
         stack = map(self.adjustRect,self._zoomrects);
+        index = self.zoomRectIndex();
         if stack:
           zs = stack[0];
           self.plot().setAxisScale(QwtPlot.yLeft,zs.top(),zs.bottom());
           self.plot().setAxisScale(QwtPlot.xBottom,zs.right(),zs.left());
           QwtPlotZoomer.setZoomBase(self);
           dprint(2,"reset zoom base, zoom stack is now",self.zoomStack());
-        self.setZoomStack(stack,self.zoomRectIndex());
+        self.setZoomStack(stack,index);
         dprint(2,"setting zoom stack",stack);
         dprint(2,"zoom stack is now",self.zoomStack());
 
@@ -858,6 +859,7 @@ class SkyModelPlotter (QWidget):
     self._markers = {};
     self.model = None;
     self.projection = None;
+    self._zoomrect  = None;
     self._text_no_source = QwtText("");
     self._text_no_source.setColor(QColor("red"));
     # image controller
@@ -1091,6 +1093,7 @@ class SkyModelPlotter (QWidget):
 
   def _plotZoomed (self,rect):
     dprint(2,"zoomed to",rect);
+    self._zoomrect = rect;
     self._qa_unzoom.setEnabled(rect != self._zoomer.zoomBase());
 
   def _updateContents (self,what=SkyModel.UpdateAll,origin=None):
@@ -1159,6 +1162,14 @@ class SkyModelPlotter (QWidget):
     self.plot.setAxisScale(QwtPlot.xBottom,lmax,lmin);
     self.plot.axisScaleEngine(QwtPlot.xBottom).setAttribute(QwtScaleEngine.Inverted, True);
     self._zoomer.setZoomBase(zbase);
+    # if previously set zoom rect intersects the zoom base at all, try to restore it
+    if self._zoomrect and self._zoomrect.intersects(zbase):
+      rect = self._zoomrect.intersected(zbase);
+      dprint(2,"restoring zoomed area",rect);
+      self._zoomer.zoom(rect);
+      self._qa_unzoom.setEnabled(rect != zbase);
+    else:
+      self._qa_unzoom.setEnabled(False);
     dprint(5,"drawing grid");
     # add grid lines
     self._grid = [ QwtPlotCurve(),QwtPlotCurve() ];
@@ -1218,7 +1229,6 @@ class SkyModelPlotter (QWidget):
       dprint(5,"attaching images");
       self._imgman.attachImagesToPlot(self.plot);
     # update the plot
-    self._qa_unzoom.setEnabled(False);
     self.plot.replot();
 
   def setModel (self,model):
