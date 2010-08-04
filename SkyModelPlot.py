@@ -602,8 +602,9 @@ class SkyModelPlotter (QWidget):
   class Plot (QwtPlot):
     """Auguments QwtPlot with additional functions, including a cache of QPoints thatr's cleared whenever a plot layout is
     updated of the plot is zoomed""";
-    def __init__ (self,mainwin,*args):
-      QwtPlot.__init__(self,*args);
+    def __init__ (self,mainwin,skymodelplotter,parent):
+      QwtPlot.__init__(self,parent);
+      self._skymodelplotter = skymodelplotter;
       self.setAcceptDrops(True);
       self.clearCaches();
       self._mainwin = mainwin;
@@ -661,11 +662,15 @@ class SkyModelPlotter (QWidget):
       self.detachItems(QwtPlotItem.Rtti_PlotItem,False);
 
     def updateLayout (self):
-      dprint(5,"updateLayout");
-      self.clearCaches();
-      res = QwtPlot.updateLayout(self);
-      self.emit(SIGNAL("updateLayout"));
-      return res;
+      # if an update event is pending, skip our internal stuff
+      if self._skymodelplotter.isUpdatePending():
+        dprint(5,"updateLayout: ignoring, since a plot update is pending");
+        QwtPlot.updateLayout(self);
+      else:
+        dprint(5,"updateLayout");
+        self.clearCaches();
+        QwtPlot.updateLayout(self);
+        self.emit(SIGNAL("updateLayout"));
 
     def setDrawingKey (self,key=None):
       """Sets the current drawing key. If key is set to not None, then drawCanvas() will look in the draw cache
@@ -709,29 +714,31 @@ class SkyModelPlotter (QWidget):
       if self._fixed_aspect:
         dprint(2,"plot canvas size is",self.plot().size());
         dprint(2,"zoom rects are",self._zoomrects);
-        stack = map(self.adjustRect,self._zoomrects);
-        index = self.zoomRectIndex();
-        if stack:
-          zs = stack[0];
-          self.plot().setAxisScale(QwtPlot.yLeft,zs.top(),zs.bottom());
-          self.plot().setAxisScale(QwtPlot.xBottom,zs.right(),zs.left());
-          QwtPlotZoomer.setZoomBase(self);
-          dprint(2,"reset zoom base, zoom stack is now",self.zoomStack());
-        self.setZoomStack(stack,index);
-        dprint(2,"setting zoom stack",stack);
-        dprint(2,"zoom stack is now",self.zoomStack());
+        self._resetZoomStack(self.zoomRectIndex());
 
-    def setZoomBase (self,zbase):
-      QwtPlotZoomer.setZoomBase(self);
-      # init list of desired zoom rects
-      self._zoomrects = [ QRectF(zbase) ];
-      dprint(2,"zoom base is",self._zoomrects);
+    def setZoomStack (self,stack,index=0):
+      self._zoomrects = stack;
+      self._resetZoomStack(index);
+
+    def _resetZoomStack (self,index):
+      stack = map(self.adjustRect,self._zoomrects);
+      if stack:
+        zs = stack[index];
+        dprint(2,"resetting plot limits to",zs);
+        self.plot().setAxisScale(QwtPlot.yLeft,zs.top(),zs.bottom());
+        self.plot().setAxisScale(QwtPlot.xBottom,zs.right(),zs.left());
+        self.plot().axisScaleEngine(QwtPlot.xBottom).setAttribute(QwtScaleEngine.Inverted, True);
+        QwtPlotZoomer.setZoomBase(self);
+        dprint(2,"reset limits, zoom stack is now",self.zoomStack());
+      dprint(2,"setting zoom stack",stack,index);
+      QwtPlotZoomer.setZoomStack(self,stack,index);
+      dprint(2,"zoom stack is now",self.zoomStack());
 
     def adjustRect (self,rect):
       """Adjusts rectangle w.r.t. aspect ratio settings. That is, if a fixed aspect ratio is in effect, adjusts the rectangle to match
       the aspect ratio of the plot canvas. Returns adjusted version."""
       if self._fixed_aspect:
-        dprint(2,"adjusting zoom rect to canvas size:",self.canvas().size());
+        dprint(2,"adjusting rect to canvas size:",self.canvas().size(),rect);
         aspect0 = self.canvas().width()/float(self.canvas().height());
         aspect = rect.width()/float(rect.height());
         # increase rectangle, if needed to match the aspect
@@ -812,12 +819,19 @@ class SkyModelPlotter (QWidget):
 
   def __init__ (self,parent,mainwin,*args):
     QWidget.__init__(self,parent,*args);
+    # plot update logic -- handle updates via the event looop
+    self._updates_enabled = False;  # updates ignored until this is True
+    self._update_pending = 0;         # serial number of most recently posted update event
+    self._update_done = 0;             # serial number of most recently processed update event
+    self._update_what = 0;             # mask of updates ('what' arguments to _updateLayout) accumulated since last update was done
+    # create currier
     self._currier = PersistentCurrier();
+    # init widgetrycd
     lo = QHBoxLayout(self);
     lo.setSpacing(0);
     lo.setContentsMargins(0,0,0,0);
     self.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Expanding);
-    self.plot  = self.Plot(self,mainwin);
+    self.plot  = self.Plot(mainwin,self,self);
     self.plot.setAutoDelete(False);
     self.plot.setEnabled(False);
     self.plot.enableAxis(QwtPlot.yLeft,False);
@@ -863,7 +877,6 @@ class SkyModelPlotter (QWidget):
     self._text_no_source = QwtText("");
     self._text_no_source.setColor(QColor("red"));
     # image controller
-    self._updates_enabled = False;
     self._imgman = self._image = None;
     self._markers = {};
     self._source_lm = {};
@@ -928,7 +941,7 @@ class SkyModelPlotter (QWidget):
   def enableUpdates (self,enable=True):
     self._updates_enabled = enable;
     if enable:
-      self._updateContents();
+      self.postUpdateEvent();
 
   # extra flag for updateContents() -- used when image content or projection has changed
   UpdateImages = 1<<16;
@@ -938,7 +951,35 @@ class SkyModelPlotter (QWidget):
     self._imgman = im;
     im.setZ0(Z_Image);
     im.enableImageBorders(self._image_pen,self._grid_color,self._bg_brush);
-    QObject.connect(im,SIGNAL("imagesChanged"),self._currier.curry(self._updateContents,self.UpdateImages));
+    QObject.connect(im,SIGNAL("imagesChanged"),self._currier.curry(self.postUpdateEvent,self.UpdateImages));
+
+  class UpdateEvent (QEvent):
+    def __init__ (self,serial):
+      QEvent.__init__(self,QEvent.User);
+      self.serial = serial;
+
+  def isUpdatePending (self):
+    return self._update_pending > self._update_done;
+
+  def postUpdateEvent (self,what=SkyModel.UpdateAll,origin=None):
+    """Posts an update event. Since plot updates are somewhat expensive, and certain operations can cause multiple updates,
+    we handle them through the event loop."""
+    dprintf(3,"postUpdateEvent(what=%x,origin=%s)\n",what,origin);
+    self._update_what |= what;
+    self._update_pending += 1;
+    dprintf(3,"posting update event, serial %d, new mask %x\n",self._update_pending,self._update_what);
+    QCoreApplication.postEvent(self,self.UpdateEvent(self._update_pending));
+
+  def event (self,ev):
+    if isinstance(ev,self.UpdateEvent):
+      if ev.serial < self._update_pending:
+        dprintf(3,"ignoring update event %d since a more recent one is already posted\n",ev.serial);
+      else:
+        dprintf(3,"received update event %d, updating contents with mask %x\n",ev.serial,self._update_what);
+        self._updateContents(self._update_what);
+        self._update_what = 0;
+        self._update_done = ev.serial;
+    return QWidget.event(self,ev);
 
   def enableMouseMode (self,mode,enable=True):
     """Enables or disables the given mode.""";
@@ -1152,24 +1193,27 @@ class SkyModelPlotter (QWidget):
         extent[i][1] = max(extent[i][1],ext[i][1]);
     dprint(2,"plot extents for model & images",extent);
     (lmin,lmax),(mmin,mmax) = extent;
-    # adjust plot limits, if a fixed ratio is in effect. This also sets the zoom base.
+    # adjust plot limits, if a fixed ratio is in effect, and set the zoom base
     zbase = QRectF(QPointF(lmin,mmin),QPointF(lmax,mmax));
-    rect = self._zoomer.adjustRect(zbase);
-    lmin,lmax,mmin,mmax = rect.left(),rect.right(),rect.top(),rect.bottom();
-    dprint(2,"adjusted for aspect ratio",lmin,lmax,mmin,mmax);
+    zbase = self._zoomer.adjustRect(zbase);
+    zooms = [ zbase ];
+    dprint(2,"zoom base, adjusted for aspect:",zbase);
+    # zooms = [ self._zoomer.adjustRect(zbase) ];
+    # if previously set zoom rect intersects the zoom base at all, try to restore it
+    if self._zoomrect and self._zoomrect.intersects(zbase) and self._zoomrect != zbase:
+      rect = self._zoomer.adjustRect(self._zoomrect.intersected(zbase));
+      if rect != zbase:
+        dprint(2,"will restore zoomed area",rect);
+        zooms.append(rect);
+    self._qa_unzoom.setEnabled(len(zooms)>1);
+#    dprint(2,"adjusted for aspect ratio",lmin,lmax,mmin,mmax);
     # reset plot limits   -- X axis inverted (L increases to left)
+    lmin,lmax,mmin,mmax = zbase.left(),zbase.right(),zbase.top(),zbase.bottom();
     self.plot.setAxisScale(QwtPlot.yLeft,mmin,mmax);
     self.plot.setAxisScale(QwtPlot.xBottom,lmax,lmin);
     self.plot.axisScaleEngine(QwtPlot.xBottom).setAttribute(QwtScaleEngine.Inverted, True);
-    self._zoomer.setZoomBase(zbase);
-    # if previously set zoom rect intersects the zoom base at all, try to restore it
-    if self._zoomrect and self._zoomrect.intersects(zbase):
-      rect = self._zoomrect.intersected(zbase);
-      dprint(2,"restoring zoomed area",rect);
-      self._zoomer.zoom(rect);
-      self._qa_unzoom.setEnabled(rect != zbase);
-    else:
-      self._qa_unzoom.setEnabled(False);
+#    dprint(2,"setting zoom base",zbase);
+#    self._zoomer.setZoomBase(zbase);
     dprint(5,"drawing grid");
     # add grid lines
     self._grid = [ QwtPlotCurve(),QwtPlotCurve() ];
@@ -1228,8 +1272,10 @@ class SkyModelPlotter (QWidget):
     if self._imgman:
       dprint(5,"attaching images");
       self._imgman.attachImagesToPlot(self.plot);
-    # update the plot
-    self.plot.replot();
+    # update the PlotZoomer with our set of zooms. This implictly causes a plot update
+    dprint(5,"updating zoomer");
+    self._zoomer.setZoomStack(zooms,len(zooms)-1);
+    # self.plot.replot();
 
   def setModel (self,model):
     self._source_lm = {};
@@ -1238,12 +1284,12 @@ class SkyModelPlotter (QWidget):
     dprint(2,"setModel",model);
     if model :
       # connect signals
-      self.model.connect("updated",self._updateContents);
+      self.model.connect("updated",self.postUpdateEvent);
       self.model.connect("selected",self.updateModelSelection);
       self.model.connect("changeCurrentSource",self.setCurrentSource);
       self.model.connect("changeGroupingStyle",self.changeGroupingStyle);
     # update plot
-    self._updateContents(SkyModel.UpdateAll);
+    self.postUpdateEvent(SkyModel.UpdateAll);
 
   def _exportPlotToPNG (self,filename=None):
     if not filename:
