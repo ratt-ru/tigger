@@ -8,7 +8,7 @@ from PyQt4.Qt import *
 
 class FloatValidator (QValidator):
   """QLineEdit validator for float items in standard or scientific notation""";
-  re_intermediate = re.compile("^([0-9]*)\.?([0-9]*)[eE]([+-])?$");
+  re_intermediate = re.compile("^-?([0-9]*)\.?([0-9]*)([eE]([+-])?[0-9]*)?$");
   def validate (self,input,pos):
     input = str(input);
     try:
@@ -16,7 +16,7 @@ class FloatValidator (QValidator):
       return QValidator.Acceptable,pos;
     except:
       pass;
-    if self.re_intermediate.match(input):
+    if not input or self.re_intermediate.match(input):
       return QValidator.Intermediate,pos;
     return QValidator.Invalid,pos;
 
