@@ -1134,7 +1134,7 @@ class SkyModelPlotter (QWidget):
 
   def _plotZoomed (self,rect):
     dprint(2,"zoomed to",rect);
-    self._zoomrect = rect;
+    self._zoomrect = QRectF(rect); # make copy
     self._qa_unzoom.setEnabled(rect != self._zoomer.zoomBase());
 
   def _updateContents (self,what=SkyModel.UpdateAll,origin=None):
