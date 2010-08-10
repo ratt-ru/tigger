@@ -32,10 +32,21 @@ def saveModel (filename,model):
     fobj.write(model.renderAttrMarkup('plotstyles',model.plotstyles,tags=['A','TR\n','TD'],verbose=""));
     fobj.write("""</TABLE>\n""");
   # other attributes
+  fobj.write("\n");
   fobj.write("""<H1>Other properties</H1>\n""");
   if model.pbexp is not None:
+    fobj.write("<P>");
     fobj.write(model.renderAttrMarkup('pbexp',model.pbexp,tags='A',verbose="Primary beam expression: "));
-    fobj.write("\n");
+    fobj.write("</P>\n");
+  if model.freq0 is not None:
+    fobj.write("<P>");
+    fobj.write(model.renderAttrMarkup('freq0',model.freq0,tags='A',verbose="Reference frequency, Hz: "));
+    fobj.write("</P>\n");
+  if model.ra0 is not None or model.dec0 is not None:
+    fobj.write("<P>");
+    fobj.write(model.renderAttrMarkup('ra0',model.ra0,tags='A',verbose="Field centre ra: "));
+    fobj.write(model.renderAttrMarkup('dec0',model.dec0,tags='A',verbose="dec: "));
+    fobj.write("</P>\n");
   fobj.write("""</BODY></HTML>\n""");
 
 def loadModel (filename):

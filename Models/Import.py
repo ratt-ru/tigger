@@ -10,6 +10,8 @@ import  numpy
 import ModelClasses
 import SkyModel
 
+from Tigger import Coordinates
+
 _verbosity = Kittens.utils.verbosity(name="lsmimport");
 dprint = _verbosity.dprint;
 dprintf = _verbosity.dprintf;
@@ -24,9 +26,43 @@ DefaultDMSFormat = dict(name=0,
     i=7,q=8,u=9,v=10,spi=11,rm=12,ex=13,ey=14,pa=15,
     freq0=16,tags=slice(17,None));
 
-def importASCII_DMS (filename,format=DefaultDMSFormat,freq0=None):
+DefaultDMSFormatString = "name ra_h ra_m ra_s dec_d dec_m dec_s i q u v spi rm ex ey pa freq0 tags...";
+
+def importASCII_DMS (filename,format=None,freq0=None,center_on_brightest=True,min_extent=0):
+  """Imports an ASCII file specified in DMS format.
+  The 'format' argument can be either a dict (such as the DefaultDMSFormat dict above), or a string such as DefaultDMSFormatString.
+  If None is specified, DefaultDMSFormat is used.
+  The 'freq0' argument supplies a default reference frequency (if one is not contained in the file.)
+  If 'center_on_brightest' is True, the mpodel field center will be set to the brightest source.
+  'min_extent' is minimal source extent (in radians), above which a source will be treated as a Gaussian rather than a point component.
+  """
   srclist = [];
-  dprint(2,"importing ASCII DMS file",filename);
+  dprint(1,"importing ASCII DMS file",filename);
+  # read file
+  lines = list(enumerate(file(filename)));
+  if not lines:
+    return ModelClasses.SkyModel([]);
+  # is there a format string in the file?
+  line0 = lines[0][1].strip();
+  if line0.startswith("#format:"):
+    format = line0[len("#format:"):];
+    dprint(1,"file contains format header:",format);
+  # set default format
+  if format is None:
+    format = DefaultDMSFormatString;
+  # is the format a string rather than a dict? Turn it into a dict then
+  if isinstance(format,str):
+    # make list of fieldname,fieldnumber tuples
+    fields = [ (field,i) for i,field in enumerate(format.split()) ];
+    if not fields:
+      raise ValueError,"illegal format string in file: '%s'"%format;
+    # last fieldname can end with ... to indicate that it absorbs the rest of the line
+    if fields[-1][0].endswith('...'):
+      fields[-1] = (fields[-1][0][:-3],slice(fields[-1][1],None));
+    # make format dict
+    format = dict(fields);
+  elif not isinstance(format,dict):
+    raise TypeError,"invalid 'format' argument of type %s"%(type(format))
   # get minimum necessary fields from format
   try:
     base_fields = [ format[x] for x in ['name','ra_h','ra_m','ra_s','dec_d','dec_m','dec_s','i'] ];
@@ -47,8 +83,12 @@ def importASCII_DMS (filename,format=DefaultDMSFormat,freq0=None):
   spi_field = format.get('spi',None);
   tags_slice = format.get('tags',None);
 
+  # brightest source and its coordinates
+  maxbright = 0;
+  brightest_name = radec0 = None;
+
   # now process file line-by-line
-  for linenum,line in enumerate(file(filename)):
+  for linenum,line in lines:
     try:
       # strip whitespace
       line = line.strip();
@@ -62,6 +102,7 @@ def importASCII_DMS (filename,format=DefaultDMSFormat,freq0=None):
       name = fields[base_fields[0]];
       try:
         h1,m1,s1,d2,m2,s2,i = map(float,[fields[x] for x in base_fields[1:]]);
+        dsign = -1 if fields[format['dec_d']][0] == '-' else -1;
       except IndexError:
         raise ValueError,"mandatory name/position/flux fields missing";
       # see if we have freq0
@@ -69,6 +110,9 @@ def importASCII_DMS (filename,format=DefaultDMSFormat,freq0=None):
         f0 = freq0 or (freq0_field and float(fields[freq0_field]));
       except IndexError:
         f0 = None;
+      # set model refrence frequency
+      if f0 is not None and freq0 is None:
+        freq0 = f0;
       # see if we have Q/U/V
       q=u=v=None;
       if quv_fields:
@@ -89,14 +133,14 @@ def importASCII_DMS (filename,format=DefaultDMSFormat,freq0=None):
       else:
         spectrum = ModelClasses.SpectralIndex(float(fields[spi_field]),f0);
       # see if we have extent parameters
-      ex=ey=pa=None;
+      ex=ey=pa=0;
       if ext_fields:
         try:
           ex,ey,pa = map(float,[fields[x] for x in ext_fields]);
         except IndexError:
           pass;
       # form up shape object
-      if ex or ey:
+      if (ex or ey) and max(ex,ey) >= min_extent:
         shape = ModelClasses.Gaussian(ex,ey,pa);
       else:
         shape = None;
@@ -110,15 +154,35 @@ def importASCII_DMS (filename,format=DefaultDMSFormat,freq0=None):
       # OK, now form up the source object
       # position
       ra  = (h1+m1/60.+s1/3600.)*(math.pi/12);
-      dec = (d2+m2/60.+s2/3600.)*(math.pi/180);
+      dec = (d2+dsign*(m2/60.+s2/3600.))*(math.pi/180);
       pos = ModelClasses.Position(ra,dec);
       # now create a source object
       dprint(3,name,ra,dec,i,q,u,v);
-      srclist.append(SkyModel.Source(name,pos,flux,shape=shape,spectrum=spectrum,**dict([(tag,True) for tag in tags])));
+      src = SkyModel.Source(name,pos,flux,shape=shape,spectrum=spectrum,**dict([(tag,True) for tag in tags]));
+      srclist.append(src);
+      # check if it's the brightest
+      brightness = src.brightness();
+      if brightness > maxbright:
+        maxbright = brightness;
+        brightest_name = src.name;
+        radec0 = ra,dec;
     except:
       dprintf(0,"%s:%d: %s, skipping\n",filename,linenum+1,str(sys.exc_info()[1]));
   dprintf(2,"imported %d sources from file %s\n",len(srclist),filename);
-  return ModelClasses.SkyModel(*srclist);
+  # create model
+  model = ModelClasses.SkyModel(*srclist);
+  if freq0 is not None:
+    model.setRefFreq(freq0);
+  # setup model center
+  if center_on_brightest and radec0:
+    dprintf(2,"brightest source is %s (%g Jy) at %f,%f\n",brightest_name,maxbright,*radec0);
+    model.setFieldCenter(*radec0);
+  # setup radial distances
+  projection = Coordinates.Projection.SinWCS(*model.fieldCenter());
+  for src in model.sources:
+    l,m = projection.lm(src.pos.ra,src.pos.dec);
+    src.setAttribute('r',math.sqrt(l*l+m*m));
+  return model;
 
 registerFormat("text file (hms/dms)",importASCII_DMS,extensions="*.txt");
 
@@ -143,8 +207,9 @@ def lm_ncp_to_radec(ra0,dec0,l,m):
   return (ra,dec)
 
 
-def importNEWSTAR (filename,import_src=True,import_cc=True,**kw):
+def importNEWSTAR (filename,import_src=True,import_cc=True,min_extent=0,**kw):
   """Imports a NEWSTAR MDL file.
+  'min_extent' is minimal source extent (in radians), above which a source will be treated as a Gaussian rather than a point component.
   """
   srclist = [];
   dprint(2,"importing NEWSTAR file",filename);
@@ -303,7 +368,7 @@ def importNEWSTAR (filename,import_src=True,import_cc=True,**kw):
     if fl_cc:
       tags['newstar_cc'] = True;
     # make shape if extended
-    if fl_ext:
+    if fl_ext and max(eX,eY) >= min_extent:
       shape = ModelClasses.Gaussian(eX,eY,eP);
     else:
       shape = None;

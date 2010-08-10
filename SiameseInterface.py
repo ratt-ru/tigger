@@ -92,7 +92,7 @@ class TiggerSkyModel (object):
         if spec:
           # if first spec is a negation, then implictly select all sources first
           if not ispec and spec[0] == "-":
-              srcs = all;
+            srcs = all;
           if spec == "all":
             srcs = all;
           elif spec.startswith("="):
@@ -101,6 +101,9 @@ class TiggerSkyModel (object):
             srcs.difference_update([ src.name for src in sources if getattr(src,spec[2:],False) ]);
           elif spec.startswith("-"):
             srcs.discard(spec[1:]);
+          else:
+            srcs.add(spec);
+
       # make list
       sources = [ src for src in sources if src.name in srcs ];
 

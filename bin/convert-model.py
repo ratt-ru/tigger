@@ -11,37 +11,14 @@ import numpy
 
 DEG = math.pi/180;
 
+NATIVE = "Tigger";
 
 if __name__ == '__main__':
-  # setup some standard command-line option parsing
-  #
-  from optparse import OptionParser
-  parser = OptionParser(usage="""%prog: sky_model [output_model]""",
-                        description="""Converts sky models between formats and/or applies varipous processing options.
-Input 'sky_model' may be any model format importable by Tigger, recognized by its extension. 'output_model' is always a native
-Tigger model. If an output model is not specfied, the conversion is done in-place if the input model is a Tigger model (-f switch
-must be specified then), or else a new filename is generated.""");
-  parser.add_option("-f","--force",action="store_true",
-                    help="Forces overwrite of output model.");
-  parser.add_option("--app-to-int",action="store_true",
-                    help="Convert apparent fluxes to intrinsic. Only works for NEWSTAR or NEWSTAR-derived input models.");
-  parser.add_option("--cluster-dist",type="float",metavar="ARCSEC",
-                    help="Distance parameter for source clustering. Default is %default.");
-  parser.add_option("--rename",action="store_true",
-                    help="Rename sources according to the COPART (cluster ordering, P.A., radius, type) scheme""");
-
-  parser.set_defaults(cluster_dist=60);
-
-  (options,rem_args) = parser.parse_args();
-
-  # get filenames
-  if len(rem_args) == 1:
-    skymodel = rem_args[0];
-    output = None;
-  elif len(rem_args) == 2:
-    skymodel,output = rem_args;
-  else:
-    parser.error("Incorrect number of arguments. Use -h for help.");
+  import Kittens.utils
+  from Kittens.utils import curry
+  _verbosity = Kittens.utils.verbosity(name="convert-model");
+  dprint = _verbosity.dprint;
+  dprintf = _verbosity.dprintf;
 
   # find Tigger
   try:
@@ -56,23 +33,82 @@ must be specified then), or else a new filename is generated.""");
   from Tigger.Models import Import,ModelHTML
   from Tigger import Coordinates
 
+  # setup some standard command-line option parsing
+  #
+  from optparse import OptionParser
+  parser = OptionParser(usage="""%prog: sky_model [output_model]""",
+                        description="""Converts sky models into Tigger format and/or applies various processing options.
+Input 'sky_model' may be any model format importable by Tigger, recognized by extension, or explicitly specified on the command line.
+'output_model' is always a native Tigger model. If an output model is not specfied, the conversion is done in-place if the input model is a Tigger model (-f switch
+must be specified to allow overwriting), or else a new filename is generated.""");
+  parser.add_option("-f","--force",action="store_true",
+                    help="Forces overwrite of output model.");
+  parser.add_option("--newstar",action="store_true",
+                    help="Input is a NEWSTAR model.");
+  parser.add_option("--dms",action="store_true",
+                    help="Input is a DMS ASCII file.");
+  parser.add_option("--format",type="string",
+                    help="""Format string, for ASCII files. Default is "%default".""");
+  parser.add_option("--tigger",action="store_true",
+                    help="Input is a Tigger model.");
+  parser.add_option("--app-to-int",action="store_true",
+                    help="Convert apparent fluxes in input model to intrinsic. Only works for NEWSTAR or NEWSTAR-derived input models.");
+  parser.add_option("--ref-freq",type="float",metavar="MHz",
+                    help="Set or change the reference frequency of the model.");
+  parser.add_option("--primary-beam",type="string",metavar="EXPR",
+                    help="""Apply a primary beam expression to estimate apparent fluxes. Any valid Python expression using the variables 'r' and 'fq' is accepted.
+                    Example (for the WSRT-like 25m dish PB): "cos(min(65*fq*1e-9*r,1.0881))**6".""");
+  parser.add_option("--min-extent",type="float",metavar="ARCSEC",
+                    help="Minimal source extent, when importing NEWSTAR or ASCII DMS files. Sources with a smaller extent will be treated as point sources. Default is %default.");
+  parser.add_option("--cluster-dist",type="float",metavar="ARCSEC",
+                    help="Distance parameter for source clustering. Default is %default.");
+  parser.add_option("--rename",action="store_true",
+                    help="Rename sources according to the COPART (cluster ordering, P.A., radial distance, type) scheme");
+  parser.add_option("--radial-step",type="float",metavar="ARCMIN",
+                    help="Size of one step in radial distance for the COPART scheme. Default is %default'.");
+  parser.add_option("-d", "--debug",dest="verbose",type="string",action="append",metavar="Context=Level",
+                    help="(for debugging Python code) sets verbosity level of the named Python context. May be used multiple times.");
+
+  parser.set_defaults(cluster_dist=60,min_extent=0,format=Import.DefaultDMSFormatString,radial_step=10,ref_freq=-1);
+
+  (options,rem_args) = parser.parse_args();
+  min_extent = (options.min_extent/3600)*DEG;
+
+  # get filenames
+  if len(rem_args) == 1:
+    skymodel = rem_args[0];
+    output = None;
+  elif len(rem_args) == 2:
+    skymodel,output = rem_args;
+  else:
+    parser.error("Incorrect number of arguments. Use -h for help.");
+
   # figure out input and output
   skymodel_name,ext = os.path.splitext(skymodel);
-  if ext.upper() == '.MDL':
-    loadfunc,format = Import.importNEWSTAR,"NEWSTAR";
+  # input format is either explicit, or determined by extension
+  if options.newstar:
+    loadfunc,format = curry(Import.importNEWSTAR,min_extent=min_extent),"NEWSTAR";
+  elif options.dms:
+    loadfunc,format = curry(Import.importASCII_DMS,min_extent=min_extent,format=options.format),"ASCII DMS";
+  elif options.tigger:
+    loadfunc,format = ModelHTML.loadModel,NATIVE;
+  elif ext.upper() == '.MDL':
+    loadfunc,format = curry(Import.importNEWSTAR,min_extent=min_extent),"NEWSTAR";
+  elif ext.upper() in (".TXT",".LSM"):
+    loadfunc,format = curry(Import.importASCII_DMS,min_extent=min_extent,format=options.format),"ASCII DMS";
   else:
-    loadfunc,format = ModelHTML.loadModel,"native";
+    loadfunc,format = ModelHTML.loadModel,NATIVE;
 
-  print "Reading %s as a %s format model"%(skymodel,format);
+  print "Reading %s as a model of type '%s'"%(skymodel,format);
   # nothing to do?
-  if format is "native":
+  if format is NATIVE:
     if options.rename and not options.app_to_int:
-      print "Native input format is same as output, and no conversion flags specified.";
+      print "Input format is same as output, and no conversion flags specified.";
       sys.exit(1);
 
   # figure out output name, if not specified
   if output is None:
-    if format is "native":
+    if format is NATIVE:
       output = skymodel;
     else:
       output = skymodel_name + "." + ModelHTML.DefaultExtension;
@@ -108,6 +144,38 @@ must be specified then), or else a new filename is generated.""");
     print "Converted apparent to intrinsic flux for %d model sources"%nsrc;
     if len(model.sources) != nsrc:
       print "  (%d sources were skipped for whatever reason.)"%(len(model.sources)-nsrc);
+
+  # set refrence frequency
+  if options.ref_freq >= 0:
+    model.setRefFreq(options.ref_freq*1e+6);
+    print "Set reference frequency to %f MHz"%options.ref_freq;
+
+  # set PB expression and estimate apparent fluxes
+  if options.primary_beam:
+    try:
+      from math import *
+      pbexp = eval('lambda r,fq:'+options.primary_beam);
+      dum = pbexp(0,1e+9); # evaluate at r=0 and 1 GHz as a test
+      if not isinstance(dum,float):
+        raise TypeError,"does not evaluate to a float";
+    except Exception,exc:
+      print "Bad primary beam expression '%s': %s"%(options.primary_beam,str(exc));
+      sys.exit(1);
+    # get frequency
+    fq = model.refFreq() or 1.4e+9;
+    nsrc = 0;
+    print "Using beam expression '%s' with reference frequency %f MHz"%(options.primary_beam,fq*1e-6);
+    # evaluate sources
+    for src in model.sources:
+      r = getattr(src,'r',None);
+      if r is not None:
+        bg = pbexp(r,fq);
+        src.setAttribute('beamgain',bg);
+        src.setAttribute('Iapp',src.flux.I*bg);
+        nsrc += 1;
+    print "Applied primary beam expression to %d model sources"%nsrc;
+    if len(model.sources) != nsrc:
+      print "  (%d sources were skipped for whatever reason, probably they didn't have an 'r' attribute)"%(len(model.sources)-nsrc);
 
   if options.rename:
     print "Renaming sources using the COPART convention"
@@ -157,16 +225,21 @@ must be specified then), or else a new filename is generated.""");
       iclust,rank = cluster[i];
       # for up name of cluster based on rank-0 source
       if not rank:
-        # lookup radius, in units of 10'. 'x' means >=100'
-        rad = min(int(math.sqrt(l[i]**2+m[i]**2)*(60/DEG)/10),10);
+        # lookup radius, in units of arcmin
+        rad_min = math.sqrt(l[i]**2+m[i]**2)*(60/DEG);
+        # divide by radial step
+        rad = min(int(rad_min/options.radial_step),10);
         radchr = '0123456789x'[rad];
-        # convert p.a. to tens of degrees
-        pa = math.atan2(l[i],m[i]);
-        if pa < 0:
-          pa += math.pi*2;
-        pa = round(pa/(DEG*10))%36;
-        # make clustername
-        clusname = clustername[iclust] = "%s%02d%s"%(Names[iclust],pa,radchr);
+        if rad_min > options.radial_step*0.01:
+          # convert p.a. to tens of degrees
+          pa = math.atan2(l[i],m[i]);
+          if pa < 0:
+            pa += math.pi*2;
+          pa = round(pa/(DEG*10))%36;
+          # make clustername
+          clusname = clustername[iclust] = "%s%02d%s"%(Names[iclust],pa,radchr);
+        else:
+          clusname = clustername[iclust] = "%s0"%(Names[iclust]);
         src.name = "%s%s"%(clusname,typecodes.get(src.typecode,''));
         src.setAttribute('cluster_lead',True);
       else:

@@ -101,7 +101,7 @@ class Source (ModelItem):
 Source.registerClass();
 
 class SkyModel (ModelItem):
-  optional_attrs   = dict(name=None,plotstyles={},pbexp=None,ra0=None,dec0=None);
+  optional_attrs   = dict(name=None,plotstyles={},pbexp=None,ra0=None,dec0=None,freq0=None);
 
   def __init__ (self,*sources,**kws):
     ModelItem.__init__(self,**kws);
@@ -298,12 +298,16 @@ class SkyModel (ModelItem):
     return True;
 
   def setFieldCenter (self,ra0,dec0):
-    self.ra0 = ra0;
-    self.dec0 = dec0;
+    self.ra0,self.dec0 = ra0,dec0;
 
   def setPrimaryBeam (self,pbexp):
     self.pbexp = pbexp;
-    # eval("lambda r,fq:"+self.beam_expr);
+
+  def setRefFreq (self,freq0):
+    self.freq0 = freq0;
+
+  def refFreq (self):
+    return self.freq0;
 
   def fieldCenter (self):
     """Returns center of field. If this is not explicitly specified in the model, uses the average position of all sources.""";

@@ -413,7 +413,6 @@ class FITSImagePlotItem (SkyCubePlotItem):
     ff = pyfits.open(filename);
     ff[0].verify('silentfix');
     hdr = ff[0].header;
-    # copying transposed data (thus into C order) somehow speeds up all subsequent operations
     dprint(3,"reading data");
     data = ff[0].data;
     # NB: all-data operations (such as getting global min/max or computing of histograms) are much faster (almost x2) when data is iterated
