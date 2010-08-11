@@ -690,6 +690,7 @@ class SkyModelPlotter (QWidget):
   class PlotZoomer (QwtPlotZoomer):
     def __init__(self,canvas,track_callback=None,label=None):
       QwtPlotZoomer.__init__(self, canvas);
+      self.setMaxStackDepth(1000);
       self._track_callback = track_callback;
       if label:
         self._label = QwtText(label);
@@ -732,7 +733,7 @@ class SkyModelPlotter (QWidget):
         dprint(2,"reset limits, zoom stack is now",self.zoomStack());
       dprint(2,"setting zoom stack",stack,index);
       QwtPlotZoomer.setZoomStack(self,stack,index);
-      dprint(2,"zoom stack is now",self.zoomStack());
+      dprint(2,"zoom stack is now",self.zoomStack(),self.maxStackDepth());
 
     def adjustRect (self,rect):
       """Adjusts rectangle w.r.t. aspect ratio settings. That is, if a fixed aspect ratio is in effect, adjusts the rectangle to match
@@ -1049,9 +1050,10 @@ class SkyModelPlotter (QWidget):
     ra,dec = self.projection.radec(l,m);
     rh,rm,rs = ModelClasses.Position.ra_hms_static(ra);
     dd,dm,ds = ModelClasses.Position.dec_dms_static(dec);
+    Rd,Rm,Rs = ModelClasses.Position.dec_dms_static(math.sqrt(l*l+m*m));
 #    text = "<P align=\"right\">%2dh%02dm%05.2fs %+2d&deg;%02d'%05.2f\""%(rh,rm,rs,dd,dm,ds);
     # emit message as well
-    msgtext = u"%2dh%02dm%05.2fs %+2d\u00B0%02d'%05.2f\""%(rh,rm,rs,dd,dm,ds);
+    msgtext = u"%2dh%02dm%05.2fs %+2d\u00B0%02d'%05.2f\"  l=%g m=%g r=%d\u00B0%02d'%05.2f\""%(rh,rm,rs,dd,dm,ds,l,m,Rd,Rm,Rs);
     # if we have an image, add pixel coordinates
     image = self._imgman and self._imgman.getTopImage();
     if image:
@@ -1195,23 +1197,25 @@ class SkyModelPlotter (QWidget):
     (lmin,lmax),(mmin,mmax) = extent;
     # adjust plot limits, if a fixed ratio is in effect, and set the zoom base
     zbase = QRectF(QPointF(lmin,mmin),QPointF(lmax,mmax));
-    zbase = self._zoomer.adjustRect(zbase);
+#    zbase = self._zoomer.adjustRect(zbase);
     zooms = [ zbase ];
     dprint(2,"zoom base, adjusted for aspect:",zbase);
     # zooms = [ self._zoomer.adjustRect(zbase) ];
-    # if previously set zoom rect intersects the zoom base at all, try to restore it
-    if self._zoomrect and self._zoomrect.intersects(zbase) and self._zoomrect != zbase:
-      rect = self._zoomer.adjustRect(self._zoomrect.intersected(zbase));
+    # if previously set zoom rect intersects the zoom base at all (and is not a superset), try to restore it
+    dprint(2,"previous zoom area:",self._zoomrect);
+    if self._zoomrect and self._zoomrect.intersects(zbase):
+      rect = self._zoomrect.intersected(zbase);
+#      rect = self._zoomer.adjustRect(self._zoomrect.intersected(zbase));
       if rect != zbase:
         dprint(2,"will restore zoomed area",rect);
         zooms.append(rect);
     self._qa_unzoom.setEnabled(len(zooms)>1);
 #    dprint(2,"adjusted for aspect ratio",lmin,lmax,mmin,mmax);
     # reset plot limits   -- X axis inverted (L increases to left)
-    lmin,lmax,mmin,mmax = zbase.left(),zbase.right(),zbase.top(),zbase.bottom();
-    self.plot.setAxisScale(QwtPlot.yLeft,mmin,mmax);
-    self.plot.setAxisScale(QwtPlot.xBottom,lmax,lmin);
-    self.plot.axisScaleEngine(QwtPlot.xBottom).setAttribute(QwtScaleEngine.Inverted, True);
+#    lmin,lmax,mmin,mmax = zbase.left(),zbase.right(),zbase.top(),zbase.bottom();
+#    self.plot.setAxisScale(QwtPlot.yLeft,mmin,mmax);
+#    self.plot.setAxisScale(QwtPlot.xBottom,lmax,lmin);
+#    self.plot.axisScaleEngine(QwtPlot.xBottom).setAttribute(QwtScaleEngine.Inverted, True);
 #    dprint(2,"setting zoom base",zbase);
 #    self._zoomer.setZoomBase(zbase);
     dprint(5,"drawing grid");

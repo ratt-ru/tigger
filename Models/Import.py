@@ -102,7 +102,7 @@ def importASCII_DMS (filename,format=None,freq0=None,center_on_brightest=True,mi
       name = fields[base_fields[0]];
       try:
         h1,m1,s1,d2,m2,s2,i = map(float,[fields[x] for x in base_fields[1:]]);
-        dsign = -1 if fields[format['dec_d']][0] == '-' else -1;
+        dsign = -1 if fields[format['dec_d']][0] == '-' else 1;
       except IndexError:
         raise ValueError,"mandatory name/position/flux fields missing";
       # see if we have freq0
