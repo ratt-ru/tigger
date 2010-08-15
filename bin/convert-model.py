@@ -45,10 +45,10 @@ must be specified to allow overwriting), or else a new filename is generated."""
                     help="Forces overwrite of output model.");
   parser.add_option("--newstar",action="store_true",
                     help="Input is a NEWSTAR model.");
-  parser.add_option("--dms",action="store_true",
-                    help="Input is a DMS ASCII file.");
+  parser.add_option("--text",action="store_true",
+                    help="Input is an ASCII text table.");
   parser.add_option("--format",type="string",
-                    help="""Format string, for ASCII files. Default is "%default".""");
+                    help="""Format string, for text tables. Default is "%default".""");
   parser.add_option("--tigger",action="store_true",
                     help="Input is a Tigger model.");
   parser.add_option("--app-to-int",action="store_true",
@@ -87,17 +87,17 @@ must be specified to allow overwriting), or else a new filename is generated."""
   skymodel_name,ext = os.path.splitext(skymodel);
   # input format is either explicit, or determined by extension
   if options.newstar:
-    loadfunc,format = curry(Import.importNEWSTAR,min_extent=min_extent),"NEWSTAR";
-  elif options.dms:
-    loadfunc,format = curry(Import.importASCII_DMS,min_extent=min_extent,format=options.format),"ASCII DMS";
+    loadfunc,kws,format = Import.importNEWSTAR,dict(min_extent=min_extent),"NEWSTAR";
+  elif options.text:
+    loadfunc,kws,format = Import.importASCII,dict(min_extent=min_extent,format=options.format),"ASCII";
   elif options.tigger:
-    loadfunc,format = ModelHTML.loadModel,NATIVE;
+    loadfunc,kws,format = ModelHTML.loadModel,{},NATIVE;
   elif ext.upper() == '.MDL':
-    loadfunc,format = curry(Import.importNEWSTAR,min_extent=min_extent),"NEWSTAR";
+    loadfunc,kws,format = Import.importNEWSTAR,dict(min_extent=min_extent),"NEWSTAR";
   elif ext.upper() in (".TXT",".LSM"):
-    loadfunc,format = curry(Import.importASCII_DMS,min_extent=min_extent,format=options.format),"ASCII DMS";
+    loadfunc,kws,format = Import.importASCII,dict(min_extent=min_extent,format=options.format),"ASCII";
   else:
-    loadfunc,format = ModelHTML.loadModel,NATIVE;
+    loadfunc,kws,format = ModelHTML.loadModel,{},NATIVE;
 
   print "Reading %s as a model of type '%s'"%(skymodel,format);
   # nothing to do?
@@ -123,10 +123,11 @@ must be specified to allow overwriting), or else a new filename is generated."""
     sys.exit(1);
 
   # load the model
-  model = loadfunc(skymodel);
+  model = loadfunc(skymodel,**kws);
   if not model.sources:
-    print "Input model %s contains no sources."%skymodel;
+    print "Input model %s contains no sources"%skymodel;
     sys.exit(1);
+  print "Model contains %d sources"%len(model.sources);
 
   # convert apparent flux to intrinsic
   if options.app_to_int:

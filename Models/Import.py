@@ -28,9 +28,10 @@ DefaultDMSFormat = dict(name=0,
 
 DefaultDMSFormatString = "name ra_h ra_m ra_s dec_d dec_m dec_s i q u v spi rm ex ey pa freq0 tags...";
 
-def importASCII_DMS (filename,format=None,freq0=None,center_on_brightest=True,min_extent=0):
-  """Imports an ASCII file specified in DMS format.
+def importASCII (filename,format=None,freq0=None,center_on_brightest=True,min_extent=0):
+  """Imports an ASCII table
   The 'format' argument can be either a dict (such as the DefaultDMSFormat dict above), or a string such as DefaultDMSFormatString.
+  (Other possible field names are "ra_d", "ra_rad", "dec_rad", "dec_sign".)
   If None is specified, DefaultDMSFormat is used.
   The 'freq0' argument supplies a default reference frequency (if one is not contained in the file.)
   If 'center_on_brightest' is True, the mpodel field center will be set to the brightest source.
@@ -64,10 +65,28 @@ def importASCII_DMS (filename,format=None,freq0=None,center_on_brightest=True,mi
   elif not isinstance(format,dict):
     raise TypeError,"invalid 'format' argument of type %s"%(type(format))
   # get minimum necessary fields from format
+  name_field = format.get('name',None);
+  # flux
   try:
-    base_fields = [ format[x] for x in ['name','ra_h','ra_m','ra_s','dec_d','dec_m','dec_s','i'] ];
-  except:
-    raise ValueError,"DMS format specification lacks mandatory name and/or position and/or flux fields";
+    i_field = format['i'];
+  except KeyError:
+    raise ValueError,"ASCII format specification lacks mandatory flux field ('i')";
+  # main RA field
+  if 'ra_h' in format:
+    ra_field,ra_scale = format['ra_h'],(math.pi/12);
+  elif 'ra_d' in format:
+    ra_field,ra_scale = format['ra_d'],(math.pi/180);
+  elif 'ra_rad' in format:
+    ra_field,ra_scale = format['ra_rad'],1.;
+  else:
+    raise ValueError,"ASCII format specification lacks mandatory Right Ascension field ('ra_h', 'ra_d' or 'ra_rad')";
+  # main Dec field
+  if 'dec_d' in format:
+    dec_field,dec_scale = format['dec_d'],(math.pi/180);
+  elif 'dec_rad' in format:
+    dec_field,dec_scale = format['dec_rad'],1.;
+  else:
+    raise ValueError,"ASCII format specification lacks mandatory Declination field ('dec_d' or 'dec_rad')";
   try:
     quv_fields = [ format[x] for x in ['q','u','v'] ];
   except KeyError:
@@ -98,13 +117,25 @@ def importASCII_DMS (filename,format=None,freq0=None,center_on_brightest=True,mi
         continue;
       # split (at whitespace) into fields
       fields = line.split();
-      # get minimal necessary attributes
-      name = fields[base_fields[0]];
-      try:
-        h1,m1,s1,d2,m2,s2,i = map(float,[fields[x] for x in base_fields[1:]]);
-        dsign = -1 if fields[format['dec_d']][0] == '-' else 1;
-      except IndexError:
-        raise ValueError,"mandatory name/position/flux fields missing";
+      # get  name
+      name = fields[name_field] if name_field is not None else str(len(srclist)+1);
+      i = float(fields[i_field]);
+      # get position: RA
+      ra = float(fields[ra_field]);
+      if 'ra_m' in format:
+        ra += float(fields[format['ra_m']])/60.;
+      if 'ra_s' in format:
+        ra += float(fields[format['ra_s']])/3600.;
+      ra *= ra_scale;
+      # position: Dec. Separate treatment of sign
+      dec = abs(float(fields[dec_field]));
+      if 'dec_m' in format:
+        dec += float(fields[format['dec_m']])/60.;
+      if 'dec_s' in format:
+        dec += float(fields[format['dec_s']])/3600.;
+      if fields[format.get('dec_sign',dec_field)][0] == '-':
+        dec = -dec;
+      dec *= dec_scale;
       # see if we have freq0
       try:
         f0 = freq0 or (freq0_field and float(fields[freq0_field]));
@@ -153,8 +184,6 @@ def importASCII_DMS (filename,format=None,freq0=None,center_on_brightest=True,mi
           pass;
       # OK, now form up the source object
       # position
-      ra  = (h1+m1/60.+s1/3600.)*(math.pi/12);
-      dec = (d2+dsign*(m2/60.+s2/3600.))*(math.pi/180);
       pos = ModelClasses.Position(ra,dec);
       # now create a source object
       dprint(3,name,ra,dec,i,q,u,v);
@@ -184,7 +213,7 @@ def importASCII_DMS (filename,format=None,freq0=None,center_on_brightest=True,mi
     src.setAttribute('r',math.sqrt(l*l+m*m));
   return model;
 
-registerFormat("text file (hms/dms)",importASCII_DMS,extensions="*.txt");
+registerFormat("text file (hms/dms)",importASCII,extensions="*.txt");
 
 def lm_ncp_to_radec(ra0,dec0,l,m):
   """Converts coordinates in l,m (NCP) relative to ra0,dec0 into ra,dec.""";

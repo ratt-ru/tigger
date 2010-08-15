@@ -312,9 +312,9 @@ class SkyModel (ModelItem):
   def fieldCenter (self):
     """Returns center of field. If this is not explicitly specified in the model, uses the average position of all sources.""";
     if self.ra0 is None:
-      self.ra0 = reduce(lambda x,y:x+y,[ src.pos.ra for src in self.sources ])/len(self.sources);
+      self.ra0 = reduce(lambda x,y:x+y,[ src.pos.ra for src in self.sources ])/len(self.sources) if self.sources else 0;
     if self.dec0 is None:
-      self.dec0 = reduce(lambda x,y:x+y,[ src.pos.dec for src in self.sources ])/len(self.sources);
+      self.dec0 = reduce(lambda x,y:x+y,[ src.pos.dec for src in self.sources ])/len(self.sources)  if self.sources else 0;
     return self.ra0,self.dec0;
 
   def save (self,filename):
