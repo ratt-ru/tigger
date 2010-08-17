@@ -153,7 +153,7 @@ def importASCII (filename,format=None,freq0=None,center_on_brightest=True,min_ex
           pass;
       # see if we have RM as well. Create flux object (unpolarized, polarized, polarized w/RM)
       if q is None:
-        flux = ModelClasses.Flux(i);
+        flux = ModelClasses.Polarization(i,0,0,0);
       elif f0 is None or rm_field is None or rm_field >= len(fields):
         flux = ModelClasses.Polarization(i,q,u,v);
       else:

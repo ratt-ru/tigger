@@ -49,6 +49,7 @@ class RestoreImageDialog (QDialog):
     lo1.addWidget(self.wfile_psf);
     # selection only
     self.wselonly = QCheckBox("restore selected model sources only",self);
+    lo.addWidget(self.wselonly );
     # OK/cancel buttons
     lo.addSpacing(10);
     lo2 = QHBoxLayout();

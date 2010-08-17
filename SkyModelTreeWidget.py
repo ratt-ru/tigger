@@ -230,8 +230,8 @@ class SkyModelTreeWidgetItem (QTreeWidgetItem):
     self.setColumn(ColumnType,src.typecode);
     # flux
     if hasattr(src,'Iapp'):
-      self.setColumn(ColumnIapp,src.Iapp,"%.2g"%src.Iapp);
-    self.setColumn(ColumnI,src.flux.I,"%.2g"%src.flux.I);
+      self.setColumn(ColumnIapp,src.Iapp,"%.3g"%src.Iapp);
+    self.setColumn(ColumnI,src.flux.I,"%.3g"%src.flux.I);
     # polarization
     if isinstance(src.flux,ModelClasses.Polarization):
       self.setColumn(ColumnQ,src.flux.Q,"%.2g"%src.flux.Q);
