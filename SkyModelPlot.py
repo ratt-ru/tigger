@@ -1053,7 +1053,7 @@ class SkyModelPlotter (QWidget):
     Rd,Rm,Rs = ModelClasses.Position.dec_dms_static(math.sqrt(l*l+m*m));
 #    text = "<P align=\"right\">%2dh%02dm%05.2fs %+2d&deg;%02d'%05.2f\""%(rh,rm,rs,dd,dm,ds);
     # emit message as well
-    msgtext = u"%2dh%02dm%05.2fs %+2d\u00B0%02d'%05.2f\"  l=%g m=%g r=%d\u00B0%02d'%05.2f\""%(rh,rm,rs,dd,dm,ds,l,m,Rd,Rm,Rs);
+    msgtext = u"%2dh%02dm%05.2fs %+2d\u00B0%02d'%05.2f\"  r=%d\u00B0%02d'%05.2f\""%(rh,rm,rs,dd,dm,ds,Rd,Rm,Rs);
     # if we have an image, add pixel coordinates
     image = self._imgman and self._imgman.getTopImage();
     if image:
