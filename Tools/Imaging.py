@@ -65,9 +65,13 @@ def fitPsf (filename,cropsize=64):
 
   return sx_rad,sy_rad,rot/DEG;
 
-def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0):
+def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_beam=None):
   """Restores sources (into the given FITSHDU) using a Gaussian PSF given by gmaj/gmin/grot.
-  If gmaj=0, uses delta functions instead.""";
+  If gmaj=0, uses delta functions instead.
+  If freq is specified, converts flux to the specified frequency.
+  If primary_beam is specified, uses it to apply a PB gain to each source. This must be a function of two arguments:
+  r and freq.
+  """;
   hdr = fits_hdu.header;
   data = fits_hdu.data;
   # create projection object, using pixel coordinates
@@ -132,13 +136,26 @@ def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0):
   conv_kernel = None;
   # loop over sources in model
   for src in sources:
+    # get normalized intensity, if spectral info is available
+    if freq is not None and hasattr(src,'spectrum'):
+      ni = src.spectrum.normalized_intensity(freq);
+      dprintf(3,"Source %s: normalized spectral intensity is %f\n",src.name,ni);
+    else:
+      ni = 1;
+    #  multiply that by PB gain, if given
+    if primary_beam:
+      r = getattr(src,'r',None);
+      if r is not None:
+        pb = primary_beam(r,freq);
+        ni *= pb;
+        dprintf(3,"Source %s: r=%g pb=%f, normalized intensity is %f\n",src.name,r,pb,ni);
     # process point sources
     if src.typecode == 'pnt':
       # pixel coordinates of source
       xsrc,ysrc = proj.lm(src.pos.ra,src.pos.dec);
       # form up stokes vector
       for i,st in enumerate(stokes):
-         stokes_vec[i] = getattr(src.flux,st,-1);
+         stokes_vec[i] = getattr(src.flux,st,-1)*ni;
       dprintf(3,"Source %s, %s Jy, at pixel %f,%f\n",src.name,stokes_vec,xsrc,ysrc);
       # gmaj != 0: use gaussian.
       if gmaj > 0:

@@ -1,5 +1,6 @@
 from PyQt4.Qt import *
 import math
+from math import *
 import pyfits
 import os.path
 
@@ -23,6 +24,33 @@ class MakeBrickDialog (QDialog):
     # file selector
     self.wfile = FileSelector(self,label="FITS filename:",dialog_label="Output FITS file",default_suffix="fits",file_types="FITS files (*.fits *.FITS)",file_mode=QFileDialog.ExistingFile);
     lo.addWidget(self.wfile);
+    # reference frequency
+    lo1 = QHBoxLayout();
+    lo.addLayout(lo1);
+    lo1.setContentsMargins(0,0,0,0);
+    label = QLabel("Frequency, MHz:",self);
+    lo1.addWidget(label);
+    tip = """<P>If your sky model contains spectral information (such as spectral indices), then a brick may be generated
+    for a specific frequency. If a frequency is not specified here, the reference frequency of the model sources will be assumed.</P>""";
+    self.wfreq = QLineEdit(self);
+    self.wfreq.setValidator(QDoubleValidator(self));
+    label.setToolTip(tip);
+    self.wfreq.setToolTip(tip);
+    lo1.addWidget(self.wfreq);
+    # beam gain
+    lo1 = QHBoxLayout();
+    lo.addLayout(lo1);
+    lo1.setContentsMargins(0,0,0,0);
+    self.wpb_apply = QCheckBox("Apply primary beam expression:",self);
+    self.wpb_apply.setChecked(True);
+    lo1.addWidget(self.wpb_apply);
+    tip = """<P>If this option is specified, a primary beam gain will be applied to the sources before inserting
+    them into the brick. This can be any valid Python expression making use of the variables 'r' (corresponding
+    to distance from field centre in radians) and 'fq' (corresponding to frequency.)</P>""";
+    self.wpb_exp = QLineEdit(self);
+    self.wpb_apply.setToolTip(tip);
+    self.wpb_exp.setToolTip(tip);
+    lo1.addWidget(self.wpb_exp);
     # overwrite or add mode
     lo1 = QHBoxLayout();
     lo.addLayout(lo1);
@@ -33,9 +61,9 @@ class MakeBrickDialog (QDialog):
     self.waddinto = QRadioButton("add into image",self);
     lo1.addWidget(self.waddinto);
     # add to model
-    self.wadd = QCheckBox("add image to sky model",self);
+    self.wadd = QCheckBox("add resulting brick to sky model as a FITS-type source",self);
     lo.addWidget(self.wadd);
-    self.wdel = QCheckBox("remove sources from sky model",self);
+    self.wdel = QCheckBox("remove from the sky model sources put into the brick",self);
     lo.addWidget(self.wdel);
     # OK/cancel buttons
     lo.addSpacing(10);
@@ -61,27 +89,63 @@ class MakeBrickDialog (QDialog):
 
   def setModel (self,model):
     self.model = model;
+    pb = self.model.primaryBeam();
+    if pb:
+      self.wpb_exp.setText(pb);
+    else:
+      self.wpb_apply.setChecked(False);
+      self.wpb_exp.setText("");
     self._fileSelected(self.wfile.filename());
 
   def _fileSelected (self,filename):
     self.wokbtn.setEnabled(bool(filename));
-    # if filename is not in model already, enable the "add to model" control
-    for src in self.model.sources:
-      if isinstance(getattr(src,'shape',None),ModelClasses.FITSImage) \
-          and os.path.exists(src.shape.filename) and os.path.exists(filename) \
-          and os.path.samefile(src.shape.filename,filename):
-        self.wadd.setChecked(True);
-        self.wadd.setEnabled(False);
-        self.wadd.setText("image already in sky model");
-        break;
-    else:
-      self.wadd.setText("add image to sky model");
+    # read fits file
+    if filename:
+      busy = BusyIndicator();
+      try:
+        input_hdu = pyfits.open(filename)[0];
+        hdr = input_hdu.header;
+        # get frequency, if specified
+        for axis in range(1,hdr['NAXIS']+1):
+          if hdr['CTYPE%d'%axis].upper() == 'FREQ':
+            self.wfreq.setText(str(hdr['CRVAL%d'%axis]/1e+6));
+            break;
+      except Exception,err:
+        busy = None;
+        self.qerrmsg.showMessage("Error reading FITS file %s: %s"%(filename,str(err)));
+        input_hdu = None;
+      # if filename is not in model already, enable the "add to model" control
+      for src in self.model.sources:
+        if isinstance(getattr(src,'shape',None),ModelClasses.FITSImage) \
+            and os.path.exists(src.shape.filename) and os.path.exists(filename) \
+            and os.path.samefile(src.shape.filename,filename):
+          self.wadd.setChecked(True);
+          self.wadd.setEnabled(False);
+          self.wadd.setText("image already in sky model");
+          break;
+      else:
+        self.wadd.setText("add image to sky model");
 
   def accept (self):
     """Tries to make a brick, and closes the dialog if successful.""";
     sources = [ src for src in self.model.sources if src.selected and src.typecode == 'pnt' ];
     filename = self.wfile.filename();
     self._fileSelected(filename);
+    # get PB expression
+    pbfunc = None;
+    if self.wpb_apply.isChecked():
+      pbexp = str(self.wpb_exp.text());
+      try:
+        pbfunc = eval("lambda r,fq:"+pbexp);
+      except Exception,err:
+        self.qerrmsg.showMessage("Error parsing primary beam expression %s: %s"%(pbexp,str(err)));
+        return;
+    # get frequency
+    freq = str(self.wfreq.text());
+    if freq:
+      freq = float(freq)*1e+6;
+    else:
+      freq = None;
     # read fits file
     busy = BusyIndicator();
     try:
@@ -94,7 +158,7 @@ class MakeBrickDialog (QDialog):
     if self.woverwrite.isChecked():
       input_hdu.data[...] = 0;
     # insert sources
-    Imaging.restoreSources(input_hdu,sources,0);
+    Imaging.restoreSources(input_hdu,sources,0,primary_beam=pbfunc,freq=freq);
     # save fits file
     try:
       input_hdu.writeto(filename,clobber=True);

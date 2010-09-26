@@ -215,16 +215,20 @@ class MainWindow (QMainWindow):
   def loadSizes (self):
     if self._current_layout is not None:
       dprint(1,"loading sizes for layout",self._current_layout);
-      # save main window size and splitter dimensions
+      # get main window size and splitter dimensions
       w = Config.getint('%s-main-window-width'%self._current_layout,0);
       h = Config.getint('%s-main-window-height'%self._current_layout,0);
+      dprint(2,"window size is",w,h);
       if not (w and h):
-        return;
+        return None;
       self.resize(QSize(w,h));
       for spl,name in ((self._splitter1,"splitter1"),(self._splitter2,"splitter2")):
         ssz = [ Config.getint('%s-%s-size%d'%(self._current_layout,name,i),-1) for i in 0,1 ];
-        if len([ sz for sz in ssz if sz >= 0 ]) == len(ssz):
+        dprint(2,"splitter",name,"sizes",ssz);
+        if all([ sz >=0 for sz in ssz ]):
           spl.setSizes(ssz);
+          return True;
+    return None;
 
   def setLayout (self,layout):
     """Changes the current window layout. Restores sizes etc. from config file.""";
@@ -259,7 +263,17 @@ class MainWindow (QMainWindow):
       self.skyplot.show();
     # reload sizes
     self._current_layout = layout;
-    self.loadSizes();
+    if not self.loadSizes():
+      dprint(1,"no sizes loaded, setting defaults");
+      if layout is self.LayoutEmpty:
+        self.resize(QSize(512,256));
+      elif layout is self.LayoutImage:
+        self.resize(QSize(512,512));
+        self._splitter2.setSizes([512,0]);
+      elif layout is self.LayoutImageModel:
+        self.resize(QSize(1024,512));
+        self._splitter1.setSizes([256,256]);
+        self._splitter2.setSizes([256,256]);
 
   def enableUpdates (self,enable=True):
     """Enables updates of the child widgets. Usually called after startup is completed (i.e. all data loaded)""";

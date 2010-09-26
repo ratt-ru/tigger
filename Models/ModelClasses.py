@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import math
 import os.path
+import numpy
 
 from Tigger import startup_dprint
 startup_dprint(1,"starting ModelClasses");
@@ -214,6 +215,13 @@ class ModelItem (object):
       return value.renderMarkup(tags,attrname=(not mandatory and attr) or None);
     # figure out enclosing tags
     tag,endtag,tags = self._resolveTags(tags,attr);
+    # convert numpy types to float or complexes
+    if isinstance(value,(numpy.int8,numpy.int16,numpy.int32,numpy.int64)):
+      value = int(value);
+    elif isinstance(value,(numpy.float32,numpy.float64,numpy.float128)):
+      value = float(value);
+    elif isinstance(value,(numpy.complex64,numpy.complex128,numpy.complex256)):
+      value = complex(value);
     # render opening tags
     markup = "<%s mdltype=%s "%(tag,type(value).__name__);
     if not mandatory:
@@ -302,10 +310,18 @@ class PolarizationWithRM (Polarization):
   mandatory_attrs = Polarization.mandatory_attrs + [ "rm","freq0" ];
 
 class Spectrum (ModelItem):
-  pass;
+  """The Spectrum class is an abstract representation of spectral information. The base implementation corresponds
+  to a flat spectrum.
+  """;
+  def normalized_intensity (self,freq):
+    """Returns the normalized intensity for a given frequency, normalized to unity at the reference frequency (if any)"""
+    return 1;
 
 class SpectralIndex (Spectrum):
   mandatory_attrs  = [ "spi","freq0" ];
+  def normalized_intensity (self,freq):
+    """Returns the normalized intensity for a given frequency, normalized to unity at the reference frequency (if any)"""
+    return (freq/self.freq0)**self.spi;
 
 class Shape (ModelItem):
   """Abstract base class for a source's brightness distribution.

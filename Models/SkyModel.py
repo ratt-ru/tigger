@@ -303,6 +303,9 @@ class SkyModel (ModelItem):
   def setPrimaryBeam (self,pbexp):
     self.pbexp = pbexp;
 
+  def primaryBeam (self):
+    return getattr(self,'pbexp',None);
+
   def setRefFreq (self,freq0):
     self.freq0 = freq0;
 

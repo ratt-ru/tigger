@@ -827,7 +827,7 @@ class SkyModelPlotter (QWidget):
     self._update_what = 0;             # mask of updates ('what' arguments to _updateLayout) accumulated since last update was done
     # create currier
     self._currier = PersistentCurrier();
-    # init widgetrycd
+    # init widgetry
     lo = QHBoxLayout(self);
     lo.setSpacing(0);
     lo.setContentsMargins(0,0,0,0);
@@ -929,6 +929,21 @@ class SkyModelPlotter (QWidget):
     QObject.connect(qa,SIGNAL("triggered(bool)"),self._currier.curry(Config.set,"fix-aspect-ratio"));
     self._zoomer.setFixedAspect(qa.isChecked());
     qa.setToolTip("""<P>Enable this to maintain a fixed aspect ratio in the plot.</P>""");
+    # grid stepping
+    self._grid_step_arcmin = DefaultGridStep_ArcMin;
+    gridmenu = self._menu.addMenu("Show grid circles");
+    qag = QActionGroup(gridmenu);
+    for step in [ None,1,2,5,10,20,30,60,120,300,600 ]:
+      if step is None:
+        text = "None";
+      elif step < 60:
+        text = "%d'"%step;
+      else:
+        text = u"%d\u00B0"%(step/60);
+      qa = gridmenu.addAction(text,self._currier.curry(self._setGridCircleStepping,step));
+      qa.setCheckable(True);
+      qa.setChecked(step==self._grid_step_arcmin);
+      qag.addAction(qa);
     # save as PNG file
     self._menu.addAction("Export plot to PNG file...",self._exportPlotToPNG);
 
@@ -1139,6 +1154,11 @@ class SkyModelPlotter (QWidget):
     self._zoomrect = QRectF(rect); # make copy
     self._qa_unzoom.setEnabled(rect != self._zoomer.zoomBase());
 
+  def _setGridCircleStepping (self,arcmin=DefaultGridStep_ArcMin):
+    """Changes the visible grid circles. None to disable.""";
+    self._grid_step_arcmin = arcmin;
+    self._updateContents();
+
   def _updateContents (self,what=SkyModel.UpdateAll,origin=None):
     # do nothing if updates are disabled (this is possible on startup, or when multiple
     # things are being loaded), or if update is of no concern to us
@@ -1219,44 +1239,44 @@ class SkyModelPlotter (QWidget):
 #    dprint(2,"setting zoom base",zbase);
 #    self._zoomer.setZoomBase(zbase);
     dprint(5,"drawing grid");
-    # add grid lines
-    self._grid = [ QwtPlotCurve(),QwtPlotCurve() ];
-    self._grid[0].setData([lmin,lmax],[0,0]);
-    self._grid[1].setData([0,0],[mmin,mmax]);
-    # add grid circles
-    circstep = DefaultGridStep_ArcMin;
-    # see how many units (of arcminute) fit in max diagonal direction
-    maxr = int(round(math.sqrt(lmax**2+mmax**2)/(DEG/60)));
-    # cache sines and cosines of curve argument
-    angles = numpy.array(range(0,361,5))*DEG;
-    sines = numpy.sin(angles);
-    cosines = numpy.cos(angles);
-    # make circles
-    for r in range(circstep,maxr,circstep):
-      # find radius in each direction, by projecting a point
-      rl ,dum= self.projection.offset(r*DEG/60,0);
-      dum,rm = self.projection.offset(0,r*DEG/60);
-      # make curve
-      curve = QwtPlotCurve();
-      x ,y = rl*cosines,rm*sines;
-      curve.setData(x,y);
-      curve.setCurveAttribute(QwtPlotCurve.Fitted,True);
-      self._grid.append(curve);
-      # make a text label and marker
-      marker = QwtPlotMarker();
-      d,m = divmod(r,60);
-      label = ("%d&deg;%02d'"%(d,m) if m else "%d&deg;"%d) if d else "%02d'"%m;
-      text = QwtText(label,QwtText.RichText);
-      text.setColor(self._grid_color);
-      marker.setValue(x[0],y[0]);
-      marker.setLabel(text);
-      marker.setLabelAlignment(Qt.AlignRight|Qt.AlignBottom);
-      marker.setZ(Z_Grid);
-      marker.attach(self.plot);
-    for gr in self._grid:
-      gr.setPen(self._grid_pen);
-      gr.setZ(Z_Grid);
-      gr.attach(self.plot);
+    # add grid lines & circles
+    circstep = self._grid_step_arcmin;
+    if circstep:
+      self._grid = [ QwtPlotCurve(),QwtPlotCurve() ];
+      self._grid[0].setData([lmin,lmax],[0,0]);
+      self._grid[1].setData([0,0],[mmin,mmax]);
+      # see how many units (of arcminute) fit in max diagonal direction
+      maxr = int(round(math.sqrt(lmax**2+mmax**2)/(DEG/60)));
+      # cache sines and cosines of curve argument
+      angles = numpy.array(range(0,361,5))*DEG;
+      sines = numpy.sin(angles);
+      cosines = numpy.cos(angles);
+      # make circles
+      for r in range(circstep,maxr,circstep):
+        # find radius in each direction, by projecting a point
+        rl ,dum= self.projection.offset(r*DEG/60,0);
+        dum,rm = self.projection.offset(0,r*DEG/60);
+        # make curve
+        curve = QwtPlotCurve();
+        x ,y = rl*cosines,rm*sines;
+        curve.setData(x,y);
+        curve.setCurveAttribute(QwtPlotCurve.Fitted,True);
+        self._grid.append(curve);
+        # make a text label and marker
+        marker = QwtPlotMarker();
+        d,m = divmod(r,60);
+        label = ("%d&deg;%02d'"%(d,m) if m else "%d&deg;"%d) if d else "%02d'"%m;
+        text = QwtText(label,QwtText.RichText);
+        text.setColor(self._grid_color);
+        marker.setValue(x[0],y[0]);
+        marker.setLabel(text);
+        marker.setLabelAlignment(Qt.AlignRight|Qt.AlignBottom);
+        marker.setZ(Z_Grid);
+        marker.attach(self.plot);
+      for gr in self._grid:
+        gr.setPen(self._grid_pen);
+        gr.setZ(Z_Grid);
+        gr.attach(self.plot);
     # make a new set of source markers, since either the image or the model may have been updated
     if self.model:
       dprint(5,"making skymodel markers");
