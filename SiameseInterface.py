@@ -81,9 +81,10 @@ class TiggerSkyModel (object):
     if self.lsm is None:
       self.lsm = ModelHTML.loadModel(self.filename);
 
-    # extract subset, if specified
-    sources = self.lsm.sources;
+    # sort by brightness
+    sources = sorted(self.lsm.sources,lambda a,b:cmp(b.brightness(),a.brightness()));
 
+    # extract subset, if specified
     if self.lsm_subset != "all":
       all = set([src.name for src in sources]);
       srcs = set();
@@ -199,10 +200,11 @@ class TiggerSkyModel (object):
         msrc.set_attr(attr,val);
 
       # makie sure Iapp exists (init with I if it doesn't)
-      if msrc.get_attr('Iap[p',None) is None:
+      if msrc.get_attr('Iapp',None) is None:
         msrc.set_attr('Iapp',src.flux.I);
 
       source_model.append(msrc);
 
+#    print [ x.name for x in source_model[:10] ];
     return source_model;
 

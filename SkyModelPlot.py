@@ -740,7 +740,7 @@ class SkyModelPlotter (QWidget):
       the aspect ratio of the plot canvas. Returns adjusted version."""
       if self._fixed_aspect:
         dprint(2,"adjusting rect to canvas size:",self.canvas().size(),rect);
-        aspect0 = self.canvas().width()/float(self.canvas().height());
+        aspect0 = self.canvas().width()/float(self.canvas().height()) if self.canvas().height() else 1;
         aspect = rect.width()/float(rect.height());
         # increase rectangle, if needed to match the aspect
         if aspect < aspect0:
