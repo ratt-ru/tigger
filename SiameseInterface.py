@@ -205,6 +205,6 @@ class TiggerSkyModel (object):
 
       source_model.append(msrc);
 
-#    print [ x.name for x in source_model[:10] ];
+#    print [ x.name for x in source_model[:30] ];
     return source_model;
 
