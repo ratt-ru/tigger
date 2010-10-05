@@ -38,9 +38,9 @@ if __name__ == '__main__':
   from optparse import OptionParser
   parser = OptionParser(usage="""%prog: sky_model [output_model]""",
                         description="""Converts sky models into Tigger format and/or applies various processing options.
-Input 'sky_model' may be any model format importable by Tigger, recognized by extension, or explicitly specified on the command line.
-'output_model' is always a native Tigger model. If an output model is not specfied, the conversion is done in-place if the input model is a Tigger model (-f switch
-must be specified to allow overwriting), or else a new filename is generated.""");
+Input 'sky_model' may be any model format importable by Tigger, recognized by extension, or explicitly specified via an option switch.
+'output_model' is always a native Tigger model. If an output model is not specfied, the conversion is done in-place if the input model
+is a Tigger model (-f switch must be specified to allow overwriting), or else a new filename is generated.""");
   parser.add_option("-f","--force",action="store_true",
                     help="Forces overwrite of output model.");
   parser.add_option("--newstar",action="store_true",

@@ -222,13 +222,14 @@ class MainWindow (QMainWindow):
       if not (w and h):
         return None;
       self.resize(QSize(w,h));
-      for spl,name in ((self._splitter1,"splitter1"),(self._splitter2,"splitter2")):
+      for spl,name in (self._splitter1,"splitter1"),(self._splitter2,"splitter2"):
         ssz = [ Config.getint('%s-%s-size%d'%(self._current_layout,name,i),-1) for i in 0,1 ];
         dprint(2,"splitter",name,"sizes",ssz);
         if all([ sz >=0 for sz in ssz ]):
           spl.setSizes(ssz);
-          return True;
-    return None;
+        else:
+          return None;
+    return True;
 
   def setLayout (self,layout):
     """Changes the current window layout. Restores sizes etc. from config file.""";

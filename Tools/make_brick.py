@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from PyQt4.Qt import *
 import math
 from math import *
@@ -61,9 +62,29 @@ class MakeBrickDialog (QDialog):
     self.waddinto = QRadioButton("add into image",self);
     lo1.addWidget(self.waddinto);
     # add to model
-    self.wadd = QCheckBox("add resulting brick to sky model as a FITS-type source",self);
+    self.wadd = QCheckBox("Add resulting brick to sky model as a FITS image component",self);
     lo.addWidget(self.wadd);
-    self.wdel = QCheckBox("remove from the sky model sources put into the brick",self);
+    lo1 = QHBoxLayout();
+    lo.addLayout(lo1);
+    lo1.setContentsMargins(0,0,0,0);
+    self.wpad = QLineEdit(self);
+    self.wpad.setValidator(QDoubleValidator(self));
+    self.wpad.setText("1.1");
+    lab = QLabel("...with padding factor:",self);
+    lab.setToolTip("""<P>The padding factor determines the amount of null padding inserted around the image during
+      the prediction stage. Padding alleviates the effects of tapering and detapering in the uv-brick, which can show
+      up towards the edges of the image. For a factor of N, the image will be padded out to N times its original size.
+      This increases memory use, so if you have no flux at the edges of the image anyway, then a pad factor of 1 is
+      perfectly fine.</P>""");
+    self.wpad.setToolTip(lab.toolTip());
+    QObject.connect(self.wadd,SIGNAL("toggled(bool)"),self.wpad.setEnabled);
+    QObject.connect(self.wadd,SIGNAL("toggled(bool)"),lab.setEnabled);
+    self.wpad.setEnabled(False);
+    lab.setEnabled(False);
+    lo1.addStretch(1);
+    lo1.addWidget(lab,0);
+    lo1.addWidget(self.wpad,1);
+    self.wdel = QCheckBox("Remove from the sky model sources that go into the brick",self);
     lo.addWidget(self.wdel);
     # OK/cancel buttons
     lo.addSpacing(10);
@@ -142,10 +163,10 @@ class MakeBrickDialog (QDialog):
         return;
     # get frequency
     freq = str(self.wfreq.text());
-    if freq:
-      freq = float(freq)*1e+6;
-    else:
-      freq = None;
+    freq = float(freq)*1e+6 if freq else None;
+    # get pad factor
+    pad = str(self.wpad.text());
+    pad = max(float(pad),1) if pad else 1;
     # read fits file
     busy = BusyIndicator();
     try:
@@ -178,8 +199,19 @@ class MakeBrickDialog (QDialog):
       # get image parameters
       max_flux = float(input_hdu.data.max());
       wcs = WCS(hdr,mode='pyfits');
-      # center coordinates
-      ra0,dec0 = wcs.getCentreWCSCoords();
+      # Get reference pixel coordinates
+      # wcs.getCentreWCSCoords() doesn't work, as that gives us the middle of the image
+      # So scan the header to get the CRPIX values
+      ra0 = dec0 = 1;
+      for iaxis in range(hdr['NAXIS']):
+        axs = str(iaxis+1);
+        name = hdr.get('CTYPE'+axs,axs).upper();
+        if name.startswith("RA"):
+          ra0 = hdr.get('CRPIX'+axs,1)-1;
+        elif name.startswith("DEC"):
+          dec0 = hdr.get('CRPIX'+axs,1)-1;
+      # convert pixel to degrees
+      ra0,dec0 = wcs.pix2wcs(ra0,dec0);
       ra0 *= DEG;
       dec0 *= DEG;
       sx,sy = wcs.getHalfSizeDeg();
@@ -194,12 +226,13 @@ class MakeBrickDialog (QDialog):
           src.flux.I = max_flux;
           src.shape.ex,src.shape.ey = sx,sy;
           src.shape.nx,src.shape.ny = nx,ny;
+          src.shape.pad = pad;
           break;
       # not contained, make new source object
       else:
         pos = ModelClasses.Position(ra0,dec0);
         flux = ModelClasses.Flux(max_flux);
-        shape = ModelClasses.FITSImage(sx,sy,0,filename,nx,ny);
+        shape = ModelClasses.FITSImage(sx,sy,0,filename,nx,ny,pad=pad);
         img_src = SkyModel.Source(os.path.splitext(os.path.basename(filename))[0],pos,flux,shape=shape);
         sources.append(img_src);
       changed = True;

@@ -2,6 +2,8 @@
 from ModelClasses import *
 import PlotStyles
 
+import re
+
 class ModelTag (ModelItem):
   mandatory_attrs = [ "name" ];
   optional_attrs = dict([ (attr,None) for attr in PlotStyles.StyleAttributes ]);
@@ -324,5 +326,42 @@ class SkyModel (ModelItem):
     """Convenience function, saves model to file in native HTML format""";
     import ModelHTML
     ModelHTML.saveModel(filename,self);
+
+  _re_bynumber = re.compile("^([!-])?(\\d+)?:(\\d+)?$");
+
+  def getSourceSubset (self,selection=None):
+    """Gets list of sources matching the given selection string (if None, then all sources are returned.)""";
+    if not selection or selection.lower() == "all":
+      return self.sources;
+    # sort by brightness
+    srclist0 = sorted(self.sources,lambda a,b:cmp(b.brightness(),a.brightness()));
+    all = set([src.name for src in srclist0]);
+    srcs = set();
+    for ispec,spec in enumerate(re.split("\s+|,",selection)):
+      spec = spec.strip();
+      if spec:
+        # if first spec is a negation, then implictly select all sources first
+        if not ispec and spec[0] in "!-":
+          srcs = all;
+        if spec.lower() == "all":
+          srcs = all;
+        elif self._re_bynumber.match(spec):
+          negate,start,end = self._re_bynumber.match(spec).groups();
+          sl = slice(int(start) if start else None,int(end) if end else None);
+          if negate:
+            srcs.difference_update([ src.name for src in srclist0[sl]]);
+          else:
+            srcs.update([ src.name for src in srclist0[sl]]);
+        elif spec.startswith("-=") or spec.startswith("!="):
+          srcs.difference_update([ src.name for src in srclist0 if getattr(src,spec[2:],None) ]);
+        elif spec.startswith("="):
+          srcs.update([ src.name for src in srclist0 if getattr(src,spec[1:],None) ]);
+        elif spec.startswith("-")  or spec.startswith("!"):
+          srcs.discard(spec[1:]);
+        else:
+          srcs.add(spec);
+    # make list
+    return [ src for src in srclist0 if src.name in srcs ];
+
 
 SkyModel.registerClass();
