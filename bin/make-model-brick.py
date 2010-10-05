@@ -63,6 +63,8 @@ while the brick itself will be added (as a FITS image component), and a new sky 
                     help="Offsets the FITS image by this many pixels in the X direction.");
   parser.add_option("-y","--y-offset",type="float",metavar="FRACPIX",
                     help="Offsets the FITS image by this many pixels in the Y direction.");
+  parser.add_option("-N","--source-name",type="string",metavar="NAME",
+                    help="Name for source component corresponding to image. Default is to use the basename of the FITS file");
   parser.add_option("--add-to-image",action="store_true",
                     help="Adds sources to contents of FITS image. Default is to overwrite image data.");
   parser.add_option("--keep-sources",action="store_true",
@@ -195,7 +197,7 @@ while the brick itself will be added (as a FITS image component), and a new sky 
     # check if this image is already contained in the model
     for src in model.sources:
       if isinstance(getattr(src,'shape',None),ModelClasses.FITSImage) and os.path.samefile(src.shape.filename,fitsfile):
-        print "Model already contains a component for this image. Updating the component";
+        print "Model already contains a component (%s) for this image. Updating the component"%src.name;
         # update source parameters
         src.position.ra,src.position.dec = ra0,dec0;
         src.flux.I = max_flux;
@@ -208,7 +210,9 @@ while the brick itself will be added (as a FITS image component), and a new sky 
       pos = ModelClasses.Position(ra0,dec0);
       flux = ModelClasses.Flux(max_flux);
       shape = ModelClasses.FITSImage(sx,sy,0,fitsfile,nx,ny,pad=options.padding);
-      img_src = SkyModel.Source(os.path.splitext(os.path.basename(fitsfile))[0],pos,flux,shape=shape);
+      sname = options.source_name or os.path.splitext(os.path.basename(fitsfile))[0];
+      img_src = SkyModel.Source(sname,pos,flux,shape=shape);
+      print "Inserting new model component named %s"%sname;
       sources.append(img_src);
     # save model
     model.setSources(sources);
