@@ -70,7 +70,7 @@ def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_bea
   If gmaj=0, uses delta functions instead.
   If freq is specified, converts flux to the specified frequency.
   If primary_beam is specified, uses it to apply a PB gain to each source. This must be a function of two arguments:
-  r and freq.
+  r and freq, returning the power beam gain.
   """;
   hdr = fits_hdu.header;
   data = fits_hdu.data;

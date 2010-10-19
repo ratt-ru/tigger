@@ -45,9 +45,9 @@ class MakeBrickDialog (QDialog):
     self.wpb_apply = QCheckBox("Apply primary beam expression:",self);
     self.wpb_apply.setChecked(True);
     lo1.addWidget(self.wpb_apply);
-    tip = """<P>If this option is specified, a primary beam gain will be applied to the sources before inserting
+    tip = """<P>If this option is specified, a primary power beam gain will be applied to the sources before inserting
     them into the brick. This can be any valid Python expression making use of the variables 'r' (corresponding
-    to distance from field centre in radians) and 'fq' (corresponding to frequency.)</P>""";
+    to distance from field centre, in radians) and 'fq' (corresponding to frequency.)</P>""";
     self.wpb_exp = QLineEdit(self);
     self.wpb_apply.setToolTip(tip);
     self.wpb_exp.setToolTip(tip);
