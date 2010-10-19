@@ -8,24 +8,32 @@ With the exception of astLib, these are already present in most Linux
 distros.  astLib may be downloaded here: http://astlib.sourceforge.net/
 
 * Purr/Kittens. Easiest to install the purr package from a MeqTrees binary
-distribution (see http://www.astron.nl/meqwiki/Downloading). 
-Alternatively, check it out from svn:
-
-  svn co svn://lofar9.astron.nl/var/svn/repos/trunk/Purr/Kittens
-
-...and make sure the Kittens directory is in your PYTHONPATH.
+distribution (see http://www.astron.nl/meqwiki/Downloading). Alternatively, 
+check it out from svn (see below), and make sure the parent 
+of the Kittens directory is in your PYTHONPATH.
 
 2. Getting Tigger
 
-  svn co svn://lofar9.astron.nl/var/svn/repos/trunk/Tigger
+  For a bleeding-edge version:
 
-  This retrieves the latest version from svn. If the need arises, I'll
-  switch to some kind of semi-official release system later.
+    svn co svn://lofar9.astron.nl/var/svn/repos/trunk/Tigger
+    svn co svn://lofar9.astron.nl/var/svn/repos/trunk/Purr/Kittens
+
+  For a release version:
+
+    svn co svn://lofar9.astron.nl/var/svn/repos/release/Tigger/release-x.y.z/Tigger
+    svn co svn://lofar9.astron.nl/var/svn/repos/release/Tigger/release-x.y.z/Kittens
 
 3. Running Tigger
 
-  Run Tigger/tigger, that's all. You may pass it FITS files or sky model files 
-  as command-line arguments. 
+  Run Tigger/bin/tigger. There's a number of other useful utilities under Tigger/bin, so maybe put this whole directory in your PATH (or make symlinks to them from somewhere.)
+  Note that these scripts contain some cleverness to locate the parent Tigger directory 
+  (the cleverness consists of taking ../.. actually), so don't copy them -- symlink them. To be precise, they:
+
+    * try import Tigger
+    * if that fails, they add ../.. (relative to their location) to sys.path and try again.
+
+  So if you do want to copy the scripts somewhere, make sure that the parent of Tigger is in PYTHONPATH, so that the first option works.
 
   If you want a sky model to play with, check one of my purrlogs, e.g.
 
