@@ -19,6 +19,7 @@ from Models import ModelHTML
 from Models import ModelBBS
 from Models import Import
 import Widgets
+import AboutDialog
 from SkyModelTreeWidget import *
 from SkyModelPlot import *
 from Images.Manager import ImageManager
@@ -144,6 +145,12 @@ class MainWindow (QMainWindow):
     self._qa_tm = menubar.addMenu(tm);
     self._qa_tm.setVisible(False);
     QObject.connect(self,SIGNAL("hasSkyModel"),self._qa_tm.setVisible);
+
+   # Help menu
+    menubar.addSeparator();
+    hm = self._help_menu = menubar.addMenu("&Help");
+    hm.addAction("&About...",self._showAboutDialog);
+    self._about_dialog = None;
 
     # message handlers
     self.qerrmsg = QErrorMessage(self);
@@ -287,6 +294,11 @@ class MainWindow (QMainWindow):
       else:
         self.setLayout(self.LayoutEmpty);
       self.show();
+
+  def _showAboutDialog (self):
+    if not self._about_dialog:
+      self._about_dialog = AboutDialog.AboutDialog(self);
+    self._about_dialog.show();
 
   def addTool (self,name,callback):
     """Adds a tool to the Tools menu""";
