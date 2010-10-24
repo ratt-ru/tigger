@@ -21,6 +21,10 @@ for icol,col in enumerate(ViewColumns):
     globals()["Column%s"%col.capitalize()] = icol;
 ColumnExtra = len(ViewColumns);
 
+# Qt-4.6 and up (PyQt 4.7 and up) has very slow QTreeWidgetItem updates, determine version here
+from PyQt4 import QtCore
+_SLOW_QTREEWIDGETITEM = QtCore.PYQT_VERSION_STR >= '4.7';
+
 class SkyModelTreeWidget (Kittens.widgets.ClickableTreeWidget):
   """This implements a QTreeWidget for sky models""";
   def __init__ (self,*args):
@@ -214,9 +218,12 @@ class SkyModelTreeWidgetItem (QTreeWidgetItem):
     self.setSource(src);
 
   def setHighlighted (self,highlighted=True):
-    for col in range(self.columnCount()):
-      self.setBackground(col,QApplication.palette().alternateBase() if highlighted else QApplication.palette().base());
-    self.setFont(0,self._fonts[1] if highlighted else self._fonts[0]);
+    global _SLOW_QTREEWIDGETITEM;
+    if not _SLOW_QTREEWIDGETITEM:
+      brush = QApplication.palette().alternateBase() if highlighted else QApplication.palette().base();
+      for col in range(self.columnCount()):
+        self.setBackground(col,brush);
+      self.setFont(0,self._fonts[1] if highlighted else self._fonts[0]);
 
   def setSource (self,src):
     # name
