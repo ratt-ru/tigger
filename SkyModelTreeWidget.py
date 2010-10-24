@@ -34,6 +34,8 @@ class SkyModelTreeWidget (Kittens.widgets.ClickableTreeWidget):
     # insert columns
     self.setHeaderLabels(ViewColumns + [""]);
     self.headerItem().setText(ColumnIapp,"I(app)");
+    self.header().setMovable(False);
+    self.header().setClickable(True);
     self.setSortingEnabled(True);
     self.setRootIsDecorated(False);
     self.setEditTriggers(QAbstractItemView.AllEditTriggers);
