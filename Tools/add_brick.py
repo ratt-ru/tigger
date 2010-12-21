@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from PyQt4.Qt import *
 import math
 import pyfits
@@ -93,8 +94,19 @@ class AddBrickDialog (QDialog):
     hdr = input_hdu.header;
     max_flux = float(input_hdu.data.max());
     wcs = WCS(hdr,mode='pyfits');
-    # center coordinates
-    ra0,dec0 = wcs.getCentreWCSCoords();
+    # Get reference pixel coordinates
+    # wcs.getCentreWCSCoords() doesn't work, as that gives us the middle of the image
+    # So scan the header to get the CRPIX values
+    ra0 = dec0 = 1;
+    for iaxis in range(hdr['NAXIS']):
+      axs = str(iaxis+1);
+      name = hdr.get('CTYPE'+axs,axs).upper();
+      if name.startswith("RA"):
+        ra0 = hdr.get('CRPIX'+axs,1)-1;
+      elif name.startswith("DEC"):
+        dec0 = hdr.get('CRPIX'+axs,1)-1;
+    # convert pixel to degrees
+    ra0,dec0 = wcs.pix2wcs(ra0,dec0);
     ra0 *= DEG;
     dec0 *= DEG;
     sx,sy = wcs.getHalfSizeDeg();
