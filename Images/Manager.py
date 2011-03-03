@@ -325,6 +325,8 @@ class ImageManager (QWidget):
     try:
       result = exprfunc(*[x[1].image() for x in arglist]);
     except Exception,exc:
+      busy = None;
+      traceback.print_exc();
       self.showErrorMessage("""Error evaluating "%s": %s."""%(expression,str(exc)));
       return None;
     busy = None;
@@ -354,18 +356,19 @@ class ImageManager (QWidget):
     try:
       skyimage = SkyImage.FITSImagePlotItem(expression,expression,hdu=hdu);
     except:
-        busy = None;
-        traceback.print_exc();
-        self.showErrorMessage("""Error loading FITS image %s: %s"""%(expression,str(sys.exc_info()[1])));
-        return None;
+      busy = None;
+      traceback.print_exc();
+      self.showErrorMessage("""Error loading FITS image %s: %s"""%(expression,str(sys.exc_info()[1])));
+      return None;
     # create control bar, add to widget stack
-    self._createImageController(skyimage,expression,expression);
+    dirname = getattr(template,'filename',None);
+    self._createImageController(skyimage,expression,expression,save=(dirname and (os.path.dirname(dirname) or ".")));
     self.showMessage("Created new image for %s"%expression,3000);
     dprint(2,"image created");
 
-  def _createImageController (self,image,name,basename,model=False):
+  def _createImageController (self,image,name,basename,model=False,save=False):
     dprint(2,"creating ImageController for",name);
-    ic = ImageController(image,self,self,name);
+    ic = ImageController(image,self,self,name,save=save);
     self._imagecons.insert(0,ic);
     self._imagecon_loadorder.append(ic);
     if model:

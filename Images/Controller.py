@@ -36,7 +36,7 @@ class ImageController (QFrame):
   slice                     image slice has changed, need to redraw (emitted by SkyImage automatically)
   repaint                 image display range or colormap has changed, need to redraw (emitted by SkyImage automatically)
   """;
-  def __init__ (self,image,parent,imgman,name=None):
+  def __init__ (self,image,parent,imgman,name=None,save=False):
     QFrame.__init__(self,parent);
     self.setFrameStyle(QFrame.StyledPanel|QFrame.Raised);
     # init state
@@ -69,6 +69,15 @@ class ImageController (QFrame):
     self.setName(self.name);
     self._wlabel.setToolTip("%s %s"%(image.filename,u"\u00D7".join(map(str,image.data().shape))));
     lo.addWidget(self._wlabel,1);
+    # if 'save' is specified, create a "save" button
+    if save:
+      self._wsave = QToolButton(self);
+      lo.addWidget(self._wsave);
+      self._wsave.setText("save");
+      self._wsave.setAutoRaise(True);
+      self._save_dir = save if isinstance(save,str) else ".";
+      QObject.connect(self._wsave,SIGNAL("clicked()"),self._saveImage);
+      self._wsave.setToolTip("""<P>Click here to write this image to a FITS file.</P>""");
     # render control
     dprint(2,"creating RenderControl");
     self._rc = RenderControl(image,self);
@@ -127,6 +136,8 @@ class ImageController (QFrame):
     self._qa_raise = self._menu.addAction(pixmaps.raise_up.icon(),"Raise image",self._currier.curry(self.image.emit,SIGNAL("raise")));
     self._qa_center = self._menu.addAction(pixmaps.center_image.icon(),"Center plot on image",self._currier.curry(self.image.emit,SIGNAL("center")));
     self._qa_show_rc = self._menu.addAction(pixmaps.colours.icon(),"Colours && Intensities...",self.showRenderControls);
+    if save:
+      self._qa_save = self._menu.addAction("Save image...",self._saveImage);
     self._menu.addAction("Unload image",self._currier.curry(self.image.emit,SIGNAL("unload")));
     self._wraise.setMenu(self._menu);
     self._wraise.setPopupMode(QToolButton.MenuButtonPopup);
@@ -277,3 +288,23 @@ class ImageController (QFrame):
     else:
       self._wraise.showMenu();
 
+  def _saveImage (self):
+    filename = QFileDialog.getSaveFileName(self,"Save FITS file",self._save_dir,"FITS files(*.fits *.FITS *fts *FTS)");
+    filename = str(filename);
+    if not filename:
+      return;
+    busy = BusyIndicator();
+    self._imgman.showMessage("""Writing FITS image %s"""%filename,3000);
+    QApplication.flush();
+    try:
+      self.image.save(filename);
+    except Exception,exc:
+      busy = None;
+      traceback.print_exc();
+      self._imgman.showErrorMessage("""Error writing FITS image %s: %s"""%(filename,str(sys.exc_info()[1])));
+      return None;
+    self.image.name = os.path.basename(filename);
+    self.setName(self.image.name);
+    self._qa_save.setVisible(False);
+    self._wsave.hide();
+    busy = None;

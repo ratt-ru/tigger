@@ -470,3 +470,10 @@ class FITSImagePlotItem (SkyCubePlotItem):
     dprint(3,"setting initial slice");
     self._setupSlice();
 
+  def save (self,filename):
+    hdu = pyfits.PrimaryHDU(self.image(),self.fits_header);
+    hdu.verify('silentfix');
+    if os.path.exists(filename):
+      os.remove(filename);
+    hdu.writeto(filename,clobber=True);
+    self.filename = filename;
