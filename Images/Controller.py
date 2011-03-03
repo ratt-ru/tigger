@@ -65,6 +65,8 @@ class ImageController (QFrame):
     # name/filename label
     self.name = os.path.basename(name or image.name);
     self._wlabel = QLabel(self.name,self);
+    self._number = 0;
+    self.setName(self.name);
     self._wlabel.setToolTip("%s %s"%(image.filename,u"\u00D7".join(map(str,image.data().shape))));
     lo.addWidget(self._wlabel,1);
     # render control
@@ -158,7 +160,12 @@ class ImageController (QFrame):
 
   def setName (self,name):
     self.name = name;
-    self._wlabel.setText(name);
+    self._wlabel.setText("%s: %s"%(chr(ord('a')+self._number),self.name));
+
+  def setNumber (self,num):
+    self._number = num;
+    self._qa_raise.setShortcut(QKeySequence("Alt+"+chr(ord('A')+num)));
+    self.setName(self.name);
 
   def setPlotProjection (self,proj):
     self.image.setPlotProjection(proj);
@@ -249,10 +256,10 @@ class ImageController (QFrame):
       if elem:
         elem.setZ(z+i);
     # set the depth label, if any
-    label = self.name;
+    label = "%s: %s"%(chr(ord('a')+self._number),self.name);
     # label = "%s %s"%(depthlabel,self.name) if depthlabel else self.name;
     if top:
-      label = "<B>%s</B>"%label;
+      label = "%s: <B>%s</B>"%(chr(ord('a')+self._number),self.name);
     self._wlabel.setText(label);
     # set hotkey
     self._qa_show_rc.setShortcut(Qt.Key_F9 if top else QKeySequence());

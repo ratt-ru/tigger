@@ -1,6 +1,7 @@
 from PyQt4.Qt import *
 import math
 import numpy
+import pyfits
 import re
 import os.path
 import time
@@ -97,33 +98,7 @@ class ImageManager (QWidget):
         self.showErrorMessage("""Error loading FITS image %s: %s"""%(filename,str(sys.exc_info()[1])));
         return None;
     # create control bar, add to widget stack
-    dprint(2,"creating ImageController");
-    ic = ImageController(image,self,self,name=(model and "model source '%s'"%model));
-    self._imagecons.insert(0,ic);
-    self._imagecon_loadorder.append(ic);
-    if model:
-      self._model_imagecons.add(id(ic));
-    self._lo.addWidget(ic);
-    if self._border_pen:
-      ic.addPlotBorder(self._border_pen,model or os.path.basename(image.name or ""),self._label_color,self._label_bg_brush);
-    # attach appropriate signals
-    image.connect(SIGNAL("slice"),self.fastReplot);
-    image.connect(SIGNAL("repaint"),self.replot);
-    image.connect(SIGNAL("raise"),self._currier.curry(self.raiseImage,ic));
-    image.connect(SIGNAL("unload"),self._currier.curry(self.unloadImage,ic));
-    image.connect(SIGNAL("center"),self._currier.curry(self.centerImage,ic));
-    if self._locked_display_range:
-      ic.renderControl().setDisplayRange(*self._locked_display_range);
-    QObject.connect(ic.renderControl(),SIGNAL("displayRangeChanged"),self._currier.curry(self._updateDisplayRange,ic.renderControl()));
-    self._plot = None;
-    # add to menus
-    dprint(2,"repopulating menus");
-    self._repopulateMenu();
-    # center and raise to top of stack
-    self.raiseImage(ic);
-    self.centerImage(ic,emit=False);
-    # signal
-    self.emit(SIGNAL("imagesChanged"));
+    ic = self._createImageController(image,(model and "model source '%s'"%model) or filename,model or os.path.basename(image.name or ""),model=model);
     self.showMessage("""Loaded FITS image %s"""%filename,3000);
     dprint(2,"image loaded");
     return ic;
@@ -310,11 +285,13 @@ class ImageManager (QWidget):
   def _repopulateMenu (self):
     self._menu.clear();
     self._menu.addAction("&Load image...",self.loadImage,Qt.CTRL+Qt.Key_L);
+    self._menu.addAction("Comp&ute image...",self.computeImage,Qt.CTRL+Qt.Key_U);
     if self._imagecons:
       self._menu.addSeparator();
       # add controls to cycle images and planes
-      for ic in self._imagecons:
-        self._menu.addMenu(ic.getMenu());
+      for i,imgcon in enumerate(self._imagecons[::-1]):
+        imgcon.setNumber(i);
+        self._menu.addMenu(imgcon.getMenu());
       self._menu.addSeparator();
       if len(self._imagecons) > 1:
         self._menu.addAction("Cycle images",self.cycleImages,Qt.Key_F5);
@@ -326,3 +303,93 @@ class ImageManager (QWidget):
       self._menu.addSeparator();
       self._menu.addAction(self._qa_plot_top);
       self._menu.addAction(self._qa_plot_all);
+
+  def computeImage (self,expression=None):
+    """Computes image from expression (if expression is None, pops up dialog)""";
+    if expression is None:
+      (expression,ok) = QInputDialog.getText(self,"Compute image","Enter expression to compute");
+      expression = str(expression);
+      if not ok or not expression:
+        return;
+    # try to parse expression
+    arglist = [ (chr(ord('a')+i),ic.image) for i,ic in enumerate(self._imagecons[::-1]) ];
+    try:
+      exprfunc = eval("lambda "+(",".join([ x[0] for x in arglist ]))+":"+expression);
+    except Exception,exc:
+      self.showErrorMessage("""Error parsing expression "%s": %s."""%(expression,str(exc)));
+      return None;
+    # try to evaluate expression
+    self.showMessage("Computing expression \"%s\""%expression,10000);
+    busy = BusyIndicator();
+    QApplication.flush();
+    try:
+      result = exprfunc(*[x[1].image() for x in arglist]);
+    except Exception,exc:
+      self.showErrorMessage("""Error evaluating "%s": %s."""%(expression,str(exc)));
+      return None;
+    busy = None;
+    if type(result) != numpy.ndarray:
+      self.showErrorMessage("""Result of "%s" is of invalid type "%s" (array expected)."""%(expression,type(result).__name__));
+      return None;
+    # determine which image this expression can be associated with
+    arglist = [ x for x in arglist if hasattr(x[1],'fits_header') and x[1].image().shape == result.shape ];
+    if not arglist:
+      self.showErrorMessage("""Result of "%s" has shape %s, which does not match any loaded FITS image."""%(expression,"x".join(map(str,result.shape))));
+      return None;
+    # if all images in arglist have the same projection, then it doesn't matter what we use
+    # else ask
+    template = arglist[0][1];
+    if len([x for x in arglist[1:] if x[1].projection == template.projection ]) != len(arglist)-1:
+      options = [ x[0] for x in arglist ];
+      (which,ok) = QInputDialog.getItem(self,"Compute image","Coordinate system to use for the result of \"%s\":"%expression,options,0,False);
+      if not ok:
+        return None;
+      print options.index(which);
+    # create a FITS image
+    busy = BusyIndicator();
+    dprint(2,"creating FITS image",expression);
+    self.showMessage("""Creating image for %s"""%expression,3000);
+    QApplication.flush();
+    hdu = pyfits.PrimaryHDU(result,template.fits_header);
+    try:
+      skyimage = SkyImage.FITSImagePlotItem(expression,expression,hdu=hdu);
+    except:
+        busy = None;
+        traceback.print_exc();
+        self.showErrorMessage("""Error loading FITS image %s: %s"""%(expression,str(sys.exc_info()[1])));
+        return None;
+    # create control bar, add to widget stack
+    self._createImageController(skyimage,expression,expression);
+    self.showMessage("Created new image for %s"%expression,3000);
+    dprint(2,"image created");
+
+  def _createImageController (self,image,name,basename,model=False):
+    dprint(2,"creating ImageController for",name);
+    ic = ImageController(image,self,self,name);
+    self._imagecons.insert(0,ic);
+    self._imagecon_loadorder.append(ic);
+    if model:
+      self._model_imagecons.add(id(ic));
+    self._lo.addWidget(ic);
+    if self._border_pen:
+      ic.addPlotBorder(self._border_pen,basename,self._label_color,self._label_bg_brush);
+    # attach appropriate signals
+    image.connect(SIGNAL("slice"),self.fastReplot);
+    image.connect(SIGNAL("repaint"),self.replot);
+    image.connect(SIGNAL("raise"),self._currier.curry(self.raiseImage,ic));
+    image.connect(SIGNAL("unload"),self._currier.curry(self.unloadImage,ic));
+    image.connect(SIGNAL("center"),self._currier.curry(self.centerImage,ic));
+    if self._locked_display_range:
+      ic.renderControl().setDisplayRange(*self._locked_display_range);
+    QObject.connect(ic.renderControl(),SIGNAL("displayRangeChanged"),self._currier.curry(self._updateDisplayRange,ic.renderControl()));
+    self._plot = None;
+    # add to menus
+    dprint(2,"repopulating menus");
+    self._repopulateMenu();
+    # center and raise to top of stack
+    self.raiseImage(ic);
+    self.centerImage(ic,emit=False);
+    # signal
+    self.emit(SIGNAL("imagesChanged"));
+    return ic;
+

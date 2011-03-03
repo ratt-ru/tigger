@@ -391,11 +391,11 @@ class SkyCubePlotItem (SkyImagePlotItem):
     return list(self.imgslice);
 
 class FITSImagePlotItem (SkyCubePlotItem):
-  def __init__ (self,filename=None,name=None):
+  def __init__ (self,filename=None,name=None,hdu=None):
     SkyCubePlotItem.__init__(self);
     self.name = name;
-    if filename:
-      self.read(filename);
+    if filename or hdu:
+      self.read(filename,hdu);
 
   # Table of Stokes parameters corresponding to Stokes axis indices
   # Taken from Table 7, Greisen, E. W., and Calabretta, M. R., Astronomy & Astrophysics, 395, 1061-1075, 2002
@@ -405,19 +405,20 @@ class FITSImagePlotItem (SkyCubePlotItem):
   # complex axis convention
   ComplexNames = [ "","real","imag","weight" ];
 
-  def read (self,filename):
+  def read (self,filename,hdu=None):
     self.filename = filename;
     self.name = self.name or os.path.basename(filename);
     # read FITS file
-    dprint(3,"opening",filename);
-    ff = pyfits.open(filename);
-    ff[0].verify('silentfix');
-    hdr = ff[0].header;
+    if not hdu:
+      dprint(3,"opening",filename);
+      hdu = pyfits.open(filename)[0];
+      hdu.verify('silentfix');
+    hdr = self.fits_header = hdu.header;
     dprint(3,"reading data");
-    data = ff[0].data;
+    data = hdu.data;
     # NB: all-data operations (such as getting global min/max or computing of histograms) are much faster (almost x2) when data is iterated
     # over in the proper order. After a transpose(), data is in fortran order. Tell this to setData().
-    data = numpy.transpose(ff[0].data);  # .copy()
+    data = numpy.transpose(data);  # .copy()
     dprint(3,"setting data");
     self.setData(data,fortran_order=True);
     dprint(3,"reading header");
