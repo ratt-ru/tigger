@@ -98,7 +98,7 @@ class ImageManager (QWidget):
         self.showErrorMessage("""Error loading FITS image %s: %s"""%(filename,str(sys.exc_info()[1])));
         return None;
     # create control bar, add to widget stack
-    ic = self._createImageController(image,(model and "model source '%s'"%model) or filename,model or os.path.basename(image.name or ""),model=model);
+    ic = self._createImageController(image,"model source '%s'"%model if model else filename,model or image.name,model=model);
     self.showMessage("""Loaded FITS image %s"""%filename,3000);
     dprint(2,"image loaded");
     return ic;

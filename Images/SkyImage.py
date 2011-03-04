@@ -477,3 +477,4 @@ class FITSImagePlotItem (SkyCubePlotItem):
       os.remove(filename);
     hdu.writeto(filename,clobber=True);
     self.filename = filename;
+    self.name = os.path.basename(filename);

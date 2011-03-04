@@ -63,7 +63,7 @@ class ImageController (QFrame):
     self._wcenter.setToolTip("<P>The plot is currently centered on (the reference pixel %d,%d) of this image.</P>"%self.image.referencePixel());
     lo.addWidget(self._wcenter);
     # name/filename label
-    self.name = os.path.basename(name or image.name);
+    self.name = image.name;
     self._wlabel = QLabel(self.name,self);
     self._number = 0;
     self.setName(self.name);
@@ -303,7 +303,6 @@ class ImageController (QFrame):
       traceback.print_exc();
       self._imgman.showErrorMessage("""Error writing FITS image %s: %s"""%(filename,str(sys.exc_info()[1])));
       return None;
-    self.image.name = os.path.basename(filename);
     self.setName(self.image.name);
     self._qa_save.setVisible(False);
     self._wsave.hide();
