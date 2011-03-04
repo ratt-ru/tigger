@@ -352,7 +352,7 @@ class ImageManager (QWidget):
     dprint(2,"creating FITS image",expression);
     self.showMessage("""Creating image for %s"""%expression,3000);
     QApplication.flush();
-    hdu = pyfits.PrimaryHDU(result,template.fits_header);
+    hdu = pyfits.PrimaryHDU(result.transpose(),template.fits_header);
     try:
       skyimage = SkyImage.FITSImagePlotItem(expression,expression,hdu=hdu);
     except:
