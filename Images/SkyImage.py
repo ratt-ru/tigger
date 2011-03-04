@@ -471,7 +471,7 @@ class FITSImagePlotItem (SkyCubePlotItem):
     self._setupSlice();
 
   def save (self,filename):
-    hdu = pyfits.PrimaryHDU(self.image(),self.fits_header);
+    hdu = pyfits.PrimaryHDU(self.image().transpose(),self.fits_header);
     hdu.verify('silentfix');
     if os.path.exists(filename):
       os.remove(filename);
