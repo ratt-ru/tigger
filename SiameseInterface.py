@@ -6,8 +6,10 @@ import traceback
 import Meow
 import Meow.OptionTools
 import Meow.Context
+import Meow.ParmGroup
 import math
 from math import *
+import os.path
 
 # find out where Tigger lives -- either it's in the path, or we add it
 try:
@@ -18,16 +20,22 @@ except:
 
 from Tigger.Models import ModelHTML,ModelClasses
 
+# this dict determines how source attributes are grouped into "parameter subgroups"
+_Subgroups = dict(I="I",Q="Q",U="U",V="V",
+    ra="pos",dec="pos",RM="RM",spi="spi",
+    sx="shape",sy="shape",phi="shape");
+_SubgroupOrder = "I","Q","U","V","pos","spi","RM","shape";
+
 class TiggerSkyModel (object):
   """Interface to a Tigger-format sky model."""
-  def __init__ (self,filename=None,include_options=False,option_namespace='tiggerlsm'):
+  def __init__ (self,filename=None,include_options=False,tdloption_namespace='tiggerlsm'):
     """Initializes a TiggerSkyModel object.
     A filename and a format may be specified, although the actual file will\
     only be loaded on demand.
     If include_options=True, immediately instantiates the options. If False, it is up to
     the caller to include the options in his menus.
     """;
-    self.tdloption_namespace = option_namespace;
+    self.tdloption_namespace = tdloption_namespace;
     self._compile_opts = [];
     self._runtime_opts = [];
     self.filename = filename;
@@ -50,6 +58,9 @@ class TiggerSkyModel (object):
         TDLMenu("Make solvable source parameters",
           TDLOption('lsm_solvable_tag',"Solvable source tag",[None,"solvable"],more=str,namespace=self,
                     doc="""If you specify a tagname, only sources bearing that tag will be made solvable. Use 'None' to make all sources solvable."""),
+          TDLOption('lsm_solve_group_tag',"Group independent solutions by tag",[None,"cluster"],more=str,namespace=self,
+                    doc="""If you specify a tagname, sources will be grouped by the value of the tag,
+                    and each group will be treated as an independent solution."""),
           TDLOption("solve_I","I",False,namespace=self),
           TDLOption("solve_Q","Q",False,namespace=self),
           TDLOption("solve_U","U",False,namespace=self),
@@ -112,64 +123,66 @@ class TiggerSkyModel (object):
     # make copy of kw dict to be used for sources not in solvable set
     kw_nonsolve = dict(kw);
     # and update kw dict to be used for sources in solvable set
+    # this will be a dict of lists of solvable subgroups
+    parms = [];
+    subgroups = {};
     if self.solvable_sources:
-      if self.solve_I:
-        kw.setdefault("I",parm);
-      if self.solve_Q:
-        kw.setdefault("Q",parm);
-      if self.solve_U:
-        kw.setdefault("U",parm);
-      if self.solve_V:
-        kw.setdefault("V",parm);
-      if self.solve_spi:
-        kw.setdefault("spi",parm);
-      if self.solve_RM:
-        kw.setdefault("RM",parm);
-      if self.solve_pos:
-        kw.setdefault("ra",parm);
-        kw.setdefault("dec",parm);
-      if self.solve_shape:
-        kw.setdefault("sx",parm);
-        kw.setdefault("sy",parm);
-        kw.setdefault("phi",parm);
+      subgroup_order = [];
+      for sgname in _SubgroupOrder:
+        if getattr(self,'solve_%s'%sgname):
+          sg = subgroups[sgname] = [];
+          subgroup_order.append(sgname);
 
     # make Meow list
     source_model = []
 
-  ## Note: conversion from AIPS++ componentlist Gaussians to Gaussian Nodes
-  ### eX, eY : multiply by 2
-  ### eP: change sign
     for src in sources:
-      # get source pos/flux parameters
-      attrs = dict(ra=src.pos.ra,dec=src.pos.dec,I=src.flux.I,
-        Q=getattr(src.flux,'Q',None),
-        U=getattr(src.flux,'U',None),
-        V=getattr(src.flux,'V',None),
-        RM=getattr(src.flux,'rm',None),
-        freq0=getattr(src.flux,'freq0',None) or (src.spectrum and getattr(src.spectrum,'freq0',None)),
-        spi=src.spectrum and getattr(src.spectrum,'spi',None));
+      if self.solvable_sources:
+        # independent groups?
+        if self.lsm_solve_group_tag:
+          independent_sg = sgname = "%s:%s"%(self.lsm_solve_group_tag,getattr(src,self.lsm_solve_group_tag,"unknown"));
+        else:
+          independent_sg = "";
+          sgname = 'source:%s'%src.name;
+        if sgname in subgroups:
+          sgsource = subgroups[sgname];
+        else:
+          sgsource = subgroups[sgname] = [];
+          subgroup_order.append(sgname);
+      # make dict of source parametrs: for each parameter we have a value,subgroup pair
+      attrs = dict(
+        ra=     src.pos.ra,
+        dec=    src.pos.dec,
+        I=      src.flux.I,
+        Q=      getattr(src.flux,'Q',None),
+        U=      getattr(src.flux,'U',None),
+        V=      getattr(src.flux,'V',None),
+        RM=     getattr(src.flux,'rm',None),
+        freq0=  getattr(src.flux,'freq0',None) or (src.spectrum and getattr(src.spectrum,'freq0',None)),
+        spi=    src.spectrum and getattr(src.spectrum,'spi',None)
+      );
       if isinstance(src.shape,ModelClasses.Gaussian):
         symmetric = src.shape.ex == src.shape.ey;
-        attrs['sx'] = src.shape.ex*2;
-        attrs['sy'] = src.shape.ey*2;
+        attrs['sx']  = src.shape.ex*2;
+        attrs['sy']  = src.shape.ey*2;
         attrs['phi'] = -src.shape.pa;
-      ## construct parms or constants for source attributes
-      ## if source is solvable (solvable_source_set of None means all are solvable),
-      ## use the kw dict, else use the nonsolve dict for source parameters
-      if self.lsm_solvable_tag is None or getattr(src,self.lsm_solvable_tag,False):
-        solvable = True;
-        kwdict = kw;
-      else:
-        solvable = False;
-        kwdict = kw_nonsolve;
-      for key,value in list(attrs.iteritems()):
-        meowparm = kwdict.get(key);
-        if isinstance(meowparm,Meow.Parm):
-          attrs[key] = meowparm.new(value);
-        elif meowparm is not None:
-          attrs[key] = value;
+      # construct parms or constants for source attributes, depending on whether the source is solvable or not
+      # If source is solvable and this particular attribute is solvable, replace
+      # value in attrs dict with a Meq.Parm.
+      solvable = False;
+      if self.solvable_sources and (not self.lsm_solvable_tag  or getattr(src,self.lsm_solvable_tag,False)):
+        for parmname,value in attrs.items():
+          sgname = _Subgroups.get(parmname,None);
+          if sgname in subgroups:
+            solvable = True;
+            parm = attrs[parmname] = ns[src.name](parmname) << Meq.Parm(value or 0,
+                                                                tags=["solvable",sgname],solve_group=independent_sg);
+            subgroups[sgname].append(parm);
+            sgsource.append(parm);
+            parms.append(parm);
+
       # construct a direction
-      direction = Meow.Direction(ns,src.name,attrs['ra'],attrs['dec'],static=not self.solve_pos);
+      direction = Meow.Direction(ns,src.name,attrs['ra'],attrs['dec'],static=not solvable or not self.solve_pos);
 
       # construct a point source or gaussian or FITS image, depending on source shape class
       if src.shape is None:
@@ -187,6 +200,8 @@ class TiggerSkyModel (object):
                 direction=direction,
                 spi=attrs['spi'],freq0=attrs['freq0'],
                 size=size,phi=phi);
+        if solvable and 'shape' in subgroups:
+          subgroups['pos'] += direction.get_solvables();
       elif isinstance(src.shape,ModelClasses.FITSImage):
         msrc = Meow.FITSImageComponent(ns,name=src.name,
                     filename=src.shape.filename,
@@ -199,12 +214,31 @@ class TiggerSkyModel (object):
       for attr,val in src.getExtraAttributes():
         msrc.set_attr(attr,val);
 
-      # makie sure Iapp exists (init with I if it doesn't)
+      # make sure Iapp exists (init with I if it doesn't)
       if msrc.get_attr('Iapp',None) is None:
         msrc.set_attr('Iapp',src.flux.I);
 
       source_model.append(msrc);
 
-#    print [ x.name for x in source_model[:30] ];
+    # if any solvable parms were made, make a parmgroup and solve job for them
+    if parms:
+      if os.path.isdir(self.filename):
+        table_name = os.path.join(self.filename,"sources.fmep");
+      else:
+        table_name = os.path.splitext(self.filename)[0]+".fmep";
+      # make list of Subgroup objects for every non-empty subgroup
+      sgs = [];
+      for sgname in subgroup_order:
+        sglist = subgroups.get(sgname,None);
+        if sglist:
+          sgs.append(Meow.ParmGroup.Subgroup(sgname,sglist));
+      # make main parm group
+      pg_src = Meow.ParmGroup.ParmGroup("source parameters",parms,
+                  subgroups=sgs,
+                  table_name=table_name,table_in_ms=False,bookmark=True);
+      # now make a solvejobs for the source
+      Meow.ParmGroup.SolveJob("cal_source","Solve for source parameters",pg_src);
+
+
     return source_model;
 

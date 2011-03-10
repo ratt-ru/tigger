@@ -945,7 +945,7 @@ class SkyModelPlotter (QWidget):
       qa.setChecked(step==self._grid_step_arcmin);
       qag.addAction(qa);
     # save as PNG file
-    self._menu.addAction("Export plot to PNG file...",self._exportPlotToPNG);
+    self._menu.addAction("Export plot to PNG file...",self._exportPlotToPNG,Qt.CTRL+Qt.Key_F12);
 
   def close (self):
     self._livezoom.close();

@@ -314,7 +314,8 @@ class ImageManager (QWidget):
     # try to parse expression
     arglist = [ (chr(ord('a')+i),ic.image) for i,ic in enumerate(self._imagecons[::-1]) ];
     try:
-      exprfunc = eval("lambda "+(",".join([ x[0] for x in arglist ]))+":"+expression);
+      exprfunc = eval("lambda "+(",".join([ x[0] for x in arglist ]))+":"+expression,
+                      numpy.__dict__,{});
     except Exception,exc:
       self.showErrorMessage("""Error parsing expression "%s": %s."""%(expression,str(exc)));
       return None;
