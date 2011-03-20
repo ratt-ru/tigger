@@ -746,7 +746,7 @@ class SkyModelPlotter (QWidget):
         if aspect < aspect0:
           dx = rect.width()*(aspect0/aspect-1)/2;
           return rect.adjusted(-dx,0,dx,0);
-        elif aspect > aspect0:
+        elif aspect0 and aspect > aspect0:
           dy = rect.height()*(aspect/aspect0-1)/2;
           return rect.adjusted(0,-dy,0,dy);
       return rect;

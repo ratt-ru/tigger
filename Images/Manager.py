@@ -285,7 +285,7 @@ class ImageManager (QWidget):
   def _repopulateMenu (self):
     self._menu.clear();
     self._menu.addAction("&Load image...",self.loadImage,Qt.CTRL+Qt.Key_L);
-    self._menu.addAction("Comp&ute image...",self.computeImage,Qt.CTRL+Qt.Key_U);
+    self._menu.addAction("&Compute image...",self.computeImage,Qt.CTRL+Qt.Key_M);
     if self._imagecons:
       self._menu.addSeparator();
       # add controls to cycle images and planes
