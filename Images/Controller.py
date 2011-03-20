@@ -55,7 +55,7 @@ class ImageController (QFrame):
     self._wraise.setAutoRaise(True);
     self._can_raise = False;
     QObject.connect(self._wraise,SIGNAL("clicked()"),self._raiseButtonPressed);
-    self._wraise.setToolTip("""<P>Click here to raise this image above other images. Click on the down-arrow to
+    self._wraise.setToolTip("""<P>Click here to raise this image above other images. Hold the button down briefly to
       show a menu of image operations.</P>""");
     # center label
     self._wcenter = QLabel(self);
@@ -113,12 +113,38 @@ class ImageController (QFrame):
     self._updateDisplayRange(*self._rc.displayRange());
     # full-range button
     self._wfullrange = QToolButton(self);
-    lo.addWidget(self._wfullrange);
-    self._wfullrange.setIcon(pixmaps.colours.icon());
+    self._wfullrange.setIcon(pixmaps.full_range.icon());
     self._wfullrange.setAutoRaise(True);
-    self._wfullrange.setToolTip("""<P>Click for colourmap and intensity policy options.</P>""");
-    self._wraise.setToolTip("""<P>Click here to show render controls for this image.</P>""");
-    QObject.connect(self._wfullrange,SIGNAL("clicked()"),self.showRenderControls);
+    self._wfullrange.setToolTip("""<P>Click to reset the intensity range to the full imager range. Hold the button down briefly for additional options.</P>""");
+    lo.addWidget(self._wfullrange);
+    QObject.connect(self._wfullrange,SIGNAL("clicked()"),self.renderControl().resetSubsetDisplayRange);
+    rangemenu = QMenu(self);
+    rangemenu.addAction(pixmaps.full_range.icon(),"Full subset",self.renderControl().resetSubsetDisplayRange);
+    for percent in (99.99,99.9,99.5,99,98,95):
+      rangemenu.addAction("%g%%"%percent,self._currier.curry(self._changeDisplayRangeToPercent,percent));
+    self._wfullrange.setPopupMode(QToolButton.DelayedPopup);
+    self._wfullrange.setMenu(rangemenu);
+    # lock button
+    self._wlock = QToolButton(self);
+    self._wlock.setIcon(pixmaps.unlocked.icon());
+    self._wlock.setAutoRaise(True);
+    self._wlock.setToolTip("""<P>Click to lock or unlock the intensity range. When the intensity range is locked across multipel images, any changes in the intensity
+          range of one are propagated to the others. Hold the button down briefly for additional options.</P>""");
+    lo.addWidget(self._wlock);
+    QObject.connect(self._wlock,SIGNAL("clicked()"),self._toggleDisplayRangeLock);
+    QObject.connect(self.renderControl(),SIGNAL("displayRangeLocked"),self._setDisplayRangeLock);
+    lockmenu = QMenu(self);
+    lockmenu.addAction(pixmaps.locked.icon(),"Lock all to this",self._currier.curry(imgman.lockAllDisplayRanges,self.renderControl()));
+    lockmenu.addAction(pixmaps.unlocked.icon(),"Unlock all",imgman.unlockAllDisplayRanges);
+    self._wlock.setPopupMode(QToolButton.DelayedPopup);
+    self._wlock.setMenu(lockmenu);
+    # dialog button
+    self._wshowdialog = QToolButton(self);
+    lo.addWidget(self._wshowdialog);
+    self._wshowdialog.setIcon(pixmaps.colours.icon());
+    self._wshowdialog.setAutoRaise(True);
+    self._wshowdialog.setToolTip("""<P>Click for colourmap and intensity policy options.</P>""");
+    QObject.connect(self._wshowdialog,SIGNAL("clicked()"),self.showRenderControls);
     if not self._rc.hasSlicing():
       tooltip = """<P>You can change the currently displayed intensity range by entering low and high limits here.</P>
       <TABLE>
@@ -126,10 +152,10 @@ class ImageController (QFrame):
         </TABLE>"""%self.image.imageMinMax();
       for w in self._wmin,self._wmax,self._wrangelbl:
         w.setToolTip(tooltip);
-#      self._wfullrange.setToolTip("""<P>Click to reset the display range to the image min/max, or click on the down-arrow for more options.</P>"""+tooltip);
-#      QObject.connect(self._wfullrange,SIGNAL("clicked()"),self.setFullDisplayRange);
+#      self._wshowdialog.setToolTip("""<P>Click to reset the display range to the image min/max, or click on the down-arrow for more options.</P>"""+tooltip);
+#      QObject.connect(self._wshowdialog,SIGNAL("clicked()"),self.setFullDisplayRange);
 #    else:
-#      QObject.connect(self._wfullrange,SIGNAL("clicked()"),self.setSliceDisplayRange);
+#      QObject.connect(self._wshowdialog,SIGNAL("clicked()"),self.setSliceDisplayRange);
 
     # create image operations menu
     self._menu = QMenu(self.name,self);
@@ -140,7 +166,7 @@ class ImageController (QFrame):
       self._qa_save = self._menu.addAction("Save image...",self._saveImage);
     self._menu.addAction("Unload image",self._currier.curry(self.image.emit,SIGNAL("unload")));
     self._wraise.setMenu(self._menu);
-    self._wraise.setPopupMode(QToolButton.MenuButtonPopup);
+    self._wraise.setPopupMode(QToolButton.DelayedPopup);
 
     # connect updates from renderControl and image
     self.image.connect(SIGNAL("slice"),self._updateImageSlice);
@@ -231,6 +257,11 @@ class ImageController (QFrame):
     else:
       self._control_dialog.hide();
 
+  def _changeDisplayRangeToPercent (self,percent):
+    if not self._control_dialog:
+      self._control_dialog = ImageControlDialog(self,self._rc,self._imgman);
+    self._control_dialog._changeDisplayRangeToPercent(percent);
+
   def _updateDisplayRange (self,dmin,dmax):
     """Updates display range widgets.""";
     self._wmin.setText("%.4g"%dmin);
@@ -277,6 +308,7 @@ class ImageController (QFrame):
     # set raise control
     self._can_raise = can_raise;
     self._qa_raise.setVisible(can_raise);
+    self._wlock.setVisible(can_raise);
     if can_raise:
       self._wraise.setToolTip("<P>Click here to raise this image to the top. Click on the down-arrow to access the image menu.</P>");
     else:
@@ -307,3 +339,9 @@ class ImageController (QFrame):
     self._qa_save.setVisible(False);
     self._wsave.hide();
     busy = None;
+
+  def _toggleDisplayRangeLock (self):
+    self.renderControl().lockDisplayRange(not self.renderControl().isDisplayRangeLocked());
+
+  def _setDisplayRangeLock (self,locked):
+    self._wlock.setIcon(pixmaps.locked.icon() if locked else pixmaps.unlocked.icon());

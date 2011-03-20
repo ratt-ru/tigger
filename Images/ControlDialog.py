@@ -274,13 +274,27 @@ class ImageControlDialog (QDialog):
     lo1.setContentsMargins(0,0,0,0);
     lo0.addLayout(lo1,0);
 #    lo1.addWidget(QLabel("Lock range accross",self));
-    wlock = QCheckBox("Lock display range across images",self);
-    wlock.setChecked(self._imgman.isDisplayRangeLocked());
-    QObject.connect(wlock,SIGNAL("clicked(bool)"),self._currier.curry(self._imgman.lockDisplayRange,self._rc));
-    QObject.connect(self._imgman,SIGNAL("displayRangeLocked"),wlock.setChecked);
+    wlock = QCheckBox("Lock display range",self);
+    lo1.addWidget(wlock);
+    wlockall = QToolButton(self);
+    wlockall.setIcon(pixmaps.locked.icon());
+    wlockall.setText("Lock all to this");
+    wlockall.setToolButtonStyle(Qt.ToolButtonTextBesideIcon);
+    wlockall.setAutoRaise(True);
+    lo1.addWidget(wlockall);
+    wunlockall = QToolButton(self);
+    wunlockall.setIcon(pixmaps.unlocked.icon());
+    wunlockall.setText("Unlock all");
+    wunlockall.setToolButtonStyle(Qt.ToolButtonTextBesideIcon);
+    wunlockall.setAutoRaise(True);
+    lo1.addWidget(wunlockall);
+    wlock.setChecked(self._rc.isDisplayRangeLocked());
+    QObject.connect(wlock,SIGNAL("clicked(bool)"),self._rc.lockDisplayRange);
+    QObject.connect(wlockall,SIGNAL("clicked()"),self._currier.curry(self._imgman.lockAllDisplayRanges,self._rc));
+    QObject.connect(wunlockall,SIGNAL("clicked()"),self._imgman.unlockAllDisplayRanges);
+    QObject.connect(self._rc,SIGNAL("displayRangeLocked"),wlock.setChecked);
 
 #    self._wlock_imap_axis = [ QCheckBox(name,self) for iaxis,name,labels in sliced_axes ];
-    lo1.addWidget(wlock,0);
 #    for iw,w in enumerate(self._wlock_imap_axis):
 #      QObject.connect(w,SIGNAL("toggled(bool)"),self._currier.curry(self._rc.lockDisplayRangeForAxis,iw));
 #      lo1.addWidget(w,0);
@@ -681,6 +695,9 @@ class ImageControlDialog (QDialog):
 
   def _changeDisplayRangeToPercent (self,percent):
     busy = BusyIndicator();
+    if self._hist is None:
+      self._updateHistogram();
+      self._updateStats(self._subset,self._subset_range);
     # delta: we need the [delta,100-delta] interval of the total distribution
     delta = self._subset.size*((100.-percent)/200.);
     # get F(x): cumulative sum

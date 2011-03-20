@@ -67,6 +67,7 @@ class RenderControl (QObject):
     self._displaydata_minmax = None;
     # This is a low,high tuple of the current display range -- will be initialized by resetFullDisplayRange()
     self._displayrange = None;
+    self._lock_display_range = False;
     self.setFullSubset();
     # setup initial slice
     if self.hasSlicing():
@@ -223,4 +224,11 @@ class RenderControl (QObject):
         busy = BusyIndicator();
         self.image.setIntensityMap(emit=True);
       self.emit(SIGNAL("displayRangeChanged"),dmin,dmax);
+
+  def isDisplayRangeLocked (self):
+    return self._lock_display_range;
+
+  def lockDisplayRange (self,lock=True):
+    self._lock_display_range = lock;
+    self.emit(SIGNAL("displayRangeLocked"),lock);
 

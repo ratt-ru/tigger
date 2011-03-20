@@ -118,31 +118,52 @@ class ImageManager (QWidget):
     self._border_pen,self._label_color,self._label_bg_brush = \
       border_pen,label_color,label_bg_brush;
 
-  def lockDisplayRange (self,rc,lock):
-    """Locks or unlocks the display range. If lock=True, propagates the range from RenderControl object rc to all other RenderControls."""
-    self._locked_display_range = lock;
-    self.emit(SIGNAL("displayRangeLocked"),bool(lock));
-    if lock:
-      self._locked_display_range = rc.displayRange();
-      self._updateDisplayRange(rc,*rc.displayRange());
-    else:
-      self._locked_display_range = None;
+  def lockAllDisplayRanges (self,rc0):
+    """Locks all display ranges, and sets the intensity from rc0""";
+    if not self._updating_imap:
+      self._updating_imap = True;
+      rc0.lockDisplayRange();
+      try:
+        for ic in self._imagecons:
+          rc1 = ic.renderControl();
+          if rc1 is not rc0:
+            rc1.setDisplayRange(*rc0.displayRange());
+            rc1.lockDisplayRange();
+      finally:
+        self._updating_imap = False;
 
-  def isDisplayRangeLocked (self):
-    return bool(self._locked_display_range);
+  def unlockAllDisplayRanges (self):
+    """Unlocks all display range.""";
+    for ic in self._imagecons:
+      ic.renderControl().lockDisplayRange(False);
+
+  def _lockDisplayRange (self,rc0,lock):
+    """Locks or unlocks the display range of a specific controller."""
+    if lock and not self._updating_imap:
+      self._updating_imap = True;
+      try:
+        # if something is already locked, copy display range from it
+        for ic in self._imagecons:
+          rc1 = ic.renderControl();
+          if rc1 is not rc0 and rc1.isDisplayRangeLocked():
+            rc0.setDisplayRange(*rc1.displayRange());
+      finally:
+        self._updating_imap = False;
+
 
   def _updateDisplayRange (self,rc,dmin,dmax):
     """This is called whenever one of the images (or rather, its associated RenderControl object) changes its display range.""";
+    if not rc.isDisplayRangeLocked():
+      return;
     # If the display range is locked, propagate it to all images.
     # but don't do it if we're already propagating (otherwise we may get called in an infinte loop)
     if not self._updating_imap:
       self._updating_imap = True;
       try:
-        if self.isDisplayRangeLocked():
-          self._locked_display_range = dmin,dmax;
-          for ic in self._imagecons:
-            if ic.renderControl() is not rc:
-              ic.renderControl().setDisplayRange(dmin,dmax);
+        for ic in self._imagecons:
+          rc1 = ic.renderControl();
+          if rc1 is not rc and rc1.isDisplayRangeLocked():
+            rc1.setDisplayRange(dmin,dmax);
       finally:
         self._updating_imap = False;
 
@@ -383,9 +404,8 @@ class ImageManager (QWidget):
     image.connect(SIGNAL("raise"),self._currier.curry(self.raiseImage,ic));
     image.connect(SIGNAL("unload"),self._currier.curry(self.unloadImage,ic));
     image.connect(SIGNAL("center"),self._currier.curry(self.centerImage,ic));
-    if self._locked_display_range:
-      ic.renderControl().setDisplayRange(*self._locked_display_range);
     QObject.connect(ic.renderControl(),SIGNAL("displayRangeChanged"),self._currier.curry(self._updateDisplayRange,ic.renderControl()));
+    QObject.connect(ic.renderControl(),SIGNAL("displayRangeLocked"),self._currier.curry(self._lockDisplayRange,ic.renderControl()));
     self._plot = None;
     # add to menus
     dprint(2,"repopulating menus");
