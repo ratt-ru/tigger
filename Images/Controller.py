@@ -84,6 +84,7 @@ class ImageController (QFrame):
     dprint(2,"done");
     # selectors for extra axes
     self._wslicers = [];
+    curslice = self._rc.currentSlice(); # this may be loaded from config, so not necessarily 0
     for iextra,axisname,labels in self._rc. slicedAxes():
       if axisname.upper() not in ["STOKES","COMPLEX"]:
         lbl = QLabel("%s:"%axisname,self);
@@ -95,6 +96,7 @@ class ImageController (QFrame):
       lo.addWidget(slicer);
       slicer.addItems(labels);
       slicer.setToolTip("""<P>Selects current slice along the %s axis.</P>"""%axisname);
+      slicer.setCurrentIndex(curslice[iextra]);
       QObject.connect(slicer,SIGNAL("currentIndexChanged(int)"),self._currier.curry(self.changeSlice,iextra));
     # min/max display ranges
     lo.addSpacing(5);
@@ -138,6 +140,7 @@ class ImageController (QFrame):
     lockmenu.addAction(pixmaps.unlocked.icon(),"Unlock all",imgman.unlockAllDisplayRanges);
     self._wlock.setPopupMode(QToolButton.DelayedPopup);
     self._wlock.setMenu(lockmenu);
+    self._setDisplayRangeLock(self.renderControl().isDisplayRangeLocked());
     # dialog button
     self._wshowdialog = QToolButton(self);
     lo.addWidget(self._wshowdialog);
@@ -145,17 +148,12 @@ class ImageController (QFrame):
     self._wshowdialog.setAutoRaise(True);
     self._wshowdialog.setToolTip("""<P>Click for colourmap and intensity policy options.</P>""");
     QObject.connect(self._wshowdialog,SIGNAL("clicked()"),self.showRenderControls);
-    if not self._rc.hasSlicing():
-      tooltip = """<P>You can change the currently displayed intensity range by entering low and high limits here.</P>
-      <TABLE>
-        <TR><TD><NOBR>Image min:</NOBR></TD><TD>%g</TD><TD>max:</TD><TD>%g</TD></TR>
-        </TABLE>"""%self.image.imageMinMax();
-      for w in self._wmin,self._wmax,self._wrangelbl:
-        w.setToolTip(tooltip);
-#      self._wshowdialog.setToolTip("""<P>Click to reset the display range to the image min/max, or click on the down-arrow for more options.</P>"""+tooltip);
-#      QObject.connect(self._wshowdialog,SIGNAL("clicked()"),self.setFullDisplayRange);
-#    else:
-#      QObject.connect(self._wshowdialog,SIGNAL("clicked()"),self.setSliceDisplayRange);
+    tooltip = """<P>You can change the currently displayed intensity range by entering low and high limits here.</P>
+    <TABLE>
+      <TR><TD><NOBR>Image min:</NOBR></TD><TD>%g</TD><TD>max:</TD><TD>%g</TD></TR>
+      </TABLE>"""%self.image.imageMinMax();
+    for w in self._wmin,self._wmax,self._wrangelbl:
+      w.setToolTip(tooltip);
 
     # create image operations menu
     self._menu = QMenu(self.name,self);
@@ -335,6 +333,7 @@ class ImageController (QFrame):
       traceback.print_exc();
       self._imgman.showErrorMessage("""Error writing FITS image %s: %s"""%(filename,str(sys.exc_info()[1])));
       return None;
+    self.renderControl().startSavingConfig(filename);
     self.setName(self.image.name);
     self._qa_save.setVisible(False);
     self._wsave.hide();

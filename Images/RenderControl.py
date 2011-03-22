@@ -4,6 +4,7 @@ import math
 import numpy
 import sys
 import time
+import os.path
 from scipy.ndimage import measurements
 
 import Kittens.utils
@@ -15,9 +16,11 @@ dprint = _verbosity.dprint;
 dprintf = _verbosity.dprintf;
 
 from Images import SkyImage,Colormaps
-from Tigger import pixmaps
+from Tigger import pixmaps,ConfigFile
 from Tigger.Widgets import FloatValidator
 
+import Kittens.config
+ImageConfigFile = Kittens.config.DualConfigParser("tigger.images.conf");
 
 class RenderControl (QObject):
   """RenderControl represents all the options (slices, color and intensity policy data) associated with an image. This object is shared by various GUI elements
@@ -27,7 +30,7 @@ class RenderControl (QObject):
   def __init__ (self,image,parent):
     QObject.__init__(self,parent);
     self.image = image;
-
+    self._config = Kittens.config.SectionParser(ImageConfigFile,os.path.normpath(os.path.abspath(image.filename))) if image.filename else None;
     # figure out the slicing -- find extra axes with size > 1
     # self._current_slice contains all extra axis, including the size-1 ones
     # self._sliced_axes is a list of (iextra,axisname,labels) tuples for size>1 axes
@@ -50,9 +53,13 @@ class RenderControl (QObject):
       ( 'log(val-min)', Colormaps.LogIntensityMap() )
     );
     # set the initial intensity map
-    self._current_imap_index = 0;
-    self.image.setIntensityMap(self._imap_list[0][1]);
-    self.image.setColorMap(Colormaps.ColormapOrdering[0]);
+    imap = self._config.getint("intensity-map-number",0) if self._config else 0;
+    cmap = self._config.getint("colour-map-number",0) if self._config else 0;
+    imap = max(min(len(self._imap_list)-1,imap),0);
+    cmap = max(min(len(Colormaps.ColormapOrdering)-1,cmap),0);
+    self._current_imap_index = imap;
+    self.image.setIntensityMap(self._imap_list[imap][1]);
+    self.image.setColorMap(Colormaps.ColormapOrdering[cmap]);
     # cache of min/max values for each slice, as these can be slowish to recompute when flipping slices
     self._sliceranges = {};
     # This is the data subset corresponding to the current display range. When the display range is set to
@@ -67,11 +74,29 @@ class RenderControl (QObject):
     self._displaydata_minmax = None;
     # This is a low,high tuple of the current display range -- will be initialized by resetFullDisplayRange()
     self._displayrange = None;
-    self._lock_display_range = False;
-    self.setFullSubset();
+    self._lock_display_range = self._config.getbool("lock-range",0) if self._config else False;
+    if self._config and self._config.has_option("range-min") and self._config.has_option("range-max"):
+      display_range = self._config.getfloat("range-min"),self._config.getfloat("range-max");
+    else:
+      display_range = None;
+    self.setFullSubset(display_range,write_config=False);
     # setup initial slice
     if self.hasSlicing():
-      self.selectSlice(self._current_slice);
+      if self._config and self._config.has_option("slice"):
+        try:
+          curslice = map(int,self._config.get("slice").split());
+        except:
+          curslice = [];
+        if len(curslice) == len(self._current_slice):
+          for iaxis,i in enumerate(curslice):
+            naxis = len(self.image.extraAxisValues(iaxis));
+            i = min(naxis-1,max(0,i));
+            self._current_slice[iaxis] = i;
+      self.selectSlice(self._current_slice,write_config=False);
+
+  def startSavingConfig(self,image_filename):
+    """Saves the current configuration under the specified image filename""";
+    self._config = Kittens.config.SectionParser(ImageConfigFile,os.path.normpath(os.path.abspath(image_filename)));
 
   def hasSlicing (self):
     """Returns True if image is a cube, and so has non-trivial slicing axes""";
@@ -81,7 +106,7 @@ class RenderControl (QObject):
     """Returns list of (axis_num,name,label_list) tuples per each non-trivial slicing axis""";
     return self._sliced_axes;
 
-  def selectSlice (self,indices):
+  def selectSlice (self,indices,write_config=True):
     """Selects slice given by indices (must be as many as there are items in self._wslicer)""";
     dprint(2,"selectSlice",time.time()%60);
     indices = tuple(indices);
@@ -95,6 +120,9 @@ class RenderControl (QObject):
       self._slicerange = self._sliceranges[indices] = self.image.imageMinMax()[:2];
     dprint(2,"min/max updated",time.time()%60);
     self.setSliceSubset(set_display_range=False);
+    if write_config and self._config:
+      self._config.set("slice"," ".join(map(str,indices)));
+
 
   def displayRange (self):
     return self._displayrange;
@@ -111,7 +139,7 @@ class RenderControl (QObject):
   def currentIntensityMap (self):
     return self.image.intensityMap();
 
-  def setIntensityMapNumber (self,index):
+  def setIntensityMapNumber (self,index,write_config=True):
     busy = BusyIndicator();
     self._current_imap_index = index;
     imap = self._imap_list[index][1];
@@ -119,6 +147,8 @@ class RenderControl (QObject):
     imap.setDataRange(*self._displayrange);
     self.image.setIntensityMap(imap);
     self.emit(SIGNAL("intensityMapChanged"),imap,index);
+    if self._config and write_config:
+      self._config.set("intensity-map-number",index);
 
   def setIntensityMapLogCycles (self,cycles,notify_image=True):
     busy = BusyIndicator();
@@ -132,16 +162,18 @@ class RenderControl (QObject):
   def lockDisplayRangeForAxis (self,iaxis,lock):
     pass;
 
-  def setColorMap (self,cmap):
+  def setColorMap (self,cmap,write_config=True):
     busy = BusyIndicator();
     self.image.setColorMap(cmap);
     self.emit(SIGNAL("colorMapChanged"),cmap);
+    if self._config and write_config:
+      self._config.set("colour-map-number",Colormaps.ColormapOrdering.index(cmap));
 
   def currentSubset (self):
     """Returns tuple of subset,(dmin,dmax),description for current data subset""";
     return self._displaydata,self._displaydata_minmax,self._displaydata_desc;
 
-  def _resetDisplaySubset (self,subset,desc,range=None,set_display_range=True):
+  def _resetDisplaySubset (self,subset,desc,range=None,set_display_range=True,write_config=True):
     dprint(4,"setting display subset");
     self._displaydata = subset;
     self._displaydata_desc = desc;
@@ -151,12 +183,12 @@ class RenderControl (QObject):
     self.image.setIntensityMap(emit=False);
     self.emit(SIGNAL("dataSubsetChanged"),subset,range,desc);
     if set_display_range:
-      self.setDisplayRange(*range);
+      self.setDisplayRange(*range,write_config=write_config);
 
-  def setFullSubset (self):
+  def setFullSubset (self,display_range=None,write_config=True):
     shapedesc = u"\u00D7".join(["%d"%x for x in list(self.image.imageDims()) + [len(labels) for iaxis,name,labels in self._sliced_axes]]);
     desc = "full cube" if self._sliced_axes else "full image";
-    return self._resetDisplaySubset(self.image.data(),desc,self._fullrange);
+    return self._resetDisplaySubset(self.image.data(),desc,display_range or self._fullrange,write_config=write_config);
 
   def _makeSliceDesc (self):
     """Makes a description of the current slice""";
@@ -170,8 +202,8 @@ class RenderControl (QObject):
         descs.append(labels[self._current_slice[iextra]]);
     return "%s plane"%(" ".join(descs),);
 
-  def setSliceSubset (self,set_display_range=True):
-    return self._resetDisplaySubset(self.image.image(),self._makeSliceDesc(),self._slicerange,set_display_range=set_display_range);
+  def setSliceSubset (self,set_display_range=True,write_config=True):
+    return self._resetDisplaySubset(self.image.image(),self._makeSliceDesc(),self._slicerange,set_display_range=set_display_range,write_config=write_config);
 
   def _setRectangularSubset (self,xx1,xx2,yy1,yy2):
     descs = [];
@@ -214,7 +246,7 @@ class RenderControl (QObject):
   def resetSubsetDisplayRange (self):
     self.setDisplayRange(*self._displaydata_minmax);
 
-  def setDisplayRange (self,dmin,dmax,notify_image=True):
+  def setDisplayRange (self,dmin,dmax,notify_image=True,write_config=True):
     if dmax < dmin:
       dmin,dmax = dmax,dmin;
     if (dmin,dmax) != self._displayrange:
@@ -224,11 +256,16 @@ class RenderControl (QObject):
         busy = BusyIndicator();
         self.image.setIntensityMap(emit=True);
       self.emit(SIGNAL("displayRangeChanged"),dmin,dmax);
+      if self._config and write_config:
+        self._config.set("range-min",dmin,save=False);
+        self._config.set("range-max",dmax);
 
   def isDisplayRangeLocked (self):
     return self._lock_display_range;
 
-  def lockDisplayRange (self,lock=True):
+  def lockDisplayRange (self,lock=True,write_config=True):
     self._lock_display_range = lock;
     self.emit(SIGNAL("displayRangeLocked"),lock);
+    if self._config and write_config:
+      self._config.set("lock-range",bool(lock));
 

@@ -376,7 +376,7 @@ class ImageManager (QWidget):
     QApplication.flush();
     hdu = pyfits.PrimaryHDU(result.transpose(),template.fits_header);
     try:
-      skyimage = SkyImage.FITSImagePlotItem(expression,expression,hdu=hdu);
+      skyimage = SkyImage.FITSImagePlotItem(name=expression,filename=None,hdu=hdu);
     except:
       busy = None;
       traceback.print_exc();
