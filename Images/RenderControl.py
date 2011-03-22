@@ -188,7 +188,8 @@ class RenderControl (QObject):
   def setFullSubset (self,display_range=None,write_config=True):
     shapedesc = u"\u00D7".join(["%d"%x for x in list(self.image.imageDims()) + [len(labels) for iaxis,name,labels in self._sliced_axes]]);
     desc = "full cube" if self._sliced_axes else "full image";
-    return self._resetDisplaySubset(self.image.data(),desc,display_range or self._fullrange,write_config=write_config);
+    self._resetDisplaySubset(self.image.data(),desc,self._fullrange,write_config=write_config,set_display_range=False);
+    self.setDisplayRange(*(display_range or self._fullrange),write_config=write_config)
 
   def _makeSliceDesc (self):
     """Makes a description of the current slice""";
@@ -202,7 +203,7 @@ class RenderControl (QObject):
         descs.append(labels[self._current_slice[iextra]]);
     return "%s plane"%(" ".join(descs),);
 
-  def setSliceSubset (self,set_display_range=True,write_config=True):
+  def setSliceSubset (self,set_display_range=True,write_config=True):\
     return self._resetDisplaySubset(self.image.image(),self._makeSliceDesc(),self._slicerange,set_display_range=set_display_range,write_config=write_config);
 
   def _setRectangularSubset (self,xx1,xx2,yy1,yy2):
@@ -245,6 +246,9 @@ class RenderControl (QObject):
 
   def resetSubsetDisplayRange (self):
     self.setDisplayRange(*self._displaydata_minmax);
+
+  def isSubsetDisplayRange (self):
+    return self._displayrange == self._displaydata_minmax;
 
   def setDisplayRange (self,dmin,dmax,notify_image=True,write_config=True):
     if dmax < dmin:

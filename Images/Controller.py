@@ -112,13 +112,11 @@ class ImageController (QFrame):
       w.setMaximumWidth(width);
       w.setMinimumWidth(width);
       QObject.connect(w,SIGNAL("editingFinished()"),self._changeDisplayRange);
-    self._updateDisplayRange(*self._rc.displayRange());
     # full-range button
     self._wfullrange = QToolButton(self);
-    self._wfullrange.setIcon(pixmaps.full_range.icon());
+    lo.addWidget(self._wfullrange,0);
+    self._wfullrange.setIcon(pixmaps.zoom_range.icon());
     self._wfullrange.setAutoRaise(True);
-    self._wfullrange.setToolTip("""<P>Click to reset the intensity range to the full imager range. Hold the button down briefly for additional options.</P>""");
-    lo.addWidget(self._wfullrange);
     QObject.connect(self._wfullrange,SIGNAL("clicked()"),self.renderControl().resetSubsetDisplayRange);
     rangemenu = QMenu(self);
     rangemenu.addAction(pixmaps.full_range.icon(),"Full subset",self.renderControl().resetSubsetDisplayRange);
@@ -126,6 +124,8 @@ class ImageController (QFrame):
       rangemenu.addAction("%g%%"%percent,self._currier.curry(self._changeDisplayRangeToPercent,percent));
     self._wfullrange.setPopupMode(QToolButton.DelayedPopup);
     self._wfullrange.setMenu(rangemenu);
+    # update widgets from current display range
+    self._updateDisplayRange(*self._rc.displayRange());
     # lock button
     self._wlock = QToolButton(self);
     self._wlock.setIcon(pixmaps.unlocked.icon());
@@ -264,6 +264,7 @@ class ImageController (QFrame):
     """Updates display range widgets.""";
     self._wmin.setText("%.4g"%dmin);
     self._wmax.setText("%.4g"%dmax);
+    self._updateFullRangeIcon();
 
   def _changeDisplayRange (self):
     """Gets display range from widgets and updates the image with it.""";
@@ -344,3 +345,11 @@ class ImageController (QFrame):
 
   def _setDisplayRangeLock (self,locked):
     self._wlock.setIcon(pixmaps.locked.icon() if locked else pixmaps.unlocked.icon());
+
+  def _updateFullRangeIcon (self):
+    if self._rc.isSubsetDisplayRange():
+      self._wfullrange.setIcon(pixmaps.zoom_range.icon());
+      self._wfullrange.setToolTip("""<P>The current intensity range is the full range. Hold this button down briefly for additional options.</P>""");
+    else:
+      self._wfullrange.setIcon(pixmaps.full_range.icon());
+      self._wfullrange.setToolTip("""<P>Click to reset to a full intensity range. Hold the button down briefly for additional options.</P>""");
