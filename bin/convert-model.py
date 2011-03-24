@@ -102,7 +102,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
   print "Reading %s as a model of type '%s'"%(skymodel,format);
   # nothing to do?
   if format is NATIVE:
-    if options.rename and not options.app_to_int:
+    if not options.rename and not options.app_to_int:
       print "Input format is same as output, and no conversion flags specified.";
       sys.exit(1);
 
