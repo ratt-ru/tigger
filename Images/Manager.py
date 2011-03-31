@@ -345,7 +345,7 @@ class ImageManager (QWidget):
     busy = BusyIndicator();
     QApplication.flush();
     try:
-      result = exprfunc(*[x[1].image() for x in arglist]);
+      result = exprfunc(*[x[1].data() for x in arglist]);
     except Exception,exc:
       busy = None;
       traceback.print_exc();
@@ -356,14 +356,15 @@ class ImageManager (QWidget):
       self.showErrorMessage("""Result of "%s" is of invalid type "%s" (array expected)."""%(expression,type(result).__name__));
       return None;
     # determine which image this expression can be associated with
-    arglist = [ x for x in arglist if hasattr(x[1],'fits_header') and x[1].image().shape == result.shape ];
+    print [ x[1].data().shape for x in arglist ];
+    arglist = [ x for x in arglist if hasattr(x[1],'fits_header') and x[1].data().shape == result.shape ];
     if not arglist:
       self.showErrorMessage("""Result of "%s" has shape %s, which does not match any loaded FITS image."""%(expression,"x".join(map(str,result.shape))));
       return None;
     # if all images in arglist have the same projection, then it doesn't matter what we use
     # else ask
     template = arglist[0][1];
-    if len([x for x in arglist[1:] if x[1].projection == template.projection ]) != len(arglist)-1:
+    if len([x for x in arglist[1:] if x[1].projection == template.projection]) != len(arglist)-1:
       options = [ x[0] for x in arglist ];
       (which,ok) = QInputDialog.getItem(self,"Compute image","Coordinate system to use for the result of \"%s\":"%expression,options,0,False);
       if not ok:
