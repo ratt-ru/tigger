@@ -8,6 +8,7 @@ import os.path
 import pyfits
 import math
 import numpy
+import traceback
 
 DEG = math.pi/180;
 
@@ -24,12 +25,22 @@ if __name__ == '__main__':
   try:
     import Tigger
   except ImportError:
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))));
+    dirname = os.path.dirname(os.path.realpath(__file__));
+    # go up the directory tree looking for directory "Tigger"
+    while len(dirname) > 1:
+      if os.path.basename(dirname) == "Tigger":
+	break;
+      dirname = os.path.dirname(dirname);
+    else:
+      print "Unable to locate the Tigger directory, it is not a parent of %s. Please check your installation and/or PYTHONPATH."%os.path.realpath(__file__);
+      sys.exit(1);
+    sys.path.append(os.path.dirname(dirname));
     try:
       import Tigger
     except:
-      print "Unable to import the Tigger package. Please check your installation and PYTHONPATH.";
+      print "Unable to import the Tigger package from %s. Please check your installation and PYTHONPATH."%dirname;
       sys.exit(1);
+      
   from Tigger.Models import Import,ModelHTML
   from Tigger import Coordinates
 
@@ -53,6 +64,9 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
                     help="Input is a Tigger model.");
   parser.add_option("--app-to-int",action="store_true",
                     help="Convert apparent fluxes in input model to intrinsic. Only works for NEWSTAR or NEWSTAR-derived input models.");
+  parser.add_option("--recenter",type="string",metavar='COORDINATES',
+                    help="Shift the sky model to a different field center. Use a pyrap.measures direction string of the form "+\
+                    "REF,C1,C2, for example \"j2000,1h5m0.2s,+30d14m15s\", or \"b1950,115.2d,+30.5d\". See the pyrap.measures documentation for more details.");
   parser.add_option("--ref-freq",type="float",metavar="MHz",
                     help="Set or change the reference frequency of the model.");
   parser.add_option("--primary-beam",type="string",metavar="EXPR",
@@ -83,6 +97,22 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
   else:
     parser.error("Incorrect number of arguments. Use -h for help.");
 
+
+  # figure out recenter option
+  if options.recenter:
+    import pyrap.measures
+    dm = pyrap.measures.measures();
+    try:
+      center_dir = dm.direction(*(options.recenter.split(',')));
+      center_dir = dm.measure(center_dir,'j2000');
+      qq = dm.get_value(center_dir);
+      print "Will recenter model to %s"%str(qq);
+      recenter_radec = [ q.get_value('rad') for q in qq ];
+    except:
+      print "Error parsing or converting --recenter coordinates, see traceback:";
+      traceback.print_exc();
+      sys.exit(1);
+
   # figure out input and output
   skymodel_name,ext = os.path.splitext(skymodel);
   # input format is either explicit, or determined by extension
@@ -102,7 +132,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
   print "Reading %s as a model of type '%s'"%(skymodel,format);
   # nothing to do?
   if format is NATIVE:
-    if not options.rename and not options.app_to_int:
+    if not options.rename and not options.app_to_int and not options.recenter:
       print "Input format is same as output, and no conversion flags specified.";
       sys.exit(1);
 
@@ -150,6 +180,14 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
   if options.ref_freq >= 0:
     model.setRefFreq(options.ref_freq*1e+6);
     print "Set reference frequency to %f MHz"%options.ref_freq;
+    
+  # recenter
+  if options.recenter:
+    proj_src = Coordinates.Projection.SinWCS(*model.fieldCenter());
+    proj_target = Coordinates.Projection.SinWCS(*recenter_radec);
+    for src in model.sources:
+      src.pos.ra,src.pos.dec = proj_target.radec(*proj_src.lm(src.pos.ra,src.pos.dec));
+    model.setFieldCenter(*recenter_radec);
 
   # set PB expression and estimate apparent fluxes
   if options.primary_beam:

@@ -32,11 +32,27 @@ if __name__ == "__main__":
   import os.path
   # Tigger lives here for now. Add it to include path so that "import Tigger" works
   sys.modules['TiggerMain'] = __name__;
+
+  # find Tigger
   try:
     import Tigger
-  except:
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))));
-    import Tigger
+  except ImportError:
+    dirname = os.path.dirname(os.path.realpath(__file__));
+    # go up the directory tree looking for directory "Tigger"
+    while len(dirname) > 1:
+      if os.path.basename(dirname) == "Tigger":
+	break;
+      dirname = os.path.dirname(dirname);
+    else:
+      print "Unable to locate the Tigger directory, it is not a parent of %s. Please check your installation and/or PYTHONPATH."%os.path.realpath(__file__);
+      sys.exit(1);
+    sys.path.append(os.path.dirname(dirname));
+    try:
+      import Tigger
+    except:
+      print "Unable to import the Tigger package from %s. Please check your installation and PYTHONPATH."%dirname;
+      sys.exit(1);
+      
   dprint(1,"imported Tigger");
   Tigger.startup_dprint = dprint;
   Tigger.startup_dprintf = dprintf;
