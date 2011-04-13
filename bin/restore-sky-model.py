@@ -5,6 +5,7 @@ import sys
 import pyfits
 import re
 import os.path
+import os
 import pyfits
 
 
@@ -23,6 +24,8 @@ an output image is not specified, makes a name for it automatically.""");
                     help="restoring beam size (0 for a delta-function.)");
   parser.add_option("-p","--psf",dest="psf",action="store",
                     help="name of PSF file to be fitted, if beam size is not specified (default psf.fits)");
+  parser.add_option("--clear",action="store_true",
+                    help="clear contents of FITS file before adding in sources");
   parser.add_option("-f",dest="force",action="store_true",
                     help="overwrite output image even if it already exists");
   parser.add_option("-v","--verbose",dest="verbose",type="int",action="store",
@@ -99,8 +102,12 @@ an output image is not specified, makes a name for it automatically.""");
 
   # read, restore, write
   input_hdu = pyfits.open(input_image)[0];
+  if options.clear:
+    input_hdu.data[...] = 0;
   Imaging.restoreSources(input_hdu,sources,gx,gy,grot);
 
   Imaging.dprintf(1,"Writing output file %s\n",output_image);
-  input_hdu.writeto(output_image,clobber=True);
+  if os.path.exists(output_image):
+    os.remove(output_image);
+  input_hdu.writeto(output_image);
 

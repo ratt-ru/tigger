@@ -4,6 +4,7 @@ import math
 from math import *
 import pyfits
 import os.path
+import traceback
 
 from Kittens.widgets import BusyIndicator
 from Tigger.Widgets import FileSelector
@@ -182,8 +183,14 @@ class MakeBrickDialog (QDialog):
     Imaging.restoreSources(input_hdu,sources,0,primary_beam=pbfunc,freq=freq);
     # save fits file
     try:
-      input_hdu.writeto(filename,clobber=True);
+      # pyfits seems to produce an exception:
+      # 	TypeError: formatwarning() takes exactly 4 arguments (5 given)
+      # when attempting to overwrite a file. As a workaround, remove the file first.
+      if os.path.exists(filename):
+	os.remove(filename);
+      input_hdu.writeto(filename);
     except Exception,err:
+      traceback.print_exc();
       busy = None;
       self.qerrmsg.showMessage("Error writing FITS file %s: %s"%(filename,str(err)));
       return;

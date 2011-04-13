@@ -77,7 +77,7 @@ def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_bea
   # create projection object, using pixel coordinates
   proj = Projection.FITSWCSpix(hdr);
   # Note that "numpy" axis ordering is the reverse of "FITS" axis ordering.
-  # The FITS header will have X as the first axis and Y as the second, the corresponding data
+  # I.e. if the FITS header has X as the first axis and Y as the second, the corresponding data
   # array has the x axis last and y second from last
   naxis = len(data.shape);
   nx = data.shape[-1];
