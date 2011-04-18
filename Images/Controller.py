@@ -201,6 +201,9 @@ class ImageController (QFrame):
     self._number = num;
     self._qa_raise.setShortcut(QKeySequence("Alt+"+chr(ord('A')+num)));
     self.setName(self.name);
+    
+  def getNumber (self):
+    return self._number;
 
   def setPlotProjection (self,proj):
     self.image.setPlotProjection(proj);

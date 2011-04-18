@@ -80,7 +80,7 @@ class ImageManager (QWidget):
     # see if image is already loaded
     if not duplicate:
       for ic in self._imagecons:
-        if os.path.samefile(filename,ic.getFilename()):
+        if ic.getFilename() and os.path.samefile(filename,ic.getFilename()):
           self.raiseImage(ic);
           if model:
             self._model_imagecons.add(id(ic));
@@ -311,7 +311,6 @@ class ImageManager (QWidget):
       self._menu.addSeparator();
       # add controls to cycle images and planes
       for i,imgcon in enumerate(self._imagecons[::-1]):
-        imgcon.setNumber(i);
         self._menu.addMenu(imgcon.getMenu());
       self._menu.addSeparator();
       if len(self._imagecons) > 1:
@@ -333,7 +332,7 @@ class ImageManager (QWidget):
       if not ok or not expression:
         return;
     # try to parse expression
-    arglist = [ (chr(ord('a')+i),ic.image) for i,ic in enumerate(self._imagecons[::-1]) ];
+    arglist = [ (chr(ord('a')+ic.getNumber()),ic.image) for ic in self._imagecons ];
     try:
       exprfunc = eval("lambda "+(",".join([ x[0] for x in arglist ]))+":"+expression,
                       numpy.__dict__,{});
@@ -356,7 +355,6 @@ class ImageManager (QWidget):
       self.showErrorMessage("""Result of "%s" is of invalid type "%s" (array expected)."""%(expression,type(result).__name__));
       return None;
     # determine which image this expression can be associated with
-    print [ x[1].data().shape for x in arglist ];
     arglist = [ x for x in arglist if hasattr(x[1],'fits_header') and x[1].data().shape == result.shape ];
     if not arglist:
       self.showErrorMessage("""Result of "%s" has shape %s, which does not match any loaded FITS image."""%(expression,"x".join(map(str,result.shape))));
@@ -392,6 +390,7 @@ class ImageManager (QWidget):
   def _createImageController (self,image,name,basename,model=False,save=False):
     dprint(2,"creating ImageController for",name);
     ic = ImageController(image,self,self,name,save=save);
+    ic.setNumber(len(self._imagecons));
     self._imagecons.insert(0,ic);
     self._imagecon_loadorder.append(ic);
     if model:

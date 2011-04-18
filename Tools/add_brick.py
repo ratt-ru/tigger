@@ -86,9 +86,9 @@ class AddBrickDialog (QDialog):
       self.qerrmsg.showMessage("Error reading FITS file %s: %s"%(filename,str(err)));
       return;
     # check name
-    name = str(self.wname.text()) or os.path.splitext(os.path.basename(str(filename)))[0];
-    if name in set([src.name for src in self.model.sources]):
-        QMessageBox.warning(self,"Already in model","<p>The model already contains a source named '%s'. Please select a different name.</p>"%name);
+    srcname = str(self.wname.text()) or os.path.splitext(os.path.basename(str(filename)))[0];
+    if srcname in set([src.name for src in self.model.sources]):
+        QMessageBox.warning(self,"Already in model","<p>The model already contains a source named '%s'. Please select a different name.</p>"%srcname);
         return;
     # get image parameters
     hdr = input_hdu.header;
@@ -116,7 +116,7 @@ class AddBrickDialog (QDialog):
     pos = ModelClasses.Position(ra0,dec0);
     flux = ModelClasses.Flux(max_flux);
     shape = ModelClasses.FITSImage(sx,sy,0,filename,nx,ny,pad=float(str(self.wpad.text())));
-    img_src = SkyModel.Source(name,pos,flux,shape=shape);
+    img_src = SkyModel.Source(srcname,pos,flux,shape=shape);
     self.model.setSources(self.model.sources + [img_src]);
     self.model.emitUpdate(SkyModel.SkyModel.UpdateAll,origin=self);
     busy = None;
