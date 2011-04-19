@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import sys
 import traceback
 import math
@@ -434,13 +435,13 @@ class FITSImagePlotItem (SkyCubePlotItem):
       crval = hdr.get('CRVAL'+axs,0 );
       cdelt = hdr.get('CDELT'+axs,1) ;
       crpix = hdr.get('CRPIX'+axs,1) -1;
-      name = hdr.get('CTYPE'+axs,axs).upper();
+      name = hdr.get('CTYPE'+axs,axs).strip().upper();
       unit = hdr.get('CUNIT'+axs);
       # have we found the coordinate axes?
-      if name.startswith('RA'):
+      if name.startswith('RA') or name == "L":
         nx = npix;
         iaxis_ra = iaxis;
-      elif name.startswith('DEC'):
+      elif name.startswith('DEC') or name == "M":
         ny = npix;
         iaxis_dec = iaxis;
       # else add axis to slicers
