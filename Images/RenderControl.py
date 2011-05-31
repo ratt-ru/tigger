@@ -183,13 +183,13 @@ class RenderControl (QObject):
     self.image.setIntensityMap(emit=False);
     self.emit(SIGNAL("dataSubsetChanged"),subset,range,desc);
     if set_display_range:
-      self.setDisplayRange(*range,write_config=write_config);
+      self.setDisplayRange(write_config=write_config,*range);
 
   def setFullSubset (self,display_range=None,write_config=True):
     shapedesc = u"\u00D7".join(["%d"%x for x in list(self.image.imageDims()) + [len(labels) for iaxis,name,labels in self._sliced_axes]]);
     desc = "full cube" if self._sliced_axes else "full image";
     self._resetDisplaySubset(self.image.data(),desc,self._fullrange,write_config=write_config,set_display_range=False);
-    self.setDisplayRange(*(display_range or self._fullrange),write_config=write_config)
+    self.setDisplayRange(write_config=write_config,*(display_range or self._fullrange))
 
   def _makeSliceDesc (self):
     """Makes a description of the current slice""";

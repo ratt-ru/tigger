@@ -130,7 +130,7 @@ class ImageController (QFrame):
     self._wlock = QToolButton(self);
     self._wlock.setIcon(pixmaps.unlocked.icon());
     self._wlock.setAutoRaise(True);
-    self._wlock.setToolTip("""<P>Click to lock or unlock the intensity range. When the intensity range is locked across multipel images, any changes in the intensity
+    self._wlock.setToolTip("""<P>Click to lock or unlock the intensity range. When the intensity range is locked across multiple images, any changes in the intensity
           range of one are propagated to the others. Hold the button down briefly for additional options.</P>""");
     lo.addWidget(self._wlock);
     QObject.connect(self._wlock,SIGNAL("clicked()"),self._toggleDisplayRangeLock);

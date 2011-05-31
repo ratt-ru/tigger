@@ -327,7 +327,18 @@ class ImageManager (QWidget):
   def computeImage (self,expression=None):
     """Computes image from expression (if expression is None, pops up dialog)""";
     if expression is None:
-      (expression,ok) = QInputDialog.getText(self,"Compute image","Enter expression to compute");
+      (expression,ok) = QInputDialog.getText(self,"Compute image",
+      """Enter an image expression to compute.
+Any valid numpy expression is supported, and
+all functions from the numpy module are available.
+Use 'a', 'b', 'c' to refer to images.
+Examples:  "(a+b)/2", "cos(a)+sin(b)", "a-a.mean()", etc.""");
+#      (expression,ok) = QInputDialog.getText(self,"Compute image","""<P>Enter an expression to compute.
+#        Use 'a', 'b', etc. to refer to loaded images. Any valid numpy expression is supported, and all the
+#       functions from the numpy module are available. Examples of valid expressions include "(a+b)/2",
+#       "cos(a)+sin(b)", "a-a.mean()", etc.
+#        </P>
+#      """);
       expression = str(expression);
       if not ok or not expression:
         return;

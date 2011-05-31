@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 if __name__ == "__main__":
@@ -41,7 +41,7 @@ if __name__ == "__main__":
     # go up the directory tree looking for directory "Tigger"
     while len(dirname) > 1:
       if os.path.basename(dirname) == "Tigger":
-	break;
+        break;
       dirname = os.path.dirname(dirname);
     else:
       print "Unable to locate the Tigger directory, it is not a parent of %s. Please check your installation and/or PYTHONPATH."%os.path.realpath(__file__);
@@ -52,7 +52,7 @@ if __name__ == "__main__":
     except:
       print "Unable to import the Tigger package from %s. Please check your installation and PYTHONPATH."%dirname;
       sys.exit(1);
-      
+
   dprint(1,"imported Tigger");
   Tigger.startup_dprint = dprint;
   Tigger.startup_dprintf = dprintf;
