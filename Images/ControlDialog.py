@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from PyQt4.Qt import *
 from PyQt4.Qwt5 import *
 
@@ -525,7 +526,7 @@ class ImageControlDialog (QDialog):
     hmin0,hmax0 = dmin,dmax;
     if hmin0 >= hmax0:
       hmax0 = hmin0+1;
-    subset = self._subset;
+    subset = self._subset.compressed();
     if self.image.isDataInFortranOrder():
       subset = numpy.ravel(subset,order='F');
     # compute full-subset hi-res histogram, if we don't have one (for percentile stats)

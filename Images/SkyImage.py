@@ -129,14 +129,12 @@ class SkyImagePlotItem (QwtPlotItem,QObject):
     """Returns currently visible rectange, in pixel coordinates. Pixel coordinates are bounded to 0,0 and nx-1,ny-1.""";
     return self._current_rect_pix;
 
-  def setImage (self,image,image_iter=None,key=None,minmax=None):
+  def setImage (self,image,key=None,minmax=None):
     """Sets image array.
-    If image_iter is not None, uses image_iter as the iterator for global operations over the image
     If key is not None, sets this as the image key (for use with the pixmap cache.)
     If minmax is not None, then stores this as the (presumably cached or precomputed) min/max values.
     """;
     self._image = image;
-    self._image_iter = image_iter if image_iter is not None else image;
     self._imgminmax = minmax;
     self._image_key = key;
     # clear intermediate caches
@@ -148,10 +146,13 @@ class SkyImagePlotItem (QwtPlotItem,QObject):
   def image (self):
     """Returns image array.""";
     return self._image;
+    
+  def imagePixel (self,x,y):
+    return self._image.data[x,y],self._image.mask[x,y];
 
   def imageMinMax (self):
     if not self._imgminmax:
-      self._imgminmax = measurements.extrema(self._image_iter)[:2];
+      self._imgminmax = measurements.extrema(self._image.compressed())[:2];
     return self._imgminmax;
 
   def draw (self,painter,xmap,ymap,rect):
@@ -224,7 +225,7 @@ class SkyImagePlotItem (QwtPlotItem,QObject):
           # interpolate. Use NAN for out of range pixels...
           interp_image = interpolation.map_coordinates(self._prefilter,xy,order=2 ,cval=numpy.nan,prefilter=False);
           # ...and put a mask on them (Colormap.colorize() will make these transparent).
-          mask = numpy.isnan(interp_image);
+          mask = ~numpy.isfinite(interp_image);
           self._cache_interp = numpy.ma.masked_array(interp_image,mask);
           dprint(2,"interpolation took",time.time()-t0,"secs"); t0 = time.time();
         # ok, we have interpolated data in _cache_interp
@@ -275,12 +276,10 @@ class SkyCubePlotItem (SkyImagePlotItem):
 
   def setData (self,data,fortran_order=False):
     """Sets the datacube. fortran_order is a hint, which makes iteration over fortran-order arrays faster when computing min/max and such.""";
-    self._data = data;
+    mask = ~numpy.isfinite(data);
+    data[mask] = 0;
+    self._data = numpy.ma.masked_array(data,mask);
     self._data_fortran_order = fortran_order;
-    if fortran_order:
-      self._data_iter = numpy.ravel(data,order='F');
-    else:
-      self._data_iter = numpy.ravel(data,order='C');
     self._dataminmax = None;
     self.setNumAxes(data.ndim);
 
@@ -288,16 +287,12 @@ class SkyCubePlotItem (SkyImagePlotItem):
     """Returns datacube""";
     return self._data;
 
-  def dataIter (self):
-    """Returns iterator for datacube (usually just a 1D array)""";
-    return self._data_iter;
-
   def isDataInFortranOrder (self):
     return self._data_fortran_order;
 
   def dataMinMax (self):
     if not self._dataminmax:
-      self._dataminmax = measurements.extrema(self.dataIter());
+      self._dataminmax = measurements.extrema(self._data.compressed());
     return self._dataminmax;
 
   def setNumAxes (self,ndim):
@@ -374,11 +369,7 @@ class SkyCubePlotItem (SkyImagePlotItem):
     index = tuple(self.imgslice);
     key = tuple([ index[iaxis] for iaxis,name,labels,values,units,scale in self._extra_axes ]);
     image = self._data[index];
-    if self.isDataInFortranOrder():
-      image_iter = numpy.ravel(image,order='F');
-    else:
-      image_iter=None;
-    self.setImage(self._data[index],image_iter=image_iter,key=key);
+    self.setImage(self._data[index],key=key);
 
   def selectSlice (self,*indices):
     if len(indices) != len(self._extra_axes):
@@ -425,7 +416,9 @@ class FITSImagePlotItem (SkyCubePlotItem):
     dprint(3,"reading header");
     ndim = hdr['NAXIS'];
     # setup projection
-    proj = Projection.FITSWCS(hdr);
+    # (strip out history from header, as big histories really slow down FITSWCS)
+    hdr1 = pyfits.Header(filter(lambda x:not str(x).startswith('HISTORY'),hdr.ascardlist()));
+    proj = Projection.FITSWCS(hdr1);
     nx = ny = None;
     # find axes
     for iaxis in range(ndim):
@@ -438,10 +431,12 @@ class FITSImagePlotItem (SkyCubePlotItem):
       name = hdr.get('CTYPE'+axs,axs).strip().upper();
       unit = hdr.get('CUNIT'+axs);
       # have we found the coordinate axes?
-      if name.startswith('RA') or name == "L":
+      if [ prefix for prefix in "RA","GLON","ELON","HLON","SLON" if name.startswith(prefix) ] or \
+          name in ("L","X"):
         nx = npix;
         iaxis_ra = iaxis;
-      elif name.startswith('DEC') or name == "M":
+      elif [ prefix for prefix in "DEC","GLAT","ELAT","HLAT","SLAT" if name.startswith(prefix) ] or \
+          name in ("M","Y"):
         ny = npix;
         iaxis_dec = iaxis;
       # else add axis to slicers
@@ -473,7 +468,9 @@ class FITSImagePlotItem (SkyCubePlotItem):
 
   def save (self,filename):
     data = self.data().transpose();
-    hdu = pyfits.PrimaryHDU(data,self.fits_header);
+    data1 = data.data.copy();
+    data1[data.mask] = numpy.NAN;
+    hdu = pyfits.PrimaryHDU(data1,self.fits_header);
     hdu.verify('silentfix');
     if os.path.exists(filename):
       os.remove(filename);

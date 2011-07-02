@@ -1076,7 +1076,11 @@ class SkyModelPlotter (QWidget):
       nx,ny = image.imageDims();
       if x>=0 and x<nx and y>=0 and y<ny:
 #        text += "<BR>x=%d y=%d"%(round(x),round(y));
-        msgtext += "   x=%d y=%d value=%g"%(x,y,image.image()[x,y]);
+        val,flag = image.imagePixel(x,y);
+        if flag:
+          msgtext += "   x=%d y=%d value=blank"%(x,y);
+        else:
+          msgtext += "   x=%d y=%d value=%g"%(x,y,val);
       self._livezoom.trackImage(image,x,y);
       self._liveprofile.trackImage(image,x,y);
 #    text += "</P>"

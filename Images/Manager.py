@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from PyQt4.Qt import *
 import math
 import numpy
@@ -362,7 +363,7 @@ Examples:  "(a+b)/2", "cos(a)+sin(b)", "a-a.mean()", etc.""");
       self.showErrorMessage("""Error evaluating "%s": %s."""%(expression,str(exc)));
       return None;
     busy = None;
-    if type(result) != numpy.ndarray:
+    if type(result) != numpy.ma.masked_array and type(result) != numpy.ndarray:
       self.showErrorMessage("""Result of "%s" is of invalid type "%s" (array expected)."""%(expression,type(result).__name__));
       return None;
     # determine which image this expression can be associated with
