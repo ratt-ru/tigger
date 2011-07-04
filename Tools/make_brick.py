@@ -187,7 +187,7 @@ class MakeBrickDialog (QDialog):
       # 	TypeError: formatwarning() takes exactly 4 arguments (5 given)
       # when attempting to overwrite a file. As a workaround, remove the file first.
       if os.path.exists(filename):
-	os.remove(filename);
+        os.remove(filename);
       input_hdu.writeto(filename);
     except Exception,err:
       traceback.print_exc();

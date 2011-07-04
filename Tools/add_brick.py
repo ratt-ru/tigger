@@ -32,7 +32,7 @@ class AddBrickDialog (QDialog):
     self.wpad = QLineEdit("2",self);
     self.wpad.setValidator(QDoubleValidator(self));
     lo1.addWidget(self.wpad,0,1);
-    lo1.addWidget(QLabel("Source name:",self),1,0);
+    lo1.addWidget(QLabel("Assign source name:",self),1,0);
     self.wname = QLineEdit(self);
     lo1.addWidget(self.wname,1,1);
     # OK/cancel buttons
