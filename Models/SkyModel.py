@@ -189,10 +189,8 @@ class SkyModel (ModelItem):
     self.scanTags();
     self.initGroupings();
 
-  def addSources (self,*src):
-    self.sources += list(src);
-    self.scanTags(src);
-    self.computeGroupings();
+  def addSources (self,sources):
+    self.setSources(list(self.sources)+list(sources));
 
   def scanTags (self,sources=None):
     """Populates self.tagnames with a list of tags present in sources""";

@@ -95,8 +95,8 @@ class MainWindow (QMainWindow):
     menubar = self.menuBar();
     # File menu
     file_menu = menubar.addMenu("&File");
-    qa_open = file_menu.addAction("&Open model...",self.openFile,Qt.CTRL+Qt.Key_O);
-    qa_merge = file_menu.addAction("&Merge in model...",self.mergeFile,Qt.CTRL+Qt.SHIFT+Qt.Key_O);
+    qa_open = file_menu.addAction("&Open model...",self._openFileCallback,Qt.CTRL+Qt.Key_O);
+    qa_merge = file_menu.addAction("&Merge in model...",self._mergeFileCallback,Qt.CTRL+Qt.SHIFT+Qt.Key_O);
     QObject.connect(self,SIGNAL("hasSkyModel"),qa_merge.setEnabled);
     file_menu.addSeparator();
     qa_save = file_menu.addAction("&Save model",self.saveFile,Qt.CTRL+Qt.Key_S);
@@ -160,7 +160,7 @@ class MainWindow (QMainWindow):
     self.model = None;
     self.filename = None;
     self._display_filename = None;
-    self._open_file_dialog = self._save_as_dialog = self._save_sel_as_dialog = self._open_image_dialog = None;
+    self._open_file_dialog = self._merge_file_dialog = self._save_as_dialog = self._save_sel_as_dialog = self._open_image_dialog = None;
     self.emit(SIGNAL("isUpdated"),False);
     self.emit(SIGNAL("hasSkyModel"),False);
     self.emit(SIGNAL("hasSelection"),False);
@@ -350,9 +350,6 @@ class MainWindow (QMainWindow):
     """Called when the model selection has been updated.""";
     self.emit(SIGNAL("hasSelection"),bool(num));
 
-  def mergeFile (self,filename=None,format=None):
-    return self.openFile(filename,format=format,merge=True);
-
   _load_file_types = (
     ("Native model",("*."+ModelHTML.DefaultExtension,),ModelHTML.loadModel),
     ("NEWSTAR model",("*.mdl","*.MDL"),Import.importNEWSTAR),
@@ -401,19 +398,31 @@ class MainWindow (QMainWindow):
       self.grouptab.clear();
       self.skyplot.setModel(None);
 
+  def _openFileCallback (self):
+    if not self._open_file_dialog:
+      filters = ";;".join([  "%s (%s)"%(name," ".join(patterns)) for name,patterns,func in self._load_file_types ]);
+      dialog = self._open_file_dialog = QFileDialog(self,"Open sky model",".",filters);
+      dialog.setFileMode(QFileDialog.ExistingFile);
+      dialog.setModal(True);
+      QObject.connect(dialog,SIGNAL("filesSelected(const QStringList &)"),self.openFile);
+    self._open_file_dialog.exec_();
+    return;
+
+  def _mergeFileCallback (self):
+    if not self._merge_file_dialog:
+      filters = ";;".join([  "%s (%s)"%(name," ".join(patterns)) for name,patterns,func in self._load_file_types ]);
+      dialog = self._merge_file_dialog = QFileDialog(self,"Merge in sky model",".",filters);
+      dialog.setFileMode(QFileDialog.ExistingFile);
+      dialog.setModal(True);
+      QObject.connect(dialog,SIGNAL("filesSelected(const QStringList &)"),
+        self._currier.curry(self.openFile,merge=True));
+    self._merge_file_dialog.exec_();
+    return;
+      
   def openFile (self,filename=None,format=None,merge=False,show=True):
-    if filename is None:
-        if not self._open_file_dialog:
-            filters = ";;".join([  "%s (%s)"%(name," ".join(patterns)) for name,patterns,func in self._load_file_types ]);
-            dialog = self._open_file_dialog = QFileDialog(self,"Open sky model",".",filters);
-            dialog.setFileMode(QFileDialog.ExistingFile);
-            dialog.setModal(True);
-            QObject.connect(dialog,SIGNAL("filesSelected(const QStringList &)"),self.openFile);
-        self._open_file_dialog.exec_();
-        return;
     from Models import ModelHTML,Import,ModelClasses
     # check that we can close existing model
-    if not self._canCloseExistingModel():
+    if not merge and not self._canCloseExistingModel():
       return False;
     if isinstance(filename,QStringList):
       filename = filename[0];

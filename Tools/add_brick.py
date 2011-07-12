@@ -71,7 +71,8 @@ class AddBrickDialog (QDialog):
           QMessageBox.warning(self,"Already in model","This FITS brick is already present in the model.");
           self.wokbtn.setEnabled(False);
           return;
-    self.wname.setText(os.path.splitext(os.path.basename(str(filename)))[0]);
+    if not str(self.wname.text()):
+      self.wname.setText(os.path.splitext(os.path.basename(str(filename)))[0]);
     self.wokbtn.setEnabled(True);
 
   def accept (self):
