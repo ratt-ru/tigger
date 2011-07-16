@@ -948,6 +948,8 @@ class SkyModelPlotter (QWidget):
     self._menu.addAction("Export plot to PNG file...",self._exportPlotToPNG,Qt.CTRL+Qt.Key_F12);
 
   def close (self):
+    self._menu.clear();
+    self._wtoolbar.clear();
     self._livezoom.close();
     self._liveprofile.close();
 

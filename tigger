@@ -121,4 +121,7 @@ if __name__ == "__main__":
   dprint(1,"added signal handler");
 
   splash.finish(mainwin);
+  
   app.exec_();
+  
+  os._exit(0);
