@@ -162,6 +162,8 @@ class ImageController (QFrame):
     self._qa_show_rc = self._menu.addAction(pixmaps.colours.icon(),"Colours && Intensities...",self.showRenderControls);
     if save:
       self._qa_save = self._menu.addAction("Save image...",self._saveImage);
+    self._menu.addAction("Export image to PNG file...",self._exportImageToPNG);
+    self._export_png_dialog = None;
     self._menu.addAction("Unload image",self._currier.curry(self.image.emit,SIGNAL("unload")));
     self._wraise.setMenu(self._menu);
     self._wraise.setPopupMode(QToolButton.DelayedPopup);
@@ -252,8 +254,11 @@ class ImageController (QFrame):
 
   def showRenderControls (self):
     if not self._control_dialog:
+      dprint(1,"creating control dialog");
       self._control_dialog = ImageControlDialog(self,self._rc,self._imgman);
+      dprint(1,"done");
     if not self._control_dialog.isVisible():
+      dprint(1,"showing control dialog");
       self._control_dialog.show();
     else:
       self._control_dialog.hide();
@@ -342,6 +347,42 @@ class ImageController (QFrame):
     self._qa_save.setVisible(False);
     self._wsave.hide();
     busy = None;
+    
+  def _exportImageToPNG (self,filename=None):
+    if not filename:
+      if not self._export_png_dialog:
+          dialog = self._export_png_dialog = QFileDialog(self,"Export image to PNG",".","*.png");
+          dialog.setDefaultSuffix("png");
+          dialog.setFileMode(QFileDialog.AnyFile);
+          dialog.setAcceptMode(QFileDialog.AcceptSave);
+          dialog.setModal(True);
+          QObject.connect(dialog,SIGNAL("filesSelected(const QStringList &)"),self._exportImageToPNG);
+      return self._export_png_dialog.exec_() == QDialog.Accepted;
+    busy = BusyIndicator();
+    if isinstance(filename,QStringList):
+      filename = filename[0];
+    filename = str(filename);
+    # make QPixmap
+    nx,ny = self.image.imageDims();
+    (l0,l1),(m0,m1) = self.image.getExtents();
+    pixmap = QPixmap(nx,ny);
+    painter = QPainter(pixmap);
+    # use QwtPlot implementation of draw canvas, since we want to avoid caching
+    xmap = QwtScaleMap();
+    xmap.setPaintInterval(0,nx);
+    xmap.setScaleInterval(l1,l0);
+    ymap = QwtScaleMap();
+    ymap.setPaintInterval(ny,0);
+    ymap.setScaleInterval(m0,m1);
+    self.image.draw(painter,xmap,ymap,pixmap.rect());
+    painter.end();
+    # save to file
+    try:
+      pixmap.save(filename,"PNG");
+    except Exception,exc:
+      self.emit(SIGNAL("showErrorMessage"),"Error writing %s: %s"%(filename,str(exc)));
+      return;
+    self.emit(SIGNAL("showMessage"),"Exported image to file %s"%filename);
 
   def _toggleDisplayRangeLock (self):
     self.renderControl().lockDisplayRange(not self.renderControl().isDisplayRangeLocked());

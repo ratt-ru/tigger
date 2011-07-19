@@ -114,7 +114,7 @@ class SkyImagePlotItem (QwtPlotItem,QObject):
     return self._l0 + (x-self._x0)*self._dl,self._m0 + (y-self._y0)*self._dm;
 
   def getExtents (self):
-    """Returns image extent, as (l0,m0),(l1,m1)""";
+    """Returns image extent, as (l0,l1),(m0,m1)""";
     return self._lminmax,self._mminmax;
 
   def boundingRect (self):

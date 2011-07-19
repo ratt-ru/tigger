@@ -372,11 +372,18 @@ class ImageControlDialog (QDialog):
     QDialog.hide(self);
 
   def show (self):
+    dprint(4,"show entrypoint");
     if self._geometry:
+      dprint(4,"setting geometry");
       self.setGeometry(self._geometry);
-    if self._hist is None:
+    if self._hist is None:    
+      busy = BusyIndicator();
+      dprint(4,"updating histogram");
       self._updateHistogram();
+      dprint(4,"updating stats");
       self._updateStats(self._subset,self._subset_range);
+      busy = None;
+    dprint(4,"calling QDialog.show");
     QDialog.show(self);
 
   # number of bins used to compute intensity transfer function
@@ -575,7 +582,7 @@ class ImageControlDialog (QDialog):
 
   def _updateStats (self,subset,minmax):
     """Recomputes subset statistics.""";
-    if subset.size <= (4096*4096):
+    if subset.size <= (2048*2048):
       self._showMeanStd(busy=False);
     else:
       self._wlab_stats.setText(("min: %s  max: %s  np: %d"%(DataValueFormat,DataValueFormat,self._subset.size))%minmax);
@@ -595,10 +602,14 @@ class ImageControlDialog (QDialog):
       self._histplot.replot();
 
   def _showMeanStd (self,busy=True):
-    if busy :
+    if busy:
       busy = BusyIndicator();
     dmin,dmax = self._subset_range;
-    mean,std = self._subset.mean(),self._subset.std();
+    dprint(5,"computing mean");
+    mean = self._subset.mean();
+    dprint(5,"computing std");
+    std  = self._subset.std();
+    dprint(5,"done");
     text = "  ".join([ ("%s: "+DataValueFormat)%(name,value) for name,value in ("min",dmin),("max",dmax),("mean",mean),("std",std) ]+["np: %d"%self._subset.size]);
     self._wlab_stats.setText(text);
     self._wmore_stats.hide();
