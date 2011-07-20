@@ -24,7 +24,8 @@ class MakeBrickDialog (QDialog):
     lo.setMargin(10);
     lo.setSpacing(5);
     # file selector
-    self.wfile = FileSelector(self,label="FITS filename:",dialog_label="Output FITS file",default_suffix="fits",file_types="FITS files (*.fits *.FITS)",file_mode=QFileDialog.ExistingFile);
+    self.wfile = FileSelector(self,label="FITS filename:",dialog_label="Output FITS file",default_suffix="fits",
+                    file_types="FITS files (*.fits *.FITS)",file_mode=QFileDialog.ExistingFile);
     lo.addWidget(self.wfile);
     # reference frequency
     lo1 = QHBoxLayout();
@@ -117,42 +118,61 @@ class MakeBrickDialog (QDialog):
     else:
       self.wpb_apply.setChecked(False);
       self.wpb_exp.setText("");
-    self._fileSelected(self.wfile.filename());
+    if model.filename():
+      self._model_dir = os.path.dirname(os.path.abspath(model.filename()));
+    else:
+      self._model_dir = os.path.abspath('.');
+    self.wfile.setDirectory(self._model_dir);
+    self._fileSelected(self.wfile.filename(),quiet=True);
 
-  def _fileSelected (self,filename):
-    self.wokbtn.setEnabled(bool(filename));
+  def _fileSelected (self,filename,quiet=False):
+    self.wokbtn.setEnabled(False);
+    if not filename:
+      return None;
+    # check that filename matches model
+    if not os.path.samefile(self._model_dir,os.path.dirname(filename)):
+      self.wfile.setFilename('');
+      if not quiet:
+        QMessageBox.warning(self,"Directory mismatch","""<P>The FITS file must reside in the same directory
+          as the current sky model.</P>""");
+      self.wfile.setDirectory(self._model_dir);
+      return None;
     # read fits file
-    if filename:
-      busy = BusyIndicator();
-      try:
-        input_hdu = pyfits.open(filename)[0];
-        hdr = input_hdu.header;
-        # get frequency, if specified
-        for axis in range(1,hdr['NAXIS']+1):
-          if hdr['CTYPE%d'%axis].upper() == 'FREQ':
-            self.wfreq.setText(str(hdr['CRVAL%d'%axis]/1e+6));
-            break;
-      except Exception,err:
-        busy = None;
-        self.qerrmsg.showMessage("Error reading FITS file %s: %s"%(filename,str(err)));
-        input_hdu = None;
-      # if filename is not in model already, enable the "add to model" control
-      for src in self.model.sources:
-        if isinstance(getattr(src,'shape',None),ModelClasses.FITSImage) \
-            and os.path.exists(src.shape.filename) and os.path.exists(filename) \
-            and os.path.samefile(src.shape.filename,filename):
-          self.wadd.setChecked(True);
-          self.wadd.setEnabled(False);
-          self.wadd.setText("image already in sky model");
+    busy = BusyIndicator();
+    try:
+      input_hdu = pyfits.open(filename)[0];
+      hdr = input_hdu.header;
+      # get frequency, if specified
+      for axis in range(1,hdr['NAXIS']+1):
+        if hdr['CTYPE%d'%axis].upper() == 'FREQ':
+          self.wfreq.setText(str(hdr['CRVAL%d'%axis]/1e+6));
           break;
-      else:
-        self.wadd.setText("add image to sky model");
+    except Exception,err:
+      busy = None;
+      self.wfile.setFilename('');
+      if not quiet:
+        QMessageBox.warning(self,"Error reading FITS","Error reading FITS file %s: %s"%(filename,str(err)));
+      return None;
+    self.wokbtn.setEnabled(True);
+    # if filename is not in model already, enable the "add to model" control
+    for src in self.model.sources:
+      if isinstance(getattr(src,'shape',None),ModelClasses.FITSImage) \
+          and os.path.exists(src.shape.filename) and os.path.exists(filename) \
+          and os.path.samefile(src.shape.filename,filename):
+        self.wadd.setChecked(True);
+        self.wadd.setEnabled(False);
+        self.wadd.setText("image already in sky model");
+        break;
+    else:
+      self.wadd.setText("add image to sky model");
+    return filename;
 
   def accept (self):
     """Tries to make a brick, and closes the dialog if successful.""";
     sources = [ src for src in self.model.sources if src.selected and src.typecode == 'pnt' ];
     filename = self.wfile.filename();
-    self._fileSelected(filename);
+    if not self._fileSelected(filename):
+      return;
     # get PB expression
     pbfunc = None;
     if self.wpb_apply.isChecked():
@@ -160,7 +180,8 @@ class MakeBrickDialog (QDialog):
       try:
         pbfunc = eval("lambda r,fq:"+pbexp);
       except Exception,err:
-        self.qerrmsg.showMessage("Error parsing primary beam expression %s: %s"%(pbexp,str(err)));
+        QMessageBox.warning(self,"Error parsing PB experssion",
+              "Error parsing primary beam expression %s: %s"%(pbexp,str(err)));
         return;
     # get frequency
     freq = str(self.wfreq.text());
@@ -174,7 +195,7 @@ class MakeBrickDialog (QDialog):
       input_hdu = pyfits.open(filename)[0];
     except Exception,err:
       busy = None;
-      self.qerrmsg.showMessage("Error reading FITS file %s: %s"%(filename,str(err)));
+      QMessageBox.warning(self,"Error reading FITS","Error reading FITS file %s: %s"%(filename,str(err)));
       return;
     # reset data if asked to
     if self.woverwrite.isChecked():
@@ -192,7 +213,7 @@ class MakeBrickDialog (QDialog):
     except Exception,err:
       traceback.print_exc();
       busy = None;
-      self.qerrmsg.showMessage("Error writing FITS file %s: %s"%(filename,str(err)));
+      QMessageBox.warning(self,"Error writing FITS","Error writing FITS file %s: %s"%(filename,str(err)));
       return;
     changed = False;
     sources = self.model.sources;
@@ -239,7 +260,7 @@ class MakeBrickDialog (QDialog):
       else:
         pos = ModelClasses.Position(ra0,dec0);
         flux = ModelClasses.Flux(max_flux);
-        shape = ModelClasses.FITSImage(sx,sy,0,filename,nx,ny,pad=pad);
+        shape = ModelClasses.FITSImage(sx,sy,0,os.path.basename(filename),nx,ny,pad=pad);
         img_src = SkyModel.Source(os.path.splitext(os.path.basename(filename))[0],pos,flux,shape=shape);
         sources.append(img_src);
       changed = True;

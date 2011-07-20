@@ -127,7 +127,7 @@ class SkyModel (ModelItem):
 
   def filename (self):
     return self._filename;
-
+    
   def setCurrentSource (self,src,origin=None):
     """Changes the current source. If it has indeed changed, emits a currentSourceChanged signal. Arguments passed with the signal:
     src: the new current source.

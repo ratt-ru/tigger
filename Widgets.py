@@ -112,6 +112,7 @@ class FileSelector (QWidget):
     self._file_types = file_types or "All files (*)";
     self._file_mode = file_mode;
     self._default_suffix = default_suffix;
+    self._dir = None;
 
   def _chooseFile (self):
     if self._file_dialog is None:
@@ -120,6 +121,8 @@ class FileSelector (QWidget):
         dialog.setDefaultSuffix(self._default_suffix);
       dialog.setFileMode(self._file_mode);
       dialog.setModal(True);
+      if self._dir is not None:
+        dialog.setDirectory(self._dir);
       QObject.connect(dialog,SIGNAL("filesSelected(const QStringList &)"),self.setFilename);
     return self._file_dialog.exec_();
 
@@ -130,6 +133,11 @@ class FileSelector (QWidget):
     self.wfname.setText(filename);
     self.emit(SIGNAL("valid"),bool(filename));
     self.emit(SIGNAL("filenameSelected"),filename);
+    
+  def setDirectory (self,directory):
+    self._dir = directory;
+    if self._file_dialog is not None:
+      self._file_dialog.setDirectory(directory);
 
   def filename (self):
     return str(self.wfname.text());

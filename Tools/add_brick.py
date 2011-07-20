@@ -59,21 +59,37 @@ class AddBrickDialog (QDialog):
 
   def setModel (self,model):
     self.model = model;
-    self._fileSelected(self.wfile.filename());
+    if model.filename():
+      self._model_dir = os.path.dirname(os.path.abspath(model.filename()));
+    else:
+      self._model_dir = os.path.abspath('.');
+    self.wfile.setDirectory(self._model_dir);
+    self._fileSelected(self.wfile.filename(),quiet=True);
 
-  def _fileSelected (self,filename):
+  def _fileSelected (self,filename,quiet=False):
+    self.wokbtn.setEnabled(False);
     if not filename:
-      return;
+      return None;
+    # check that filename matches model
+    if not os.path.samefile(self._model_dir,os.path.dirname(filename)):
+      self.wfile.setFilename('');
+      if not quiet:
+        QMessageBox.warning(self,"Directory mismatch","""<P>The FITS file must reside in the same directory
+          as the current sky model.</P>""");
+      self.wfile.setDirectory(self._model_dir);
+      return None;
     # if filename is not in model already, enable the "add to model" control
     for src in self.model.sources:
       if isinstance(getattr(src,'shape',None),ModelClasses.FITSImage):
         if os.path.exists(src.shape.filename) and os.path.samefile(src.shape.filename,filename):
-          QMessageBox.warning(self,"Already in model","This FITS brick is already present in the model.");
-          self.wokbtn.setEnabled(False);
-          return;
+          if not quiet:
+            QMessageBox.warning(self,"Already in model","This FITS brick is already present in the model.");
+          self.wfile.setFilename('');
+          return None;
     if not str(self.wname.text()):
       self.wname.setText(os.path.splitext(os.path.basename(str(filename)))[0]);
     self.wokbtn.setEnabled(True);
+    return filename;
 
   def accept (self):
     """Tries to add brick, and closes the dialog if successful.""";
@@ -84,7 +100,7 @@ class AddBrickDialog (QDialog):
       input_hdu = pyfits.open(filename)[0];
     except Exception,err:
       busy = None;
-      self.qerrmsg.showMessage("Error reading FITS file %s: %s"%(filename,str(err)));
+      QMessageBox.warning(self,"Error reading FITS","Error reading FITS file %s: %s"%(filename,str(err)));
       return;
     # check name
     srcname = str(self.wname.text()) or os.path.splitext(os.path.basename(str(filename)))[0];
@@ -116,7 +132,7 @@ class AddBrickDialog (QDialog):
     nx,ny = input_hdu.data.shape[-1:-3:-1];
     pos = ModelClasses.Position(ra0,dec0);
     flux = ModelClasses.Flux(max_flux);
-    shape = ModelClasses.FITSImage(sx,sy,0,filename,nx,ny,pad=float(str(self.wpad.text())));
+    shape = ModelClasses.FITSImage(sx,sy,0,os.path.basename(filename),nx,ny,pad=float(str(self.wpad.text())));
     img_src = SkyModel.Source(srcname,pos,flux,shape=shape);
     self.model.setSources(self.model.sources + [img_src]);
     self.model.emitUpdate(SkyModel.SkyModel.UpdateAll,origin=self);
