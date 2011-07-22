@@ -97,10 +97,15 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
   else:
     parser.error("Incorrect number of arguments. Use -h for help.");
 
-
   # figure out recenter option
   if options.recenter:
-    import pyrap.measures
+    try:
+      import pyrap.measures
+    except:
+      traceback.print_exc();
+      print "Failed to import pyrap.measures, which is required by the --recenter option."
+      print "You probably need to install the 'pyrap' package for this to work."
+      sys.exit(1);
     dm = pyrap.measures.measures();
     try:
       center_dir = dm.direction(*(options.recenter.split(',')));

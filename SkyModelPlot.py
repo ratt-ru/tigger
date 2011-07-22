@@ -16,6 +16,7 @@ dprint = _verbosity.dprint;
 dprintf = _verbosity.dprintf;
 
 from Models import ModelClasses,PlotStyles
+import Coordinates
 from Coordinates import Projection
 from  Models.SkyModel import SkyModel
 from Tigger import pixmaps,Config
@@ -27,6 +28,7 @@ Z_Grid = 9000;
 Z_Source = 10000;
 Z_SelectedSource = 10001;
 Z_CurrentSource = 10002;
+Z_Markup = 10010;
 
 # default stepping of grid circles
 DefaultGridStep_ArcMin = 30;
@@ -595,9 +597,10 @@ class SkyModelPlotter (QWidget):
   SelectionRemove = 4;  # remove from selection
   # Mouse pointer modes
   MouseZoom = 0;
-  MouseSubset = 1;
-  MouseSelect = 2;
-  MouseDeselect = 3;
+  MouseMeasure = 1;
+  MouseSubset = 2;
+  MouseSelect = 3;
+  MouseDeselect = 4;
 
   class Plot (QwtPlot):
     """Auguments QwtPlot with additional functions, including a cache of QPoints thatr's cleared whenever a plot layout is
@@ -777,6 +780,7 @@ class SkyModelPlotter (QWidget):
       QwtPlotPicker.__init__(self,QwtPlot.xBottom,QwtPlot.yLeft,mode,rubber_band,QwtPicker.ActiveOnly,canvas);
       # setup appearance
       self._text = QwtText(label);
+      self._color = None;
 #      self._text_inactive = QwtText();
       self.setLabel(label,color);
       if isinstance(text_bg,QColor):
@@ -791,8 +795,10 @@ class SkyModelPlotter (QWidget):
       if select_callback:
         if mode == QwtPicker.RectSelection:
           QObject.connect(self,SIGNAL("selected(const QwtDoubleRect &)"),select_callback);
-        else:
+        elif mode == QwtPicker.PointSelection:
           QObject.connect(self,SIGNAL("selected(const QwtDoublePoint &)"),select_callback);
+        elif mode == QwtPicker.PolygonSelection:
+          QObject.connect(self,SIGNAL("selected(const QwtPolygon &)"),select_callback);
 
     def setLabel (self,label,color=None):
       if color:
@@ -816,7 +822,27 @@ class SkyModelPlotter (QWidget):
           text = self._text;
         if self._text_bg:
           text.setBackgroundBrush(self._text_bg);
+        if self._color is not None:
+          text.setColor(self._color);
         return text;
+    
+  class PlotRuler (PlotPicker):
+    """This is an ugly kludge to get a QwtPicker in PolygonSelection mode (with a PolygonRubberBand)
+    to act as a DragSelection. By default, it is impossible to display a "ruler" that acts like
+    a RecSelection-style DragSelection: rulers are only available with a PolygonSelection,
+    which does not support drag, but rather requires two clicks. By intercepting the mouse release
+    event here and faking a second mouse press, we achieve DragSelection-like behaviour."""
+    def widgetLeaveEvent (self,event):
+      self.reset();
+    def transition (self,event):
+      SkyModelPlotter.PlotPicker.transition(self,event);
+      if event.type() == QEvent.MouseButtonRelease:
+        ev1 = QMouseEvent(QEvent.MouseButtonPress,event.pos(),event.button(),event.buttons(),event.modifiers());
+        SkyModelPlotter.PlotPicker.transition(self,ev1);
+        ev2 = QMouseEvent(QEvent.MouseButtonRelease,event.pos(),event.button(),event.buttons(),event.modifiers());
+        SkyModelPlotter.PlotPicker.transition(self,ev2);
+        self.reset();
+        
 
   def __init__ (self,parent,mainwin,*args):
     QWidget.__init__(self,parent,*args);
@@ -858,6 +884,32 @@ class SkyModelPlotter (QWidget):
     self._zoomer.setTrackerPen(QColor("navy"));
     self._zoomer.setTrackerMode(QwtPicker.AlwaysOn);
     QObject.connect(self._zoomer,SIGNAL("zoomed(const QwtDoubleRect &)"),self._plotZoomed);
+    # attach ruler
+#    self._coordinate_lookup = self.PlotPicker(self.plot.canvas(),"","cyan",
+#      self._lookupCoordinates,mode=QwtPicker.PointSelection);
+#    self._coordinate_lookup.setMousePattern(QwtEventPattern.MouseSelect1,Qt.LeftButton);
+    self._ruler = self.PlotRuler(self.plot.canvas(),"","cyan",self._measureRuler,
+      mode=QwtPicker.PolygonSelection,
+      rubber_band=QwtPicker.PolygonRubberBand,
+      track_callback=self._trackRuler);
+    # this is the initial position of the ruler -- None if ruler is not tracking
+    self._ruler_pos0 = None;
+    # this picker is just to make sure _trackCoordinates is still called in measurement mode
+    self._ruler1 = self.PlotPicker(self.plot.canvas(),"",mode=QwtPicker.PointSelection,track_callback=self._trackCoordinates);
+    self._ruler1.setTrackerMode(QwtPicker.AlwaysOn);
+    # markup symbols and colors and pens
+    self._plot_markup = [];
+    self._markup_color = QColor("red");
+    self._markup_pen = QPen(self._markup_color,1);
+    self._markup_brush = QBrush(Qt.NoBrush);
+    self._markup_xsymbol = QwtSymbol(QwtSymbol.XCross,self._markup_brush,self._markup_pen,QSize(16,16));
+    self._markup_absymbol = QwtSymbol(QwtSymbol.Ellipse,self._markup_brush,self._markup_pen,QSize(4,4));
+    self._markup_a_label = QwtText("A");
+    self._markup_a_label.setColor(self._markup_color);
+    self._markup_b_label = QwtText("B");
+    self._markup_b_label.setColor(self._markup_color);
+    # self._ruler.setRubberBand(QwtPicker.PolygonRubberBand);
+    # self._ruler.setSelectionFlags(QwtPicker.PolygonSelection|QwtPicker.DragSelection);
     # attach object pickers
     # selection pickers
     self._picker1 = self.PlotPicker(self.plot.canvas(),"select","green",self._selectRect,track_callback=self._trackCoordinates);
@@ -871,7 +923,6 @@ class SkyModelPlotter (QWidget):
     self._livezoom = LiveImageZoom(self);
     self._liveprofile = LiveProfile(self);
     # other internal init
-    self._markers = {};
     self.model = None;
     self.projection = None;
     self._zoomrect  = None;
@@ -897,22 +948,39 @@ class SkyModelPlotter (QWidget):
     mouse_menu = self._menu.addMenu("Mouse mode");
     self._qa_mm = [
       mouse_menu.addAction(pixmaps.zoom_in.icon(),"Zoom",self._currier.curry(self.setMouseMode,self.MouseZoom),Qt.Key_F4),
+      mouse_menu.addAction(pixmaps.ruler.icon(),"Measure",self._currier.curry(self.setMouseMode,self.MouseMeasure)),
       mouse_menu.addAction(pixmaps.zoom_colours.icon(),"Select image subset",self._currier.curry(self.setMouseMode,self.MouseSubset)),
       mouse_menu.addAction(pixmaps.big_plus.icon(),"Select objects",self._currier.curry(self.setMouseMode,self.MouseSelect)),
       mouse_menu.addAction(pixmaps.big_minus.icon(),"Deselect objects",self._currier.curry(self.setMouseMode,self.MouseDeselect)) ];
     self._qa_mm[0].setToolTip("""<P>Puts the mouse in zoom mode. In this mode, hold the left mouse button and drag a rectangle
-        on the plot to zoom in. Middle-click to zoom back out one step, and right-click to zoom out all the way. Hold down
+        on the plot to zoom in. Middle-click to zoom back out one step, and right-click to zoom out all the way.</P> 
+        <P>As in most other modes, you may hold down
         CTRL and left-click to select individual model sources.</P>""");
-    self._qa_mm[1].setToolTip("""<P>Puts the mouse in image selection mode. In this mode, hold the left mouse button and drag a
+    self._qa_mm[1].setToolTip("""<P>Puts the mouse in measurement mode. 
+        In this mode, click on the plot to look up coordinates (coordinates will also be copied
+        to the text console, and to the clipboard), or hold the left mouse button and drag a "ruler"
+        to measure separation and position angle. The resulting coordinates and measurements will be</P>
+        <OL>
+        <LI>displayed on-screen in a tooltip</LI>
+        <LI>copied to the clipboard</LI>
+        <LI>printed to the text console from which Tigger was started</LI>
+        </OL>
+        <P>As in most other modes, you may hold down
+        CTRL and left-click to select individual model sources.</P>""");
+    self._qa_mm[2].setToolTip("""<P>Puts the mouse in image selection mode. In this mode, hold the left mouse button and drag a
         rectangle on the current image to select a window on the image. The current intensity range
-        (and histogram) will be set to the data range of the selected window. Hold down
+        (and histogram) will be set to the data range of the selected window.</P>
+        <P>As in most other modes, you may hold down
         CTRL and left-click to select individual model sources.</P>""");
-    self._qa_mm[2].setToolTip("""<P>Puts the mouse in source selection mode. In this mode, hold the left mouse button and drag a
+    self._qa_mm[3].setToolTip("""<P>Puts the mouse in source selection mode. In this mode, hold the left mouse button and drag a
         rectangle on the plot to select all sources within the rectangle. Hold down SHIFT while you drag to extend to
-        a previous selection. Hold down CTRL and left-click to select individual model sources.</P>""");
-    self._qa_mm[3].setToolTip("""<P>Puts the mouse in source deselection mode. In this mode, hold the left mouse button and drag a
-        rectangle on the plot to deselect all sources within the rectangle. Hold down CTRL and left-click to deselect
-        individual model sources.</P>""");
+        a previous selection.</P>
+        <P>As in most other modes, you may hold down
+        CTRL and left-click to select individual model sources.</P>""");
+    self._qa_mm[4].setToolTip("""<P>Puts the mouse in source deselection mode. In this mode, hold the left mouse button and drag a
+        rectangle on the plot to deselect all sources within the rectangle.</P>
+         <P>Unlike other modes, you may hold down
+        CTRL and left-click to <b>de-select</b> individual model sources.</P>""");
     for qa in self._qa_mm:
       self._qag_mousemode.addAction(qa);
       qa.setCheckable(True);
@@ -1014,6 +1082,8 @@ class SkyModelPlotter (QWidget):
     dprint(1,"setting mouse mode",mode);
     self._mouse_mode = mode;
     self._qa_mm[mode].setChecked(True);
+    # remove markup
+    self._removePlotMarkup();
     # remove shortcuts from all actions
     for qa in self._qa_mm:
       qa.setShortcut(QKeySequence());
@@ -1028,7 +1098,10 @@ class SkyModelPlotter (QWidget):
     # picker2 is for selecting rectangles with SHIFT. Active for selection modes only.
     # picker3 is for selecting sources with CTRL. Always active.
     self._zoomer.setEnabled(mode == self.MouseZoom);
-    self._picker1.setEnabled(mode != self.MouseZoom);
+    self._ruler.setEnabled(mode == self.MouseMeasure);
+    self._ruler1.setEnabled(mode == self.MouseMeasure);
+#    self._coordinate_lookup.setEnabled(mode == self.MouseMeasure);
+    self._picker1.setEnabled(mode > self.MouseMeasure);
     self._picker2.setEnabled(mode in (self.MouseSelect,self.MouseDeselect));
     self._picker3.setLabel("+select",color="green");
     if mode == self.MouseSubset:
@@ -1053,6 +1126,155 @@ class SkyModelPlotter (QWidget):
         return mindist[1].src;
     return  None;
 
+  def _convertCoordinates (self,pos):
+    # get ra/dec coordinates of point
+    pos = self.plot.screenPosToLm(pos);
+    l,m = pos.x(),pos.y();
+    ra,dec = self.projection.radec(l,m);
+    rh,rm,rs = ModelClasses.Position.ra_hms_static(ra);
+    dd,dm,ds = ModelClasses.Position.dec_dms_static(dec);
+    dist,pa = Coordinates.angular_dist_pos_angle(self.projection.ra0,self.projection.dec0,ra,dec);
+    Rd,Rm,Rs = ModelClasses.Position.dec_dms_static(dist);
+    PAd = pa*180/math.pi;
+    if PAd < 0:
+      PAd += 360;
+    # if we have an image, add pixel coordinates
+    x = y = val = flag = None;
+    image = self._imgman and self._imgman.getTopImage();
+    if image:
+      x,y = map(int,map(round,image.lmToPix(l,m)));
+      nx,ny = image.imageDims();
+      if x>=0 and x<nx and y>=0 and y<ny:
+#        text += "<BR>x=%d y=%d"%(round(x),round(y));
+        val,flag = image.imagePixel(x,y);
+      else:
+        x = y = None;
+    return l,m,ra,dec,dist,pa,rh,rm,rs,dd,dm,ds,Rd,Rm,Rs,PAd,x,y,val,flag;
+
+  def _trackRuler (self,pos):
+    # beginning to track?
+    if not self.projection:
+      return None;
+    if self._ruler_pos0 is None:
+      self._ruler_pos0 = QPoint(pos.x(),pos.y());
+      lmpos = self.plot.screenPosToLm(pos);
+      ra,dec = self.projection.radec(lmpos.x(),lmpos.y());
+      self._ruler_radec0 = [ ra,dec ];
+      return None;
+    if (pos - self._ruler_pos0).manhattanLength() > 1:
+      lmpos = self.plot.screenPosToLm(pos);
+      ra,dec = self.projection.radec(lmpos.x(),lmpos.y());
+      dist,pa = Coordinates.angular_dist_pos_angle(*(self._ruler_radec0 + [ra,dec]));
+      Rd,Rm,Rs = ModelClasses.Position.dec_dms_static(dist);
+      pa *= 180/math.pi;
+      pa += 360*(pa<0);
+      msgtext = u"%d\u00B0%02d'%05.2f\"  PA=%.2f\u00B0"%(Rd,Rm,Rs,pa);
+      return QwtText(msgtext);
+    
+  def _measureRuler (self,polygon):
+    self._ruler_pos0 = None;
+    if not self.projection or polygon.size() < 2:
+      return;
+    # get distance between points, if <=1, report coordinates rather than a measurement
+    markup_items = [];
+    pos0,pos1 = polygon.point(0),polygon.point(1);
+    l,m,ra,dec,dist,pa,rh,rm,rs,dd,dm,ds,Rd,Rm,Rs,PAd,x,y,val,flag = self._convertCoordinates(pos0);
+    if (pos0-pos1).manhattanLength() <= 1:
+      # make tooltip text, this uses HTML
+      tiptext = "<NOBR>X: %2dh%02dm%05.2fs %+2d&deg;%02d'%05.2f\"  &nbsp;  r<sub>0</sub>=%d&deg;%02d'%05.2f\"   &nbsp;  PA<sub>0</sub>=%6.2f&deg;"%(rh,rm,rs,dd,dm,ds,Rd,Rm,Rs,PAd);
+      if x is not None:
+        tiptext += " &nbsp;  x=%d y=%d value=blank"%(x,y) if flag else " &nbsp;  x=%d y=%d value=%g"%(x,y,val);
+      tiptext += "</NOBR>";
+      # make console (and cliboard) text
+      msgtext = u"X: %2dh%02dm%05.2fs %+2d\u00B0%02d'%05.2f\" (%.6f\u00B0 %.6f\u00B0)  r=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0"%(
+          rh,rm,rs,dd,dm,ds,ra*180/math.pi,dec*180/math.pi,Rd,Rm,Rs,dist*180/math.pi,PAd);
+      if x is not None:
+        msgtext += "   x=%d y=%d value=blank"%(x,y) if flag else "   x=%d y=%d value=%g"%(x,y,val);
+      # make marker
+      marker = QwtPlotMarker();
+      marker.setValue(l,m);
+      marker.setSymbol(self._markup_xsymbol);
+      markup_items.append(marker);
+    else:
+      l1,m1,ra1,dec1,dist1,pa1,rh1,rm1,rs1,dd1,dm1,ds1,Rd1,Rm1,Rs1,PAd1,x1,y1,val1,flag1 = self._convertCoordinates(pos1);
+      # make tooltip text, this uses HTML
+      tiptext = "<NOBR>A: %2dh%02dm%05.2fs %+2d&deg;%02d'%05.2f\"  &nbsp; r<sub>0</sub>=%d&deg;%02d'%05.2f\"   &nbsp;  PA<sub>0</sub>=%6.2f&deg;"%(rh,rm,rs,dd,dm,ds,Rd,Rm,Rs,PAd);
+      if x is not None:
+        tiptext += " &nbsp; x=%d y=%d value=blank"%(x,y) if flag else " x=%d y=%d value=%g"%(x,y,val);
+      tiptext += "</NOBR><BR>";
+      tiptext += "<NOBR>B: %2dh%02dm%05.2fs %+2d&deg;%02d'%05.2f\" &nbsp;  r<sub>0</sub>=%d&deg;%02d'%05.2f\"  &nbsp;  PA<sub>0</sub>=%6.2f&deg;"%(rh1,rm1,rs1,dd1,dm1,ds1,Rd1,Rm1,Rs1,PAd1);
+      if x1 is not None:
+        tiptext += " &nbsp; x=%d y=%d value=blank"%(x1,y1) if flag1 else " &nbsp;  x=%d y=%d value=%g"%(x1,y1,val1);
+      tiptext += "</NOBR><BR>";
+      # distance measurement
+      dist2,pa2 = Coordinates.angular_dist_pos_angle(ra,dec,ra1,dec1);
+      Rd2,Rm2,Rs2 = ModelClasses.Position.dec_dms_static(dist2);
+      pa2 *= 180/math.pi;
+      pa2 += 360*(pa2<0);
+      tiptext += "<NOBR>|AB|=%d&deg;%02d'%05.2f\" &nbsp; PA<sub>AB</sub>=%6.2f&deg;</NOBR>"%(Rd2,Rm2,Rs2,pa2);
+      # make console (and cliboard) text
+      msgtext = u"A: %2dh%02dm%05.2fs %+2d\u00B0%02d'%05.2f\" (%.6f\u00B0 %.6f\u00B0)  r=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0"%(
+          rh,rm,rs,dd,dm,ds,ra*180/math.pi,dec*180/math.pi,Rd,Rm,Rs,dist*180/math.pi,PAd);
+      if x is not None:
+        msgtext += u"   x=%d y=%d value=blank"%(x,y) if flag else "   x=%d y=%d value=%g"%(x,y,val);
+      msgtext += u"\nB: %2dh%02dm%05.2fs %+2d\u00B0%02d'%05.2f\" (%.6f\u00B0 %.6f\u00B0)  r=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0"%(
+          rh1,rm1,rs1,dd1,dm1,ds1,ra1*180/math.pi,dec1*180/math.pi,Rd1,Rm1,Rs1,dist1*180/math.pi,PAd1);
+      if x1 is not None:
+        msgtext += u"   x=%d y=%d value=blank"%(x1,y1) if flag1 else "   x=%d y=%d value=%g"%(x1,y1,val1);
+      msgtext += u"\n|AB|=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0"%(Rd2,Rm2,Rs2,dist2*180/math.pi,pa2);
+      # make markers
+      marka,markb = QwtPlotMarker(),QwtPlotMarker();
+      marka.setValue(l,m);
+      markb.setValue(l1,m1);
+      marka.setLabel(self._markup_a_label);
+      markb.setLabel(self._markup_b_label);
+      marka.setSymbol(self._markup_absymbol);
+      markb.setSymbol(self._markup_absymbol);
+      # work out optimal label alignment
+      aligna = Qt.AlignRight if pos0.x() > pos1.x() else Qt.AlignLeft;
+      alignb = Qt.AlignLeft if pos0.x() > pos1.x() else Qt.AlignRight;
+      aligna |= Qt.AlignBottom if pos0.y() > pos1.y() else Qt.AlignTop;
+      alignb |= Qt.AlignTop if pos0.y() > pos1.y() else Qt.AlignBottom;
+      marka.setLabelAlignment(aligna);
+      markb.setLabelAlignment(alignb);
+      marka.setSpacing(0);
+      markb.setSpacing(0);
+      line = QwtPlotCurve();
+      line.setData([l,l1],[m,m1]);
+      line.setBrush(self._markup_brush);
+      line.setPen(self._markup_pen);
+      markup_items = [ marka,markb,line ];
+    # calling QToolTip.showText() directly from here doesn't work, so set a timer on it
+    QTimer.singleShot(10,self._currier.curry(self._showCoordinateToolTip,tiptext));
+    # same deal for markup items
+    for item in markup_items:
+      item.setZ(Z_Markup);
+    QTimer.singleShot(10,self._currier.curry(self._addPlotMarkup,markup_items));
+    print msgtext;
+    QApplication.clipboard().setText(msgtext+"\n");
+    QApplication.clipboard().setText(msgtext+"\n",QClipboard.Selection);
+      
+  def _showCoordinateToolTip (self,text):
+    QToolTip.showText(self.plot.mapToGlobal(QPoint(0,0)),text,self.plot,self.plot.rect());
+    
+  def _addPlotMarkup (self,items):
+    """Adds a list of QwtPlotItems to the markup""";
+    self._removePlotMarkup(replot=False);
+    for item in items:
+      item.attach(self.plot);
+    self._plot_markup = items;
+    self.plot.clearDrawCache();
+    self.plot.replot();
+    
+  def _removePlotMarkup (self,replot=True):
+    """Removes all markup items, and refreshes the plot if replot=True""";
+    for item in self._plot_markup:
+      item.detach();
+    if self._plot_markup and replot:
+      self.plot.clearDrawCache();
+      self.plot.replot();
+    self._plot_markup = [];
+
   def _trackCoordinates (self,pos):
     if not self.projection:
       return None;
@@ -1062,33 +1284,16 @@ class SkyModelPlotter (QWidget):
       if src:
         self.model.setCurrentSource(src);
     # get ra/dec coordinates of point
-    pos = self.plot.screenPosToLm(pos);
-    l,m = pos.x(),pos.y();
-    ra,dec = self.projection.radec(l,m);
-    rh,rm,rs = ModelClasses.Position.ra_hms_static(ra);
-    dd,dm,ds = ModelClasses.Position.dec_dms_static(dec);
-    Rd,Rm,Rs = ModelClasses.Position.dec_dms_static(math.sqrt(l*l+m*m));
+    l,m,ra,dec,dist,pa,rh,rm,rs,dd,dm,ds,Rd,Rm,Rs,PAd,x,y,val,flag = self._convertCoordinates(pos);
 #    text = "<P align=\"right\">%2dh%02dm%05.2fs %+2d&deg;%02d'%05.2f\""%(rh,rm,rs,dd,dm,ds);
     # emit message as well
-    msgtext = u"%2dh%02dm%05.2fs %+2d\u00B0%02d'%05.2f\"  r=%d\u00B0%02d'%05.2f\""%(rh,rm,rs,dd,dm,ds,Rd,Rm,Rs);
+    msgtext = u"%2dh%02dm%05.2fs %+2d\u00B0%02d'%05.2f\"  r=%d\u00B0%02d'%05.2f\"  PA=%.2f\u00B0"%(rh,rm,rs,dd,dm,ds,Rd,Rm,Rs,PAd);
     # if we have an image, add pixel coordinates
     image = self._imgman and self._imgman.getTopImage();
-    if image:
-      x,y = map(int,map(round,image.lmToPix(l,m)));
-      nx,ny = image.imageDims();
-      if x>=0 and x<nx and y>=0 and y<ny:
-#        text += "<BR>x=%d y=%d"%(round(x),round(y));
-        val,flag = image.imagePixel(x,y);
-        if flag:
-          msgtext += "   x=%d y=%d value=blank"%(x,y);
-        else:
-          msgtext += "   x=%d y=%d value=%g"%(x,y,val);
+    if image and x is not None:
+      msgtext += "   x=%d y=%d value=blank"%(x,y) if flag else "   x=%d y=%d value=%g"%(x,y,val);
       self._livezoom.trackImage(image,x,y);
       self._liveprofile.trackImage(image,x,y);
-#    text += "</P>"
-#    text = QwtText(text,QwtText.RichText);
-#    if self._coord_bg_brush:
-#      text.setBackgroundBrush(self._coord_bg_brush);
     self.emit(SIGNAL("showMessage"),msgtext,3000);
     return None;
 
@@ -1173,6 +1378,8 @@ class SkyModelPlotter (QWidget):
     # clear plot, but do not delete items
     self.projection = None;
     self.plot.clear();
+    # clear any plot markup
+    self._plot_markup = [];
     # get current image (None if no images)
     self._image = self._imgman and self._imgman.getCenterImage();
     # show/hide live zoomer with image

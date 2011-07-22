@@ -1,7 +1,9 @@
+# -*- coding: utf-8 -*-
 from Tigger import startup_dprint
 startup_dprint(1,"start of Coordinates");
 
 import math
+import numpy
 from numpy import sin,cos,arcsin,arccos;
 startup_dprint(1,"imported numpy");
 import pyfits
@@ -27,6 +29,18 @@ except ImportError:
   print "Failed to import the astLib.astWCS module. Please install the astLib package (http://astlib.sourceforge.net/)."
 
 startup_dprint(1,"imported WCS");
+
+def angular_dist_pos_angle (ra1,dec1,ra2,dec2):
+  """Computes the angular distance between the two points on a sphere, and 
+  the position angle (North through East) of the direction from 1 to 2.""";
+  sind1,sind2 = sin(dec1),sin(dec2);
+  cosd1,cosd2 = cos(dec1),cos(dec2);
+  cosra,sinra = cos(ra1-ra2),sin(ra1-ra2);
+  
+  adist = numpy.arccos(sind1*sind2 + cosd1*cosd2*cosra);
+  pa = numpy.arctan2(-cosd2*sinra,-cosd2*sind1*cosra+sind2*cosd1);
+  return adist,pa;
+
 
 class _Projector (object):
     """This is an abstract base class for all projection classes below. A projection class can be used to create projector objects for
