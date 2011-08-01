@@ -1413,8 +1413,6 @@ class SkyModelPlotter (QWidget):
         xmax = extent[iext][1] = max([lm[iext] for lm in self._source_lm.itervalues()]);
         # add 5% on either side
         margin = .05*(xmax - xmin);
-        if not margin:
-          margin = DEG*0.5;
         extent[iext][0] -= margin;
         extent[iext][1] += margin;
         dprint(2,"plot extents for model",extent);
@@ -1426,6 +1424,10 @@ class SkyModelPlotter (QWidget):
       for i in 0,1:
         extent[i][0] = min(extent[i][0],ext[i][0]);
         extent[i][1] = max(extent[i][1],ext[i][1]);
+    # if margins still not set, force them to 1x1 degree
+    for i in 0,1:
+      if extent[i][0] == extent[i][1]:
+        extent[i] = [-DEG*0.5,DEG*0.5 ];
     dprint(2,"plot extents for model & images",extent);
     (lmin,lmax),(mmin,mmax) = extent;
     # adjust plot limits, if a fixed ratio is in effect, and set the zoom base

@@ -447,6 +447,40 @@ class ImageControlDialog (QDialog):
       qimg = self.cmap.colorize(self.imap.remap(xp.reshape((len(xp),1))));
       # plot image
       painter.drawImage(QRect(xp1,y0,xdp,dy),qimg);
+      
+  class HistogramLineMarker (object):
+    """Helper class implementing a line marker for a histogram plot""";
+    def __init__ (self,plot,color="black",linestyle=Qt.DotLine,align=Qt.AlignBottom|Qt.AlignRight,z=90,label="",zlabel=None,linewidth=1,spacing=2,
+                  yaxis=QwtPlot.yRight):
+      self.line = QwtPlotCurve();
+      self.color = color = color if isinstance(color,QColor) else QColor(color);
+      self.line.setPen(QPen(color,linewidth,linestyle));
+      self.marker = QwtPlotMarker();
+      self.marker.setLabelAlignment(align);
+      self.marker.setSpacing(spacing);
+      self.setText(label);
+      self.line.setZ(z);
+      self.marker.setZ(zlabel if zlabel is not None else z);
+      # set axes -- using yRight, since that is the "markup" z-axis
+      self.line.setAxis(QwtPlot.xBottom,yaxis);
+      self.marker.setAxis(QwtPlot.xBottom,yaxis);
+      # attach to plot
+      self.line.attach(plot);
+      self.marker.attach(plot);
+      
+    def show (self):
+      self.line.show(); 
+      self.marker.show();
+      
+    def hide (self):
+      self.line.hide(); 
+      self.marker.hide();
+
+    def setText (self,text):
+      label = QwtText(text);
+      label.setColor(self.color);
+      self.marker.setLabel(label);
+      
 
   def _setupHistogramPlot (self):
     self._histplot.setCanvasBackground(QColor("lightgray"));
@@ -467,12 +501,19 @@ class ImageControlDialog (QDialog):
 #    self._histcurve1.attach(self._histplot);
     self._histcurve2.attach(self._histplot);
     # add maxbin and half-max curves
-    self._line_maxbin = QwtPlotCurve();
-    self._line_halfmax = QwtPlotCurve();
-    for c in self._line_halfmax,self._line_maxbin:
-      c.setPen(QPen(Qt.DotLine));
-      c.setZ(90);
-      c.attach(self._histplot);
+    self._line_0       = self.HistogramLineMarker(self._histplot,color="grey50",linestyle=Qt.SolidLine,align=Qt.AlignTop|Qt.AlignLeft,z=90);
+    self._line_mean    = self.HistogramLineMarker(self._histplot,color="black",linestyle=Qt.SolidLine,align=Qt.AlignBottom|Qt.AlignRight,z=91,
+          label="mean",zlabel=151);
+    self._line_std     = self.HistogramLineMarker(self._histplot,color="black",linestyle=Qt.SolidLine,align=Qt.AlignTop|Qt.AlignRight,z=91,
+          label="std",zlabel=151);
+    sym = QwtSymbol();
+    sym.setStyle(QwtSymbol.VLine);
+    sym.setSize(8);
+    self._line_std.line.setSymbol(sym);
+    self._line_maxbin  = self.HistogramLineMarker(self._histplot,color="green",linestyle=Qt.DotLine,align=Qt.AlignTop|Qt.AlignRight,z=92,
+          label="max bin",zlabel=150);
+    self._line_halfmax = self.HistogramLineMarker(self._histplot,color="green",linestyle=Qt.DotLine,align=Qt.AlignBottom|Qt.AlignRight,z=90,
+          label="half-max",yaxis=QwtPlot.yLeft);
     # add current range
     self._rangebox = QwtPlotCurve();
     self._rangebox.setStyle(QwtPlotCurve.Steps);
@@ -493,6 +534,14 @@ class ImageControlDialog (QDialog):
     self._itfcurve.setYAxis(QwtPlot.yRight);
     self._itfcurve.setZ(120);
     self._itfcurve.attach(self._histplot);
+    self._itfmarker = QwtPlotMarker();
+    label = QwtText("ITF");
+    label.setColor(QColor("blue"));
+    self._itfmarker.setLabel(label);
+    self._itfmarker.setSpacing(0);
+    self._itfmarker.setLabelAlignment(Qt.AlignTop|Qt.AlignRight);
+    self._itfmarker.setZ(120);
+    self._itfmarker.attach(self._histplot);
     # add colorbar
     self._cb_item = self.ColorBarPlotItem(1,1+self.ColorBarHeight);
     self._cb_item.setYAxis(QwtPlot.yRight);
@@ -523,6 +572,7 @@ class ImageControlDialog (QDialog):
       self._rangebox.setData(self._rc.displayRange(),[1,1]);
       self._rangebox2.setData(self._rc.displayRange(),[1,1]);
       self._itfcurve.setData(xdata,ydata);
+      self._itfmarker.setValue(xdata[0],1);
 
   def _updateHistogram (self,hmin=None,hmax=None):
     """Recomputes histogram. If no arguments, computes full histogram for
@@ -575,11 +625,18 @@ class ImageControlDialog (QDialog):
     # update curves
     # call _setHistLogScale() (with current setting) to update axis scales and set data
     self._setHistLogScale(self._ylogscale,replot=False);
-    # set maxbin lines
-    self._line_maxbin.setData([self._hist_peak,self._hist_peak],[1,self._hist_max]);
-    self._line_halfmax.setData(self._hist_range,[self._hist_max/2,self._hist_max/2]);
+    # set plot lines
+    self._line_0.line.setData([0,0],[0,1]);
+    self._line_0.marker.setValue(0,0);
+    self._line_maxbin.line.setData([self._hist_peak,self._hist_peak],[0,1]);
+    self._line_maxbin.marker.setValue(self._hist_peak,0);
+    self._line_maxbin.setText(("max bin:"+DataValueFormat)%self._hist_peak);
+    # set half-max line
+    self._line_halfmax.line.setData(self._hist_range,[self._hist_max/2,self._hist_max/2]);
+    self._line_halfmax.marker.setValue(hmin,self._hist_max/2);
+    # update ITF
     self._updateITF();
-
+    
   def _updateStats (self,subset,minmax):
     """Recomputes subset statistics.""";
     if subset.size <= (2048*2048):
@@ -594,6 +651,9 @@ class ImageControlDialog (QDialog):
     self._subset_range = minmax;
     self._wlab_subset.setText("Subset: %s"%desc);
     self._hist = self._hist_hires = None;
+    # hide the mean/std markers, they will only be shown when _showMeanStd() is called
+    self._line_mean.hide();
+    self._line_std.hide();
     # if we're visibile, recompute histograms and stats
     if self.isVisible():
       # if subset is sufficiently small, compute extended stats on-the-fly. Else show the "more" button to compute them later
@@ -613,6 +673,17 @@ class ImageControlDialog (QDialog):
     text = "  ".join([ ("%s: "+DataValueFormat)%(name,value) for name,value in ("min",dmin),("max",dmax),("mean",mean),("std",std) ]+["np: %d"%self._subset.size]);
     self._wlab_stats.setText(text);
     self._wmore_stats.hide();
+    # update markers
+    ypos = 0.3;
+    self._line_mean.line.setData([mean,mean],[0,1]);
+    self._line_mean.marker.setValue(mean,ypos);
+    self._line_mean.setText((u"\u03BC="+DataValueFormat)%mean);
+    self._line_mean.show();
+    self._line_std.line.setData([mean-std,mean+std],[ypos,ypos]);
+    self._line_std.marker.setValue(mean,ypos);
+    self._line_std.setText((u"\u03C3="+DataValueFormat)%std);
+    self._line_std.show();
+    self._histplot.replot();
 
   def _setIntensityLogCyclesLabel (self,value):
       self._wlogcycles_label.setText("Log cycles: %4.1f"%value);
