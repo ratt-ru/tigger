@@ -353,13 +353,13 @@ class MainWindow (QMainWindow):
   _load_file_types = (
     ("Native model",("*."+ModelHTML.DefaultExtension,),ModelHTML.loadModel),
     ("NEWSTAR model",("*.mdl","*.MDL"),Import.importNEWSTAR),
-    ("LOFAR BBS model",("*.cat","*.catalog"),ModelBBS.loadModel),
+#    ("LOFAR BBS model",("*.cat","*.catalog"),ModelBBS.loadModel),
     ("All files",("*",),None),
   );
 
   _save_file_types = (
     ("Native model",("*."+ModelHTML.DefaultExtension,),ModelHTML.saveModel),
-    ("LOFAR BBS model",("*.cat","*.catalog"),ModelBBS.saveModel),
+#    ("LOFAR BBS model",("*.cat","*.catalog"),ModelBBS.saveModel),
   );
 
   def showMessage (self,msg,time=3000):
