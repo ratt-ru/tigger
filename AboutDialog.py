@@ -1,10 +1,7 @@
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
-#/usr/bin/python
 #
-#% $Id: connect_meqtimba_dialog.py 6778 2009-02-19 14:00:37Z oms $
-#
-#
-# Copyright (C) 2002-2007
+# Copyright (C) 2002-2011
 # The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
 # P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
@@ -24,7 +21,7 @@
 # or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-from Tigger import *
+from Tigger import release_string,svn_revision_html,pixmaps
 
 import os.path
 import time
@@ -33,6 +30,8 @@ import fnmatch
 import traceback
 
 from PyQt4.Qt import *
+
+
 
 class AboutDialog (QDialog):
     def __init__(self,parent=None,name=None,modal=0,fl=None):
@@ -96,13 +95,13 @@ class AboutDialog (QDialog):
     def languageChange(self):
         self.setWindowTitle(self.__tr("About Tigger"))
         self.title_label.setText(self.__tr( \
-          """<h3>Tigger version %s</h3>
+          """<h3>Tigger (%s)</h3>%s
           <p>(C) 2010 Oleg Smirnov & ASTRON<br>(Netherlands Institude for Radioastronomy)<br>
           Oude Hoogeveensedijk 4<br>
           7991 PD Dwingeloo, The Netherlands<br>
           http://www.astron.nl<br>
           osmirnov@gmail.com</p>
-          """%(Version) \
+          """%(release_string,svn_revision_html) \
           ));
 
         self.btn_ok.setText(self.__tr("&OK"))
