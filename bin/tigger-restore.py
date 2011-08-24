@@ -85,14 +85,15 @@ an output image is not specified, makes a name for it automatically.""");
       sys.exit(1);
 
   from Tigger.Tools import Imaging
-  from Tigger.Models import Import,ModelHTML
+  from Tigger.Models import ModelHTML
 
   Imaging._verbosity.set_verbose(options.verbose);
 
   # read model and sort by apparent brightness
   ext = os.path.splitext(skymodel)[1];
-  if ext.upper() == 'MDL':
-    model = Import.importNEWSTAR(skymodel);
+  if ext.upper() == '.MDL':
+    from Tigger.Models.Formats import NEWSTAR
+    model = NEWSTAR.load(skymodel);
   else:
     model = ModelHTML.loadModel(skymodel);
 

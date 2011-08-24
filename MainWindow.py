@@ -42,7 +42,6 @@ from Models import ModelClasses
 from Models import SkyModel
 from Models import ModelHTML
 from Models import ModelBBS
-from Models import Import
 import Widgets
 import AboutDialog
 from SkyModelTreeWidget import *
@@ -375,9 +374,11 @@ class MainWindow (QMainWindow):
     """Called when the model selection has been updated.""";
     self.emit(SIGNAL("hasSelection"),bool(num));
 
+  from Tigger.Models.Formats import NEWSTAR
+
   _load_file_types = (
     ("Native model",("*."+ModelHTML.DefaultExtension,),ModelHTML.loadModel),
-    ("NEWSTAR model",("*.mdl","*.MDL"),Import.importNEWSTAR),
+    ("NEWSTAR model",("*.mdl","*.MDL"),NEWSTAR.load),
 #    ("LOFAR BBS model",("*.cat","*.catalog"),ModelBBS.loadModel),
     ("All files",("*",),None),
   );
@@ -445,7 +446,7 @@ class MainWindow (QMainWindow):
     return;
       
   def openFile (self,filename=None,format=None,merge=False,show=True):
-    from Models import ModelHTML,Import,ModelClasses
+    from Models import ModelHTML,ModelClasses
     # check that we can close existing model
     if not merge and not self._canCloseExistingModel():
       return False;

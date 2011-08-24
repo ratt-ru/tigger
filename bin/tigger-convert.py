@@ -66,8 +66,10 @@ if __name__ == '__main__':
       print "Unable to import the Tigger package from %s. Please check your installation and PYTHONPATH."%dirname;
       sys.exit(1);
       
-  from Tigger.Models import Import,ModelHTML
+  from Tigger.Models import ModelHTML
   from Tigger import Coordinates
+  from Tigger.Models.Formats import NEWSTAR
+  from Tigger.Models.Formats import ASCII
 
   # setup some standard command-line option parsing
   #
@@ -108,7 +110,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
   parser.add_option("-d", "--debug",dest="verbose",type="string",action="append",metavar="Context=Level",
                     help="(for debugging Python code) sets verbosity level of the named Python context. May be used multiple times.");
 
-  parser.set_defaults(cluster_dist=60,min_extent=0,format=Import.DefaultDMSFormatString,radial_step=10,ref_freq=-1);
+  parser.set_defaults(cluster_dist=60,min_extent=0,format=ASCII.DefaultDMSFormatString,radial_step=10,ref_freq=-1);
 
   (options,rem_args) = parser.parse_args();
   min_extent = (options.min_extent/3600)*DEG;
@@ -147,15 +149,15 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
   skymodel_name,ext = os.path.splitext(skymodel);
   # input format is either explicit, or determined by extension
   if options.newstar:
-    loadfunc,kws,format = Import.importNEWSTAR,dict(min_extent=min_extent),"NEWSTAR";
+    loadfunc,kws,format = NEWSTAR.load,dict(min_extent=min_extent),"NEWSTAR";
   elif options.text:
-    loadfunc,kws,format = Import.importASCII,dict(min_extent=min_extent,format=options.format),"ASCII";
+    loadfunc,kws,format = ASCII.load,dict(min_extent=min_extent,format=options.format),"ASCII";
   elif options.tigger:
     loadfunc,kws,format = ModelHTML.loadModel,{},NATIVE;
   elif ext.upper() == '.MDL':
-    loadfunc,kws,format = Import.importNEWSTAR,dict(min_extent=min_extent),"NEWSTAR";
+    loadfunc,kws,format = NEWSTAR.load,dict(min_extent=min_extent),"NEWSTAR";
   elif ext.upper() in (".TXT",".LSM"):
-    loadfunc,kws,format = Import.importASCII,dict(min_extent=min_extent,format=options.format),"ASCII";
+    loadfunc,kws,format = ASCII.load,dict(min_extent=min_extent,format=options.format),"ASCII";
   else:
     loadfunc,kws,format = ModelHTML.loadModel,{},NATIVE;
 
