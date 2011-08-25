@@ -135,86 +135,93 @@ def load (filename,import_src=True,import_cc=True,min_extent=0,**kw):
   ff = open(filename,mode="rb");
   
   ### read GFH and MDH headers -- 512 bytes
-  gfh = numpy.fromfile(ff,dtype=numpy.uint8,count=512);
-  mdh = numpy.fromfile(ff,dtype=numpy.uint8,count=64);
-  # parse headers
-  parseGFH(gfh);
-  maxlin,modptr,nsources,mtype,mepoch,ra0,dec0,freq0 = parseMDH(mdh);
-  
-  beam_const = 65*1e-9*freq0;
-  
-  ## temp dict to hold unique nodenames
-  unamedict={}
-  ### Models -- 56 bytes
-  for ii in range(0,nsources):
-    mdl = numpy.fromfile(ff,dtype=numpy.uint8,count=56)
+  try:
+    gfh = numpy.fromfile(ff,dtype=numpy.uint8,count=512);
+    mdh = numpy.fromfile(ff,dtype=numpy.uint8,count=64);
+    # parse headers
+    ftype,fhlen,fver,crdate,crtime,rrdate,rrtime,rcount,nname = parseGFH(gfh);
+    if ftype != ".MDL":
+      raise TypeError;
+    maxlin,modptr,nsources,mtype,mepoch,ra0,dec0,freq0 = parseMDH(mdh);
     
-    ### source parameters
-    sI,ll,mm,id,sQ,sU,sV,eX,eY,eP,SI,RM = struct.unpack('fffiffffffff',mdl[0:48])
-    ### type bits
-    bit1,bit2 = struct.unpack('BB',mdl[52:54]);
+    beam_const = 65*1e-9*freq0;
+    
+    ## temp dict to hold unique nodenames
+    unamedict={}
+    ### Models -- 56 bytes
+    for ii in xrange(0,nsources):
+      mdl = numpy.fromfile(ff,dtype=numpy.uint8,count=56)
+      
+      ### source parameters
+      sI,ll,mm,id,sQ,sU,sV,eX,eY,eP,SI,RM = struct.unpack('fffiffffffff',mdl[0:48])
+      ### type bits
+      bit1,bit2 = struct.unpack('BB',mdl[52:54]);
 
-    # convert fluxes
-    sI *= 0.005    # convert from WU to Jy (1WU=5mJy)
-    sQ *= sI;
-    sU *= sI;
-    sV *= sI;
+      # convert fluxes
+      sI *= 0.005    # convert from WU to Jy (1WU=5mJy)
+      sQ *= sI;
+      sU *= sI;
+      sV *= sI;
 
-    # Interpret bitflags 1: bit 0= extended; bit 1= Q|U|V <>0 and no longer used according to Wim
-    fl_ext = bit1&1;
-    # Interpret bitflags 2: bit 0= clean component; bit 3= beamed
-    fl_cc = bit2&1;
-    fl_beamed = bit2&8;
+      # Interpret bitflags 1: bit 0= extended; bit 1= Q|U|V <>0 and no longer used according to Wim
+      fl_ext = bit1&1;
+      # Interpret bitflags 2: bit 0= clean component; bit 3= beamed
+      fl_cc = bit2&1;
+      fl_beamed = bit2&8;
 
-    ### extended source params: in arcsec, so multiply by ???
-    if fl_ext:
-      ## the procedure is NMOEXT in nscan/nmoext.for
-      if eP == 0 and eX == eY:
-        r0 = 0
+      ### extended source params: in arcsec, so multiply by ???
+      if fl_ext:
+        ## the procedure is NMOEXT in nscan/nmoext.for
+        if eP == 0 and eX == eY:
+          r0 = 0
+        else:
+          r0 = .5*math.atan2(-eP,eY-eX)
+        r1 = math.sqrt(eP*eP+(eX-eY)*(eX-eY))
+        r2 = eX+eY
+        eX = 2*math.sqrt(abs(0.5*(r2+r1)))
+        eY = 2*math.sqrt(abs(0.5*(r2-r1)))
+        eP = r0
+
+      # NEWSTAR MDL lists might have same source twice if they are
+      # clean components, so make a unique name for them
+      bname='N'+str(id);
+      if unamedict.has_key(bname):
+        uniqname = bname+'_'+str(unamedict[bname])
+        unamedict[bname] += 1
       else:
-        r0 = .5*math.atan2(-eP,eY-eX)
-      r1 = math.sqrt(eP*eP+(eX-eY)*(eX-eY))
-      r2 = eX+eY
-      eX = 2*math.sqrt(abs(0.5*(r2+r1)))
-      eY = 2*math.sqrt(abs(0.5*(r2-r1)))
-      eP = r0
-
-    # NEWSTAR MDL lists might have same source twice if they are
-    # clean components, so make a unique name for them
-    bname='N'+str(id);
-    if unamedict.has_key(bname):
-      uniqname = bname+'_'+str(unamedict[bname])
-      unamedict[bname] += 1
-    else:
-      uniqname = bname
-      unamedict[bname] = 1
-    # compose source information
-    pos = ModelClasses.Position(*lm_ncp_to_radec(ra0,dec0,ll,mm));
-    flux  = ModelClasses.PolarizationWithRM(sI,sQ,sU,sV,RM,freq0);
-    spectrum = ModelClasses.SpectralIndex(SI,freq0);
-    tags = {};
-    # work out beam gain and apparent flux
-    tags['_lm_ncp'] = (ll,mm);
-    tags['_newstar_r']   = tags['r'] = r = math.sqrt(ll*ll+mm*mm);
-    tags['newstar_beamgain'] = bg = max(math.cos(beam_const*r)**6,.01);
-    tags['newstar_id'] = id;
-    if fl_beamed:
-      tags['Iapp'] = sI*bg;
-      tags['newstar_beamed'] = True;
-      tags['flux_intrinsic'] = True;
-    else:
-      tags['flux_apparent'] = True;
-    # make some tags based on model flags
-    if fl_cc:
-      tags['newstar_cc'] = True;
-    # make shape if extended
-    if fl_ext and max(eX,eY) >= min_extent:
-      shape = ModelClasses.Gaussian(eX,eY,eP);
-    else:
-      shape = None;
-    # compute apparent flux
-    src = SkyModel.Source(uniqname,pos,flux,shape=shape,spectrum=spectrum,**tags);
-    srclist.append(src);
+        uniqname = bname
+        unamedict[bname] = 1
+      # compose source information
+      pos = ModelClasses.Position(*lm_ncp_to_radec(ra0,dec0,ll,mm));
+      flux  = ModelClasses.PolarizationWithRM(sI,sQ,sU,sV,RM,freq0);
+      spectrum = ModelClasses.SpectralIndex(SI,freq0);
+      tags = {};
+      # work out beam gain and apparent flux
+      tags['_lm_ncp'] = (ll,mm);
+      tags['_newstar_r']   = tags['r'] = r = math.sqrt(ll*ll+mm*mm);
+      tags['newstar_beamgain'] = bg = max(math.cos(beam_const*r)**6,.01);
+      tags['newstar_id'] = id;
+      if fl_beamed:
+        tags['Iapp'] = sI*bg;
+        tags['newstar_beamed'] = True;
+        tags['flux_intrinsic'] = True;
+      else:
+        tags['flux_apparent'] = True;
+      # make some tags based on model flags
+      if fl_cc:
+        tags['newstar_cc'] = True;
+      # make shape if extended
+      if fl_ext and max(eX,eY) >= min_extent:
+        shape = ModelClasses.Gaussian(eX,eY,eP);
+      else:
+        shape = None;
+      # compute apparent flux
+      src = SkyModel.Source(uniqname,pos,flux,shape=shape,spectrum=spectrum,**tags);
+      srclist.append(src);
+  except:
+    traceback.print_exc();
+    raise TypeError("%s does not appear to be a valid NEWSTAR MDL file"%filename);
+  
   dprintf(2,"imported %d sources from file %s\n",len(srclist),filename);
   return ModelClasses.SkyModel(ra0=ra0,dec0=dec0,freq0=freq0,pbexp='max(cos(65*1e-9*fq*r)**6,.01)',*srclist);
 
@@ -226,10 +233,18 @@ def save (model,filename,freq0=None,sources=None,**kw):
   """
   if sources is None:
     sources = model.sources;
-  dprint(2,"writing %s model sources to NEWSTAR file",len(sources),filename);
+  dprintf(2,"writing %s model sources to NEWSTAR file\n",len(sources),filename);
   
   ra0,dec0 = model.fieldCenter();
   freq0 = freq0 or model.refFreq();
+  # if freq0 is not specified, scan sources
+  if freq0 is None:
+    for src in sources:
+      freq0 = (src.spectrum and getattr(src.spectrum,'freq0',None)) or getattr(src.flux,'freq0',None);
+      if freq0:
+        break;
+    else:
+      raise ValueError("unable to determine NEWSTAR model reference frequency, please specify one explicitly.");
   
   ff = open(filename,mode="wb");
   
@@ -323,6 +338,7 @@ def save (model,filename,freq0=None,sources=None,**kw):
   ff.seek(512);
   mdh.tofile(ff);
   ff.close();
-
   dprintf(1,"wrote %d sources to file %s\n",nsrc,filename);
 
+
+Tigger.Models.Formats.registerFormat("NEWSTAR",load,"NEWSTAR model file",(".mdl",".MDL"),export_func=save);

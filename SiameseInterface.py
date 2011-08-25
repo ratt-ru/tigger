@@ -43,7 +43,8 @@ except:
   sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))));
   import Tigger
 
-from Tigger.Models import ModelHTML,ModelClasses
+from Tigger.Models import ModelClasses
+from Tigger.Models.Formats import ModelHTML
 
 # this dict determines how source attributes are grouped into "parameter subgroups"
 _Subgroups = dict(I="I",Q="Q",U="U",V="V",
@@ -115,7 +116,7 @@ class TiggerSkyModel (object):
       return [];
     # load the sky model
     if self.lsm is None:
-      self.lsm = ModelHTML.loadModel(self.filename);
+      self.lsm = Tigger.load(self.filename);
 
     # sort by brightness
     sources = sorted(self.lsm.sources,lambda a,b:cmp(b.brightness(),a.brightness()));

@@ -66,9 +66,13 @@ if __name__ == '__main__':
       print "Unable to import the Tigger package from %s. Please check your installation and PYTHONPATH."%dirname;
       sys.exit(1);
       
-  from Tigger.Models import ModelHTML
   from Tigger import Coordinates
-  from Tigger.Models.Formats import NEWSTAR
+  import Tigger.Models.Formats
+  AUTO = "auto";
+  full_formats = Tigger.Models.Formats.listFormatsFull();
+  input_formats = [ name for name,(load,save,doc,extensions) in full_formats if load ] + [ AUTO ];
+  output_formats = [ name for name,(load,save,doc,extensions) in full_formats if save ] + [ AUTO ];
+  
   from Tigger.Models.Formats import ASCII
 
   # setup some standard command-line option parsing
@@ -81,14 +85,14 @@ Input 'sky_model' may be any model format importable by Tigger, recognized by ex
 is a Tigger model (-f switch must be specified to allow overwriting), or else a new filename is generated.""");
   parser.add_option("-f","--force",action="store_true",
                     help="Forces overwrite of output model.");
-  parser.add_option("--newstar",action="store_true",
-                    help="Input is a NEWSTAR model.");
-  parser.add_option("--text",action="store_true",
-                    help="Input is an ASCII text table.");
+  parser.add_option("-t","--type",choices=input_formats,
+                    help="Input model type (%s). Default is %%default."%(", ".join(input_formats)));
+  parser.add_option("-o","--output-type",choices=output_formats,metavar="TYPE",
+                    help="Output model type (%s). Default is %%default."%(", ".join(output_formats)));
   parser.add_option("--format",type="string",
-                    help="""Format string, for text tables. Default is "%default".""");
-  parser.add_option("--tigger",action="store_true",
-                    help="Input is a Tigger model.");
+                    help="""Input format, for ASCII or BBS tables. For ASCII tables, default is "%s". For BBS tables, the default format is found in the file itself."""%ASCII.DefaultDMSFormatString);
+  parser.add_option("-T","--tags",type="string",action="append",metavar="TAG",
+                    help="Extract sources with the specified tags.");
   parser.add_option("--app-to-int",action="store_true",
                     help="Convert apparent fluxes in input model to intrinsic. Only works for NEWSTAR or NEWSTAR-derived input models.");
   parser.add_option("--recenter",type="string",metavar='COORDINATES',
@@ -100,7 +104,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
                     help="""Apply a primary beam expression to estimate apparent fluxes. Any valid Python expression using the variables 'r' and 'fq' is accepted.
                     Example (for the WSRT-like 25m dish PB): "cos(min(65*fq*1e-9*r,1.0881))**6".""");
   parser.add_option("--min-extent",type="float",metavar="ARCSEC",
-                    help="Minimal source extent, when importing NEWSTAR or ASCII DMS files. Sources with a smaller extent will be treated as point sources. Default is %default.");
+                    help="Minimal source extent, when importing NEWSTAR or ASCII files. Sources with a smaller extent will be treated as point sources. Default is %default.");
   parser.add_option("--cluster-dist",type="float",metavar="ARCSEC",
                     help="Distance parameter for source clustering. Default is %default.");
   parser.add_option("--rename",action="store_true",
@@ -110,7 +114,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
   parser.add_option("-d", "--debug",dest="verbose",type="string",action="append",metavar="Context=Level",
                     help="(for debugging Python code) sets verbosity level of the named Python context. May be used multiple times.");
 
-  parser.set_defaults(cluster_dist=60,min_extent=0,format=ASCII.DefaultDMSFormatString,radial_step=10,ref_freq=-1);
+  parser.set_defaults(cluster_dist=60,min_extent=0,format=None,type='auto',output_type='auto',radial_step=10,ref_freq=-1);
 
   (options,rem_args) = parser.parse_args();
   min_extent = (options.min_extent/3600)*DEG;
@@ -145,56 +149,71 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
       traceback.print_exc();
       sys.exit(1);
 
-  # figure out input and output
-  skymodel_name,ext = os.path.splitext(skymodel);
-  # input format is either explicit, or determined by extension
-  if options.newstar:
-    loadfunc,kws,format = NEWSTAR.load,dict(min_extent=min_extent),"NEWSTAR";
-  elif options.text:
-    loadfunc,kws,format = ASCII.load,dict(min_extent=min_extent,format=options.format),"ASCII";
-  elif options.tigger:
-    loadfunc,kws,format = ModelHTML.loadModel,{},NATIVE;
-  elif ext.upper() == '.MDL':
-    loadfunc,kws,format = NEWSTAR.load,dict(min_extent=min_extent),"NEWSTAR";
-  elif ext.upper() in (".TXT",".LSM"):
-    loadfunc,kws,format = ASCII.load,dict(min_extent=min_extent,format=options.format),"ASCII";
-  else:
-    loadfunc,kws,format = ModelHTML.loadModel,{},NATIVE;
+  # figure out input type
+  try:
+    input_type,import_func,dum,input_doc = Tigger.Models.Formats.resolveFormat(skymodel,options.type if options.type != AUTO else None);
+  except:
+    print "Unable to determine model type for %s, please specify one explicitly with the -t/--type option."%skymodel;
+    sys.exit(1);
 
-  print "Reading %s as a model of type '%s'"%(skymodel,format);
-  # nothing to do?
-  if format is NATIVE:
-    if not options.rename and not options.app_to_int and not options.recenter:
-      print "Input format is same as output, and no conversion flags specified.";
+  # figure out output type, if explicitly specified
+  output_type = None;
+  if output is None and options.output_type == AUTO:
+    options.output_type = "Tigger";
+    
+  if options.output_type != AUTO:
+    output_type,dum,export_func,output_doc = Tigger.Models.Formats.getFormat(options.output_type);
+    output_extensions = Tigger.Models.Formats.getFormatExtensions(options.output_type);
+    if not export_func or not extensions:
+      print "Output model type '%s' is not supported."%options.output_type;
       sys.exit(1);
-
+      
   # figure out output name, if not specified
   if output is None:
-    if format is NATIVE:
-      output = skymodel;
-    else:
-      output = skymodel_name + "." + ModelHTML.DefaultExtension;
-  # if no extension on output, add default
-  else:
-    if not os.path.splitext(output)[1]:
-      output = output + "." + ModelHTML.DefaultExtension;
+    if not output_type:
+      print "An output filename and/or an explicit output model type (-o/--output-type) must be specfified.";
+      sys.exit(1);
+    # get base input name
+    basename = os.path.splitext(os.path.splitext(skymodel)[0])[0];
+    output = basename + output_extensions[0];
+  # else output name is specified, use this to determine format unless it is explicitly set
+  elif not output_type:
+    try:
+      output_type,dum,export_func,output_doc = Tigger.Models.Formats.resolveFormat(output,None);
+    except:
+      export_func = None;
+    if not export_func:
+      print "Unable to determine model type for %s, please specify one explicitly with the -o/--output-type option."%output;
+      sys.exit(1);
 
   # check if we need to overwrite
   if os.path.exists(output) and not options.force:
     print "Output file %s already exists. Use the -f switch to overwrite."%output;
     sys.exit(1);
 
+  print "Reading %s (%s)"%(skymodel,input_doc);
+
   # load the model
-  model = loadfunc(skymodel,**kws);
-  if not model.sources:
+  model = import_func(skymodel,min_extent=options.min_extent,format=options.format);
+  sources = model.sources;
+  if not sources:
     print "Input model %s contains no sources"%skymodel;
-    sys.exit(1);
-  print "Model contains %d sources"%len(model.sources);
+    sys.exit(0);
+  print "Model contains %d sources"%len(sources);
+
+  # apply selection by tag
+  if options.tags:
+    for tag in options.tags:
+      sources = [ src for src in sources if getattr(src,tag,False) ];
+    if not sources:
+      print "No sources left after selection by tag (-T/--tag) has been applied.";
+      sys.exit(0);
+    print "Selection by tag (%s) reduces this to %d sources"%(", ".join(options.tags),len(sources));
 
   # convert apparent flux to intrinsic
   if options.app_to_int:
     nsrc = 0;
-    for src in model.sources:
+    for src in sources:
       bg = getattr(src,'newstar_beamgain',None);
       if getattr(src,'flux_apparent',None) and bg is not None:
         src.setAttribute('Iapp',src.flux.I);
@@ -205,19 +224,19 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
         src.setAttribute('flux_intrinsic',True);
         nsrc += 1;
     print "Converted apparent to intrinsic flux for %d model sources"%nsrc;
-    if len(model.sources) != nsrc:
+    if len(sources) != nsrc:
       print "  (%d sources were skipped for whatever reason.)"%(len(model.sources)-nsrc);
 
   # set refrence frequency
   if options.ref_freq >= 0:
     model.setRefFreq(options.ref_freq*1e+6);
-    print "Set reference frequency to %f MHz"%options.ref_freq;
+    print "Setting reference frequency to %f MHz"%options.ref_freq;
     
   # recenter
   if options.recenter:
     proj_src = Coordinates.Projection.SinWCS(*model.fieldCenter());
     proj_target = Coordinates.Projection.SinWCS(*recenter_radec);
-    for src in model.sources:
+    for src in sources:
       src.pos.ra,src.pos.dec = proj_target.radec(*proj_src.lm(src.pos.ra,src.pos.dec));
     model.setFieldCenter(*recenter_radec);
 
@@ -237,7 +256,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
     nsrc = 0;
     print "Using beam expression '%s' with reference frequency %f MHz"%(options.primary_beam,fq*1e-6);
     # evaluate sources
-    for src in model.sources:
+    for src in sources:
       r = getattr(src,'r',None);
       if r is not None:
         bg = pbexp(r,fq);
@@ -252,7 +271,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
     print "Renaming sources using the COPART convention"
     typecodes = dict(Gau="G",FITS="F");
     # sort sources by decreasing flux
-    sources = sorted(model.sources,lambda a,b:cmp(b.brightness(),a.brightness()));
+    sources = sorted(sources,lambda a,b:cmp(b.brightness(),a.brightness()));
     projection = Coordinates.Projection.SinWCS(*model.fieldCenter());
     # work out source clusters
     l = numpy.zeros(len(sources),float);
@@ -320,5 +339,5 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
       src.setAttribute('cluster_size',clustersize[iclust]);
       src.setAttribute('cluster_flux',clusterflux[iclust]);
   # save output
-  print "Saving model to",output;
-  model.save(output);
+  print "Saving to %s (%s)"%(output,output_doc);
+  export_func(model,output,sources=sources);

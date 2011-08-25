@@ -34,6 +34,7 @@ import Kittens.utils
 from Tigger.Models import ModelClasses
 from Tigger.Models import SkyModel
 from Tigger import Coordinates
+import Tigger.Models.Formats
 from Tigger.Models.Formats import dprint,dprintf
 
 
@@ -55,79 +56,77 @@ def load (filename,format=None,freq0=None,center_on_brightest=True,min_extent=0)
   """
   srclist = [];
   dprint(1,"importing ASCII DMS file",filename);
-  # read file
-  lines = list(enumerate(file(filename)));
-  if not lines:
-    return ModelClasses.SkyModel([]);
-  # is there a format string in the file?
-  line0 = lines[0][1].strip();
-  if line0.startswith("#format:"):
-    format = line0[len("#format:"):];
-    dprint(1,"file contains format header:",format);
-  # set default format
-  if format is None:
-    format = DefaultDMSFormatString;
-  # is the format a string rather than a dict? Turn it into a dict then
-  if isinstance(format,str):
-    # make list of fieldname,fieldnumber tuples
-    fields = [ (field,i) for i,field in enumerate(format.split()) ];
-    if not fields:
-      raise ValueError,"illegal format string in file: '%s'"%format;
-    # last fieldname can end with ... to indicate that it absorbs the rest of the line
-    if fields[-1][0].endswith('...'):
-      fields[-1] = (fields[-1][0][:-3],slice(fields[-1][1],None));
-    # make format dict
-    format = dict(fields);
-  elif not isinstance(format,dict):
-    raise TypeError,"invalid 'format' argument of type %s"%(type(format))
-  # get minimum necessary fields from format
-  name_field = format.get('name',None);
-  # flux
-  try:
-    i_field = format['i'];
-  except KeyError:
-    raise ValueError,"ASCII format specification lacks mandatory flux field ('i')";
-  # main RA field
-  if 'ra_h' in format:
-    ra_field,ra_scale = format['ra_h'],(math.pi/12);
-  elif 'ra_d' in format:
-    ra_field,ra_scale = format['ra_d'],(math.pi/180);
-  elif 'ra_rad' in format:
-    ra_field,ra_scale = format['ra_rad'],1.;
-  else:
-    raise ValueError,"ASCII format specification lacks mandatory Right Ascension field ('ra_h', 'ra_d' or 'ra_rad')";
-  # main Dec field
-  if 'dec_d' in format:
-    dec_field,dec_scale = format['dec_d'],(math.pi/180);
-  elif 'dec_rad' in format:
-    dec_field,dec_scale = format['dec_rad'],1.;
-  else:
-    raise ValueError,"ASCII format specification lacks mandatory Declination field ('dec_d' or 'dec_rad')";
-  try:
-    quv_fields = [ format[x] for x in ['q','u','v'] ];
-  except KeyError:
-    quv_fields = None;
-  # fields for extent parameters
-  try:
-    ext_fields = [ format[x] for x in ['ex','ey','pa'] ];
-  except KeyError:
-    ext_fields = None;
-  # fields for reference freq and RM and SpI
-  freq0_field = format.get('freq0',None);
-  rm_field = format.get('rm',None);
-  spi_field = format.get('spi',None);
-  tags_slice = format.get('tags',None);
-
   # brightest source and its coordinates
   maxbright = 0;
   brightest_name = radec0 = None;
 
   # now process file line-by-line
-  for linenum,line in lines:
+  linenum = 0;
+  for line in file(filename):
+    # for the first line, firgure out the file format
+    if not linenum:
+      if not format and line.startswith("#format:"):
+        format = line[len("#format:"):];
+        dprint(1,"file contains format header:",format);
+      # set default format
+      if format is None:
+        format = DefaultDMSFormatString;
+      # is the format a string rather than a dict? Turn it into a dict then
+      if isinstance(format,str):
+        # make list of fieldname,fieldnumber tuples
+        fields = [ (field,i) for i,field in enumerate(format.split()) ];
+        if not fields:
+          raise ValueError,"illegal format string in file: '%s'"%format;
+        # last fieldname can end with ... to indicate that it absorbs the rest of the line
+        if fields[-1][0].endswith('...'):
+          fields[-1] = (fields[-1][0][:-3],slice(fields[-1][1],None));
+        # make format dict
+        format = dict(fields);
+      elif not isinstance(format,dict):
+        raise TypeError,"invalid 'format' argument of type %s"%(type(format))
+      # get minimum necessary fields from format
+      name_field = format.get('name',None);
+      # flux
+      try:
+        i_field = format['i'];
+      except KeyError:
+        raise ValueError,"ASCII format specification lacks mandatory flux field ('i')";
+      # main RA field
+      if 'ra_h' in format:
+        ra_field,ra_scale = format['ra_h'],(math.pi/12);
+      elif 'ra_d' in format:
+        ra_field,ra_scale = format['ra_d'],(math.pi/180);
+      elif 'ra_rad' in format:
+        ra_field,ra_scale = format['ra_rad'],1.;
+      else:
+        raise ValueError,"ASCII format specification lacks mandatory Right Ascension field ('ra_h', 'ra_d' or 'ra_rad')";
+      # main Dec field
+      if 'dec_d' in format:
+        dec_field,dec_scale = format['dec_d'],(math.pi/180);
+      elif 'dec_rad' in format:
+        dec_field,dec_scale = format['dec_rad'],1.;
+      else:
+        raise ValueError,"ASCII format specification lacks mandatory Declination field ('dec_d' or 'dec_rad')";
+      try:
+        quv_fields = [ format[x] for x in ['q','u','v'] ];
+      except KeyError:
+        quv_fields = None;
+      # fields for extent parameters
+      try:
+        ext_fields = [ format[x] for x in ['ex','ey','pa'] ];
+      except KeyError:
+        ext_fields = None;
+      # fields for reference freq and RM and SpI
+      freq0_field = format.get('freq0',None);
+      rm_field = format.get('rm',None);
+      spi_field = format.get('spi',None);
+      tags_slice = format.get('tags',None);
+    # now go on to process the line
+    linenum += 1;
     try:
       # strip whitespace
       line = line.strip();
-      dprint(4,"read line:",line);
+      dprintf(4,"%s:%d: read line '%s'\n",filename,linenum,line);
       # skip empty or commented lines
       if not line or line[0] == '#':
         continue;
@@ -212,7 +211,7 @@ def load (filename,format=None,freq0=None,center_on_brightest=True,min_extent=0)
         brightest_name = src.name;
         radec0 = ra,dec;
     except:
-      dprintf(0,"%s:%d: %s, skipping\n",filename,linenum+1,str(sys.exc_info()[1]));
+      dprintf(0,"%s:%d: %s, skipping\n",filename,linenum,str(sys.exc_info()[1]));
   dprintf(2,"imported %d sources from file %s\n",len(srclist),filename);
   # create model
   model = ModelClasses.SkyModel(*srclist);
@@ -230,4 +229,4 @@ def load (filename,format=None,freq0=None,center_on_brightest=True,min_extent=0)
   return model;
 
 
-# registerFormat("text file (hms/dms)",importASCII,extensions="*.txt");
+Tigger.Models.Formats.registerFormat("ASCII",load,"ASCII file (hms/dms)",(".txt",".lsm"));

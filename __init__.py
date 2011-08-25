@@ -61,8 +61,4 @@ else:
 
   from Kittens.widgets import BusyIndicator
 
-# provide some convenience methods
-def load (filename):
-  """Loads and returns a native-format sky model."""
-  import Models.ModelHTML
-  return Models.ModelHTML.loadModel(filename);
+from Tigger.Models.Formats import load,save,listFormats

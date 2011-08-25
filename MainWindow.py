@@ -40,8 +40,7 @@ from Kittens.utils import PersistentCurrier
 
 from Models import ModelClasses
 from Models import SkyModel
-from Models import ModelHTML
-from Models import ModelBBS
+from Models.Formats import ModelHTML
 import Widgets
 import AboutDialog
 from SkyModelTreeWidget import *
@@ -374,19 +373,11 @@ class MainWindow (QMainWindow):
     """Called when the model selection has been updated.""";
     self.emit(SIGNAL("hasSelection"),bool(num));
 
-  from Tigger.Models.Formats import NEWSTAR
+  import Tigger.Models.Formats
+  _formats = [ f[1] for f in Tigger.Models.Formats.listFormatsFull() ];
 
-  _load_file_types = (
-    ("Native model",("*."+ModelHTML.DefaultExtension,),ModelHTML.loadModel),
-    ("NEWSTAR model",("*.mdl","*.MDL"),NEWSTAR.load),
-#    ("LOFAR BBS model",("*.cat","*.catalog"),ModelBBS.loadModel),
-    ("All files",("*",),None),
-  );
-
-  _save_file_types = (
-    ("Native model",("*."+ModelHTML.DefaultExtension,),ModelHTML.saveModel),
-#    ("LOFAR BBS model",("*.cat","*.catalog"),ModelBBS.saveModel),
-  );
+  _load_file_types = [ (doc,["*"+ext for ext in extensions],load) for load,save,doc,extensions in _formats if load ];
+  _save_file_types = [ (doc,["*"+ext for ext in extensions],save) for load,save,doc,extensions in _formats if save ];
 
   def showMessage (self,msg,time=3000):
     self.statusBar().showMessage(msg,3000);
@@ -446,7 +437,7 @@ class MainWindow (QMainWindow):
     return;
       
   def openFile (self,filename=None,format=None,merge=False,show=True):
-    from Models import ModelHTML,ModelClasses
+    from Models import ModelClasses
     # check that we can close existing model
     if not merge and not self._canCloseExistingModel():
       return False;
@@ -454,12 +445,8 @@ class MainWindow (QMainWindow):
       filename = filename[0];
     filename = str(filename);
     # try to determine the file type
-    for filetype,patterns,loadfunc in self._load_file_types:
-      if [ patt for patt in patterns if fnmatch.fnmatch(filename,patt) ]:
-        break;
-    else:
-      loadfunc = None;
-    if loadfunc is None:
+    filetype,import_func,export_func,doc = Tigger.Models.Formats.resolveFormat(filename,format);
+    if import_func is None:
       self.showErrorMessage("""Error loading model file %s: unknown file format"""%filename);
       return;
     # try to load the specified file
@@ -467,12 +454,12 @@ class MainWindow (QMainWindow):
     self.showMessage("""Reading %s file %s"""%(filetype,filename),3000);
     QApplication.flush();
     try:
-        model = loadfunc(filename);
-        model.setFilename(filename);
+      model = import_func(filename);
+      model.setFilename(filename);
     except:
-        busy = None;
-        self.showErrorMessage("""Error loading '%s' file %s: %s"""%(filetype,filename,str(sys.exc_info()[1])));
-        return;
+      busy = None;
+      self.showErrorMessage("""Error loading '%s' file %s: %s"""%(filetype,filename,str(sys.exc_info()[1])));
+      return;
     # set the layout
     if show:
       self.setLayout(self.LayoutImageModel);
@@ -486,12 +473,9 @@ class MainWindow (QMainWindow):
       self._display_filename = os.path.basename(filename);
       self.setModel(model);
       self._indicateModelUpdated(updated=False);
-      # only set self.filename if loading a native-format file. Otherwise set it to None, so that trying to save
-      # the file results in a save-as operation (so that we don'tr save to a file that we imported from).
-      if loadfunc is ModelHTML.loadModel:
-        self.filename = filename;
-      else:
-        self.filename = None;
+      # only set self.filename if an export function is available for this format. Otherwise set it to None, so that trying to save
+      # the file results in a save-as operation (so that we don't save to a file in an unsupported format).
+      self.filename = filename if export_func else None;
 
   def closeEvent (self,event):
     dprint(1,"closing");
@@ -528,7 +512,7 @@ class MainWindow (QMainWindow):
     self.setLayout(self.LayoutImage if self.imgman.getTopImage() else self.LayoutEmpty);
     return True;
 
-  def saveFile (self,filename=None,confirm=True):
+  def saveFile (self,filename=None,confirm=True,force=False):
     """Saves file using the specified 'filename'. If filename is None, uses current filename, if that is not set, goes to saveFileAs()
     to open dialog and get a filename.
     Returns True if saving succeeded, False on error (or if cancelled by user).
@@ -537,21 +521,28 @@ class MainWindow (QMainWindow):
       filename = filename[0];
     filename = ( filename and str(filename) ) or self.filename;
     if filename is None:
-      return self._saveFileAs();
+      return self.saveFileAs();
     else:
-      if confirm:
-        if QMessageBox.question(self,"Saving sky model","<P>Save changes to sky model %s?</P>"%self.filename,
-                QMessageBox.Save|QMessageBox.Cancel,QMessageBox.Save) != QMessageBox.Save:
+      warning = '';
+      # try to determine the file type
+      filetype,import_func,export_func,doc = Tigger.Models.Formats.resolveFormat(filename,None);
+      if export_func is None:
+        self.showErrorMessage("""Error saving model file %s: unsupported output format"""%filename);
+        return;
+      if os.path.exists(filename):
+        warning += "<P>The file already exists and will be overwritten.</P>";
+      if filetype != 'Tigger':
+        warning += """<P>Please note that you are exporting the model using the external format '%s'. 
+              Some source types, attributes and other model features may be omitted during the export.</P>"""%filetype;
+      # get confirmation
+      if confirm or (warning and not force):
+        dialog = QMessageBox.warning if warning else QMessageBox.question;
+        if dialog(self,"Saving sky model","<P>Save model to %s?</P>%s"%(filename,warning),
+                  QMessageBox.Save|QMessageBox.Cancel,QMessageBox.Save) != QMessageBox.Save:
           return False;
       busy = BusyIndicator();
-      # try to determine the file type
-      for filetype,patterns,savefunc in self._save_file_types:
-        if [ patt for patt in patterns if fnmatch.fnmatch(filename,patt) ]:
-          break;
-      else:
-        savefunc = None;
       try:
-        savefunc(filename,self.model);
+        export_func(self.model,filename);
         self.model.setFilename(filename);
       except:
           busy = None;
@@ -560,6 +551,7 @@ class MainWindow (QMainWindow):
       self.showMessage("""Saved model to file %s"""%filename,3000);
       self._display_filename = os.path.basename(filename);
       self._indicateModelUpdated(updated=False);
+      self.filename = filename;
       return True;
 
   def saveFileAs (self,filename=None):
@@ -573,13 +565,14 @@ class MainWindow (QMainWindow):
           dialog.setDefaultSuffix(ModelHTML.DefaultExtension);
           dialog.setFileMode(QFileDialog.AnyFile);
           dialog.setAcceptMode(QFileDialog.AcceptSave);
+          dialog.setConfirmOverwrite(False);
           dialog.setModal(True);
           QObject.connect(dialog,SIGNAL("filesSelected(const QStringList &)"),self.saveFileAs);
       return self._save_as_dialog.exec_() == QDialog.Accepted;
     # filename supplied, so save
     return self.saveFile(filename,confirm=False);
 
-  def saveSelectionAs (self,filename=None):
+  def saveSelectionAs (self,filename=None,force=False):
     if not self.model:
       return;
     if filename is None:
@@ -589,6 +582,7 @@ class MainWindow (QMainWindow):
           dialog.setDefaultSuffix(ModelHTML.DefaultExtension);
           dialog.setFileMode(QFileDialog.AnyFile);
           dialog.setAcceptMode(QFileDialog.AcceptSave);
+          dialog.setConfirmOverwrite(True);
           dialog.setModal(True);
           QObject.connect(dialog,SIGNAL("filesSelected(const QStringList &)"),self.saveSelectionAs);
       return self._save_sel_as_dialog.exec_() == QDialog.Accepted;
@@ -597,20 +591,22 @@ class MainWindow (QMainWindow):
       filename = filename[0];
     filename= str(filename);
     selmodel = self.model.copy();
-    selmodel.setSources([src for src in self.model.sources if src.selected]);
-    busy = BusyIndicator();
+    sources = [ src for src in self.model.sources if src.selected ];
+    if not sources:
+      self.showErrorMessage("""You have not selected any sources to save.""");
+      return;
     # try to determine the file type
-    for filetype,patterns,savefunc in self._save_file_types:
-      if [ patt for patt in patterns if fnmatch.fnmatch(filename,patt) ]:
-        break;
-    else:
-      savefunc = None;
+    filetype,import_func,export_func,doc = Tigger.Models.Formats.resolveFormat(filename,None);
+    if export_func is None:
+      self.showErrorMessage("""Error saving model file %s: unsupported output format"""%filename);
+      return;
+    busy = BusyIndicator();
     try:
-      savefunc(filename,selmodel);
+      export_func(self.model,filename,sources=sources);
     except:
-        busy = None;
-        self.showErrorMessage("""Error saving selection to model file %s: %s"""%(filename,str(sys.exc_info()[1])));
-        return False;
+      busy = None;
+      self.showErrorMessage("""Error saving selection to model file %s: %s"""%(filename,str(sys.exc_info()[1])));
+      return False;
     self.showMessage("""Wrote %d selected source%s to file %s"""%(len(selmodel.sources),"" if len(selmodel.sources)==1 else "s",filename),3000);
     pass;
 

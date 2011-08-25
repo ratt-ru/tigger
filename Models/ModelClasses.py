@@ -274,7 +274,10 @@ class ModelItem (object):
         markup += self.renderAttrMarkup(key,item,tags=tags);
     # render everything else inline
     else:
-      markup += "mdlval=\"%s\">"%repr(value);
+      if isinstance(value,str):
+        markup += "mdlval=\"'%s'\">"%value.replace("\"","\\\"").replace("'","\\'");
+      else:
+        markup += "mdlval=\"%s\">"%repr(value);
       if verbose is attr:
         markup += comment%':'.join((attr,str(value)));
       else:

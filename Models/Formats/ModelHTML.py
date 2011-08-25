@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #
 #% $Id$ 
 #
@@ -34,12 +35,14 @@ _verbosity = Kittens.utils.verbosity(name="lsmhtml");
 dprint = _verbosity.dprint;
 dprintf = _verbosity.dprintf;
 
-import ModelClasses
-import SkyModel
+from Tigger.Models import ModelClasses
+from Tigger.Models import SkyModel
 
 DefaultExtension = "lsm.html";
 
-def saveModel (filename,model):
+def save (model,filename,sources=None,**kw):
+  if sources is None:
+    sources = model.sources;
   fobj = file(filename,'w');
   fobj.write("""<HTML><BODY mdltype=SkyModel>\n""");
   if model.name is not None:
@@ -47,7 +50,7 @@ def saveModel (filename,model):
     fobj.write("\n");
   # write list of sources
   fobj.write("""<H1>Source list</H1>\n<TABLE BORDER=1 FRAME=box RULES=all CELLPADDING=5>\n""");
-  for src in model.sources:
+  for src in sources:
     fobj.write(src.renderMarkup(tags=["TR\n","TD"]));
     fobj.write("\n");
   fobj.write("""</TABLE>\n""");
@@ -72,17 +75,22 @@ def saveModel (filename,model):
     fobj.write(model.renderAttrMarkup('ra0',model.ra0,tags='A',verbose="Field centre ra: "));
     fobj.write(model.renderAttrMarkup('dec0',model.dec0,tags='A',verbose="dec: "));
     fobj.write("</P>\n");
+  for attr,value in model.getExtraAttributes():
+    if attr not in ("pbexp","freq0","ra0","dec0"):
+      fobj.write("<P>");
+      fobj.write(model.renderAttrMarkup(attr,value,tags='A'));
+      fobj.write("</P>\n");
   fobj.write("""</BODY></HTML>\n""");
 
-def loadModel (filename):
-    parser = ModelIndexParser();
-    parser.reset();
-    for line in file(filename):
-        parser.feed(line);
-    parser.close();
-    if not parser.toplevel_objects:
-      raise RuntimeError,"failed to load sky model from file %s"%filename;
-    return parser.toplevel_objects[0];
+def load (filename,**kw):
+  parser = ModelIndexParser();
+  parser.reset();
+  for line in file(filename):
+      parser.feed(line);
+  parser.close();
+  if not parser.toplevel_objects:
+    raise RuntimeError,"failed to load sky model from file %s"%filename;
+  return parser.toplevel_objects[0];
 
 class ModelIndexParser (HTMLParser):
   def reset (self):
@@ -180,3 +188,5 @@ class ModelIndexParser (HTMLParser):
     # add the object to model
     self.add_object(mdlattr,obj);
 
+import Tigger.Models.Formats
+Tigger.Models.Formats.registerFormat("Tigger",load,"Tigger sky model",(".lsm.html",),export_func=save);

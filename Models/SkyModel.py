@@ -129,6 +129,7 @@ Source.registerClass();
 
 class SkyModel (ModelItem):
   optional_attrs   = dict(name=None,plotstyles={},pbexp=None,ra0=None,dec0=None,freq0=None);
+  allow_extra_attrs = True;
 
   def __init__ (self,*sources,**kws):
     ModelItem.__init__(self,**kws);
@@ -345,10 +346,10 @@ class SkyModel (ModelItem):
       self.dec0 = reduce(lambda x,y:x+y,[ src.pos.dec for src in self.sources ])/len(self.sources)  if self.sources else 0;
     return self.ra0,self.dec0;
 
-  def save (self,filename):
-    """Convenience function, saves model to file in native HTML format""";
-    import ModelHTML
-    ModelHTML.saveModel(filename,self);
+  def save (self,filename,format=None):
+    """Convenience function, saves model to file. Format may be specified explicitly, or determined from filename.""";
+    import Formats
+    Formats.save(self,filename,format=format);
 
   _re_bynumber = re.compile("^([!-])?(\\d+)?:(\\d+)?$");
 
