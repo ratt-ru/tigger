@@ -283,7 +283,7 @@ class ColormapWithControls (Colormap):
       self.value = value;
       if self._wlabel is not None:
         if value is None:
-          value = self._wslider.value();
+          self.value = value = self._wslider.value();
         self._wreset.setEnabled(value != self._default);
         self._wlabel.setText(self.format%(self.name,self.value));
         # stop timer if being called to finalize the change in value
