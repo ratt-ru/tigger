@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #
 #% $Id$ 
 #
@@ -77,14 +78,22 @@ class RenderControl (QObject):
       ( 'Histogram-equalized',  Colormaps.HistEqIntensityMap()   ),
       ( 'log(val-min)', Colormaps.LogIntensityMap() )
     );
+    # create list of color maps
+    self._cmap_list = Colormaps.getColormapList();
+    for cmap in self._cmap_list:
+      if isinstance(cmap,Colormaps.ColormapWithControls):
+        cmap.loadConfig(self._config);
+        QObject.connect(cmap,SIGNAL("colormapChanged"),self.updateColorMapParameters);
     # set the initial intensity map
     imap = self._config.getint("intensity-map-number",0) if self._config else 0;
     cmap = self._config.getint("colour-map-number",0) if self._config else 0;
     imap = max(min(len(self._imap_list)-1,imap),0);
-    cmap = max(min(len(Colormaps.ColormapOrdering)-1,cmap),0);
+    cmap = max(min(len(self._cmap_list)-1,cmap),0);
     self._current_imap_index = imap;
+    self._current_cmap_index = cmap;
     self.image.setIntensityMap(self._imap_list[imap][1]);
-    self.image.setColorMap(Colormaps.ColormapOrdering[cmap]);
+    self.image.setColorMap(self._cmap_list[cmap]);
+
     # cache of min/max values for each slice, as these can be slowish to recompute when flipping slices
     self._sliceranges = {};
     # This is the data subset corresponding to the current display range. When the display range is set to
@@ -186,13 +195,24 @@ class RenderControl (QObject):
 
   def lockDisplayRangeForAxis (self,iaxis,lock):
     pass;
-
-  def setColorMap (self,cmap,write_config=True):
+    
+  def getColormapList (self):
+    return self._cmap_list;
+    
+  def updateColorMapParameters (self):
+    """Call this when the colormap parameters have changed""";
     busy = BusyIndicator();
+    self.image.updateCurrentColorMap();
+    self._cmap_list[self._current_cmap_index].saveConfig(self._config);
+
+  def setColorMapNumber (self,index,write_config=True):
+    busy = BusyIndicator();
+    self._current_cmap_index = index;
+    cmap = self._cmap_list[index];
     self.image.setColorMap(cmap);
     self.emit(SIGNAL("colorMapChanged"),cmap);
     if self._config and write_config:
-      self._config.set("colour-map-number",Colormaps.ColormapOrdering.index(cmap));
+      self._config.set("colour-map-number",index);
 
   def currentSubset (self):
     """Returns tuple of subset,(dmin,dmax),description for current data subset""";

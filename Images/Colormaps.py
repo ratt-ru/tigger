@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #
 #% $Id$ 
 #
@@ -143,10 +144,11 @@ class HistEqIntensityMap (IntensityMap):
       values = numpy.ma.masked_array(values,data.mask);
     return values;
 
-class Colormap (object):
+class Colormap (QObject):
   """A Colormap provides operations for turning normalized float arrays into QImages. The default implementation is a linear colormap between two colors.
   """;
   def __init__ (self,name,color0=QColor("black"),color1=QColor("white"),alpha=(1,1)):
+    QObject.__init__(self);
     self.name = name;
     # color is either specified as one argument (which should then be a [3,n] or [4,n] array),
     # or as two QColors orstring names.
@@ -203,10 +205,11 @@ class Colormap (object):
     # setup alpha channel
     if alpha is None:
       alpha = numpy.interp(data.ravel(),self._alpha_arg,self._alpha).reshape(data.shape);
-    alpha = numpy.round(255*alpha).astype(numpy.int32);
+    alpha = numpy.round(255*alpha).astype(numpy.int32).clip(0,255);
     # make RGB arrays
-    rgbs = [ (numpy.interp(data.ravel(),self._rgb_arg,self._rgb[:,i]).reshape(data.shape)*255).round().astype(numpy.int32)
-                  for i in range(3) ];
+    rgbs = [ (numpy.interp(data.ravel(),self._rgb_arg,self._rgb[:,i]).
+                reshape(data.shape)*255).round().astype(numpy.int32).clip(0,255)
+             for i in range(3) ];
     # add data mask
     mask = getattr(data,'mask',None);
     if mask is not None and mask is not False:
@@ -215,6 +218,12 @@ class Colormap (object):
         x[mask] = 0;
     # do the deed
     return self.QARGBImage(alpha,*rgbs);
+    
+  def makeControlWidgets (self,parent):
+    """Creates control widgets for the colormap's internal parameters.
+    "parent" is a parent widget.
+    Returns None if no controls are required""";
+    return None;
 
   class QARGBImage (QImage):
     """This is a QImage which is constructed from an A,R,G,B arrays.""";
@@ -226,51 +235,173 @@ class Colormap (object):
       self._buffer = argb.transpose().tostring();
       QImage.__init__(self,self._buffer,nx,ny,QImage.Format_ARGB32);
 
-# default greyscale colormap
-Greyscale = Colormap("Greyscale");
+class ColormapWithControls (Colormap):
+  """This is a base class for a colormap with controls knobs""";
+  class SliderControl (QObject):
+    """This class implements a slider control for a colormap""";
+    def __init__ (self,name,value,minval,maxval,step,format="%s: %.1f"):
+      QObject.__init__(self);
+      self.name,self.value,self.minval,self.maxval,self.step,self.format = \
+        name,value,minval,maxval,step,format;
+      self._default = value;
+      self._wlabel = None;
 
-# a pure-orange colormap where intensity maps to alpha
-TransparentOrange = Colormap("Transparent Fuchsia",color0="fuchsia",color1="fuchsia",alpha=(0,1));
+    def makeControlWidgets (self,parent,gridlayout,row,column):
+      toprow = QWidget(parent);
+      gridlayout.addWidget(toprow,row*2,column);
+      top_lo = QHBoxLayout(toprow);
+      top_lo.setContentsMargins(0,0,0,0);
+      self._wlabel = QLabel(self.format%(self.name,self.value),toprow);
+      top_lo.addWidget(self._wlabel);
+      self._wreset = QToolButton(toprow);
+      self._wreset.setText("reset");
+      self._wreset.setToolButtonStyle(Qt.ToolButtonTextOnly);
+      self._wreset.setAutoRaise(True);
+      self._wreset.setEnabled(self.value != self._default);
+      QObject.connect(self._wreset,SIGNAL("clicked()"),self._resetValue);
+      top_lo.addWidget(self._wreset);
+      self._wslider = QwtSlider(parent);
+      # This works around a stupid bug in QwtSliders -- see comments on histogram zoom wheel above
+      self._wslider_timer = QTimer(parent);
+      self._wslider_timer.setSingleShot(True);
+      self._wslider_timer.setInterval(500);
+      QObject.connect(self._wslider_timer,SIGNAL("timeout()"),self.setValue);
+      gridlayout.addWidget(self._wslider,row*2+1,column);
+      self._wslider.setRange(self.minval,self.maxval);
+      self._wslider.setStep(self.step);
+      self._wslider.setValue(self.value);
+      self._wslider.setTracking(False);
+      QObject.connect(self._wslider,SIGNAL("valueChanged(double)"),self.setValue);
+      QObject.connect(self._wslider,SIGNAL("sliderMoved(double)"),self._previewValue);
 
-# some Karma-derived colormaps
+    def _resetValue (self):
+      self._wslider.setValue(self._default);
+      self.setValue(self._default);
+
+    def setValue (self,value=None,notify=True):
+      # only update widgets if already created
+      self.value = value;
+      if self._wlabel is not None:
+        if value is None:
+          value = self._wslider.value();
+        self._wreset.setEnabled(value != self._default);
+        self._wlabel.setText(self.format%(self.name,self.value));
+        # stop timer if being called to finalize the change in value
+        if notify:
+          self._wslider_timer.stop();
+          self.emit(SIGNAL("valueChanged"),self.value);
+      
+    def _previewValue (self,value):
+      self.setValue(notify=False);
+      self._wslider_timer.start(500);
+      self.emit(SIGNAL("valueMoved"),self.value);
+      
+  def emitChange (self,*dum):
+    self.emit(SIGNAL("colormapChanged"));
+
+  def emitPreview (self,*dum):
+    self.emit(SIGNAL("colormapPreviewed"));
+    
+  def loadConfig (self,config):
+    pass;
+    
+  def saveConfig (self,config):
+    pass;
+
+class CubeHelixColormap (ColormapWithControls):
+  """This implements the "cubehelix" colour scheme proposed by Dave Green:
+  D. Green 2011, Bull. Astr. Soc. India (2011) 39, 289–295
+  http://arxiv.org/pdf/1108.5083v1
+  """
+  def __init__(self,gamma=1,rgb=0.5,rots=-1.5,hue=1.2,name="CubeHelix"):
+    ColormapWithControls.__init__(self,name);
+    self.gamma  = self.SliderControl("Gamma",gamma,0,6,.1);
+    self.color  = self.SliderControl("Colour",rgb,0,3,.1);
+    self.cycles = self.SliderControl("Cycles",rots,-10,10,.1);
+    self.hue    = self.SliderControl("Hue",hue,0,2,.1);
+    
+  def colorize (self,data,alpha=None):
+    """Converts normalized data (0...1) array into a QImage of the same dimensions.
+    'alpha', if set, is a 0...1 array of the same size, which is mapped to the alpha channel
+    (i.e. 0 for fully transparent and 1 for fully opaque).
+    If data is a masked array, masked pixels will be fully transparent.""";
+    # setup alpha channel
+    if alpha is None:
+      alpha = numpy.zeros(data.shape,dtype=numpy.int32);
+      alpha[...] = 255;
+    else:
+      alpha = numpy.round(255*alpha).astype(numpy.int32).clip(0,255);
+    # make RGB arrays
+    dg = data**self.gamma.value;
+    a = self.hue.value*dg*(1-dg)/2;
+    phi = 2*math.pi*(self.color.value/3 + self.cycles.value*data);
+    cosphi = a*numpy.cos(phi);
+    sinphi = a*numpy.sin(phi);
+    r = dg - 0.14861*cosphi + 1.78277*sinphi;
+    g = dg - 0.29227*cosphi - 0.90649*sinphi;
+    b = dg + 1.97249*cosphi;
+    rgbs = [ (x*255).round().astype(numpy.int32).clip(0,255) for x in r,g,b ];
+    # add data mask
+    mask = getattr(data,'mask',None);
+    if mask is not None and mask is not False:
+      alpha[mask] = 0;
+      for x in rgbs:
+        x[mask] = 0;
+    # do the deed
+    return self.QARGBImage(alpha,*rgbs);
+
+  def makeControlWidgets (self,parent):
+    """Creates control widgets for the colormap's internal parameters.
+    "parent" is a parent widget.
+    Returns None if no controls are required""";
+    top = QWidget(parent);
+    layout = QGridLayout(top);
+    layout.setContentsMargins(0,0,0,0);
+    for irow,icol,control in ((0,0,self.gamma),(0,1,self.color),(1,0,self.cycles),(1,1,self.hue)):
+      control.makeControlWidgets(top,layout,irow,icol);
+      QObject.connect(control,SIGNAL("valueChanged"),self.emitChange);
+      QObject.connect(control,SIGNAL("valueMoved"),self.emitPreview);
+    return top;
+
+  def loadConfig (self,config):
+    for name in "gamma","color","cycles","hue":
+      control = getattr(self,name);
+      value = config.getfloat("cubehelix-colourmap-%s"%name,control.value);
+      control.setValue(value,notify=False);
+    
+  def saveConfig (self,config):
+    for name in "gamma","color","cycles","hue":
+      control = getattr(self,name);
+      config.set("cubehelix-colourmap-%s"%name,control.value);
+
+
+# instantiate "static" colormaps (i.e. those that have no internal parameters, and thus can be
+# shared among images without instantiating a new Colormap object for each)
+GreyscaleColormap = Colormap("Greyscale");
+TransparentFuchsiaColormap = Colormap("Transparent Fuchsia",color0="fuchsia",color1="fuchsia",alpha=(0,1));
+
 from ColormapTables import Karma
-_karma_colormaps = [ Colormap(cmap,getattr(Karma,cmap))
-    for cmap in [
-    "Background",
-    "Heat",
-    "Isophot",
-    "Mousse",
-    "Rainbow",
-    "RGB",
-    "RGB2",
-    "Smooth",
-    "Staircase",
-    "Mirp",
-    "Random" ]
-];
-
-# list of colormaps in some kind of logical order
-ColormapOrdering = [
-  Greyscale,
-  TransparentOrange ] + _karma_colormaps;
-
-class ColormapMenu (QMenu):
-  def __init__ (self,*args):
-    QMenu.__init__(self,*args);
-    self._currier = Kittens.utils.PersistentCurrier();
-    self._qas = {};
-    qag = QActionGroup(self);
-    for cmap in ColormapOrdering:
-      qa = self.addAction(cmap.name,self._currier.curry(self.select,cmap));
-      self._qas[id(cmap)] = qa;
-      qa.setCheckable(True);
-      qag.addAction(qa);
-
-  def select (self,cmap=ColormapOrdering[0]):
-    if id(cmap) not in self._qas:
-      raise KeyError,"colormap object not in colormap list";
-    self._qas[id(cmap)].setChecked(True);
-    self.emit(SIGNAL("select"),cmap);
-
-#      pm =QPixmap.fromImage(img);
-
+_karma_colormaps = [
+    Colormap(cmap,getattr(Karma,cmap))
+      for cmap in [
+        "Background",
+        "Heat",
+        "Isophot",
+        "Mousse",
+        "Rainbow",
+        "RGB",
+        "RGB2",
+        "Smooth",
+        "Staircase",
+        "Mirp",
+        "Random" ]
+  ];
+  
+def getColormapList ():
+  """Returns list of Colormap instances."""
+  
+  # Some colormaps need a unique instantiation (because they have parameters)
+  # For the rest, use the static objects
+  return [ GreyscaleColormap,
+           CubeHelixColormap(),
+           TransparentFuchsiaColormap ] + _karma_colormaps;

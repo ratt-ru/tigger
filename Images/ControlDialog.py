@@ -353,10 +353,28 @@ class ImageControlDialog (QDialog):
     ### NB: use setIconSize() and icons in QComboBox!!!
     self._wcolmaps = QComboBox(self);
     self._wcolmaps.setIconSize(QSize(128,16));
-    for cmap in Colormaps.ColormapOrdering:
+    for cmap in self._rc.getColormapList():
       self._wcolmaps.addItem(QIcon(cmap.makeQPixmap(128,16)),cmap.name);
     lo1.addWidget(self._wcolmaps);
-    QObject.connect(self._wcolmaps,SIGNAL("activated(int)"),self._changeColormap);
+    QObject.connect(self._wcolmaps,SIGNAL("activated(int)"),self._rc.setColorMapNumber);
+    # add widgetstack for colormap controls
+    self._wcolmap_control_stack = QStackedWidget(self);
+    self._wcolmap_control_blank = QWidget(self._wcolmap_control_stack);
+    self._wcolmap_control_stack.addWidget(self._wcolmap_control_blank);
+    lo0.addWidget(self._wcolmap_control_stack);
+    self._colmap_controls = [];
+    # add controls to stack
+    for index,cmap in enumerate(self._rc.getColormapList()):
+      if isinstance(cmap,Colormaps.ColormapWithControls):
+        controls = cmap.makeControlWidgets(self._wcolmap_control_stack);
+        self._wcolmap_control_stack.addWidget(controls);
+        QObject.connect(cmap,SIGNAL("colormapChanged"),
+            self._currier.curry(self._previewColormapParameters,index,cmap));
+        QObject.connect(cmap,SIGNAL("colormapPreviewed"),
+            self._currier.curry(self._previewColormapParameters,index,cmap));
+        self._colmap_controls.append(controls);
+      else:
+        self._colmap_controls.append(self._wcolmap_control_blank);
 
     # connect updates from renderControl and image
     self.image.connect(SIGNAL("slice"),self._updateImageSlice);
@@ -767,13 +785,20 @@ class ImageControlDialog (QDialog):
     self._cb_item.setColorMap(cmap);
     self._histplot.replot();
     try:
-      index = Colormaps.ColormapOrdering.index(cmap);
+      index = self._rc.getColormapList().index(cmap);
     except:
       return;
-    self._wcolmaps.setCurrentIndex(index);
+    self._setCurrentColormapNumber(index,cmap);
+    
+  def _previewColormapParameters (self,index,cmap):
+    """Called to preview a new colormap parameter value""";
+    self._histplot.replot();
+    self._wcolmaps.setItemIcon(index,QIcon(cmap.makeQPixmap(128,16)));
 
-  def _changeColormap (self,imap):
-    self._rc.setColorMap(Colormaps.ColormapOrdering[imap]);
+  def _setCurrentColormapNumber (self,index,cmap):
+    self._wcolmaps.setCurrentIndex(index);
+    # show controls for colormap
+    self._wcolmap_control_stack.setCurrentWidget(self._colmap_controls[index]);
 
   def _changeDisplayRange (self):
     """Gets display range from widgets and updates the image with it.""";

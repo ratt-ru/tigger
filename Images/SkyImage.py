@@ -71,7 +71,7 @@ class SkyImagePlotItem (QwtPlotItem,QObject):
     if nx and ny:
       self.setImageCoordinates(nx,ny,l0,m0,dl,dm);
     # set default colormap and intensity map
-    self.colormap = Colormaps.Greyscale;
+    self.colormap = Colormaps.GreyscaleColormap;
     self.imap = Colormaps.LinearIntensityMap();
 
   def emit (self,*args):
@@ -92,6 +92,10 @@ class SkyImagePlotItem (QwtPlotItem,QObject):
       self.colormap = cmap;
     if emit:
       self.emit(SIGNAL("repaint"));
+      
+  def updateCurrentColorMap (self):
+    self._cache_qimage = {};
+    self.emit(SIGNAL("repaint"));
 
   def setIntensityMap(self,imap=None,emit=True):
     """Changes the intensity map. If called with no arguments, clears intensity map-dependent caches""";
