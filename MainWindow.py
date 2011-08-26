@@ -533,7 +533,8 @@ class MainWindow (QMainWindow):
         warning += "<P>The file already exists and will be overwritten.</P>";
       if filetype != 'Tigger':
         warning += """<P>Please note that you are exporting the model using the external format '%s'. 
-              Some source types, attributes and other model features may be omitted during the export.</P>"""%filetype;
+              Source types, tags and other model features not supported by this
+              format will be omitted during the export.</P>"""%filetype;
       # get confirmation
       if confirm or (warning and not force):
         dialog = QMessageBox.warning if warning else QMessageBox.question;

@@ -66,13 +66,14 @@ def load (filename,format=None,freq0=None,center_on_brightest=True,min_extent=0)
     # for the first line, firgure out the file format
     if not linenum:
       if not format and line.startswith("#format:"):
-        format = line[len("#format:"):];
+        format = line[len("#format:"):].strip();
         dprint(1,"file contains format header:",format);
       # set default format
       if format is None:
         format = DefaultDMSFormatString;
       # is the format a string rather than a dict? Turn it into a dict then
       if isinstance(format,str):
+        format_str = format;
         # make list of fieldname,fieldnumber tuples
         fields = [ (field,i) for i,field in enumerate(format.split()) ];
         if not fields:
@@ -84,6 +85,11 @@ def load (filename,format=None,freq0=None,center_on_brightest=True,min_extent=0)
         format = dict(fields);
       elif not isinstance(format,dict):
         raise TypeError,"invalid 'format' argument of type %s"%(type(format))
+        nf = max(format.itervalues())+1;
+        fields = ['---']*nf;
+        for field,number in format.iteritems():
+          fields[number] = field;
+        format_str = " ".join(fields);
       # get minimum necessary fields from format
       name_field = format.get('name',None);
       # flux
@@ -191,18 +197,37 @@ def load (filename,format=None,freq0=None,center_on_brightest=True,min_extent=0)
       else:
         shape = None;
       # get tags
-      tags = [];
+      tagdict = {};
       if tags_slice:
         try:
           tags = fields[tags_slice];
         except IndexError:
           pass;
+        for tagstr1 in tags:
+          for tagstr in tagstr1.split(","):
+            if tagstr[0] == "+":
+              tagname,value = tagstr[1:],True;
+            elif tagstr[0] == "-":
+              tagname,value = tagstr[1:],False;
+            elif "=" in tagstr:
+              tagname,value = tagstr.split("=",1);
+              if value[0] in "'\"" and value[-1] in "'\"":
+                value = value[1:-1];
+              else:
+                try:
+                  value = float(value);
+                except:
+                  continue;
+            else:
+              tagname,value = tagstr,True;
+            tagdict[tagname] = value;
+          
       # OK, now form up the source object
       # position
       pos = ModelClasses.Position(ra,dec);
       # now create a source object
       dprint(3,name,ra,dec,i,q,u,v);
-      src = SkyModel.Source(name,pos,flux,shape=shape,spectrum=spectrum,**dict([(tag,True) for tag in tags]));
+      src = SkyModel.Source(name,pos,flux,shape=shape,spectrum=spectrum,**tagdict);
       srclist.append(src);
       # check if it's the brightest
       brightness = src.brightness();
@@ -217,6 +242,8 @@ def load (filename,format=None,freq0=None,center_on_brightest=True,min_extent=0)
   model = ModelClasses.SkyModel(*srclist);
   if freq0 is not None:
     model.setRefFreq(freq0);
+  # set model format
+  model.setAttribute("ASCII_Format",format_str);
   # setup model center
   if center_on_brightest and radec0:
     dprintf(2,"brightest source is %s (%g Jy) at %f,%f\n",brightest_name,maxbright,*radec0);
@@ -229,4 +256,144 @@ def load (filename,format=None,freq0=None,center_on_brightest=True,min_extent=0)
   return model;
 
 
-Tigger.Models.Formats.registerFormat("ASCII",load,"ASCII file (hms/dms)",(".txt",".lsm"));
+def save (model,filename,sources=None,format=None,**kw):
+  """
+  Exports model to a text file
+  """;
+  if sources is None:
+    sources = model.sources;
+  dprintf(2,"writing %d model sources to text file %s\n",len(sources),filename);
+  # create catalog parser based on either specified format, or the model format, or the default format
+  format_str = format or getattr(model,'ASCII_Format',DefaultDMSFormatString);
+  dprint(2,"format string is",format_str);
+  # convert this into format dict
+  fields = [ [field,i] for i,field in enumerate(format_str.split()) ];
+  if not fields:
+    raise ValueError,"illegal format string '%s'"%format;
+  # last fieldname can end with ... ("tags..."), so strip it
+  if fields[-1][0].endswith('...'):
+    fields[-1][0] = fields[-1][0][:-3];
+  # make format dict
+  format = dict(fields);
+  nfields = len(fields);
+  # get minimum necessary fields from format
+  name_field = format.get('name',None);
+  # flux
+  try:
+    i_field = format['i'];
+  except KeyError:
+    raise ValueError,"ASCII format specification lacks mandatory flux field ('i')";
+  # main RA field
+  ra_rad_field,ra_d_field,ra_h_field,ra_m_field,ra_s_field = \
+    [ format.get(x,None) for x in 'ra_rad','ra_h','ra_d','ra_m','ra_s' ];
+  dec_rad_field,dec_d_field,dec_m_field,dec_s_field = \
+    [ format.get(x,None) for x in 'dec_rad','dec_d','dec_m','dec_s' ];
+  if ra_h_field is not None:
+    ra_scale = 12;
+    ra_d_field = ra_h_field;
+  else:
+    ra_scale = 180;
+  # fields for extent parameters
+  try:
+    ext_fields = [ format[x] for x in ['ex','ey','pa'] ];
+  except KeyError:
+    ext_fields = None;
+  # fields for reference freq and RM and SpI
+  freq0_field = format.get('freq0',None);
+  rm_field = format.get('rm',None);
+  spi_field = format.get('spi',None);
+  tags_field = format.get('tags',None);
+  
+  # open file
+  ff = open(filename,mode="wt");
+  ff.write("#format: %s\n"%format_str);
+  # write sources
+  nsrc = 0;
+  for src in sources:
+    # only write points and gaussians
+    if src.shape is not None and not isinstance(src.shape,ModelClasses.Gaussian):
+      dprint(3,"skipping source '%s': non-supported type '%s'"%(src.name,src.shape.typecode));
+      continue;
+    # prepare field values
+    fval = ['0']*nfields;
+    # name
+    if name_field is not None:
+      fval[name_field] = src.name;
+    # position: RA
+    ra,dec = src.pos.ra,src.pos.dec;
+    if ra_rad_field is not None:
+      fval[ra_rad_field] = str(ra);
+    ra *= ra_scale/math.pi;
+    rad,ram = divmod(ra,1);     
+    ram,ras = divmod(ram*60,1); 
+    rad = int(rad);
+    ram = int(ram);
+    ras *= 60;
+    if ra_s_field is not None:
+      fval[ra_s_field] = str(ras);
+    if ra_m_field is not None:
+      fval[ra_m_field] = str(ram);
+    else:
+      rad = ra;
+    if ra_d_field is not None:
+      fval[ra_d_field] = str(rad);
+    # position: Dec
+    if dec_rad_field is not None:
+      fval[dec_rad_field] = str(dec);
+    dsign = '+' if dec>=0 else "-";
+    dec = abs(dec*180/math.pi);
+    decd,decm = divmod(dec,1);     
+    decm,decs = divmod(decm*60,1); 
+    decd = int(decd);
+    decm = int(decm);
+    decs *= 60;
+    if dec_s_field is not None:
+      fval[dec_s_field] = str(decs);
+    if dec_m_field is not None:
+      fval[dec_m_field] = str(decm);
+    else:
+      decd = dec;
+    if dec_d_field is not None:
+      fval[dec_d_field] = dsign+str(decd);
+    # fluxes
+    for stokes in "IQUV":
+      field = format.get(stokes.lower());
+      if field is not None:
+        fval[field] = str(getattr(src.flux,stokes,0));
+    # shape
+    if src.shape:
+      for parm in "ex","ey","pa":
+        field = format.get(parm.lower());
+        if field is not None:
+          fval[field] = str(getattr(src.shape,stokes,0));
+    # RM, spi, freq0  
+    if freq0_field is not None:
+      freq0 = (src.spectrum and getattr(src.spectrum,'freq0',None)) or getattr(src.flux,'freq0',0);
+      fval[freq0_field] = str(freq0);
+    if rm_field is not None:
+      fval[rm_field] = str(getattr(src.flux,'rm',0));
+    if spi_field is not None and hasattr(src,'spectrum'):
+      fval[spi_field] = str(getattr(src.spectrum,'spi',0));
+    # tags
+    if tags_field is not None:
+      outtags = [];
+      for tag,value in src.getTags():
+        if isinstance(value,str):
+          outtags.append("%s=\"%s\""%(tag,value));
+        elif isinstance(value,bool):
+          if value:
+            outtags.append("+"+tag);
+          else:
+            outtags.append("-"+tag);
+        elif isinstance(value,(int,float)):
+          outtags.append("%s=%f"%(tag,value));
+      fval[tags_field] = ",".join(outtags);
+    # write the line
+    ff.write(" ".join(fval)+"\n");
+    nsrc += 1;
+    
+  ff.close();
+  dprintf(1,"wrote %d sources to file %s\n",nsrc,filename);
+
+
+Tigger.Models.Formats.registerFormat("ASCII",load,"ASCII table",(".txt",".lsm"),export_func=save);

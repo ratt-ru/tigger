@@ -90,7 +90,9 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
   parser.add_option("-o","--output-type",choices=output_formats,metavar="TYPE",
                     help="Output model type (%s). Default is %%default."%(", ".join(output_formats)));
   parser.add_option("--format",type="string",
-                    help="""Input format, for ASCII or BBS tables. For ASCII tables, default is "%s". For BBS tables, the default format is found in the file itself."""%ASCII.DefaultDMSFormatString);
+                    help="""Input format, for ASCII or BBS tables. For ASCII tables, default is "%s". For BBS tables, the default format is found in the model itself."""%ASCII.DefaultDMSFormatString);
+  parser.add_option("--output-format",type="string",metavar="FORMAT",
+                    help="""Output format, for ASCII or BBS tables. For ASCII tables, default is "%s". For BBS tables, the default format is found in the model itself."""%ASCII.DefaultDMSFormatString);
   parser.add_option("-T","--tags",type="string",action="append",metavar="TAG",
                     help="Extract sources with the specified tags.");
   parser.add_option("--app-to-int",action="store_true",
@@ -340,4 +342,4 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
       src.setAttribute('cluster_flux',clusterflux[iclust]);
   # save output
   print "Saving to %s (%s)"%(output,output_doc);
-  export_func(model,output,sources=sources);
+  export_func(model,output,sources=sources,format=options.output_format or None);

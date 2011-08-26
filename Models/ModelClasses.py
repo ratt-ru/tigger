@@ -297,17 +297,20 @@ class Position (ModelItem):
   mandatory_attrs  = [ "ra","dec" ];
 
   @staticmethod
-  def ra_hms_static (rad):
+  def ra_hms_static (rad,scale=12):
     """Returns RA as tuple of (h,m,s)""";
     # convert negative values
     while rad < 0:
         rad += 2*math.pi;
     # convert to hours
-    rad *= 12.0/math.pi;
+    rad *= scale/math.pi;
     return  _deg_to_dms(rad);
 
   def ra_hms (self):
     return self.ra_hms_static(self.ra);
+
+  def ra_dms (self):
+    return self.ra_hms_static(self.ra,scale=180);
 
   @staticmethod
   def dec_dms_static (rad):
