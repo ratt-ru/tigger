@@ -345,7 +345,7 @@ class Spectrum (ModelItem):
   to a flat spectrum.
   """;
   def normalized_intensity (self,freq):
-    """Returns the normalized intensity for a given frequency, normalized to unity at the reference frequency (if any)"""
+    """Returns the normalized intensity for a given frequency,normalized to unity at the reference frequency (if any)"""
     return 1;
 
 class SpectralIndex (Spectrum):
