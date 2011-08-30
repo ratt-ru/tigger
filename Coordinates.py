@@ -52,6 +52,7 @@ try:
   from astLib.astWCS import WCS
 except ImportError:
   print "Failed to import the astLib.astWCS module. Please install the astLib package (http://astlib.sourceforge.net/)."
+  raise;
 
 startup_dprint(1,"imported WCS");
 

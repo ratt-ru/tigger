@@ -257,7 +257,8 @@ class SkyModelTreeWidgetItem (QTreeWidgetItem):
     self.setColumn(ColumnName,src.name);
     # coordinates
     self.setColumn(ColumnRa,src.pos.ra,"%2dh%02dm%05.2fs"%src.pos.ra_hms());
-    self.setColumn(ColumnDec,src.pos.dec,("%+2d"+unichr(0xB0)+"%02d'%05.2f\"")%src.pos.dec_dms());
+    self.setColumn(ColumnDec,src.pos.dec,("%s%2d"+unichr(0xB0)+"%02d'%05.2f\"")%
+        src.pos.dec_sdms());
     if hasattr(src,'r'):
       self.setColumn(ColumnR,src.r,"%.1f'"%(src.r*180*60/math.pi));
     # type

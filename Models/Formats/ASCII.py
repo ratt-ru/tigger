@@ -278,21 +278,16 @@ def save (model,filename,sources=None,format=None,**kw):
   nfields = len(fields);
   # get minimum necessary fields from format
   name_field = format.get('name',None);
-  # flux
-  try:
-    i_field = format['i'];
-  except KeyError:
-    raise ValueError,"ASCII format specification lacks mandatory flux field ('i')";
   # main RA field
   ra_rad_field,ra_d_field,ra_h_field,ra_m_field,ra_s_field = \
-    [ format.get(x,None) for x in 'ra_rad','ra_h','ra_d','ra_m','ra_s' ];
+    [ format.get(x,None) for x in 'ra_rad','ra_d','ra_h','ra_m','ra_s' ];
   dec_rad_field,dec_d_field,dec_m_field,dec_s_field = \
     [ format.get(x,None) for x in 'dec_rad','dec_d','dec_m','dec_s' ];
   if ra_h_field is not None:
-    ra_scale = 12;
+    ra_scale = 15;
     ra_d_field = ra_h_field;
   else:
-    ra_scale = 180;
+    ra_scale = 1;
   # fields for extent parameters
   try:
     ext_fields = [ format[x] for x in ['ex','ey','pa'] ];
@@ -303,7 +298,6 @@ def save (model,filename,sources=None,format=None,**kw):
   rm_field = format.get('rm',None);
   spi_field = format.get('spi',None);
   tags_field = format.get('tags',None);
-  
   # open file
   ff = open(filename,mode="wt");
   ff.write("#format: %s\n"%format_str);
@@ -321,40 +315,32 @@ def save (model,filename,sources=None,format=None,**kw):
       fval[name_field] = src.name;
     # position: RA
     ra,dec = src.pos.ra,src.pos.dec;
+    # RA in radians
     if ra_rad_field is not None:
       fval[ra_rad_field] = str(ra);
-    ra *= ra_scale/math.pi;
-    rad,ram = divmod(ra,1);     
-    ram,ras = divmod(ram*60,1); 
-    rad = int(rad);
-    ram = int(ram);
-    ras *= 60;
-    if ra_s_field is not None:
-      fval[ra_s_field] = str(ras);
+    ra /= ra_scale;
+    # RA in h/m/s or d/m/s 
     if ra_m_field is not None:
+      ra,ram,ras = src.pos.ra_hms_static(ra,scale=180,prec=1e-4);
       fval[ra_m_field] = str(ram);
-    else:
-      rad = ra;
-    if ra_d_field is not None:
-      fval[ra_d_field] = str(rad);
+      if ra_s_field is not None:
+        fval[ra_s_field] = str(ras);
+      if ra_d_field is not None:
+        fval[ra_d_field] = str(ra);
+    elif ra_d_field is not None:
+        fval[ra_d_field] = str(ra*180/math.pi);
     # position: Dec
     if dec_rad_field is not None:
       fval[dec_rad_field] = str(dec);
-    dsign = '+' if dec>=0 else "-";
-    dec = abs(dec*180/math.pi);
-    decd,decm = divmod(dec,1);     
-    decm,decs = divmod(decm*60,1); 
-    decd = int(decd);
-    decm = int(decm);
-    decs *= 60;
-    if dec_s_field is not None:
-      fval[dec_s_field] = str(decs);
     if dec_m_field is not None:
+      dsign,decd,decm,decs = src.pos.dec_sdms();
       fval[dec_m_field] = str(decm);
-    else:
-      decd = dec;
-    if dec_d_field is not None:
-      fval[dec_d_field] = dsign+str(decd);
+      if dec_s_field is not None:
+        fval[dec_s_field] = str(decs);
+      if dec_d_field is not None:
+        fval[dec_d_field] = dsign+str(decd);
+    elif dec_d_field is not None:
+        fval[dec_d_field] = str(dec*180/math.pi);
     # fluxes
     for stokes in "IQUV":
       field = format.get(stokes.lower());

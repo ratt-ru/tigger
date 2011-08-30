@@ -1157,7 +1157,7 @@ class SkyModelPlotter (QWidget):
     l,m = pos.x(),pos.y();
     ra,dec = self.projection.radec(l,m);
     rh,rm,rs = ModelClasses.Position.ra_hms_static(ra);
-    dd,dm,ds = ModelClasses.Position.dec_dms_static(dec);
+    dsign,dd,dm,ds = ModelClasses.Position.dec_sdms_static(dec);
     dist,pa = Coordinates.angular_dist_pos_angle(self.projection.ra0,self.projection.dec0,ra,dec);
     Rd,Rm,Rs = ModelClasses.Position.dec_dms_static(dist);
     PAd = pa*180/math.pi;
@@ -1174,7 +1174,7 @@ class SkyModelPlotter (QWidget):
         val,flag = image.imagePixel(x,y);
       else:
         x = y = None;
-    return l,m,ra,dec,dist,pa,rh,rm,rs,dd,dm,ds,Rd,Rm,Rs,PAd,x,y,val,flag;
+    return l,m,ra,dec,dist,pa,rh,rm,rs,dsign,dd,dm,ds,Rd,Rm,Rs,PAd,x,y,val,flag;
 
   def _trackRuler (self,pos):
     # beginning to track?
@@ -1203,16 +1203,16 @@ class SkyModelPlotter (QWidget):
     # get distance between points, if <=1, report coordinates rather than a measurement
     markup_items = [];
     pos0,pos1 = polygon.point(0),polygon.point(1);
-    l,m,ra,dec,dist,pa,rh,rm,rs,dd,dm,ds,Rd,Rm,Rs,PAd,x,y,val,flag = self._convertCoordinates(pos0);
+    l,m,ra,dec,dist,pa,rh,rm,rs,dsign,dd,dm,ds,Rd,Rm,Rs,PAd,x,y,val,flag = self._convertCoordinates(pos0);
     if (pos0-pos1).manhattanLength() <= 1:
       # make tooltip text, this uses HTML
-      tiptext = "<NOBR>X: %2dh%02dm%05.2fs %+2d&deg;%02d'%05.2f\"  &nbsp;  r<sub>0</sub>=%d&deg;%02d'%05.2f\"   &nbsp;  PA<sub>0</sub>=%6.2f&deg;"%(rh,rm,rs,dd,dm,ds,Rd,Rm,Rs,PAd);
+      tiptext = "<NOBR>X: %02dh%02dm%05.2fs %s%02d&deg;%02d'%05.2f\"  &nbsp;  r<sub>0</sub>=%d&deg;%02d'%05.2f\"   &nbsp;  PA<sub>0</sub>=%06.2f&deg;"%(rh,rm,rs,dsign,dd,dm,ds,Rd,Rm,Rs,PAd);
       if x is not None:
         tiptext += " &nbsp;  x=%d y=%d value=blank"%(x,y) if flag else " &nbsp;  x=%d y=%d value=%g"%(x,y,val);
       tiptext += "</NOBR>";
       # make console (and cliboard) text
-      msgtext = u"X: %2dh%02dm%05.2fs %+2d\u00B0%02d'%05.2f\" (%.6f\u00B0 %.6f\u00B0)  r=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0"%(
-          rh,rm,rs,dd,dm,ds,ra*180/math.pi,dec*180/math.pi,Rd,Rm,Rs,dist*180/math.pi,PAd);
+      msgtext = u"X: %2dh%02dm%05.2fs %s%02d\u00B0%02d'%05.2f\" (%.6f\u00B0 %.6f\u00B0)  r=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0"%(
+          rh,rm,rs,dsign,dd,dm,ds,ra*180/math.pi,dec*180/math.pi,Rd,Rm,Rs,dist*180/math.pi,PAd);
       if x is not None:
         msgtext += "   x=%d y=%d value=blank"%(x,y) if flag else "   x=%d y=%d value=%g"%(x,y,val);
       # make marker
@@ -1221,29 +1221,29 @@ class SkyModelPlotter (QWidget):
       marker.setSymbol(self._markup_xsymbol);
       markup_items.append(marker);
     else:
-      l1,m1,ra1,dec1,dist1,pa1,rh1,rm1,rs1,dd1,dm1,ds1,Rd1,Rm1,Rs1,PAd1,x1,y1,val1,flag1 = self._convertCoordinates(pos1);
+      l1,m1,ra1,dec1,dist1,pa1,rh1,rm1,rs1,dsign1,dd1,dm1,ds1,Rd1,Rm1,Rs1,PAd1,x1,y1,val1,flag1 = self._convertCoordinates(pos1);
       # make tooltip text, this uses HTML
-      tiptext = "<NOBR>A: %2dh%02dm%05.2fs %+2d&deg;%02d'%05.2f\"  &nbsp; r<sub>0</sub>=%d&deg;%02d'%05.2f\"   &nbsp;  PA<sub>0</sub>=%6.2f&deg;"%(rh,rm,rs,dd,dm,ds,Rd,Rm,Rs,PAd);
+      tiptext = "<NOBR>A: %02dh%02dm%05.2fs %s%02d&deg;%02d'%05.2f\"  &nbsp; r<sub>0</sub>=%d&deg;%02d'%05.2f\"   &nbsp;  PA<sub>0</sub>=%06.2f&deg;"%(rh,rm,rs,dsign,dd,dm,ds,Rd,Rm,Rs,PAd);
       if x is not None:
-        tiptext += " &nbsp; x=%d y=%d value=blank"%(x,y) if flag else " x=%d y=%d value=%g"%(x,y,val);
+        tiptext += " &nbsp; x=%d y=%d value=blank"%(x,y) if flag else " &nbsp; x=%d y=%d value=%g"%(x,y,val);
       tiptext += "</NOBR><BR>";
-      tiptext += "<NOBR>B: %2dh%02dm%05.2fs %+2d&deg;%02d'%05.2f\" &nbsp;  r<sub>0</sub>=%d&deg;%02d'%05.2f\"  &nbsp;  PA<sub>0</sub>=%6.2f&deg;"%(rh1,rm1,rs1,dd1,dm1,ds1,Rd1,Rm1,Rs1,PAd1);
+      tiptext += "<NOBR>B: %02dh%02dm%05.2fs %s%02d&deg;%02d'%05.2f\" &nbsp;  r<sub>0</sub>=%d&deg;%02d'%05.2f\"  &nbsp;  PA<sub>0</sub>=%06.2f&deg;"%(rh1,rm1,rs1,dsign1,dd1,dm1,ds1,Rd1,Rm1,Rs1,PAd1);
       if x1 is not None:
-        tiptext += " &nbsp; x=%d y=%d value=blank"%(x1,y1) if flag1 else " &nbsp;  x=%d y=%d value=%g"%(x1,y1,val1);
+        tiptext += " &nbsp; x=%d y=%d value=blank"%(x1,y1) if flag1 else " &nbsp; x=%d y=%d value=%g"%(x1,y1,val1);
       tiptext += "</NOBR><BR>";
       # distance measurement
       dist2,pa2 = Coordinates.angular_dist_pos_angle(ra,dec,ra1,dec1);
       Rd2,Rm2,Rs2 = ModelClasses.Position.dec_dms_static(dist2);
       pa2 *= 180/math.pi;
       pa2 += 360*(pa2<0);
-      tiptext += "<NOBR>|AB|=%d&deg;%02d'%05.2f\" &nbsp; PA<sub>AB</sub>=%6.2f&deg;</NOBR>"%(Rd2,Rm2,Rs2,pa2);
+      tiptext += "<NOBR>|AB|=%d&deg;%02d'%05.2f\" &nbsp; PA<sub>AB</sub>=%06.2f&deg;</NOBR>"%(Rd2,Rm2,Rs2,pa2);
       # make console (and cliboard) text
-      msgtext = u"A: %2dh%02dm%05.2fs %+2d\u00B0%02d'%05.2f\" (%.6f\u00B0 %.6f\u00B0)  r=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0"%(
-          rh,rm,rs,dd,dm,ds,ra*180/math.pi,dec*180/math.pi,Rd,Rm,Rs,dist*180/math.pi,PAd);
+      msgtext = u"A: %2dh%02dm%05.2fs %s%02d\u00B0%02d'%05.2f\" (%.6f\u00B0 %.6f\u00B0)  r=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%06.2f\u00B0"%(
+          rh,rm,rs,dsign,dd,dm,ds,ra*180/math.pi,dec*180/math.pi,Rd,Rm,Rs,dist*180/math.pi,PAd);
       if x is not None:
         msgtext += u"   x=%d y=%d value=blank"%(x,y) if flag else "   x=%d y=%d value=%g"%(x,y,val);
-      msgtext += u"\nB: %2dh%02dm%05.2fs %+2d\u00B0%02d'%05.2f\" (%.6f\u00B0 %.6f\u00B0)  r=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0"%(
-          rh1,rm1,rs1,dd1,dm1,ds1,ra1*180/math.pi,dec1*180/math.pi,Rd1,Rm1,Rs1,dist1*180/math.pi,PAd1);
+      msgtext += u"\nB: %2dh%02dm%05.2fs %s%02d\u00B0%02d'%05.2f\" (%.6f\u00B0 %.6f\u00B0)  r=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0"%(
+          rh1,rm1,rs1,dsign1,dd1,dm1,ds1,ra1*180/math.pi,dec1*180/math.pi,Rd1,Rm1,Rs1,dist1*180/math.pi,PAd1);
       if x1 is not None:
         msgtext += u"   x=%d y=%d value=blank"%(x1,y1) if flag1 else "   x=%d y=%d value=%g"%(x1,y1,val1);
       msgtext += u"\n|AB|=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0"%(Rd2,Rm2,Rs2,dist2*180/math.pi,pa2);
@@ -1309,10 +1309,10 @@ class SkyModelPlotter (QWidget):
       if src:
         self.model.setCurrentSource(src);
     # get ra/dec coordinates of point
-    l,m,ra,dec,dist,pa,rh,rm,rs,dd,dm,ds,Rd,Rm,Rs,PAd,x,y,val,flag = self._convertCoordinates(pos);
+    l,m,ra,dec,dist,pa,rh,rm,rs,dsign,dd,dm,ds,Rd,Rm,Rs,PAd,x,y,val,flag = self._convertCoordinates(pos);
 #    text = "<P align=\"right\">%2dh%02dm%05.2fs %+2d&deg;%02d'%05.2f\""%(rh,rm,rs,dd,dm,ds);
     # emit message as well
-    msgtext = u"%2dh%02dm%05.2fs %+2d\u00B0%02d'%05.2f\"  r=%d\u00B0%02d'%05.2f\"  PA=%.2f\u00B0"%(rh,rm,rs,dd,dm,ds,Rd,Rm,Rs,PAd);
+    msgtext = u"%02dh%02dm%05.2fs %s%02d\u00B0%02d'%05.2f\"  r=%d\u00B0%02d'%05.2f\"  PA=%.2f\u00B0"%(rh,rm,rs,dsign,dd,dm,ds,Rd,Rm,Rs,PAd);
     # if we have an image, add pixel coordinates
     image = self._imgman and self._imgman.getTopImage();
     if image and x is not None:

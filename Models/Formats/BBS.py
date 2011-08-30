@@ -102,12 +102,15 @@ class CatalogParser (object):
     fields = [];
     self.separators = [];
     while True:
-      match = re.match("(\w[\w:]*(=(fixed)?'[^']*')?)([^\w]+)(\w.*)$",format);
+      match = re.match("(\w[\w:]*(=(fixed)?'[^']*')?)(([^\w]+)(\w.*))?$",format);
       if not match:
         break;
       fields.append(match.group(1));
-      self.separators.append(match.group(4));
-      format = match.group(5);
+      # if no group 4, then we've reached the last field
+      if not match.group(4):
+        break;
+      self.separators.append(match.group(5));
+      format = match.group(6);
     # now parse the format specification
     # this is a dict of field name -> field index
     self.field_number = {};
@@ -140,10 +143,11 @@ class CatalogParser (object):
     fields = [];
     for sep in self.separators:
       ff = line.split(sep,1);
-      fields.append(ff[0]);
       if len(ff) < 2:
         break;
+      fields.append(ff[0]);
       line = ff[1];
+    fields.append(line);
     dprint(4,"line %d: "%linenum,fields);
     return CatalogLine(self,fields);
     
@@ -179,7 +183,7 @@ class CatalogParser (object):
     # convert to degrees
     return scale*(float(d) + float(m)/60 + float(s)/3600)*math.pi/180;
 
-  def putAngle (self,catline,angle,field,fh,fd,fm,fs):
+  def putAngle (self,catline,angle,field,fh,fd,fm,fs,prec=1e-6):
     """Helper function: inverse of getAngle.""";
     # decompose angle into sign,d,m,s
     if angle < 0:
@@ -188,17 +192,16 @@ class CatalogParser (object):
     else:
       sign = "+" if field == "Dec" else "";
     angle *= 12/math.pi if not self.defines(field) and self.defines(fh) else 180/math.pi;
-    d,m = divmod(angle,1);
-    m *= 60;
-    m,s = divmod(m,1);
-    s *= 60;
+    mins,secs = divmod(round(angle*3600/prec)*prec,60);
+    mins = int(mins);
+    degs,mins = divmod(mins,60);
     #generate output
     if self.defines(field):
-      setattr(catline,field,"%s%d.%d.%.4f"%(sign,d,m,s));
+      setattr(catline,field,"%s%d.%d.%.4f"%(sign,degs,mins,secs));
     else:
-      setattr(catline,fh if self.defines(fh) else fd,"%s%d"%d);
-      setattr(catline,fm,"%d"%m);
-      setattr(catline,fs,"%.4f%s");
+      setattr(catline,fh if self.defines(fh) else fd,"%s%d"%(sign,degs));
+      setattr(catline,fm,"%d"%mins);
+      setattr(catline,fs,"%.4f"%secs);
 
 
 def load (filename,freq0=None,center_on_brightest=False,**kw):
@@ -224,7 +227,7 @@ def load (filename,freq0=None,center_on_brightest=False,**kw):
   parser = CatalogParser(format_str);
     
   # check for mandatory fields
-  for field in "Name","Type","I":
+  for field in "Name","Type":
     if not parser.defines(field):
       raise ValueError,"Table lacks mandatory field '%s'"%field;
 
@@ -242,7 +245,7 @@ def load (filename,freq0=None,center_on_brightest=False,**kw):
       catline = parser.parse(line,linenum);
       if not catline:
         continue;
-      dprint(4,"line %d: "%linenum,catline.__dict__);
+      dprint(5,"line %d: "%linenum,catline.__dict__);
       # is it a patch record?
       patchname = getattr(catline,'Patch','');
       if not catline.Name:
@@ -337,6 +340,10 @@ def save (model,filename,sources=None,format=None,**kw):
         "Name, Type, Patch, Ra, Dec, I, Q, U, V, ReferenceFrequency, SpectralIndexDegree='0', SpectralIndex:0='0.0', MajorAxis, MinorAxis, Orientation");
   dprint(2,"format string is",format);
   parser = CatalogParser(format);
+  # check for mandatory fields
+  for field in "Name","Type":
+    if not parser.defines(field):
+      raise ValueError,"Output format lacks mandatory field '%s'"%field;
   # open file
   ff = open(filename,mode="wt");
   ff.write("# (%s) = format\n# The above line defines the field order and is required.\n\n"%format);

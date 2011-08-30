@@ -285,46 +285,46 @@ class ModelItem (object):
     markup += endtag;
     return markup;
 
-def _deg_to_dms (x):
-  """Converts x (in degrees) into d,m,s tuple, where d and m are ints."""
-  degs,mins = divmod(x,1.);
-  mins *= 60;
-  mins,secs = divmod(mins,1);
-  secs *= 60;
-  return int(degs),int(mins),secs;
+def _deg_to_dms (x,prec=0.01):
+  """Converts x (in degrees) into d,m,s tuple, where d and m are ints.
+  prec gives the precision, in arcseconds."""
+  mins,secs = divmod(round(x*3600/prec)*prec,60);
+  mins = int(mins);
+  degs,mins = divmod(mins,60);
+  return degs,mins,secs;
 
 class Position (ModelItem):
   mandatory_attrs  = [ "ra","dec" ];
 
   @staticmethod
-  def ra_hms_static (rad,scale=12):
+  def ra_hms_static (rad,scale=12,prec=0.01):
     """Returns RA as tuple of (h,m,s)""";
     # convert negative values
     while rad < 0:
         rad += 2*math.pi;
     # convert to hours
     rad *= scale/math.pi;
-    return  _deg_to_dms(rad);
+    return  _deg_to_dms(rad,prec);
 
-  def ra_hms (self):
-    return self.ra_hms_static(self.ra);
+  def ra_hms (self,prec=0.01):
+    return self.ra_hms_static(self.ra,scale=12,prec=prec);
 
-  def ra_dms (self):
-    return self.ra_hms_static(self.ra,scale=180);
+  def ra_dms (self,prec=0.01):
+    return self.ra_hms_static(self.ra,scale=180,prec=prec);
 
   @staticmethod
-  def dec_dms_static (rad):
-    """Returns Dec as tuple of (d,m,s)""";
-    if rad < 0:
-        mult = -1;
-        rad = abs(rad);
-    else:
-        mult = 1
-    d,m,s = _deg_to_dms(rad*DEG);
-    return (mult*(d%180),m,s);
+  def dec_dms_static (rad,prec=0.01):
+    return Position.dec_sdms_static(rad,prec)[1:];
+  
+  @staticmethod
+  def dec_sdms_static (rad,prec=0.01):
+    """Returns Dec as tuple of (sign,d,m,s). Sign is "+" or "-".""";
+    sign = "-" if rad<0 else "+";
+    d,m,s = _deg_to_dms(abs(rad)*DEG,prec);
+    return (sign,d,m,s);
 
-  def dec_dms (self):
-    return self.dec_dms_static(self.dec);
+  def dec_sdms (self,prec=0.01):
+    return self.dec_sdms_static(self.dec,prec);
 
 class Flux (ModelItem):
   mandatory_attrs  = [ "I" ];
