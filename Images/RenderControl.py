@@ -82,7 +82,8 @@ class RenderControl (QObject):
     self._cmap_list = Colormaps.getColormapList();
     for cmap in self._cmap_list:
       if isinstance(cmap,Colormaps.ColormapWithControls):
-        cmap.loadConfig(self._config);
+        if self._config:
+          cmap.loadConfig(self._config);
         QObject.connect(cmap,SIGNAL("colormapChanged"),self.updateColorMapParameters);
     # set the initial intensity map
     imap = self._config.getint("intensity-map-number",0) if self._config else 0;
@@ -131,6 +132,18 @@ class RenderControl (QObject):
   def startSavingConfig(self,image_filename):
     """Saves the current configuration under the specified image filename""";
     self._config = Kittens.config.SectionParser(ImageConfigFile,os.path.normpath(os.path.abspath(image_filename)));
+    if self._displayrange:
+      self._config.set("range-min",self._displayrange[0],save=False);
+      self._config.set("range-max",self._displayrange[1],save=False);
+    if self._current_slice:
+      self._config.set("slice"," ".join(map(str,self._current_slice)),save=False);
+    for cmap in self._cmap_list:
+      if isinstance(cmap,Colormaps.ColormapWithControls):
+        cmap.saveConfig(self._config,save=False);
+    self._config.set("intensity-map-number",self._current_imap_index,save=False);
+    self._config.set("colour-map-number",self._current_cmap_index,save=False);
+    self._config.set("lock-range",self._lock_display_range,save=True);
+    
 
   def hasSlicing (self):
     """Returns True if image is a cube, and so has non-trivial slicing axes""";
@@ -203,7 +216,8 @@ class RenderControl (QObject):
     """Call this when the colormap parameters have changed""";
     busy = BusyIndicator();
     self.image.updateCurrentColorMap();
-    self._cmap_list[self._current_cmap_index].saveConfig(self._config);
+    if self._config:
+      self._cmap_list[self._current_cmap_index].saveConfig(self._config);
 
   def setColorMapNumber (self,index,write_config=True):
     busy = BusyIndicator();

@@ -305,7 +305,7 @@ class ColormapWithControls (Colormap):
   def loadConfig (self,config):
     pass;
     
-  def saveConfig (self,config):
+  def saveConfig (self,config,save=True):
     pass;
 
 class CubeHelixColormap (ColormapWithControls):
@@ -369,10 +369,10 @@ class CubeHelixColormap (ColormapWithControls):
       value = config.getfloat("cubehelix-colourmap-%s"%name,control.value);
       control.setValue(value,notify=False);
     
-  def saveConfig (self,config):
+  def saveConfig (self,config,save=True):
     for name in "gamma","color","cycles","hue":
       control = getattr(self,name);
-      config.set("cubehelix-colourmap-%s"%name,control.value);
+      config.set("cubehelix-colourmap-%s"%name,control.value,save=save);
 
 
 # instantiate "static" colormaps (i.e. those that have no internal parameters, and thus can be
