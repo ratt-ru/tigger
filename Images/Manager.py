@@ -349,7 +349,7 @@ class ImageManager (QWidget):
       self._menu.addSeparator();
       self._menu.addAction(self._qa_plot_top);
       self._menu.addAction(self._qa_plot_all);
-
+      
   def computeImage (self,expression=None):
     """Computes image from expression (if expression is None, pops up dialog)""";
     if expression is None:
@@ -380,8 +380,17 @@ Examples:  "(a+b)/2", "cos(a)+sin(b)", "a-a.mean()", etc.""");
     self.showMessage("Computing expression \"%s\""%expression,10000);
     busy = BusyIndicator();
     QApplication.flush();
+    # trim trivial trailing dimensions. This avoids the problem of when an NxMx1 and an NxMx1x1 arrays are added,
+    # the result is promoted to NxMxMx1 following the numpy rules.
+    def trimshape (shape):
+      out = shape;
+      while out and out[-1] == 1:
+        out = out[:-1];
+      return out;
+    def trimarray (array):
+      return array.reshape(trimshape(array.shape));
     try:
-      result = exprfunc(*[x[1].data() for x in arglist]);
+      result = exprfunc(*[trimarray(x[1].data()) for x in arglist]);
     except Exception,exc:
       busy = None;
       traceback.print_exc();
@@ -392,7 +401,8 @@ Examples:  "(a+b)/2", "cos(a)+sin(b)", "a-a.mean()", etc.""");
       self.showErrorMessage("""Result of "%s" is of invalid type "%s" (array expected)."""%(expression,type(result).__name__));
       return None;
     # determine which image this expression can be associated with
-    arglist = [ x for x in arglist if hasattr(x[1],'fits_header') and x[1].data().shape == result.shape ];
+    res_shape = trimshape(result.shape);
+    arglist = [ x for x in arglist if hasattr(x[1],'fits_header') and trimshape(x[1].data().shape) == res_shape ];
     if not arglist:
       self.showErrorMessage("""Result of "%s" has shape %s, which does not match any loaded FITS image."""%(expression,"x".join(map(str,result.shape))));
       return None;
