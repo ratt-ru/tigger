@@ -354,8 +354,16 @@ class SkyCubePlotItem (SkyImagePlotItem):
     units = units or "";
     scale,prefix = getScalePrefix(values);
     units = prefix+units;
+    # estimate number of significant digits
+    valarr = numpy.array(values)/scale;
+    try:
+      ndigits = int(math.ceil(math.log10(max(abs(valarr))/abs((valarr[1:]-valarr[0:-1])).min())));
+      nexp = int(math.log10(max(abs(valarr))));
+      format = ".%de"%ndigits if nexp > ndigits-4 else ".%df"%ndigits;
+    except:
+      format = ".2g";
     if labels is None:
-      labels = [ "%d: %g %s"%(i,val/scale,units) for i,val in enumerate(values) ];
+      labels = [ ("%d: %"+format+" %s")%(i,val/scale,units) for i,val in enumerate(values) ];
     self._extra_axes.append((iaxis,name,labels,values,units,scale));
 
   def numExtraAxes (self):

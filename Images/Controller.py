@@ -110,7 +110,7 @@ class ImageController (QFrame):
     # selectors for extra axes
     self._wslicers = [];
     curslice = self._rc.currentSlice(); # this may be loaded from config, so not necessarily 0
-    for iextra,axisname,labels in self._rc. slicedAxes():
+    for iextra,axisname,labels in self._rc.slicedAxes():
       if axisname.upper() not in ["STOKES","COMPLEX"]:
         lbl = QLabel("%s:"%axisname,self);
         lo.addWidget(lbl);
@@ -122,7 +122,7 @@ class ImageController (QFrame):
       slicer.addItems(labels);
       slicer.setToolTip("""<P>Selects current slice along the %s axis.</P>"""%axisname);
       slicer.setCurrentIndex(curslice[iextra]);
-      QObject.connect(slicer,SIGNAL("currentIndexChanged(int)"),self._currier.curry(self.changeSlice,iextra));
+      QObject.connect(slicer,SIGNAL("activated(int)"),self._currier.curry(self._rc.changeSlice,iextra));
     # min/max display ranges
     lo.addSpacing(5);
     self._wrangelbl = QLabel(self);
@@ -311,19 +311,12 @@ class ImageController (QFrame):
     return self._rc.currentSlice();
 
   def _updateImageSlice (self,slice):
+    dprint(2,slice);
     for i,(iextra,name,labels) in enumerate(self._rc.slicedAxes()):
-      self._wslicers[i].setCurrentIndex(slice[iextra]);
-
-  def changeSlice (self,iaxis,index):
-    sl = self._rc.currentSlice();
-    if sl[iaxis] != index:
-      sl = list(sl);
-      sl[iaxis] = index;
-      self._rc.selectSlice(sl);
-
-  def incrementSlice (self,isliced_axis,incr):
-    slicer = self._wslicers[isliced_axis];
-    slicer.setCurrentIndex((slicer.currentIndex()+incr)%slicer.count());
+      slicer = self._wslicers[i];
+      if slicer.currentIndex() != slice[iextra]:
+        dprint(3,"setting widget",i,"to",slice[iextra]);
+        slicer.setCurrentIndex(slice[iextra]);
 
   def setZ (self,z,top=False,depthlabel=None,can_raise=True):
     for i,elem in enumerate((self.image,self._image_border,self._image_label)):

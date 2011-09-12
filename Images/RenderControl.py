@@ -62,12 +62,13 @@ class RenderControl (QObject):
     # self._sliced_axes is a list of (iextra,axisname,labels) tuples for size>1 axes
     # where iextra is an index into self._current_slice.
     self._current_slice = [0]*image.numExtraAxes();
-    self._sliced_axes = [];
+    self._slice_dims    = [1]*image.numExtraAxes();
+    self._sliced_axes   = [];
     for i in range(image.numExtraAxes()):
       iaxis,axisname,labels = image.extraAxisNumberNameLabels(i);
+      self._slice_dims[i] = len(labels);
       if len(labels) > 1:
         self._sliced_axes.append((i,axisname,labels));
-
     # set the full image range (i.e. mix/max) and current slice range
     dprint(2,"getting data min/max");
     self._fullrange = self._slicerange = image.dataMinMax()[:2];
@@ -153,12 +154,28 @@ class RenderControl (QObject):
     """Returns list of (axis_num,name,label_list) tuples per each non-trivial slicing axis""";
     return self._sliced_axes;
 
+  def incrementSlice (self,iaxis,incr,write_config=True):
+    dprint(2,"incrementing slice axis",iaxis,"by",incr);
+    self._current_slice[iaxis] = (self._current_slice[iaxis] + incr)%self._slice_dims[iaxis];
+    self._updateSlice(write_config);
+      
+  def changeSlice (self,iaxis,index,write_config=True):
+    dprint(2,"changing slice axis",iaxis,"to",index);
+    if self._current_slice[iaxis] != index:
+      self._current_slice[iaxis] = index;
+      self._updateSlice(write_config);
+
   def selectSlice (self,indices,write_config=True):
-    """Selects slice given by indices (must be as many as there are items in self._wslicer)""";
-    dprint(2,"selectSlice",time.time()%60);
-    indices = tuple(indices);
+    """Selects slice given by indices""";
+    dprint(2,"selecting slice",indices);
+    self._current_slice = list(indices);
+    self._updateSlice(write_config);
+
+  def _updateSlice (self,write_config=True):
+    """Common internal method called to finalize changes to _current_slice""";
     busy = BusyIndicator();
-    self._current_slice = indices;
+    dprint(2,"_updateSlice",self._current_slice,time.time()%60);
+    indices = tuple(self._current_slice);
     self.image.selectSlice(*indices);
     dprint(2,"image slice selected",time.time()%60);
     img = self.image.image();
@@ -170,12 +187,14 @@ class RenderControl (QObject):
     if write_config and self._config:
       self._config.set("slice"," ".join(map(str,indices)));
 
-
   def displayRange (self):
     return self._displayrange;
 
   def currentSlice (self):
     return self._current_slice;
+    
+  def sliceDimensions (self):
+    return self._slice_dims;
 
   def getIntensityMapNames (self):
     return [ name for name,imap in self._imap_list ];

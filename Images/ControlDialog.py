@@ -169,21 +169,21 @@ class ImageControlDialog (QDialog):
         wslicer.addItems(labels);
         wslicer.setToolTip("""<P>Selects current slice along the %s axis.</P>"""%name);
         wslicer.setCurrentIndex(self._rc.currentSlice()[iextra]);
-        QObject.connect(wslicer,SIGNAL("currentIndexChanged(int)"),self._currier.curry(self._changeSlice,iextra));
+        QObject.connect(wslicer,SIGNAL("activated(int)"),self._currier.curry(self._rc.changeSlice,iextra));
         lo2 = QVBoxLayout();
         lo1.addLayout(lo2);
         lo2.setContentsMargins(0,0,0,0);
         lo2.setSpacing(0);
         wminus = QToolButton(self);
         wminus.setArrowType(Qt.UpArrow);
-        QObject.connect(wminus,SIGNAL("clicked()"),self._currier.curry(self._incrementSlice,i,-1));
+        QObject.connect(wminus,SIGNAL("clicked()"),self._currier.curry(self._rc.incrementSlice,iextra,1));
         if i == 0:
           wminus.setShortcut(Qt.SHIFT+Qt.Key_F7);
         elif i == 1:
           wminus.setShortcut(Qt.SHIFT+Qt.Key_F8);
         wplus = QToolButton(self);
         wplus.setArrowType(Qt.DownArrow);
-        QObject.connect(wplus,SIGNAL("clicked()"),self._currier.curry(self._incrementSlice,i,1));
+        QObject.connect(wplus,SIGNAL("clicked()"),self._currier.curry(self._rc.incrementSlice,iextra,-1));
         if i == 0:
           wplus.setShortcut(Qt.Key_F7);
         elif i == 1:
@@ -814,17 +814,6 @@ class ImageControlDialog (QDialog):
   def _updateImageSlice (self,slice):
     for i,(iextra,name,labels) in enumerate(self._rc.slicedAxes()):
       self._wslicers[i].setCurrentIndex(slice[iextra]);
-
-  def _changeSlice (self,iaxis,index):
-    sl = self._rc.currentSlice();
-    if sl[iaxis] != index:
-      sl = list(sl);
-      sl[iaxis] = index;
-      self._rc.selectSlice(sl);
-
-  def _incrementSlice (self,iaxis,value):
-    ws = self._wslicers[iaxis];
-    ws.setCurrentIndex((ws.currentIndex()+value)%ws.count());
 
   def _changeDisplayRangeToPercent (self,percent):
     busy = BusyIndicator();

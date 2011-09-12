@@ -208,8 +208,12 @@ class ImageManager (QWidget):
     if len(self._imagecons)>1:
       self.raiseImage(self._imagecons[1]);
 
-  def incrementSlice (self,axis,incr):
-    self._imagecons[0].incrementSlice(axis,incr);
+  def incrementSlice (self,extra_axis,incr):
+    if self._imagecons:
+      rc = self._imagecons[0].renderControl();
+      sliced_axes = rc.slicedAxes();
+      if extra_axis < len(sliced_axes):
+        rc.incrementSlice(sliced_axes[extra_axis][0],incr);
 
   def setLMRectSubset (self,rect):
     if self._imagecons:
