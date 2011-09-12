@@ -410,15 +410,20 @@ Examples:  "(a+b)/2", "cos(a)+sin(b)", "a-a.mean()", etc.""");
     if not arglist:
       self.showErrorMessage("""Result of "%s" has shape %s, which does not match any loaded FITS image."""%(expression,"x".join(map(str,result.shape))));
       return None;
+    # look for an image in the arglist with the same projection, and with a valid dirname
+    # (for the where-to-save hint)
+    template = arglist[0][1];
     # if all images in arglist have the same projection, then it doesn't matter what we use
     # else ask
-    template = arglist[0][1];
     if len([x for x in arglist[1:] if x[1].projection == template.projection]) != len(arglist)-1:
       options = [ x[0] for x in arglist ];
       (which,ok) = QInputDialog.getItem(self,"Compute image","Coordinate system to use for the result of \"%s\":"%expression,options,0,False);
       if not ok:
         return None;
-      print options.index(which);
+      try:
+        template = arglist[options.index(which)][1];
+      except:
+        pass;
     # create a FITS image
     busy = BusyIndicator();
     dprint(2,"creating FITS image",expression);
@@ -432,9 +437,13 @@ Examples:  "(a+b)/2", "cos(a)+sin(b)", "a-a.mean()", etc.""");
       traceback.print_exc();
       self.showErrorMessage("""Error loading FITS image %s: %s"""%(expression,str(sys.exc_info()[1])));
       return None;
-    # create control bar, add to widget stack
+    # get directory name for save-to hint
     dirname = getattr(template,'filename',None);
-    self._createImageController(skyimage,expression,expression,save=(dirname and (os.path.dirname(dirname) or ".")));
+    if not dirname:
+      dirnames = [ getattr(img,'filename') for x,img in arglist if hasattr(img,'filename') ];
+      dirname = dirnames[0] if dirnames else None;
+    # create control bar, add to widget stack
+    self._createImageController(skyimage,expression,expression,save=((dirname and os.path.dirname(dirname)) or "."));
     self.showMessage("Created new image for %s"%expression,3000);
     dprint(2,"image created");
 
