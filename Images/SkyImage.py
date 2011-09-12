@@ -358,8 +358,12 @@ class SkyCubePlotItem (SkyImagePlotItem):
     valarr = numpy.array(values)/scale;
     try:
       ndigits = int(math.ceil(math.log10(max(abs(valarr))/abs((valarr[1:]-valarr[0:-1])).min())));
-      nexp = int(math.log10(max(abs(valarr))));
-      format = ".%de"%ndigits if nexp > ndigits-4 else ".%df"%ndigits;
+      nexp = int(abs(numpy.log10(abs(valarr))).max());
+ #     print ndigits,nexp;
+      if nexp > 4:
+        format = ".%de"%ndigits;
+      else:
+        format = ".%df"%ndigits;
     except:
       format = ".2g";
     if labels is None:
