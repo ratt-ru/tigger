@@ -302,15 +302,15 @@ class RenderControl (QObject):
       x1,y1,x2,y2 = rect.getCoords();
       x1,y1 = self.image.lmToPix(x1,y1);
       x2,y2 = self.image.lmToPix(x2,y2);
-      dprint(0,x1,y1,x2,y2);
+      dprint(2,x1,y1,x2,y2);
       xx1,xx2 = int(math.floor(min(x1,x2))),int(math.ceil(max(x1,x2)));
       yy1,yy2 = int(math.floor(min(y1,y2))),int(math.ceil(max(y1,y2)));
-      dprint(0,xx1,yy1,xx2,yy2);
+      dprint(2,xx1,yy1,xx2,yy2);
       # ensure limits
       nx,ny = self.image.imageDims();
       xx1,xx2 = max(xx1,0),min(xx2,nx);
       yy1,yy2 = max(yy1,0),min(yy2,ny);
-      dprint(0,xx1,yy1,xx2,yy2);
+      dprint(2,xx1,yy1,xx2,yy2);
       # check that we actually selected some valid pixels
       if xx1 >= xx2 or yy1 >= yy2:
         return;
