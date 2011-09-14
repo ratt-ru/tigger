@@ -360,9 +360,9 @@ class ImageManager (QWidget):
       (expression,ok) = QInputDialog.getText(self,"Compute image",
       """Enter an image expression to compute.
 Any valid numpy expression is supported, and
-all functions from the numpy module are available.
+all functions from the numpy module are available (including sub-modules such as fft).
 Use 'a', 'b', 'c' to refer to images.
-Examples:  "(a+b)/2", "cos(a)+sin(b)", "a-a.mean()", etc.""");
+Examples:  "(a+b)/2", "cos(a)+sin(b)", "a-a.mean()", "fft.fft2(a)", etc.""");
 #      (expression,ok) = QInputDialog.getText(self,"Compute image","""<P>Enter an expression to compute.
 #        Use 'a', 'b', etc. to refer to loaded images. Any valid numpy expression is supported, and all the
 #       functions from the numpy module are available. Examples of valid expressions include "(a+b)/2",
@@ -404,6 +404,12 @@ Examples:  "(a+b)/2", "cos(a)+sin(b)", "a-a.mean()", etc.""");
     if type(result) != numpy.ma.masked_array and type(result) != numpy.ndarray:
       self.showErrorMessage("""Result of "%s" is of invalid type "%s" (array expected)."""%(expression,type(result).__name__));
       return None;
+    # convert coomplex results to real
+    if numpy.iscomplexobj(result):
+      self.showErrorMessage("""Result of "%s" is complex. Complex images are currently
+      not fully supported, so we'll implicitly use the absolute value instead."""%(expression));
+      expression = "abs(%s)"%expression;
+      result = abs(result);
     # determine which image this expression can be associated with
     res_shape = trimshape(result.shape);
     arglist = [ x for x in arglist if hasattr(x[1],'fits_header') and trimshape(x[1].data().shape) == res_shape ];
@@ -429,13 +435,13 @@ Examples:  "(a+b)/2", "cos(a)+sin(b)", "a-a.mean()", etc.""");
     dprint(2,"creating FITS image",expression);
     self.showMessage("""Creating image for %s"""%expression,3000);
     QApplication.flush();
-    hdu = pyfits.PrimaryHDU(result.transpose(),template.fits_header);
     try:
+      hdu = pyfits.PrimaryHDU(result.transpose(),template.fits_header);
       skyimage = SkyImage.FITSImagePlotItem(name=expression,filename=None,hdu=hdu);
     except:
       busy = None;
       traceback.print_exc();
-      self.showErrorMessage("""Error loading FITS image %s: %s"""%(expression,str(sys.exc_info()[1])));
+      self.showErrorMessage("""Error creating FITS image %s: %s"""%(expression,str(sys.exc_info()[1])));
       return None;
     # get directory name for save-to hint
     dirname = getattr(template,'filename',None);

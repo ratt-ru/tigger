@@ -233,6 +233,15 @@ class ModelItem (object):
     # closing tag
     markup += endtag;
     return markup;
+    
+  numpy_int_types = tuple([
+      getattr(numpy,"%s%d"%(t,d)) for t in "int","uint" for d in 8,16,32,64 
+      if hasattr(numpy,"%s%d"%(t,d))
+    ]);
+  numpy_float_types = tuple([
+      getattr(numpy,"float%d"%d) for d in 32,64,96,128 
+      if hasattr(numpy,"float%d"%d)
+    ]);
 
   def renderAttrMarkup (self,attr,value,tags=None,verbose=None,mandatory=False):
     # render ModelItems recursively via renderMarkup() above
@@ -241,11 +250,12 @@ class ModelItem (object):
     # figure out enclosing tags
     tag,endtag,tags = self._resolveTags(tags,attr);
     # convert numpy types to float or complexes
-    if isinstance(value,(numpy.int8,numpy.int16,numpy.int32,numpy.int64)):
+    if isinstance(value,self.numpy_int_types):
       value = int(value);
-    elif isinstance(value,(numpy.float32,numpy.float64,numpy.float128)):
+    elif isinstance(value,self.numpy_float_types):
+      print value,type(value),numpy.isrealobj(value);
       value = float(value);
-    elif isinstance(value,(numpy.complex64,numpy.complex128,numpy.complex256)):
+    elif numpy.iscomplexobj(value):
       value = complex(value);
     # render opening tags
     markup = "<%s mdltype=%s "%(tag,type(value).__name__);

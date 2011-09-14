@@ -424,6 +424,39 @@ class SkyCubePlotItem (SkyImagePlotItem):
     return list(self.imgslice);
 
 class FITSImagePlotItem (SkyCubePlotItem):
+  
+  @staticmethod
+  def hasComplexAxis (hdr):
+    """Returns True if given FITS header has a complex axis (must be last axis)""";
+    nax = hdr['NAXIS'];
+    return nax if hdr['CTYPE%d'%nax].strip() == "COMPLEX" else 0;
+    
+  @staticmethod
+  def addComplexAxis (header):
+    """Adds a complex axis to the given FITS header, returns new copy of header""";
+    hdr = header.copy();
+    nax = hdr['NAXIS']+1;
+    hdr['NAXIS'] = nax;
+    hdr.update('NAXIS%d'%nax,2,"complex image");
+    hdr.update('CTYPE%d'%nax,"COMPLEX","complex image");
+    hdr.update('CRPIX%d'%nax,1);
+    hdr.update('CRVAL%d'%nax,1);
+    hdr.update('CDELT%d'%nax,1);
+    return hdr;
+
+  @staticmethod
+  def removeComplexAxis (header):
+    """Removes a complex axis from the given FITS header, returns new copy of header""";
+    axis = FITSImagePlotItem.hasComplexAxis(header);
+    if axis:
+      header = header.copy();
+      header['NAXIS'] = axis-1;
+      for name in 'NAXIS','CTYPE','CRPIX','CRVAL','CDELT':
+        key = "%s%d"%(name,axis);
+        if header.has_key(key):
+          del header[key];
+    return header;
+  
   def __init__ (self,filename=None,name=None,hdu=None):
     SkyCubePlotItem.__init__(self);
     self.name = name;
