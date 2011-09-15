@@ -81,14 +81,17 @@ class RenderControl (QObject):
     );
     # create list of color maps
     self._cmap_list = Colormaps.getColormapList();
-    for cmap in self._cmap_list:
+    default_cmap = 0;
+    for i,cmap in enumerate(self._cmap_list):
       if isinstance(cmap,Colormaps.ColormapWithControls):
         if self._config:
           cmap.loadConfig(self._config);
         QObject.connect(cmap,SIGNAL("colormapChanged"),self.updateColorMapParameters);
+      if isinstance(cmap,Colormaps.CubeHelixColormap):
+        default_cmap = i;
     # set the initial intensity map
     imap = self._config.getint("intensity-map-number",0) if self._config else 0;
-    cmap = self._config.getint("colour-map-number",0) if self._config else 0;
+    cmap = self._config.getint("colour-map-number",default_cmap) if self._config else default_cmap;
     imap = max(min(len(self._imap_list)-1,imap),0);
     cmap = max(min(len(self._cmap_list)-1,cmap),0);
     self._current_imap_index = imap;
