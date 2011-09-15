@@ -506,11 +506,11 @@ class FITSImagePlotItem (SkyCubePlotItem):
       unit = hdr.get('CUNIT'+axs);
       # have we found the coordinate axes?
       if [ prefix for prefix in "RA","GLON","ELON","HLON","SLON" if name.startswith(prefix) ] or \
-          name in ("L","X"):
+          name in ("L","X","LL","U","UU"):
         nx = npix;
         iaxis_ra = iaxis;
       elif [ prefix for prefix in "DEC","GLAT","ELAT","HLAT","SLAT" if name.startswith(prefix) ] or \
-          name in ("M","Y"):
+          name in ("M","Y","MM","V","VV"):
         ny = npix;
         iaxis_dec = iaxis;
       # else add axis to slicers
