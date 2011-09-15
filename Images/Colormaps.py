@@ -85,8 +85,8 @@ class LinearIntensityMap (IntensityMap):
 
 class LogIntensityMap (IntensityMap):
   """This scales data linearly between preset min and max values."""
-  def __init__ (self):
-    self.log_cycles = 6;
+  def __init__ (self,log_cycles=6):
+    self.log_cycles = log_cycles;
 
   def remap (self,data):
     # d0,d1 is current data range

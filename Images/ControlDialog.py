@@ -732,10 +732,10 @@ class ImageControlDialog (QDialog):
       self._wlogcycles_label.setText("Log cycles: %4.1f"%value);
 
   def _previewIntensityLogCycles (self,value):
-    self._setIntensityLogCycles(value,notify_image=False);
+    self._setIntensityLogCycles(value,notify_image=False,write_config=False);
     self._wlogcycles_timer.start(500);
 
-  def _setIntensityLogCycles (self,value=None,notify_image=True):
+  def _setIntensityLogCycles (self,value=None,notify_image=True,write_config=True):
     if value is None:
       value = self._wlogcycles.value();
     # stop timer if being called to finalize the change in value
@@ -743,7 +743,7 @@ class ImageControlDialog (QDialog):
       self._wlogcycles_timer.stop();
     if not self._updating_imap:
       self._setIntensityLogCyclesLabel(value);
-      self._rc.setIntensityMapLogCycles(value,notify_image=notify_image);
+      self._rc.setIntensityMapLogCycles(value,notify_image=notify_image,write_config=write_config);
       self._updateITF();
       self._histplot.replot();
 

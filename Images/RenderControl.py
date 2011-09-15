@@ -74,10 +74,11 @@ class RenderControl (QObject):
     self._fullrange = self._slicerange = image.dataMinMax()[:2];
     dprint(2,"done");
     # create dict of intensity maps
+    log_cycles = self._config.getfloat("intensity-log-cycles",6) if self._config else 6;
     self._imap_list = (
       ( 'Linear',   Colormaps.LinearIntensityMap()    ),
       ( 'Histogram-equalized',  Colormaps.HistEqIntensityMap()   ),
-      ( 'log(val-min)', Colormaps.LogIntensityMap() )
+      ( 'log(val-min)', Colormaps.LogIntensityMap(log_cycles) )
     );
     # create list of color maps
     self._cmap_list = Colormaps.getColormapList();
@@ -219,7 +220,7 @@ class RenderControl (QObject):
     if self._config and write_config:
       self._config.set("intensity-map-number",index);
 
-  def setIntensityMapLogCycles (self,cycles,notify_image=True):
+  def setIntensityMapLogCycles (self,cycles,notify_image=True,write_config=True):
     busy = BusyIndicator();
     imap = self.currentIntensityMap();
     if isinstance(imap,Colormaps.LogIntensityMap):
@@ -227,6 +228,8 @@ class RenderControl (QObject):
       if notify_image:
         self.image.setIntensityMap();
       self.emit(SIGNAL("intensityMapChanged"),imap,self._current_imap_index);
+    if self._config and write_config:
+      self._config.set("intensity-log-cycles",cycles);
 
   def lockDisplayRangeForAxis (self,iaxis,lock):
     pass;
