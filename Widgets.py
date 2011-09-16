@@ -30,6 +30,18 @@ import traceback
 import re
 
 from PyQt4.Qt import *
+from PyQt4.Qwt5 import *
+
+class TiggerPlotCurve (QwtPlotCurve):
+  """Wrapper around QwtPlotCurve to make it compatible with numpy float types"""
+  def setData (x,y):
+    return QwtPlotCurve.setData(map(float,x),map(float,y));
+
+class TiggerPlotMarker (QwtPlotMarker):
+  """Wrapper around QwtPlotCurve to make it compatible with numpy float types"""
+  def setValue (x,y):
+    return QwtPlotMarker.setValue(float(x),float(y));
+
 
 class FloatValidator (QValidator):
   """QLineEdit validator for float items in standard or scientific notation""";

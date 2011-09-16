@@ -46,6 +46,7 @@ from Coordinates import Projection
 from  Models.SkyModel import SkyModel
 from Tigger import pixmaps,Config
 import MainWindow
+from Tigger.Widgets import TiggerPlotCurve,TiggerPlotMarker
 
 # plot Z depths for various classes of objects
 Z_Image = 1000;
@@ -85,7 +86,7 @@ class SourceMarker (object):
   def __init__ (self,src,l,m,size,model):
     self.src = src;
     self._lm,self._size = (l,m),size;
-    self.plotmarker = QwtPlotMarker();
+    self.plotmarker = TiggerPlotMarker();
     self.plotmarker.setValue(l,m);
     self._symbol = QwtSymbol();
     self._font = QApplication.font();
@@ -352,7 +353,7 @@ class LiveImageZoom (ToolDialog):
     self._zi.attach(self._zoomplot);
     self._zi.setZ(0);
     # setup targeting reticule for zoom plot
-    self._reticules = QwtPlotCurve(),QwtPlotCurve();
+    self._reticules = TiggerPlotCurve(),TiggerPlotCurve();
     for curve in self._reticules:
       curve.setPen(QPen(QColor("green")));
       curve.setStyle(QwtPlotCurve.Lines);
@@ -360,8 +361,8 @@ class LiveImageZoom (ToolDialog):
       curve.setZ(1);
     # setup cross-section curves
     pen = makeDualColorPen("navy","yellow");
-    self._xcs = QwtPlotCurve();
-    self._ycs = QwtPlotCurve();
+    self._xcs = TiggerPlotCurve();
+    self._ycs = TiggerPlotCurve();
     self._xcs.setPen(makeDualColorPen("navy","yellow"));
     self._ycs.setPen(makeDualColorPen("black","cyan"));
     for curve in self._xcs,self._ycs:
@@ -528,8 +529,8 @@ class LiveProfile (ToolDialog):
     self._profplot.setMinimumWidth(256);
     self._profplot.setSizePolicy(QSizePolicy.Minimum,QSizePolicy.Minimum);
     # and profile curve
-    self._profcurve = QwtPlotCurve();
-    self._ycs = QwtPlotCurve();
+    self._profcurve = TiggerPlotCurve();
+    self._ycs = TiggerPlotCurve();
     self._profcurve.setPen(QPen(QColor("black")));
     self._profcurve.setStyle(QwtPlotCurve.Lines);
     self._profcurve.attach(self._profplot);
@@ -1216,7 +1217,7 @@ class SkyModelPlotter (QWidget):
       if x is not None:
         msgtext += "   x=%d y=%d value=blank"%(x,y) if flag else "   x=%d y=%d value=%g"%(x,y,val);
       # make marker
-      marker = QwtPlotMarker();
+      marker = TiggerPlotMarker();
       marker.setValue(l,m);
       marker.setSymbol(self._markup_xsymbol);
       markup_items.append(marker);
@@ -1248,7 +1249,7 @@ class SkyModelPlotter (QWidget):
         msgtext += u"   x=%d y=%d value=blank"%(x1,y1) if flag1 else "   x=%d y=%d value=%g"%(x1,y1,val1);
       msgtext += u"\n|AB|=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0"%(Rd2,Rm2,Rs2,dist2*180/math.pi,pa2);
       # make markers
-      marka,markb = QwtPlotMarker(),QwtPlotMarker();
+      marka,markb = TiggerPlotMarker(),TiggerPlotMarker();
       marka.setValue(l,m);
       markb.setValue(l1,m1);
       marka.setLabel(self._markup_a_label);
@@ -1264,7 +1265,7 @@ class SkyModelPlotter (QWidget):
       markb.setLabelAlignment(alignb);
       marka.setSpacing(0);
       markb.setSpacing(0);
-      line = QwtPlotCurve();
+      line = TiggerPlotCurve();
       line.setData([l,l1],[m,m1]);
       line.setBrush(self._markup_brush);
       line.setPen(self._markup_pen);
@@ -1482,7 +1483,7 @@ class SkyModelPlotter (QWidget):
     # add grid lines & circles
     circstep = self._grid_step_arcmin;
     if circstep:
-      self._grid = [ QwtPlotCurve(),QwtPlotCurve() ];
+      self._grid = [ TiggerPlotCurve(),TiggerPlotCurve() ];
       self._grid[0].setData([lmin,lmax],[0,0]);
       self._grid[1].setData([0,0],[mmin,mmax]);
       # see how many units (of arcminute) fit in max diagonal direction
@@ -1497,13 +1498,13 @@ class SkyModelPlotter (QWidget):
         rl ,dum= self.projection.offset(r*DEG/60,0);
         dum,rm = self.projection.offset(0,r*DEG/60);
         # make curve
-        curve = QwtPlotCurve();
+        curve = TiggerPlotCurve();
         x ,y = rl*cosines,rm*sines;
         curve.setData(x,y);
         curve.setCurveAttribute(QwtPlotCurve.Fitted,True);
         self._grid.append(curve);
         # make a text label and marker
-        marker = QwtPlotMarker();
+        marker = TiggerPlotMarker();
         d,m = divmod(r,60);
         label = ("%d&deg;%02d'"%(d,m) if m else "%d&deg;"%d) if d else "%02d'"%m;
         text = QwtText(label,QwtText.RichText);

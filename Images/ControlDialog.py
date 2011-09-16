@@ -8,7 +8,7 @@
 # ASTRON (Netherlands Foundation for Research in Astronomy)
 # P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
 #
-# This program is free software; you can redistribute it and/or modify
+# This program is free software; you can redistribute f and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation; either version 2 of the License, or
 # (at your option) any later version.
@@ -39,10 +39,9 @@ from Kittens.widgets import BusyIndicator
 
 from Images import SkyImage,Colormaps
 from Tigger import pixmaps
-from Tigger.Widgets import FloatValidator
+from Tigger.Widgets import FloatValidator,TiggerPlotCurve,TiggerPlotMarker
 
 from RenderControl import RenderControl,dprint,dprintf
-
 
 DataValueFormat = "%.4g";
 
@@ -495,10 +494,10 @@ class ImageControlDialog (QDialog):
     """Helper class implementing a line marker for a histogram plot""";
     def __init__ (self,plot,color="black",linestyle=Qt.DotLine,align=Qt.AlignBottom|Qt.AlignRight,z=90,label="",zlabel=None,linewidth=1,spacing=2,
                   yaxis=QwtPlot.yRight):
-      self.line = QwtPlotCurve();
+      self.line = TiggerPlotCurve();
       self.color = color = color if isinstance(color,QColor) else QColor(color);
       self.line.setPen(QPen(color,linewidth,linestyle));
-      self.marker = QwtPlotMarker();
+      self.marker = TiggerPlotMarker();
       self.marker.setLabelAlignment(align);
       self.marker.setSpacing(spacing);
       self.setText(label);
@@ -530,8 +529,8 @@ class ImageControlDialog (QDialog):
     self._histplot.setAxisFont(QwtPlot.yLeft,QApplication.font());
     self._histplot.setAxisFont(QwtPlot.xBottom,QApplication.font());
     # add histogram curves
-    self._histcurve1 = QwtPlotCurve();
-    self._histcurve2 = QwtPlotCurve();
+    self._histcurve1 = TiggerPlotCurve();
+    self._histcurve2 = TiggerPlotCurve();
     self._histcurve1.setStyle(QwtPlotCurve.Steps);
     self._histcurve2.setStyle(QwtPlotCurve.Steps);
     self._histcurve1.setPen(QPen(Qt.NoPen));
@@ -558,26 +557,26 @@ class ImageControlDialog (QDialog):
     self._line_halfmax = self.HistogramLineMarker(self._histplot,color="green",linestyle=Qt.DotLine,align=Qt.AlignBottom|Qt.AlignRight,z=90,
           label="half-max",yaxis=QwtPlot.yLeft);
     # add current range
-    self._rangebox = QwtPlotCurve();
+    self._rangebox = self.Curve();
     self._rangebox.setStyle(QwtPlotCurve.Steps);
     self._rangebox.setYAxis(QwtPlot.yRight);
     self._rangebox.setPen(QPen(Qt.NoPen));
     self._rangebox.setBrush(QBrush(QColor("darkgray")));
     self._rangebox.setZ(50);
     self._rangebox.attach(self._histplot);
-    self._rangebox2 = QwtPlotCurve();
+    self._rangebox2 = self.Curve();
     self._rangebox2.setStyle(QwtPlotCurve.Sticks);
     self._rangebox2.setYAxis(QwtPlot.yRight);
     self._rangebox2.setZ(60);
 #  self._rangebox2.attach(self._histplot);
     # add intensity transfer function
-    self._itfcurve = QwtPlotCurve();
+    self._itfcurve = self.Curve();
     self._itfcurve.setStyle(QwtPlotCurve.Lines);
     self._itfcurve.setPen(QPen(QColor("blue")));
     self._itfcurve.setYAxis(QwtPlot.yRight);
     self._itfcurve.setZ(120);
     self._itfcurve.attach(self._histplot);
-    self._itfmarker = QwtPlotMarker();
+    self._itfmarker = TiggerPlotMarker();
     label = QwtText("ITF");
     label.setColor(QColor("blue"));
     self._itfmarker.setLabel(label);
