@@ -557,20 +557,20 @@ class ImageControlDialog (QDialog):
     self._line_halfmax = self.HistogramLineMarker(self._histplot,color="green",linestyle=Qt.DotLine,align=Qt.AlignBottom|Qt.AlignRight,z=90,
           label="half-max",yaxis=QwtPlot.yLeft);
     # add current range
-    self._rangebox = self.Curve();
+    self._rangebox = TiggerPlotCurve();
     self._rangebox.setStyle(QwtPlotCurve.Steps);
     self._rangebox.setYAxis(QwtPlot.yRight);
     self._rangebox.setPen(QPen(Qt.NoPen));
     self._rangebox.setBrush(QBrush(QColor("darkgray")));
     self._rangebox.setZ(50);
     self._rangebox.attach(self._histplot);
-    self._rangebox2 = self.Curve();
+    self._rangebox2 = TiggerPlotCurve();
     self._rangebox2.setStyle(QwtPlotCurve.Sticks);
     self._rangebox2.setYAxis(QwtPlot.yRight);
     self._rangebox2.setZ(60);
 #  self._rangebox2.attach(self._histplot);
     # add intensity transfer function
-    self._itfcurve = self.Curve();
+    self._itfcurve = TiggerPlotCurve();
     self._itfcurve.setStyle(QwtPlotCurve.Lines);
     self._itfcurve.setPen(QPen(QColor("blue")));
     self._itfcurve.setYAxis(QwtPlot.yRight);

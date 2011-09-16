@@ -34,13 +34,13 @@ from PyQt4.Qwt5 import *
 
 class TiggerPlotCurve (QwtPlotCurve):
   """Wrapper around QwtPlotCurve to make it compatible with numpy float types"""
-  def setData (x,y):
-    return QwtPlotCurve.setData(map(float,x),map(float,y));
+  def setData (self,x,y):
+    return QwtPlotCurve.setData(self,map(float,x),map(float,y));
 
 class TiggerPlotMarker (QwtPlotMarker):
   """Wrapper around QwtPlotCurve to make it compatible with numpy float types"""
-  def setValue (x,y):
-    return QwtPlotMarker.setValue(float(x),float(y));
+  def setValue (self,x,y):
+    return QwtPlotMarker.setValue(self,float(x),float(y));
 
 
 class FloatValidator (QValidator):
