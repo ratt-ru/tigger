@@ -516,7 +516,7 @@ class FITSImagePlotItem (SkyCubePlotItem):
       # else add axis to slicers
       else:
         # values becomes a list of axis values
-        values = list(crval + numpy.arange(crpix,crpix+npix)*cdelt);
+        values = list(crval + (numpy.arange(npix) - crpix)*cdelt);
         unit = unit and unit.lower().capitalize();
         # FITS knows of two enumerable axes: STOKES and COMPLEX. For these two, replace values with proper names
         if name == "STOKES":
