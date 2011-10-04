@@ -44,7 +44,7 @@ ViewColumns = [ "name","RA","Dec","r","type","Iapp","I","Q","U","V","RM","spi","
 
 for icol,col in enumerate(ViewColumns):
     globals()["Column%s"%col.capitalize()] = icol;
-ColumnExtra = len(ViewColumns);
+NumColumns = len(ViewColumns);
 
 # Qt-4.6 and up (PyQt 4.7 and up) has very slow QTreeWidgetItem updates, determine version here
 from PyQt4 import QtCore
@@ -57,7 +57,7 @@ class SkyModelTreeWidget (Kittens.widgets.ClickableTreeWidget):
     self._currier = PersistentCurrier();
     self.model = None;
     # insert columns
-    self.setHeaderLabels(ViewColumns + [""]);
+    self.setHeaderLabels(ViewColumns);
     self.headerItem().setText(ColumnIapp,"I(app)");
     self.header().setMovable(False);
     self.header().setClickable(True);
@@ -66,14 +66,15 @@ class SkyModelTreeWidget (Kittens.widgets.ClickableTreeWidget):
     self.setEditTriggers(QAbstractItemView.AllEditTriggers);
     self.setMouseTracking(True);
     # set column width modes
-    for icol in range(ColumnExtra+1):
+    for icol in range(NumColumns-1):
       self.header().setResizeMode(icol,QHeaderView.ResizeToContents);
+    self.header().setStretchLastSection(True);
     ## self.setTextAlignment(ColumnR,Qt.AlignRight);
     ## self.setTextAlignment(ColumnType,Qt.AlignHCenter);
     # _column_enabled[i] is True if column is available in the model.
     # _column_show[i] is True if column is currently being shown (via a view control)
-    self._column_enabled = [True]*(ColumnExtra+1);
-    self._column_shown    = [True]*(ColumnExtra+1);
+    self._column_enabled = [True]*NumColumns;
+    self._column_shown    = [True]*NumColumns;
     # other listview init
     self.header().show();
     self.setSelectionMode(QTreeWidget.ExtendedSelection);
@@ -253,9 +254,9 @@ class SkyModelTreeWidgetItem (QTreeWidgetItem):
     boldfont.setBold(True);
     self._fonts = [ stdfont,boldfont ];
     # array of actual (i.e. numeric) column values
-    self._values = [None]*(ColumnExtra+1);
+    self._values = [None]*NumColumns;
     # set text alignment
-    for icol in range(ColumnExtra+1):
+    for icol in range(NumColumns):
       self.setTextAlignment(icol,Qt.AlignLeft);
     self.setTextAlignment(ColumnR,Qt.AlignRight);
     self.setTextAlignment(ColumnType,Qt.AlignHCenter);
