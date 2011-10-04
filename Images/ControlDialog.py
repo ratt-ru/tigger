@@ -101,15 +101,24 @@ class ImageControlDialog (QDialog):
     lo2.setSpacing(2);
     lo0.addLayout(lo2);
     lo0.addLayout(lo1);
-    self._wautozoom =QCheckBox("autozoom",self);
+    self._wautozoom = QCheckBox("autozoom",self);
     self._wautozoom.setChecked(True);
+    self._wautozoom.setToolTip("""<P>If checked, then the histrogram plot will zoom in automatically when
+      you narrow the current intensity range.</P>""");
     self._wlogy = QCheckBox("log Y",self);
     self._wlogy.setChecked(True);
     self._ylogscale = True;
+    self._wlogy.setToolTip("""<P>If checked, a log-scale Y axis is used for the histogram plot instead of a linear one.""");
     QObject.connect(self._wlogy,SIGNAL("toggled(bool)"),self._setHistLogScale);
-    self._whistunzoom = self.makeButton("",self._unzoomHistogram,icon=pixmaps.full_range.icon());
-    self._whistzoomout= self.makeButton("-",self._currier.curry(self._zoomHistogramByFactor,math.sqrt(.1)));
-    self._whistzoomin= self.makeButton("+",self._currier.curry(self._zoomHistogramByFactor,math.sqrt(10)));
+    self._whistunzoom  = self.makeButton("",self._unzoomHistogram,icon=pixmaps.full_range.icon());
+    self._whistzoomout = self.makeButton("-",self._currier.curry(self._zoomHistogramByFactor,math.sqrt(.1)));
+    self._whistzoomin  = self.makeButton("+",self._currier.curry(self._zoomHistogramByFactor,math.sqrt(10)));
+    self._whistzoomin.setToolTip("""<P>Click to zoom into the histogram plot by one step. This does not 
+      change the current intensity range.</P>""");
+    self._whistzoomout.setToolTip("""<P>Click to zoom out of the histogram plot by one step. This does not 
+      change the current intensity range.</P>""");
+    self._whistunzoom.setToolTip("""<P>Click to reset the histogram plot back to its full extent. 
+      This does not change the current intensity range.</P>""");
     self._whistzoom = QwtWheel(self);
     self._whistzoom.setOrientation(Qt.Horizontal);
     self._whistzoom.setMaximumWidth(80);
@@ -119,6 +128,9 @@ class ImageControlDialog (QDialog):
     self._whistzoom.setTracking(False);
     QObject.connect(self._whistzoom,SIGNAL("valueChanged(double)"),self._zoomHistogramFinalize);
     QObject.connect(self._whistzoom,SIGNAL("sliderMoved(double)"),self._zoomHistogramPreview);
+    self._whistzoom.setToolTip("""<P>Use this wheel control to zoom in/out of the histogram plot.
+      This does not change the current intensity range.
+      Note that the zoom wheel should also respond to your mouse wheel, if you have one.</P>""");
     # This works around a stupid bug in QwtSliders -- when using the mousewheel, only sliderMoved() signals are emitted,
     # with no final  valueChanged(). If we want to do a fast preview of something on sliderMoved(), and a "slow" final
     # step on valueChanged(), we're in trouble. So we start a timer on sliderMoved(), and if the timer expires without
@@ -134,7 +146,19 @@ class ImageControlDialog (QDialog):
       w.setMinimumSize(width,width);
       w.setMaximumSize(width,width);
     self._whistzoom.setMinimumSize(80,width);
-    self._wlab_histpos = QLabel(self);
+    self._wlab_histpos_text = "(hover here for help)";
+    self._wlab_histpos = QLabel(self._wlab_histpos_text,self);
+    self._wlab_histpos.setToolTip("""
+      <P>The plot shows a histogram of either the full image or its selected subset 
+      (as per the "Data subset" section below).</P>
+      <P>The current intensity range is indicated by the grey box
+      in the plot.</P>
+      <P>Use the left mouse button to change the low intensity limit, and the right 
+      button (on Macs, use Ctrl-click) to change the high limit.</P>
+      <P>Use Shift with the left mouse button to zoom into an area of the histogram,
+      or else use the "zoom wheel" control or the plus/minus toolbuttons above the histogram to zoom in or out. 
+      To zoom back out to the full extent of the histogram, click on the rightmost button above the histogram.</P>
+      """);
     lo2.addWidget(self._wlab_histpos,1);
     lo2.addWidget(self._wautozoom);
     lo2.addWidget(self._wlogy,0);
@@ -205,11 +229,15 @@ class ImageControlDialog (QDialog):
     lo1.setSpacing(2);
     lo0.addLayout(lo1);
     self._wlab_subset = QLabel("Subset: xxx",self);
+    self._wlab_subset.setToolTip("""<P>This indicates the current data subset to which the histogram 
+      and the stats given here apply. Use the "Reset to" control on the right to change the 
+      current subset and recompute the histogram and stats.</P>""");
     lo1.addWidget(self._wlab_subset,1);
 #    lo1.addWidget(QLabel("Reset to:",self),0);
     reset_menu = QMenu(self);
     self._wreset = QToolButton(self);
     self._wreset.setText("Reset to");
+    self._wreset.setToolTip("""<P>Use this to reset the current data subset and recompute the histogram and stats.</P>""");
     lo1.addWidget(self._wreset);
     self._qa_reset_full = reset_menu.addAction("Full datacube" if sliced_axes else "Full image",self._rc.setFullSubset);
     if sliced_axes:
@@ -240,12 +268,15 @@ class ImageControlDialog (QDialog):
     lo0.addLayout(lo1,0);
     self._range_validator = FloatValidator(self);
     self._wrange = QLineEdit(self),QLineEdit(self);
+    self._wrange[0].setToolTip("""<P>This is the low end of the intensity range.</P>""");
+    self._wrange[1].setToolTip("""<P>This is the high end of the intensity range.</P>""");
     for w in self._wrange:
       w.setValidator(self._range_validator);
       QObject.connect(w,SIGNAL("editingFinished()"),self._changeDisplayRange);
     lo1.addWidget(QLabel("low:",self),0);
     lo1.addWidget(self._wrange[0],1);
     self._wrangeleft0 = self.makeButton(u"\u21920",self._setZeroLeftLimit,width=32);
+    self._wrangeleft0.setToolTip("""<P>Click this to set the low end of the intensity range to 0.</P>""");
     lo1.addWidget(self._wrangeleft0,0);
     lo1.addSpacing(8);
     lo1.addWidget(QLabel("high:",self),0);
@@ -253,10 +284,12 @@ class ImageControlDialog (QDialog):
     lo1.addSpacing(8);
     self._wrange_full = self.makeButton(None,self._setHistDisplayRange,icon=pixmaps.intensity_graph.icon());
     lo1.addWidget(self._wrange_full);
+    self._wrange_full.setToolTip("""<P>Click this to reset the intensity range to the current extent of the histogram plot.</P>""");
     # add menu for display range
     range_menu = QMenu(self);
     wrange_menu = QToolButton(self);
     wrange_menu.setText("Reset to");
+    wrange_menu.setToolTip("""<P>Use this to reset the intensity range to various pre-defined settings.</P>""");
     lo1.addWidget(wrange_menu);
     self._qa_range_full = range_menu.addAction(pixmaps.full_range.icon(),"Full subset",self._rc.resetSubsetDisplayRange);
     self._qa_range_hist = range_menu.addAction(pixmaps.intensity_graph.icon(),"Current histogram limits",self._setHistDisplayRange);
@@ -273,6 +306,7 @@ class ImageControlDialog (QDialog):
     lo1.addWidget(self._wimap,1,0);
     self._wimap.addItems(rc.getIntensityMapNames());
     QObject.connect(self._wimap,SIGNAL("currentIndexChanged(int)"),self._rc.setIntensityMapNumber);
+    self._wimap.setToolTip("""<P>Use this to change the type of the intensity transfer function (ITF).</P>""");
 
     # log cycles control
     lo1.setColumnStretch(1,1);
@@ -281,6 +315,7 @@ class ImageControlDialog (QDialog):
 #    self._wlogcycles = QwtWheel(self);
 #    self._wlogcycles.setTotalAngle(360);
     self._wlogcycles = QwtSlider(self);
+    self._wlogcycles.setToolTip("""<P>Use this to change the log-base for the logarithmic intensity transfer function (ITF).</P>""");
     # This works around a stupid bug in QwtSliders -- see comments on histogram zoom wheel above
     self._wlogcycles_timer = QTimer(self);
     self._wlogcycles_timer.setSingleShot(True);
@@ -300,18 +335,22 @@ class ImageControlDialog (QDialog):
     lo0.addLayout(lo1,0);
 #    lo1.addWidget(QLabel("Lock range accross",self));
     wlock = QCheckBox("Lock display range",self);
+    wlock.setToolTip("""<P>If checked, then the intensity range will be locked. The ranges of all locked images
+      change simultaneously.</P>""");
     lo1.addWidget(wlock);
     wlockall = QToolButton(self);
     wlockall.setIcon(pixmaps.locked.icon());
     wlockall.setText("Lock all to this");
     wlockall.setToolButtonStyle(Qt.ToolButtonTextBesideIcon);
     wlockall.setAutoRaise(True);
+    wlockall.setToolTip("""<P>Click this to lock together the intensity ranges of all images.</P>""");
     lo1.addWidget(wlockall);
     wunlockall = QToolButton(self);
     wunlockall.setIcon(pixmaps.unlocked.icon());
     wunlockall.setText("Unlock all");
     wunlockall.setToolButtonStyle(Qt.ToolButtonTextBesideIcon);
     wunlockall.setAutoRaise(True);
+    wunlockall.setToolTip("""<P>Click this to unlock the intensity ranges of all images.</P>""");
     lo1.addWidget(wunlockall);
     wlock.setChecked(self._rc.isDisplayRangeLocked());
     QObject.connect(wlock,SIGNAL("clicked(bool)"),self._rc.lockDisplayRange);
@@ -352,6 +391,7 @@ class ImageControlDialog (QDialog):
     ### NB: use setIconSize() and icons in QComboBox!!!
     self._wcolmaps = QComboBox(self);
     self._wcolmaps.setIconSize(QSize(128,16));
+    self._wcolmaps.setToolTip("""<P>Use this to select a different colourmap.</P>""");
     for cmap in self._rc.getColormapList():
       self._wcolmaps.addItem(QIcon(cmap.makeQPixmap(128,16)),cmap.name);
     lo1.addWidget(self._wcolmaps);
@@ -595,6 +635,9 @@ class ImageControlDialog (QDialog):
     self._hist_maxpicker = self.HistLimitPicker(self._histplot,"high: %(x).4g");
     self._hist_maxpicker.setMousePattern(QwtEventPattern.MouseSelect1,Qt.RightButton);
     QObject.connect(self._hist_maxpicker,SIGNAL("selected(const QwtDoublePoint &)"),self._selectHighLimit);
+    self._hist_maxpicker1 = self.HistLimitPicker(self._histplot,"high: %(x).4g");
+    self._hist_maxpicker1.setMousePattern(QwtEventPattern.MouseSelect1,Qt.LeftButton,Qt.CTRL);
+    QObject.connect(self._hist_maxpicker1,SIGNAL("selected(const QwtDoublePoint &)"),self._selectHighLimit);
     self._hist_zoompicker = self.HistLimitPicker(self._histplot,label="zoom",
                                                  tracker_mode=QwtPicker.AlwaysOn,track=self._trackHistCoordinates,color="black",
                                                  mode=QwtPicker.RectSelection,rubber_band=QwtPicker.RectRubberBand);
@@ -602,7 +645,7 @@ class ImageControlDialog (QDialog):
     QObject.connect(self._hist_zoompicker,SIGNAL("selected(const QwtDoubleRect &)"),self._zoomHistogramIntoRect);
 
   def _trackHistCoordinates (self,x,y):
-    self._wlab_histpos.setText((DataValueFormat+" %d")%(x,y) if x is not None else "");
+    self._wlab_histpos.setText((DataValueFormat+" %d")%(x,y) if x is not None else self._wlab_histpos_text);
     return QwtText();
 
   def _updateITF (self):
