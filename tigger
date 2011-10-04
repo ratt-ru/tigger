@@ -30,8 +30,8 @@ if __name__ == "__main__":
 
     # parse options is the first thing we should do
     from optparse import OptionParser
-    usage = "usage: %prog [options] <model name> [<image name>]"
-    parser = OptionParser()
+    usage = "usage: %prog [options] <sky models or FITS files>"
+    parser = OptionParser(usage=usage)
     parser.add_option("-d", "--debug",dest="verbose",type="string",action="append",metavar="Context=Level",
                       help="(for debugging Python code) sets verbosity level of the named Python context. May be used multiple times.");
     parser.add_option("-T", "--timestamps",action="store_true",
@@ -156,7 +156,10 @@ if __name__ == "__main__":
     
     app.exec_();
 
+  except SystemExit:
+    pass;
   except:
     traceback.print_exc();
 
+  import os
   os._exit(0);

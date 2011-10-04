@@ -160,17 +160,24 @@ class SkyModelTreeWidget (Kittens.widgets.ClickableTreeWidget):
       return;
     # if only selection was changed, take shortcut
     if what&SkyModel.UpdateSelectionOnly:
+      dprint(2,"model update -- selection only");
       return self._refreshSelectedItems(origin);
+    busy = BusyIndicator();
     # else repopulate widget completely
+    dprint(2,"model update -- complete");
     Kittens.widgets.ClickableTreeWidget.clear(self);
+    dprint(2,"creating model items");
     items = [ SkyModelTreeWidgetItem(src) for src in self.model.sources ];
     self._itemdict = dict(zip([src.name for src in self.model.sources],items));
+    dprint(2,"adding to tree widget");
     self.addTopLevelItems(items);
     self.header().updateGeometry();
     # show/hide columns based on tag availability
     self._enableColumn(ColumnIapp,'Iapp' in self.model.tagnames);
     self._enableColumn(ColumnR,'r' in self.model.tagnames);
+    dprint(2,"re-sorting");
     self.sortItems(('Iapp' in self.model.tagnames and ColumnIapp) or ColumnI,Qt.DescendingOrder);
+    busy = None;
 
   def addColumnViewActionsTo (self,menu):
     for name,qa,columns in self._column_views:
@@ -207,9 +214,14 @@ class SkyModelTreeWidget (Kittens.widgets.ClickableTreeWidget):
     self._updating_selection = False;
 
   def _refreshSelectedItems (self,origin=None):
+    busy = BusyIndicator();
+    dprint(3,"refreshing selected items");
     for item in self.iterator():
       if item.isSelected():
+        dprint(4,"resetting item",item._src.name);
         item.setSource(item._src);
+    dprint(3,"refreshing selected items done");
+    busy = None;
 
   def changeGroupingVisibility (self,group,origin=None):
     if origin is self:
@@ -242,6 +254,12 @@ class SkyModelTreeWidgetItem (QTreeWidgetItem):
     self._fonts = [ stdfont,boldfont ];
     # array of actual (i.e. numeric) column values
     self._values = [None]*(ColumnExtra+1);
+    # set text alignment
+    for icol in range(ColumnExtra+1):
+      self.setTextAlignment(icol,Qt.AlignLeft);
+    self.setTextAlignment(ColumnR,Qt.AlignRight);
+    self.setTextAlignment(ColumnType,Qt.AlignHCenter);
+    # setup source
     self.setSource(src);
 
   def setHighlighted (self,highlighted=True):
@@ -254,6 +272,7 @@ class SkyModelTreeWidgetItem (QTreeWidgetItem):
 
   def setSource (self,src):
     # name
+    dprint(3,"setSource 1",src.name);
     self.setColumn(ColumnName,src.name);
     # coordinates
     self.setColumn(ColumnRa,src.pos.ra,"%2dh%02dm%05.2fs"%src.pos.ra_hms());
@@ -267,6 +286,7 @@ class SkyModelTreeWidgetItem (QTreeWidgetItem):
     if hasattr(src,'Iapp'):
       self.setColumn(ColumnIapp,src.Iapp,"%.3g"%src.Iapp);
     self.setColumn(ColumnI,src.flux.I,"%.3g"%src.flux.I);
+    dprint(3,"setSource 2",src.name);
     # polarization
     if isinstance(src.flux,ModelClasses.Polarization):
       self.setColumn(ColumnQ,src.flux.Q,"%.2g"%src.flux.Q);
@@ -283,27 +303,37 @@ class SkyModelTreeWidgetItem (QTreeWidgetItem):
       shapeval = [ val for attr,val in shape.getAttributes() ];
       shapestr = shape.strDesc(label=False);
       self.setColumn(ColumnShape,shapeval,shapestr);
+    dprint(3,"setSource 3",src.name);
     # Tags. Tags are all extra attributes that do not have a dedicated column (i.e. not Iapp or r), and do not start
     # with "_" (which is reserved for internal attributes)
-    truetags = [];
-    falsetags = [];
-    othertags = [];
-    for attr,val in src.getExtraAttributes():
-      if attr[0] != "_" and attr not in SkyModelTreeWidget.TagsWithOwnColumn:
-        if val is False:
-          falsetags.append("-"+attr);
-        elif val is True:
-          truetags.append("+"+attr);
-        else:
-          othertags.append("%s=%s"%(attr,str(val)));
-    for tags in truetags,falsetags,othertags:
-      tags.sort();
-    self.setColumn(ColumnTags,tags," ".join(truetags+falsetags+othertags));
-    # set text alignment
-    for icol in range(ColumnExtra+1):
-      self.setTextAlignment(icol,Qt.AlignLeft);
-    self.setTextAlignment(ColumnR,Qt.AlignRight);
-    self.setTextAlignment(ColumnType,Qt.AlignHCenter);
+    
+    ## the complexity below seems entirely unnecessary, since sorting the tag strings automatically puts "_" first,
+    ## "-" second, and alphabet afterwards
+    
+    #truetags = [];
+    #falsetags = [];
+    #othertags = [];
+    #for attr,val in src.getExtraAttributes():
+      #if attr[0] != "_" and attr not in SkyModelTreeWidget.TagsWithOwnColumn:
+        #if val is False:
+          #falsetags.append("-"+attr);
+        #elif val is True:
+          #truetags.append("+"+attr);
+        #else:
+          #othertags.append("%s=%s"%(attr,str(val)));
+    #for tags in truetags,falsetags,othertags:
+      #tags.sort();
+    #self.setColumn(ColumnTags,tags," ".join(truetags+falsetags+othertags));
+    
+    # so instead:
+    tags = [ "+"+attr if val is True else "-"+attr if val is False else "%s=%s"%(attr,str(val))
+      for attr,val in src.getExtraAttributes()
+      if attr[0] != "_" and attr not in SkyModelTreeWidget.TagsWithOwnColumn ];
+    tagstr = " ".join(sorted(tags));
+    dprint(3,"setSource 4",src.name);
+    self.setColumn(ColumnTags,tags,tagstr);
+    dprint(3,"setSource 5",src.name);
+    dprint(3,"setSource done",src.name);
 
   def setColumn (self,icol,value,text=None):
     """helper function to set the value of a column""";

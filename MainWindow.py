@@ -621,13 +621,17 @@ class MainWindow (QMainWindow):
     tagname,value = self._add_tag_dialog.getTag();
     if tagname is None or value is None:
       return None;
+    dprint(1,"tagging selected sources with",tagname,value);
     # tag selected sources
     for src in self.model.sources:
       if src.selected:
         src.setAttribute(tagname,value);
     # If tag is not new, set a UpdateSelectionOnly flag on the signal
+    dprint(1,"adding tag to model");
     self.model.addTag(tagname);
+    dprint(1,"recomputing totals");
     self.model.getTagGrouping(tagname).computeTotal(self.model.sources);
+    dprint(1,"emitting update signal");
     what = SkyModel.UpdateSourceContent+SkyModel.UpdateTags+SkyModel.UpdateSelectionOnly;
     self.model.emitUpdate(what,origin=self);
 
