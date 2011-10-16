@@ -351,7 +351,7 @@ def save (model,filename,sources=None,format=None,**kw):
       for parm in "ex","ey","pa":
         field = format.get(parm.lower());
         if field is not None:
-          fval[field] = str(getattr(src.shape,stokes,0));
+          fval[field] = str(getattr(src.shape,parm,0));
     # RM, spi, freq0  
     if freq0_field is not None:
       freq0 = (src.spectrum and getattr(src.spectrum,'freq0',None)) or getattr(src.flux,'freq0',0);
