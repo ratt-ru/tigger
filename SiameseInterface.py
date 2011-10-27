@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 
 #
-#% $Id$ 
+#% $Id$
 #
 #
 # Copyright (C) 2002-2011
-# The MeqTree Foundation & 
+# The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
 # P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
 #
@@ -21,7 +21,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>,
-# or write to the Free Software Foundation, Inc., 
+# or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
@@ -163,7 +163,10 @@ class TiggerSkyModel (object):
     source_model = []
 
     for src in sources:
-      if self.solvable_sources:
+      # this will be True if this source has solvable parms
+      solvable = self.solvable_sources and ( not self.lsm_solvable_tag
+                  or getattr(src,self.lsm_solvable_tag,False) );
+      if solvable:
         # independent groups?
         if self.lsm_solve_group_tag:
           independent_sg = sgname = "%s:%s"%(self.lsm_solve_group_tag,getattr(src,self.lsm_solve_group_tag,"unknown"));
@@ -188,15 +191,14 @@ class TiggerSkyModel (object):
         spi=    src.spectrum and getattr(src.spectrum,'spi',None)
       );
       if isinstance(src.shape,ModelClasses.Gaussian):
-        symmetric = src.shape.ex == src.shape.ey;
+        symmetric = not solvable and ( src.shape.ex == src.shape.ey );
         attrs['sx']  = src.shape.ex*2;
         attrs['sy']  = src.shape.ey*2;
         attrs['phi'] = -src.shape.pa;
       # construct parms or constants for source attributes, depending on whether the source is solvable or not
       # If source is solvable and this particular attribute is solvable, replace
       # value in attrs dict with a Meq.Parm.
-      solvable = False;
-      if self.solvable_sources and (not self.lsm_solvable_tag  or getattr(src,self.lsm_solvable_tag,False)):
+      if solvable:
         for parmname,value in attrs.items():
           sgname = _Subgroups.get(parmname,None);
           if sgname in subgroups:

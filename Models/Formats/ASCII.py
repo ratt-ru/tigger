@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 #
-#% $Id$ 
+#% $Id$
 #
 #
 # Copyright (C) 2002-2011
-# The MeqTree Foundation & 
+# The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
 # P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
 #
@@ -20,7 +20,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>,
-# or write to the Free Software Foundation, Inc., 
+# or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
@@ -40,10 +40,12 @@ from Tigger.Models.Formats import dprint,dprintf
 
 DefaultDMSFormat = dict(name=0,
     ra_h=1,ra_m=2,ra_s=3,dec_d=4,dec_m=5,dec_s=6,
-    i=7,q=8,u=9,v=10,spi=11,rm=12,ex=13,ey=14,pa=15,
+    i=7,q=8,u=9,v=10,spi=11,rm=12,ex_s=13,ey_s=14,pa_d=15,
     freq0=16,tags=slice(17,None));
 
-DefaultDMSFormatString = "name ra_h ra_m ra_s dec_d dec_m dec_s i q u v spi rm ex ey pa freq0 tags...";
+DefaultDMSFormatString = "name ra_h ra_m ra_s dec_d dec_m dec_s i q u v spi rm ex_s ey_s pa_d freq0 tags...";
+
+DEG = math.pi/180;
 
 def load (filename,format=None,freq0=None,center_on_brightest=True,min_extent=0):
   """Imports an ASCII table
@@ -118,9 +120,14 @@ def load (filename,format=None,freq0=None,center_on_brightest=True,min_extent=0)
       except KeyError:
         quv_fields = None;
       # fields for extent parameters
-      try:
-        ext_fields = [ format[x] for x in ['ex','ey','pa'] ];
-      except KeyError:
+      ext_fields = [];
+      for ext in 'ex','ey','pa':
+        for field,scale in (ext,1.),(ext+'_d',DEG),(ext+'_m',DEG/60),(ext+'_s',DEG/3600):
+          if field in format:
+            ext_fields.append((format[field],scale));
+            break;
+      # if not all three accumulated, ignore
+      if len(ext_fields) != 3:
         ext_fields = None;
       # fields for reference freq and RM and SpI
       freq0_field = format.get('freq0',None);
@@ -188,7 +195,7 @@ def load (filename,format=None,freq0=None,center_on_brightest=True,min_extent=0)
       ex=ey=pa=0;
       if ext_fields:
         try:
-          ex,ey,pa = map(float,[fields[x] for x in ext_fields]);
+          ex,ey,pa = [ float(fields[num])*scale for num,scale in ext_fields ];
         except IndexError:
           pass;
       # form up shape object
@@ -221,7 +228,7 @@ def load (filename,format=None,freq0=None,center_on_brightest=True,min_extent=0)
             else:
               tagname,value = tagstr,True;
             tagdict[tagname] = value;
-          
+
       # OK, now form up the source object
       # position
       pos = ModelClasses.Position(ra,dec);
@@ -288,11 +295,6 @@ def save (model,filename,sources=None,format=None,**kw):
     ra_d_field = ra_h_field;
   else:
     ra_scale = 1;
-  # fields for extent parameters
-  try:
-    ext_fields = [ format[x] for x in ['ex','ey','pa'] ];
-  except KeyError:
-    ext_fields = None;
   # fields for reference freq and RM and SpI
   freq0_field = format.get('freq0',None);
   rm_field = format.get('rm',None);
@@ -319,7 +321,7 @@ def save (model,filename,sources=None,format=None,**kw):
     if ra_rad_field is not None:
       fval[ra_rad_field] = str(ra);
     ra /= ra_scale;
-    # RA in h/m/s or d/m/s 
+    # RA in h/m/s or d/m/s
     if ra_m_field is not None:
       ra,ram,ras = src.pos.ra_hms_static(ra,scale=180,prec=1e-4);
       fval[ra_m_field] = str(ram);
@@ -349,10 +351,11 @@ def save (model,filename,sources=None,format=None,**kw):
     # shape
     if src.shape:
       for parm in "ex","ey","pa":
-        field = format.get(parm.lower());
-        if field is not None:
-          fval[field] = str(getattr(src.shape,parm,0));
-    # RM, spi, freq0  
+        for field,scale in (parm,1.),(parm+'_d',DEG),(parm+'_m',DEG/60),(parm+'_s',DEG/3600):
+          ifield = format.get(field.lower());
+          if field is not None:
+            fval[field] = str(getattr(src.shape,parm,0)/scale);
+    # RM, spi, freq0
     if freq0_field is not None:
       freq0 = (src.spectrum and getattr(src.spectrum,'freq0',None)) or getattr(src.flux,'freq0',0);
       fval[freq0_field] = str(freq0);
@@ -377,7 +380,7 @@ def save (model,filename,sources=None,format=None,**kw):
     # write the line
     ff.write(" ".join(fval)+"\n");
     nsrc += 1;
-    
+
   ff.close();
   dprintf(1,"wrote %d sources to file %s\n",nsrc,filename);
 

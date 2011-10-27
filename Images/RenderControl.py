@@ -114,7 +114,6 @@ class RenderControl (QObject):
     self._displaydata_minmax = None;
     # This is a low,high tuple of the current display range -- will be initialized by resetFullDisplayRange()
     self._displayrange = None;
-    self._lock_display_range = self._config.getbool("lock-range",0) if self._config else False;
     if self._config and self._config.has_option("range-min") and self._config.has_option("range-max"):
       display_range = self._config.getfloat("range-min"),self._config.getfloat("range-max");
     else:
@@ -133,6 +132,11 @@ class RenderControl (QObject):
             i = min(naxis-1,max(0,i));
             self._current_slice[iaxis] = i;
       self.selectSlice(self._current_slice,write_config=False);
+    # lock display range if so configured
+    self._lock_display_range = self._config.getbool("lock-range",0) if self._config else False;
+    if self._lock_display_range:
+      self.lockDisplayRange(True,write_config=False);
+
 
   def startSavingConfig(self,image_filename):
     """Saves the current configuration under the specified image filename""";

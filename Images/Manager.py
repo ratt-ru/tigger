@@ -118,6 +118,8 @@ class ImageManager (QWidget):
     QApplication.flush();
     try:
       image = SkyImage.FITSImagePlotItem(str(filename));
+    except KeyboardInterrupt:
+      raise;
     except:
         busy = None;
         traceback.print_exc();
