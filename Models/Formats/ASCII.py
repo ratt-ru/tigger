@@ -40,10 +40,10 @@ from Tigger.Models.Formats import dprint,dprintf
 
 DefaultDMSFormat = dict(name=0,
     ra_h=1,ra_m=2,ra_s=3,dec_d=4,dec_m=5,dec_s=6,
-    i=7,q=8,u=9,v=10,spi=11,rm=12,ex_s=13,ey_s=14,pa_d=15,
+    i=7,q=8,u=9,v=10,spi=11,rm=12,emaj_s=13,emin_s=14,pa_d=15,
     freq0=16,tags=slice(17,None));
 
-DefaultDMSFormatString = "name ra_h ra_m ra_s dec_d dec_m dec_s i q u v spi rm ex_s ey_s pa_d freq0 tags...";
+DefaultDMSFormatString = "name ra_h ra_m ra_s dec_d dec_m dec_s i q u v spi rm emaj_s emin_s pa_d freq0 tags...";
 
 DEG = math.pi/180;
 
@@ -121,7 +121,7 @@ def load (filename,format=None,freq0=None,center_on_brightest=True,min_extent=0)
         quv_fields = None;
       # fields for extent parameters
       ext_fields = [];
-      for ext in 'ex','ey','pa':
+      for ext in 'emaj','emin','pa':
         for field,scale in (ext,1.),(ext+'_d',DEG),(ext+'_m',DEG/60),(ext+'_s',DEG/3600):
           if field in format:
             ext_fields.append((format[field],scale));
@@ -350,7 +350,7 @@ def save (model,filename,sources=None,format=None,**kw):
         fval[field] = str(getattr(src.flux,stokes,0));
     # shape
     if src.shape:
-      for parm in "ex","ey","pa":
+      for parm in "emaj","emin","pa":
         for field,scale in (parm,1.),(parm+'_d',DEG),(parm+'_m',DEG/60),(parm+'_s',DEG/3600):
           ifield = format.get(field.lower());
           if field is not None:

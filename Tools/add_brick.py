@@ -157,7 +157,7 @@ class AddBrickDialog (QDialog):
     nx,ny = input_hdu.data.shape[-1:-3:-1];
     pos = ModelClasses.Position(ra0,dec0);
     flux = ModelClasses.Flux(max_flux);
-    shape = ModelClasses.FITSImage(sx,sy,0,os.path.basename(filename),nx,ny,pad=float(str(self.wpad.text())));
+    shape = ModelClasses.FITSImage(sx,sy,0,os.path.basename(filename),nx,ny,pad=float(str(self.wpad.text()) or "1"));
     img_src = SkyModel.Source(srcname,pos,flux,shape=shape);
     self.model.setSources(self.model.sources + [img_src]);
     self.model.emitUpdate(SkyModel.SkyModel.UpdateAll,origin=self);

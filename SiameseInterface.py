@@ -191,10 +191,9 @@ class TiggerSkyModel (object):
         spi=    src.spectrum and getattr(src.spectrum,'spi',None)
       );
       if isinstance(src.shape,ModelClasses.Gaussian):
-        symmetric = not solvable and ( src.shape.ex == src.shape.ey );
-        attrs['sx']  = src.shape.ex*2;
-        attrs['sy']  = src.shape.ey*2;
-        attrs['phi'] = -src.shape.pa;
+        attrs['lproj'] = src.shape.ex*math.sin(src.shape.pa);
+        attrs['mproj'] = src.shape.ex*math.cos(src.shape.pa);
+        attrs['ratio'] = src.shape.ey/src.shape.ex;
       # construct parms or constants for source attributes, depending on whether the source is solvable or not
       # If source is solvable and this particular attribute is solvable, replace
       # value in attrs dict with a Meq.Parm.
@@ -219,15 +218,11 @@ class TiggerSkyModel (object):
                 direction=direction,
                 spi=attrs['spi'],freq0=attrs['freq0'],RM=attrs['RM']);
       elif isinstance(src.shape,ModelClasses.Gaussian):
-        if symmetric:
-          size,phi = attrs['sx'],None;
-        else:
-          size,phi = [attrs['sx'],attrs['sy']],attrs['phi'];
         msrc = Meow.GaussianSource(ns,name=src.name,
                 I=attrs['I'],Q=attrs['Q'],U=attrs['U'],V=attrs['V'],
                 direction=direction,
                 spi=attrs['spi'],freq0=attrs['freq0'],
-                size=size,phi=phi);
+                lproj=attrs['lproj'],mproj=attrs['mproj'],ratio=attrs['ratio']);
         if solvable and 'shape' in subgroups:
           subgroups['pos'] += direction.get_solvables();
       elif isinstance(src.shape,ModelClasses.FITSImage):
