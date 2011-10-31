@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 #
-#% $Id$ 
+#% $Id$
 #
 #
 # Copyright (C) 2002-2011
-# The MeqTree Foundation & 
+# The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
 # P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
 #
@@ -20,7 +20,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>,
-# or write to the Free Software Foundation, Inc., 
+# or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
@@ -148,9 +148,12 @@ class AddBrickDialog (QDialog):
       elif name.startswith("DEC"):
         dec0 = hdr.get('CRPIX'+axs,1)-1;
     # convert pixel to degrees
+#    print ra0,dec0;
     ra0,dec0 = wcs.pix2wcs(ra0,dec0);
     ra0 *= DEG;
     dec0 *= DEG;
+#    print ModelClasses.Position.ra_hms_static(ra0);
+#    print ModelClasses.Position.dec_sdms_static(dec0);
     sx,sy = wcs.getHalfSizeDeg();
     sx *= DEG;
     sy *= DEG;

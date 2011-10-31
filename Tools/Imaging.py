@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 
 #
-#% $Id$ 
+#% $Id$
 #
 #
 # Copyright (C) 2002-2011
-# The MeqTree Foundation & 
+# The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
 # P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
 #
@@ -22,7 +22,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>,
-# or write to the Free Software Foundation, Inc., 
+# or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
@@ -108,7 +108,7 @@ def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_bea
   nx = data.shape[-1];
   ny = data.shape[-2];
   dprintf(1,"Read image of shape %s\n",data.shape);
-  # Now we make "indexer" tuples. These use the numpy.newarray index to turn elementary vectors into
+  # Now we make "indexer" tuples. These use the numpy.newaxis index to turn elementary vectors into
   # full arrays of the same number of dimensions as 'data' (data can be 2-, 3- or 4-dimensional, so we need
   # a general solution.)
   # For e.g. a nfreq x nstokes x ny x nx array, the following objects are created:
@@ -212,7 +212,7 @@ def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_bea
         xdum = numpy.array([1]);
         ydum = numpy.array([1]);
         data[...,ysrc:ysrc+1,xsrc:xsrc+1] += stokes_vec[stokes_indexer]*xdum[x_indexer]*ydum[y_indexer];
-    # procvess model images -- convolve with PSF and add to data
+    # process model images -- convolve with PSF and add to data
     elif src.typecode == "FITS":
       imgff = pyfits.open(src.shape.filename);
       img = imgff[0].data
@@ -247,12 +247,13 @@ def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_bea
             img_indices = indices;
           # else error
           else:
-            raise RuntimeError,"axis %d of model image %s doesn't match those of output image"%(axis,src.shape.filename);
-        # no such axis in uimage -- no index
+            raise RuntimeError,"axis %d of model image %s doesn't match that of output image"%(axis,src.shape.filename);
+        # no such axis in image -- no index
         else:
           img_indices = [[]]*range(indices);
         # update list of slices
-        slices =[ (sd+sd0,si+si0) for sd0,si0 in slices for sd,si in zip(indices,img_indices) ];
+        slices = [ (sd+sd0,si+si0) for sd0,si0 in slices for sd,si in zip(indices,img_indices) ];
       # now loop over slices and assign
       for sd,si in slices:
+        print sd,si;
         data[tuple(sd)] += convolve(img[tuple(si)],conv_kernel);

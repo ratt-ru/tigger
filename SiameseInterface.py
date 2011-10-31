@@ -36,6 +36,8 @@ import math
 from math import *
 import os.path
 
+from Meow.MeqMaker import SourceSubsetSelector
+
 # find out where Tigger lives -- either it's in the path, or we add it
 try:
   import Tigger
@@ -56,7 +58,7 @@ class TiggerSkyModel (object):
   """Interface to a Tigger-format sky model."""
   def __init__ (self,filename=None,include_options=False,tdloption_namespace='tiggerlsm'):
     """Initializes a TiggerSkyModel object.
-    A filename and a format may be specified, although the actual file will\
+    A filename and a format may be specified, although the actual file will
     only be loaded on demand.
     If include_options=True, immediately instantiates the options. If False, it is up to
     the caller to include the options in his menus.
@@ -65,6 +67,7 @@ class TiggerSkyModel (object):
     self._compile_opts = [];
     self._runtime_opts = [];
     self.filename = filename;
+    self.subset = SourceSubsetSelector("Source subset",tdloption_namespace=tdloption_namespace,annotate=False);
     self.lsm = None;
     # immediately include options, if needed
     if include_options:
@@ -79,8 +82,7 @@ class TiggerSkyModel (object):
                    TDLFileSelect("*."+ModelHTML.DefaultExtension,default=self.filename,exist=True),
                    namespace=self),
         TDLOption('lsm_subset',"Source subset",["all"],more=str,namespace=self,
-                  doc="""<P>You can enter source names separated by space. "all" selects all sources. "=<i>tagname</i>"
-                  selects all sources with a given tag. "-<i>name</i>" deselects the named sources. "-=<i>tagname</i>" deselects sources by tag,</P>"""),
+                  doc=SourceSubsetSelector.docstring),
         TDLMenu("Make solvable source parameters",
           TDLOption('lsm_solvable_tag',"Solvable source tag",[None,"solvable"],more=str,namespace=self,
                     doc="""If you specify a tagname, only sources bearing that tag will be made solvable. Use 'None' to make all sources solvable."""),
@@ -122,28 +124,7 @@ class TiggerSkyModel (object):
     sources = sorted(self.lsm.sources,lambda a,b:cmp(b.brightness(),a.brightness()));
 
     # extract subset, if specified
-    if self.lsm_subset != "all":
-      all = set([src.name for src in sources]);
-      srcs = set();
-      for ispec,spec in enumerate(self.lsm_subset.split()):
-        spec = spec.strip();
-        if spec:
-          # if first spec is a negation, then implictly select all sources first
-          if not ispec and spec[0] == "-":
-            srcs = all;
-          if spec == "all":
-            srcs = all;
-          elif spec.startswith("="):
-            srcs.update([ src.name for src in sources if getattr(src,spec[1:],False) ]);
-          elif spec.startswith("-="):
-            srcs.difference_update([ src.name for src in sources if getattr(src,spec[2:],False) ]);
-          elif spec.startswith("-"):
-            srcs.discard(spec[1:]);
-          else:
-            srcs.add(spec);
-
-      # make list
-      sources = [ src for src in sources if src.name in srcs ];
+    sources = SourceSubsetSelector.filter_subset(self.lsm_subset,sources);
 
     parm = Meow.Parm(tags="source solvable");
     # make copy of kw dict to be used for sources not in solvable set
