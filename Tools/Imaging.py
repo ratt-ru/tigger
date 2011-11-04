@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 
 #
-#% $Id$
+#% $Id$ 
 #
 #
 # Copyright (C) 2002-2011
-# The MeqTree Foundation &
+# The MeqTree Foundation & 
 # ASTRON (Netherlands Foundation for Research in Astronomy)
 # P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
 #
@@ -22,7 +22,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>,
-# or write to the Free Software Foundation, Inc.,
+# or write to the Free Software Foundation, Inc., 
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
@@ -31,8 +31,11 @@ import gaussfitter2
 import math
 import numpy
 
-from Tigger.Coordinates import Projection
+from Tigger.Coordinates import Projection,radec_string
+from Tigger.Images import FITSHeaders
 from scipy.ndimage.filters import convolve
+from scipy.ndimage.interpolation import map_coordinates
+import astLib.astWCS
 
 # init debug printing
 import Kittens.utils
@@ -90,6 +93,170 @@ def fitPsf (filename,cropsize=64):
 
   return sx_rad,sy_rad,rot/DEG;
 
+def getImageCube (fitshdu,filename="",extra_axes=None):
+  """Converts a FITS HDU (consisting of a header and data) into a 4+-dim numpy array where the 
+  first two axes are x and y, the third is Stokes (possibly of length 1, if missing in the
+  original image), and the rest are either as found in the FITS header (if extra_axes=None),
+  or in the order specified by CTYPE in extra_axes (if present, else a dummy axis of size 1 is inserted),
+  with axes not present in extra_axes removed by taking the 0-th plane along each.
+  Returns tuple of
+    array,stokes_list,extra_axes_ctype_list,removed_axes_ctype_list
+  e.g. array,("I","Q"),("FREQ--FOO","TIME--BAR")
+  """
+  hdr = fitshdu.header;
+  data = fitshdu.data;
+  # recognized axes
+  ix = iy = istokes = None;
+  naxis = len(data.shape);
+  # other axes which will be returned
+  other_axes = [];
+  other_axes_ctype = [];
+  remove_axes = [];
+  remove_axes_ctype = [];
+  # identify X, Y and stokes axes
+  for n in range(naxis):
+    iax = naxis-1-n;
+    axs = str(n+1);
+    ctype = hdr.get('CTYPE'+axs).strip().upper();
+    if ix is None and FITSHeaders.isAxisTypeX(ctype):
+      ix = iax; # in numpy order, axes are reversed
+    elif iy is None and FITSHeaders.isAxisTypeY(ctype):
+      iy = iax; 
+    elif ctype == 'STOKES':
+      if istokes is not None:
+        raise ValueError,"duplicate STOKES axis in FITS file %s"%filename;
+      istokes = iax;
+      crval = hdr.get('CRVAL'+axs,0);
+      cdelt = hdr.get('CDELT'+axs,1);
+      crpix = hdr.get('CRPIX'+axs,1)-1;
+      values = map(int,list(crval + (numpy.arange(data.shape[iax]) - crpix)*cdelt));
+      stokes_names = [ (FITSHeaders.StokesNames[i] 
+                        if i>0 and i<len(FITSHeaders.StokesNames) else "%d"%i) for i in values ];
+    else:
+      other_axes.append(iax);
+      other_axes_ctype.append(ctype);
+  # not found?
+  if ix is None or iy is None:
+    raise ValueError,"FITS file %s does not appear to contain an X and/or Y axis"%filename;
+  # form up shape of resulting image, and order of axes for transpose
+  shape = [data.shape[ix],data.shape[iy]];
+  axes = [ix,iy];
+  # add stokes axis
+  if istokes is None:
+    shape.append(1);
+    stokes_labels = ("I",);
+  else:
+    shape.append(data.shape[istokes]);
+    axes.append(istokes);
+  if extra_axes:
+    # if a fixed order for the extra axes is specified, add the ones we found
+    for ctype in extra_axes:
+      if ctype in other_axes_ctype:
+        iax = other_axes[other_axes_ctype.index(ctype)];
+        axes.append(iax);
+        shape.append(data.shape[iax]);
+      else:
+        shape.append(1);
+    # add the ones that were not found into the remove list
+    for iaxis,ctype in zip(other_axes,other_axes_ctype):
+      if ctype not in extra_axes:
+        axes.append(iaxis);
+        remove_axes.append(iaxis); 
+        remove_axes_ctype.append(ctype);
+  # return all extra axes found in header
+  else:
+    shape += [ data.shape[i] for i in other_axes ];
+    axes += other_axes;
+    extra_axes = other_axes_ctype;
+  # tranpose
+  data = data.transpose(axes);
+  # trim off axes which are to be removed, if we have any
+  if remove_axes:
+    data = data[[Ellipsis]+[0]*len(remove_axes)];
+  # reshape and return
+  return data.reshape(shape),stokes_names,extra_axes,remove_axes_ctype;
+  
+  
+class ImageResampler (object):
+  """This class resamples images from one projection ("source") to another ("target").""";
+  def __init__(self,sproj,tproj,sl,sm,tl,tm):
+    """Creates resampler.
+    sproj,tproj are the source and target Projection objects.
+    sl,sm is a (sorted, ascending) list of l,m coordinates in the source image 
+    tl,tm is a (sorted, ascending) list of l,m coordinates in the target image
+    """
+    # convert tl,tm to to source coordinates
+    # find the overlap region first, to keeps the number of coordinate conversions to a minimum
+    overlap = astLib.astWCS.findWCSOverlap(sproj.wcs,tproj.wcs);
+    tx2,tx1,ty1,ty2 = overlap['wcs2Pix'];
+    # no overlap? stop then
+    if tx1 > tl[-1] or tx2 < tl[0] or ty1 > tm[-1] or ty2 < tm[0]:
+      self._target_slice = None,None;
+      return;
+    tx1 = max(0,int(math.floor(tx1)));
+    tx2 = min(len(tl),int(math.floor(tx2+1)));
+    ty1 = max(0,int(math.floor(ty1)));
+    ty2 = min(len(tm),int(math.floor(ty2+1)));
+    tl = tl[tx1:tx2];
+    tm = tm[ty1:ty2];
+    dprint(4,"overlap target pixels are %d:%d and %d:%d"%(tx1,tx2,ty1,ty2));
+    
+    #### The code below works but can be very slow  (~minutes) when doing large images, because of WCS
+    ## make target lm matrix
+    #tmat = numpy.zeros((2,len(tl),len(tm)));
+    #tmat[0,...] = tl[:,numpy.newaxis];
+    #tmat[1,...] = tm[numpy.newaxis,:];
+    ## convert this to radec. Go through list since that's what Projection expects
+    #dprint(4,"converting %d target l/m pixel coordinates to radec"%(len(tl)*len(tm)));
+    #ra,dec = tproj.radec(tmat[0,...].ravel(),tmat[1,...].ravel())
+    #dprint(4,"converting radec to source l/m");
+    #tls,tms = sproj.lm(ra,dec);
+    #tmat[0,...] = tls.reshape((len(tl),len(tm)));
+    #tmat[1,...] = tms.reshape((len(tl),len(tm)));
+    
+    #### my alternative conversion code
+    ## source to target is always an affine transform (one image projected into the plane of another, right?), so
+    ## use WCS to map the corners, and figure out a linear transform from there
+    
+    # this maps three corners
+    t00 = sproj.lm(*tproj.radec(tl[0],tm[0]));
+    t1x = sproj.lm(*tproj.radec(tl[-1],tm[0]));
+    t1y = sproj.lm(*tproj.radec(tl[0],tm[-1]));
+    
+    tmat = numpy.zeros((2,len(tl),len(tm)));
+    tlnorm = (tl-tl[0])/(tl[-1]-tl[0]);
+    tmnorm = (tm-tm[0])/(tm[-1]-tm[0]);
+    tmat[0,...] = t00[0] + (tlnorm*(t1x[0]-t00[0]))[:,numpy.newaxis] + (tmnorm*(t1y[0]-t00[0]))[numpy.newaxis,:];
+    tmat[1,...] = t00[1] + (tmnorm*(t1y[1]-t00[1]))[numpy.newaxis,:] + (tlnorm*(t1x[1]-t00[1]))[:,numpy.newaxis];
+    
+    dprint(4,"setting up slices");
+    # ok, now find pixels in tmat that are within the source image extent
+    tmask = (sl[0]<=tmat[0,...])&(tmat[0,...]<=sl[-1])&(sm[0]<=tmat[1,...])&(tmat[1,...]<=sm[-1]);
+    # find extents along target's l and m axis
+    # tmask_l/m is true for each target column/row that has pixels within the source image
+    tmask_l = numpy.where(tmask.sum(1)>0)[0];
+    tmask_m = numpy.where(tmask.sum(0)>0)[0];
+    # check if there's no overlap at all -- return then
+    if not len(tmask_l) or not len(tmask_m):
+      self._target_slice = None,None;
+      return;
+    # ok, now we know over which pixels of the target image need to be interpolated
+    ix0,ix1 = tmask_l[0],tmask_l[-1]+1;
+    iy0,iy1 = tmask_m[0],tmask_m[-1]+1;
+    self._target_slice = slice(ix0+tx1,ix1+tx1),slice(iy0+ty1,iy1+ty1);
+    dprint(4,"slices are",ix0,ix1,iy0,iy1);
+    # make [2,nx,ny] array of interpolation coordinates
+    self._target_coords = tmat[:,ix0:ix1,iy0:iy1];
+    
+  def targetSlice (self):
+    return self._target_slice;
+
+  def __call__ (self,image):
+    if self._target_slice[0] is None:
+      return 0;
+    else:
+      return map_coordinates(image,self._target_coords);
+    
 def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_beam=None):
   """Restores sources (into the given FITSHDU) using a Gaussian PSF given by gmaj/gmin/grot.
   If gmaj=0, uses delta functions instead.
@@ -98,17 +265,14 @@ def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_bea
   r and freq, returning the power beam gain.
   """;
   hdr = fits_hdu.header;
-  data = fits_hdu.data;
+  data,stokes,extra_data_axes,dum = getImageCube(fits_hdu);
   # create projection object, using pixel coordinates
   proj = Projection.FITSWCSpix(hdr);
-  # Note that "numpy" axis ordering is the reverse of "FITS" axis ordering.
-  # I.e. if the FITS header has X as the first axis and Y as the second, the corresponding data
-  # array has the x axis last and y second from last
   naxis = len(data.shape);
-  nx = data.shape[-1];
-  ny = data.shape[-2];
+  nx = data.shape[0];
+  ny = data.shape[1];
   dprintf(1,"Read image of shape %s\n",data.shape);
-  # Now we make "indexer" tuples. These use the numpy.newaxis index to turn elementary vectors into
+  # Now we make "indexer" tuples. These use the numpy.newarray index to turn elementary vectors into
   # full arrays of the same number of dimensions as 'data' (data can be 2-, 3- or 4-dimensional, so we need
   # a general solution.)
   # For e.g. a nfreq x nstokes x ny x nx array, the following objects are created:
@@ -120,33 +284,21 @@ def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_bea
   #  1. form up vectors of world coordinates (vx,vy) corresponding to pixel coordinates i1:i2 and j1:j2
   #  2. form up vector of Stokes parameters
   #  3. g = Gauss(vx[x_indexer],vy[y_indexer])*stokes[stokes_indexer]
-  #  4. Just say data[...,j1:j2,i1:2] += g
+  #  4. Just say data[j1:j2,i1:2,...] += g
   # This automatically expands all array dimensions as needed.
 
-  # This is a helper function, returns an naxis-sized tuple, with slice(None) in the N-from-last
-  # position , and elem_index elsewhere.
+  # This is a helper function, returns an naxis-sized tuple, with slice(None) in the Nth
+  # position, and elem_index elsewhere.
   def make_axis_indexer (n,elem_index=numpy.newaxis):
     indexer = [elem_index]*naxis;
-    indexer[naxis-1-n] = slice(None);
+    indexer[n] = slice(None);
     return tuple(indexer);
   x_indexer = make_axis_indexer(0);
   y_indexer = make_axis_indexer(1);
-  # figure out position of Stokes axis, and make indexing objects
-  for n in range(2,naxis):
-    if hdr.get('CTYPE%d'%(n+1)).strip().upper() == 'STOKES':
-      nstokes = data.shape[naxis-1-n];
-      if nstokes > 4:
-        raise ValueError,"Too many stokes planes in image (%d)"%nstokes;
-      stokes = "IQUV"[0:nstokes];
-      stokes_vec = numpy.zeros((nstokes,));
-      dprintf(2,"Stokes components are %s at image axis %d\n",stokes,n);
-      stokes_indexer = make_axis_indexer(n);
-      break;
-  # else no stokes axis -- use I only, and an indexer object that'll make the stokes vector scalar
-  else:
-    stokes = "I";
-    stokes_vec = numpy.zeros((1,));
-    stokes_indexer = (0,);
+  # figure out stokes 
+  nstokes = len(stokes);
+  stokes_vec = numpy.zeros((nstokes,));
+  stokes_indexer = make_axis_indexer(2);
   dprint(2,"Stokes are",stokes);
   dprint(2,"Stokes indexing vector is",stokes_indexer);
   # get pixel sizes, in radians
@@ -158,7 +310,7 @@ def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_bea
     dprintf(2,"Will use a box of radius %f pixels for restoration\n",box_radius);
     cos_rot = math.cos(grot);
     sin_rot = math.sin(grot);
-  conv_kernel = None;
+  conv_kernels = {};
   # loop over sources in model
   for src in sources:
     # get normalized intensity, if spectral info is available
@@ -180,7 +332,7 @@ def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_bea
       xsrc,ysrc = proj.lm(src.pos.ra,src.pos.dec);
       # form up stokes vector
       for i,st in enumerate(stokes):
-         stokes_vec[i] = getattr(src.flux,st,-1)*ni;
+         stokes_vec[i] = getattr(src.flux,st,0)*ni;
       dprintf(3,"Source %s, %s Jy, at pixel %f,%f\n",src.name,stokes_vec,xsrc,ysrc);
       # gmaj != 0: use gaussian.
       if gmaj > 0:
@@ -201,7 +353,7 @@ def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_bea
         # evaluate gaussian at these, scale up by stokes vector
         gg = stokes_vec[stokes_indexer]*numpy.exp(-((xi1/gmaj)**2+(yj1/gmin)**2)/2.);
         # add into data
-        data[...,j1:j2,i1:i2] += gg;
+        data[i1:i2,j1:j2,...] += gg;
       # else gmaj=0: use delta functions
       else:
         xsrc = int(round(xsrc));
@@ -211,49 +363,81 @@ def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_bea
           continue;
         xdum = numpy.array([1]);
         ydum = numpy.array([1]);
-        data[...,ysrc:ysrc+1,xsrc:xsrc+1] += stokes_vec[stokes_indexer]*xdum[x_indexer]*ydum[y_indexer];
+        data[xsrc:xsrc+1,ysrc:ysrc+1,...] += stokes_vec[stokes_indexer]*xdum[x_indexer]*ydum[y_indexer];
     # process model images -- convolve with PSF and add to data
     elif src.typecode == "FITS":
-      imgff = pyfits.open(src.shape.filename);
-      img = imgff[0].data
-      # projection had better match
-      imgproj = Projection.FITSWCSpix(imgff[0].header);
-      if img.shape[-2:] != data.shape[-2:] or img.ndim > data.ndim or imgproj != proj:
-        raise RuntimeError,"coordinates or shape of model image %s don't match those of output image"%src.shape.filename;
-      # evaluate convolution kernel first time we need it
+      modelff = pyfits.open(src.shape.filename);
+      model,model_stokes,extra_model_axes,removed_model_axes = \
+          getImageCube(modelff[0],src.shape.filename,extra_axes=extra_data_axes);
+      modelproj = Projection.FITSWCSpix(modelff[0].header);
+      # map Stokes planes: at least the first one ("I", presumably) must be present
+      # The rest are represented by indices in model_stp. Thus e.g. for an IQUV data image and an IV model,
+      # model_stp will be [0,-1,-1,1]
+      model_stp = [ (model_stokes.index(st) if st in model_stokes else -1) for st in stokes ];
+      if model_stp[0] < 0:
+        print "Warning: model image %s lacks Stokes %s, skipping."%(src.shape.filename,model_stokes[0]);
+        continue;
+      # figure out whether the images overlap at all
+      # in the trivial case, both images have the same WCS, so no resampling is needed
+      if model.shape[:2] == data.shape[:2] and modelproj == proj:
+        model_resampler = lambda x:x;
+        data_x_slice = data_y_slice = slice(None);
+        dprintf(3,"Source %s: same resolution as output, no interpolation needed\n",src.shape.filename);
+      # else make a resampler engine
+      else:
+        model_resampler = ImageResampler(modelproj,proj,
+          numpy.arange(model.shape[0],dtype=float),numpy.arange(model.shape[1],dtype=float),
+          numpy.arange(data.shape[0],dtype=float),numpy.arange(data.shape[1],dtype=float));
+        data_x_slice,data_y_slice = model_resampler.targetSlice();
+        dprintf(3,"Source %s: resampling into image at %s, %s\n",src.shape.filename,data_x_slice,data_y_slice);
+        # skip this source if no overlap
+        if data_x_slice is None or data_y_slice is None:
+          continue;
+      # warn about ignored model axes (e.g. when model has frequency and our output doesn't)
+      if removed_model_axes:
+        print "Warning: model image %s has one or more axes that are not present in the output image:"%src.shape.filename;
+        print "  taking the first plane along (%s)."%(",".join(removed_model_axes));
+      # evaluate convolution kernel for this model scale, if not already cached
+      conv_kernel = conv_kernels.get((modelproj.xscale,modelproj.yscale),None);
       if conv_kernel is None:
         radius = int(round(box_radius));
         # convert pixel coordinates into world coordinates relative to 0
-        xi = numpy.arange(-radius,radius+1)*proj.xscale
-        yj = numpy.arange(-radius,radius+1)*proj.yscale
+        xi = numpy.arange(-radius,radius+1)*modelproj.xscale
+        yj = numpy.arange(-radius,radius+1)*modelproj.yscale
         # work out rotated coordinates
-        # (rememeber that X is last axis, Y is second-last)
-        xi1 = (xi*cos_rot)[numpy.newaxis,:] - (yj*sin_rot)[:,numpy.newaxis];
-        yj1 = (xi*sin_rot)[numpy.newaxis,:] + (yj*cos_rot)[:,numpy.newaxis];
+        xi1 = (xi*cos_rot)[:,numpy.newaxis] - (yj*sin_rot)[numpy.newaxis,:];
+        yj1 = (xi*sin_rot)[:,numpy.newaxis] + (yj*cos_rot)[numpy.newaxis,:];
         # evaluate convolution kernel
         conv_kernel = numpy.exp(-((xi1/gmaj)**2+(yj1/gmin)**2)/2.);
-      # work out data slices that we need to loop over
-      slices = [([Ellipsis],[Ellipsis])];
-      for axis in range(2,data.ndim):
-        # list of data indices to iterate over for this axis
-        indices = [[x] for x in range(data.shape[-1-axis])];
-        # list of image indices to iterate over
-        if axis < img.ndim:
-          # shape-1: use 0 throughout
-          if img.shape[-1-axis] == 1:
-            img_indices = [[0]]*len(indices);
-          # shape-n: must be same as data
-          elif img.shape[-1-axis] == data.shape[-1-axis]:
-            img_indices = indices;
-          # else error
-          else:
-            raise RuntimeError,"axis %d of model image %s doesn't match that of output image"%(axis,src.shape.filename);
-        # no such axis in image -- no index
+        conv_kernels[modelproj.xscale,modelproj.yscale] = conv_kernel;
+      # Work out data slices that we need to loop over.
+      # For every 2D slice in the data image cube (assuming other axes besides x/y), we need to apply a 
+      # convolution to the corresponding model slice, and add it in to the data slice. The complication 
+      # is that any extra axis may be of length 1 in the model and of length N in the data (e.g. frequency axis), 
+      # in which case we need to add the same model slice to all N data slices. The loop below puts together a series
+      # of index tuples representing each per-slice operation.
+      # These two initial slices correspond to the x/y axes. Additional indices will be appended to these in a loop
+      slices = [([data_x_slice,data_y_slice],[slice(None),slice(None)])];
+      # work out Stokes axis
+      for dst,mst in enumerate(model_stp):
+        if mst >= 0:
+          slices = [ (sd0+[dst],sm0+[mst]) for sd0,sm0 in slices ];
+      # now loop over extra axes
+      for axis in range(3,len(extra_data_axes)+3):
+        # list of data image indices to iterate over for this axis, 0...N-1
+        indices = [[x] for x in range(data.shape[axis])];
+        # list of model image indices to iterate over
+        if model.shape[axis] == 1:
+          model_indices = [[0]]*len(indices);
+        # shape-n: must be same as data, in which case 0..N-1 is assigned to 0..N-1
+        elif model.shape[axis] == data.shape[axis]:
+          model_indices = indices;
+        # else error
         else:
-          img_indices = [[]]*range(indices);
+          raise RuntimeError,"axis %s of model image %s doesn't match that of output image"%\
+                              (extra_data_axes[axis-3],src.shape.filename);
         # update list of slices
-        slices = [ (sd+sd0,si+si0) for sd0,si0 in slices for sd,si in zip(indices,img_indices) ];
+        slices =[ (sd0+sd,si0+si) for sd0,si0 in slices for sd,si in zip(indices,model_indices) ];
       # now loop over slices and assign
       for sd,si in slices:
-        print sd,si;
-        data[tuple(sd)] += convolve(img[tuple(si)],conv_kernel);
+        data[tuple(sd)] += model_resampler(convolve(model[tuple(si)],conv_kernel));

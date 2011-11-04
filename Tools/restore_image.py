@@ -160,7 +160,12 @@ class RestoreImageDialog (QDialog):
     bmin = bmin/(Imaging.FWHM*3600)*DEG;
     pa = pa*DEG;
     # restore
-    Imaging.restoreSources(input_hdu,sources,bmaj,bmin,pa);
+    try:
+      Imaging.restoreSources(input_hdu,sources,bmaj,bmin,pa);
+    except Exception,err:
+      busy = None;
+      self.qerrmsg.showMessage("Error restoring model into image: %s"%str(err));
+      return;
     # save fits file
     try:
       input_hdu.writeto(outfile,clobber=True);

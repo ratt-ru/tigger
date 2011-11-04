@@ -35,12 +35,24 @@ import pyfits
 
 
 if __name__ == '__main__':
+  
+  import Tigger.Models.Formats
+  from Tigger.Models.Formats import ASCII
+  
+  AUTO = "auto";
+  full_formats = Tigger.Models.Formats.listFormatsFull();
+  input_formats = [ name for name,(load,save,doc,extensions) in full_formats if load ] + [ AUTO ];
+  
   # setup some standard command-line option parsing
   #
   from optparse import OptionParser
   parser = OptionParser(usage="""%prog: [options] input_image sky_model [output_image]""",
                         description="""Restores sources from sky model into an input image, writes result to output image. If
 an output image is not specified, makes a name for it automatically.""");
+  parser.add_option("-t","--type",choices=input_formats,
+                    help="Input model type (%s). Default is %%default."%(", ".join(input_formats)));
+  parser.add_option("--format",type="string",
+                    help="""Input format, for ASCII or BBS tables. For ASCII tables, default is "%s". For BBS tables, the default format is specified in the file header."""%ASCII.DefaultDMSFormatString);
   parser.add_option("-n","--num-sources",dest="nsrc",type="int",action="store",
                     help="Only restore the NSRC brightest sources");
   parser.add_option("-s","--scale",dest="fluxscale",metavar="FLUXSCALE[,N]",action="store",
@@ -55,6 +67,8 @@ an output image is not specified, makes a name for it automatically.""");
                     help="overwrite output image even if it already exists");
   parser.add_option("-v","--verbose",dest="verbose",type="int",action="store",
                     help="set verbosity level (0 is silent, higher numbers mean more messages)");
+  parser.add_option("-T","--timestamps",action="store_true",
+                    help="enable timestamps in debug messages (useful for timing)");
   parser.set_defaults(n=0,fluxscale='1',psf='psf.fits',beam=-1);
 
   (options,rem_args) = parser.parse_args();
@@ -85,17 +99,20 @@ an output image is not specified, makes a name for it automatically.""");
       sys.exit(1);
 
   from Tigger.Tools import Imaging
-  from Tigger.Models import ModelHTML
 
   Imaging._verbosity.set_verbose(options.verbose);
+  Imaging._verbosity.enable_timestamps(options.timestamps);
 
   # read model and sort by apparent brightness
-  ext = os.path.splitext(skymodel)[1];
-  if ext.upper() == '.MDL':
-    from Tigger.Models.Formats import NEWSTAR
-    model = NEWSTAR.load(skymodel);
-  else:
-    model = ModelHTML.loadModel(skymodel);
+  # figure out input type
+  try:
+    input_type,import_func,dum,input_doc = Tigger.Models.Formats.resolveFormat(skymodel,options.type if options.type != AUTO else None);
+  except:
+    print "Unable to determine model type for %s, please specify one explicitly with the -t/--type option."%skymodel;
+    sys.exit(1);
+  
+  print "Reading %s (%s)"%(skymodel,input_doc);
+  model = import_func(skymodel,format=options.format);
 
   Imaging.dprintf(1,"Read %d sources from %s\n",len(model.sources),skymodel);
 
@@ -127,12 +144,13 @@ an output image is not specified, makes a name for it automatically.""");
     gx,gy,grot = Imaging.fitPsf(options.psf);
 
   # read, restore, write
+  print "Restoring model into input image %s"%input_image;
   input_hdu = pyfits.open(input_image)[0];
   if options.clear:
     input_hdu.data[...] = 0;
   Imaging.restoreSources(input_hdu,sources,gx,gy,grot);
 
-  Imaging.dprintf(1,"Writing output file %s\n",output_image);
+  print "Writing output image %s"%output_image;
   if os.path.exists(output_image):
     os.remove(output_image);
   input_hdu.writeto(output_image);

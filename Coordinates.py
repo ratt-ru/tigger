@@ -51,8 +51,9 @@ if 'TiggerMain' in sys.modules:
 
 try:
   from astLib.astWCS import WCS
+  import PyWCSTools.wcs 
 except ImportError:
-  print "Failed to import the astLib.astWCS module. Please install the astLib package (http://astlib.sourceforge.net/)."
+  print "Failed to import the astLib.astWCS and/or PyWCSTools module. Please install the astLib package (http://astlib.sourceforge.net/)."
   raise;
 
 startup_dprint(1,"imported WCS");
@@ -68,6 +69,41 @@ def angular_dist_pos_angle (ra1,dec1,ra2,dec2):
   pa = numpy.arctan2(-cosd2*sinra,-cosd2*sind1*cosra+sind2*cosd1);
   return adist,pa;
 
+
+def _deg_to_dms (x,prec=0.01):
+  """Converts x (in degrees) into d,m,s tuple, where d and m are ints.
+  prec gives the precision, in arcseconds."""
+  mins,secs = divmod(round(x*3600/prec)*prec,60);
+  mins = int(mins);
+  degs,mins = divmod(mins,60);
+  return degs,mins,secs;
+
+def ra_hms (rad,scale=12,prec=0.01):
+  """Returns RA as tuple of (h,m,s)""";
+  # convert negative values
+  while rad < 0:
+      rad += 2*math.pi;
+  # convert to hours
+  rad *= scale/math.pi;
+  return  _deg_to_dms(rad,prec);
+
+def dec_dms (rad,prec=0.01):
+  return dec_sdms(rad,prec)[1:];
+
+def dec_sdms (rad,prec=0.01):
+  """Returns Dec as tuple of (sign,d,m,s). Sign is "+" or "-".""";
+  sign = "-" if rad<0 else "+";
+  d,m,s = _deg_to_dms(abs(rad)/DEG,prec);
+  return (sign,d,m,s);
+
+def ra_hms_string (rad):
+  return "%dh%02dm%05.2fs"%ra_hms(rad);
+
+def dec_sdms_string (rad):
+  return "%s%dd%02dm%05.2fs"%dec_sdms(rad);
+
+def radec_string (ra,dec):
+  return "%s %s"%(ra_hms_string(ra),dec_sdms_string(dec));
 
 class _Projector (object):
     """This is an abstract base class for all projection classes below. A projection class can be used to create projector objects for
@@ -139,11 +175,32 @@ class Projection (object):
       _Projector.__init__(self,ra0*DEG,dec0*DEG);
 
     def lm (self,ra,dec):
-      return self.wcs.wcs2pix(ra/DEG,dec/DEG)
+      if numpy.isscalar(ra) and numpy.isscalar(dec):
+        return self.wcs.wcs2pix(ra/DEG,dec/DEG);
+      else:
+        ## when fed in arrays of ra/dec, wcs.wcs2pix will return a nested list of
+        ## [[l1,m1],[l2,m2],,...]. Convert this to an array and extract columns.
+        lm = numpy.array(self.wcs.wcs2pix(ra/DEG,dec/DEG));
+        return lm[...,0],lm[...,1];
 
     def radec (self,l,m):
-      ra,dec = self.wcs.pix2wcs(l,m);
+      if numpy.isscalar(l) and numpy.isscalar(m):
+        ra,dec = self.wcs.pix2wcs(l,m);
+      else:
+## this is slow as molasses because of the way astLib.WCS implements the loop. ~120 seconds for 4M pixels
+        ## when fed in arrays of ra/dec, wcs.wcs2pix will return a nested list of
+        ## [[l1,m1],[l2,m2],,...]. Convert this to an array and extract columns.
+#        radec = numpy.array(self.wcs.pix2wcs(l,m));
+#        ra = radec[...,0];
+#        dec = radec[...,1];
+### try a faster implementation -- oh well, only a bit faster, ~95 seconds for the same
+### can also replace list comprehension with map(), but that doesn't improve things.
+### Note also that the final array constructor takes ~10 secs!
+        radec = numpy.array([ PyWCSTools.wcs.pix2wcs(self.wcs.WCSStructure,x,y) for x,y in zip(l+1,m+1) ]);
+        ra = radec[...,0];
+        dec = radec[...,1];
       return ra*DEG,dec*DEG;
+
 
     def offset (self,dra,ddec):
       return self.xpix0 - dra/self.xscale,self.ypix0 + ddec/self.xscale;
