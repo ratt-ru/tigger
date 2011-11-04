@@ -74,11 +74,14 @@ class ImageManager (QWidget):
     self._qa_plot_all.setCheckable(True);
     self._qa_plot_top.setChecked(True);
     QObject.connect(self._qa_plot_all,SIGNAL("toggled(bool)"),self._displayAllImages);
+    self._closing = False;
 
-    # repopulate the menu
+    # populate the menu
     self._repopulateMenu();
 
   def close (self):
+    dprint(1,"closing Manager");
+    self._closing = True;
     for ic in self._imagecons:
       ic.close();
 
@@ -480,7 +483,10 @@ Examples:  "(a+b)/2", "cos(a)+sin(b)", "a-a.mean()", "fft.fft2(a)", etc.""");
     self._repopulateMenu();
     # center and raise to top of stack
     self.raiseImage(ic);
-    self.centerImage(ic,emit=False);
+    if not self._center_image:
+      self.centerImage(ic,emit=False);
+    else:
+      ic.setPlotProjection(self._center_image.projection);
     # signal
     self.emit(SIGNAL("imagesChanged"));
     return ic;

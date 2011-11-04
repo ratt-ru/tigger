@@ -44,7 +44,7 @@ dprintf = _verbosity.dprintf;
 
 from Images import SkyImage,Colormaps
 from Models import ModelClasses,PlotStyles
-from Coordinates import Projection
+from Coordinates import Projection,radec_string;
 from Models.SkyModel import SkyModel
 from Tigger import pixmaps
 from Tigger.Widgets import FloatValidator
@@ -237,7 +237,13 @@ class ImageController (QFrame):
     sameproj = proj == self.image.projection;
     self._wcenter.setVisible(sameproj);
     self._qa_center.setVisible(not sameproj);
-
+    if self._image_border:
+      (l0,l1),(m0,m1) = self.image.getExtents();
+      path = numpy.array([l0,l0,l1,l1,l0]),numpy.array([m0,m1,m1,m0,m0]);
+      self._image_border.setData(*path);
+      if self._image_label:
+        self._image_label.setValue(path[0][2],path[1][2]);
+      
   def addPlotBorder (self,border_pen,label,label_color=None,bg_brush=None):
     # make plot items for image frame
     # make curve for image borders

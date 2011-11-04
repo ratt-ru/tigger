@@ -216,13 +216,22 @@ class Projection (object):
       Projection.FITSWCSpix.__init__(self,header);
 
     def lm (self,ra,dec):
-      l,m = self.wcs.wcs2pix(ra/DEG,dec/DEG);
+      if numpy.isscalar(ra) and numpy.isscalar(dec):
+        l,m = self.wcs.wcs2pix(ra/DEG,dec/DEG);
+      else:
+        lm = numpy.array(self.wcs.wcs2pix(ra/DEG,dec/DEG));
+        l,m = lm[...,0],lm[...,1];
       l = (self.xpix0-l)*self.xscale;
       m = (m-self.ypix0)*self.yscale;
       return l,m;
 
     def radec (self,l,m):
-      ra,dec = self.wcs.pix2wcs(self.xpix0-l/self.xscale,self.ypix0+m/self.yscale);
+      if numpy.isscalar(l) and numpy.isscalar(m):
+        ra,dec = self.wcs.pix2wcs(self.xpix0-l/self.xscale,self.ypix0+m/self.yscale);
+      else:
+        radec = numpy.array(self.wcs.pix2wcs(self.xpix0-l/self.xscale,self.ypix0+m/self.yscale));
+        ra = radec[...,0];
+        dec = radec[...,1];
       return ra*DEG,dec*DEG;
 
     def offset (self,dra,ddec):

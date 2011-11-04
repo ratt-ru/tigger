@@ -187,6 +187,7 @@ class MainWindow (QMainWindow):
     self.emit(SIGNAL("isUpdated"),False);
     self.emit(SIGNAL("hasSkyModel"),False);
     self.emit(SIGNAL("hasSelection"),False);
+    self._exiting = False;
 
     # set initial layout
     self._current_layout = None;
@@ -479,8 +480,10 @@ class MainWindow (QMainWindow):
 
   def closeEvent (self,event):
     dprint(1,"closing");
+    self._exiting = True;
     self.saveSizes();
     if not self.closeFile():
+      self._exiting = False;
       event.ignore();
       return;
     self.skyplot.close();
@@ -498,8 +501,9 @@ class MainWindow (QMainWindow):
       elif res == QMessageBox.Save:
         if not self.saveFile(confirm=False):
           return False;
-    # unload images
-    self.imgman.unloadModelImages();
+    # unload model images, unless we are already exiting anyway
+    if not self._exiting:
+      self.imgman.unloadModelImages();
     return True;
 
   def closeFile (self):
