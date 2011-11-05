@@ -81,6 +81,7 @@ def fitPsf (filename,cropsize=64):
 
   sx_rad = abs(sx * proj.xscale);
   sy_rad = abs(sy * proj.yscale);
+  rot -= 90;  # convert West through North PA into the conventional North through East
   if sx_rad < sy_rad:
     sx_rad,sy_rad = sy_rad,sx_rad;
     rot -= 90;
@@ -89,7 +90,7 @@ def fitPsf (filename,cropsize=64):
   while rot < -180:
     rot += 360;
 
-  dprintf(1,"Fitted gaussian PSF FWHM of %f x %f pixels (%f x %f arcsec), p.a. %f deg\n",sx*FWHM,sy*FWHM,sx_rad*FWHM*ARCSEC,sy_rad*FWHM*ARCSEC,rot);
+  dprintf(1,"Fitted gaussian PSF FWHM of %f x %f pixels (%f x %f arcsec), PA %f deg\n",sx*FWHM,sy*FWHM,sx_rad*FWHM*ARCSEC,sy_rad*FWHM*ARCSEC,rot);
 
   return sx_rad,sy_rad,rot/DEG;
 
@@ -258,12 +259,14 @@ class ImageResampler (object):
       return map_coordinates(image,self._target_coords);
     
 def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_beam=None):
-  """Restores sources (into the given FITSHDU) using a Gaussian PSF given by gmaj/gmin/grot.
+  """Restores sources (into the given FITSHDU) using a Gaussian PSF given by gmaj/gmin/grot, in radians.
+  grot is PA in the North thru East convention (PA=0 is N).
   If gmaj=0, uses delta functions instead.
   If freq is specified, converts flux to the specified frequency.
   If primary_beam is specified, uses it to apply a PB gain to each source. This must be a function of two arguments:
   r and freq, returning the power beam gain.
   """;
+  grot += math.pi/2;  # convert from N-E to W-N (which is the more conventional mathematical definition of these things), so X is major axis
   hdr = fits_hdu.header;
   data,stokes,extra_data_axes,dum = getImageCube(fits_hdu);
   # create projection object, using pixel coordinates
@@ -400,6 +403,7 @@ def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_bea
       # evaluate convolution kernel for this model scale, if not already cached
       conv_kernel = conv_kernels.get((modelproj.xscale,modelproj.yscale),None);
       if conv_kernel is None:
+        box_radius = 5*(max(gmaj,gmin))/min(abs(modelproj.xscale),abs(modelproj.yscale));
         radius = int(round(box_radius));
         # convert pixel coordinates into world coordinates relative to 0
         xi = numpy.arange(-radius,radius+1)*modelproj.xscale
@@ -440,4 +444,8 @@ def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_bea
         slices =[ (sd0+sd,si0+si) for sd0,si0 in slices for sd,si in zip(indices,model_indices) ];
       # now loop over slices and assign
       for sd,si in slices:
-        data[tuple(sd)] += model_resampler(convolve(model[tuple(si)],conv_kernel));
+        conv = convolve(model[tuple(si)],conv_kernel);
+        data[tuple(sd)] += model_resampler(conv);
+        ## for debugging these are handy:
+        #data[0:conv.shape[0],0:conv.shape[1],0,0] = conv;
+        #data[0:conv_kernel.shape[0],-conv_kernel.shape[1]:,0,0] = conv_kernel;
