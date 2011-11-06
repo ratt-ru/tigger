@@ -67,7 +67,6 @@ class TiggerSkyModel (object):
     self._compile_opts = [];
     self._runtime_opts = [];
     self.filename = filename;
-    self.subset = SourceSubsetSelector("Source subset",tdloption_namespace=tdloption_namespace,annotate=False);
     self.lsm = None;
     # immediately include options, if needed
     if include_options:
@@ -83,6 +82,11 @@ class TiggerSkyModel (object):
                    namespace=self),
         TDLOption('lsm_subset',"Source subset",["all"],more=str,namespace=self,
                   doc=SourceSubsetSelector.docstring),
+        TDLOption('null_subset',"Use nulls for subset",[None],more=str,namespace=self,doc=
+                  """<P>If you wish, any subset of sources may be "nulled" by inserting a null
+                  brightness for them. This is used in some advanced calibration scenarios; if
+                  you're not sure about this option, just leave it set to "None".</P>
+                  </P>"""+SourceSubsetSelector.docstring),
         TDLMenu("Make solvable source parameters",
           TDLOption('lsm_solvable_tag',"Solvable source tag",[None,"solvable"],more=str,namespace=self,
                     doc="""If you specify a tagname, only sources bearing that tag will be made solvable. Use 'None' to make all sources solvable."""),
@@ -125,7 +129,11 @@ class TiggerSkyModel (object):
 
     # extract subset, if specified
     sources = SourceSubsetSelector.filter_subset(self.lsm_subset,sources);
-
+    # get nulls subset
+    if self.null_subset:
+      nulls = set([src.name for src in SourceSubsetSelector.filter_subset(self.null_subset,sources)]);
+    else:
+      nulls = set();
     parm = Meow.Parm(tags="source solvable");
     # make copy of kw dict to be used for sources not in solvable set
     kw_nonsolve = dict(kw);
@@ -144,8 +152,9 @@ class TiggerSkyModel (object):
     source_model = []
 
     for src in sources:
+      is_null = src.name in nulls;
       # this will be True if this source has solvable parms
-      solvable = self.solvable_sources and ( not self.lsm_solvable_tag
+      solvable = self.solvable_sources and not is_null and ( not self.lsm_solvable_tag
                   or getattr(src,self.lsm_solvable_tag,False) );
       if solvable:
         # independent groups?
@@ -160,18 +169,21 @@ class TiggerSkyModel (object):
           sgsource = subgroups[sgname] = [];
           subgroup_order.append(sgname);
       # make dict of source parametrs: for each parameter we have a value,subgroup pair
-      attrs = dict(
-        ra=     src.pos.ra,
-        dec=    src.pos.dec,
-        I=      src.flux.I,
-        Q=      getattr(src.flux,'Q',None),
-        U=      getattr(src.flux,'U',None),
-        V=      getattr(src.flux,'V',None),
-        RM=     getattr(src.flux,'rm',None),
-        freq0=  getattr(src.flux,'freq0',None) or (src.spectrum and getattr(src.spectrum,'freq0',None)),
-        spi=    src.spectrum and getattr(src.spectrum,'spi',None)
-      );
-      if isinstance(src.shape,ModelClasses.Gaussian):
+      if is_null:
+        attrs = dict(ra=src.pos.ra,dec=src.pos.dec,I=0,Q=None,U=None,V=None,RM=None,spi=None,freq0=None);
+      else:
+        attrs = dict(
+          ra=     src.pos.ra,
+          dec=    src.pos.dec,
+          I=      src.flux.I,
+          Q=      getattr(src.flux,'Q',None),
+          U=      getattr(src.flux,'U',None),
+          V=      getattr(src.flux,'V',None),
+          RM=     getattr(src.flux,'rm',None),
+          freq0=  getattr(src.flux,'freq0',None) or (src.spectrum and getattr(src.spectrum,'freq0',None)),
+          spi=    src.spectrum and getattr(src.spectrum,'spi',None)
+        );
+      if not is_null and isinstance(src.shape,ModelClasses.Gaussian):
         attrs['lproj'] = src.shape.ex*math.sin(src.shape.pa);
         attrs['mproj'] = src.shape.ex*math.cos(src.shape.pa);
         attrs['ratio'] = src.shape.ey/src.shape.ex;
@@ -193,7 +205,7 @@ class TiggerSkyModel (object):
       direction = Meow.Direction(ns,src.name,attrs['ra'],attrs['dec'],static=not solvable or not self.solve_pos);
 
       # construct a point source or gaussian or FITS image, depending on source shape class
-      if src.shape is None:
+      if src.shape is None or is_null:
         msrc = Meow.PointSource(ns,name=src.name,
                 I=attrs['I'],Q=attrs['Q'],U=attrs['U'],V=attrs['V'],
                 direction=direction,
