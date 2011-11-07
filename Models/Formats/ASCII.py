@@ -353,8 +353,8 @@ def save (model,filename,sources=None,format=None,**kw):
       for parm in "emaj","emin","pa":
         for field,scale in (parm,1.),(parm+'_d',DEG),(parm+'_m',DEG/60),(parm+'_s',DEG/3600):
           ifield = format.get(field.lower());
-          if field is not None:
-            fval[field] = str(getattr(src.shape,parm,0)/scale);
+          if ifield is not None:
+            fval[ifield] = str(getattr(src.shape,parm,0)/scale);
     # RM, spi, freq0
     if freq0_field is not None:
       freq0 = (src.spectrum and getattr(src.spectrum,'freq0',None)) or getattr(src.flux,'freq0',0);
