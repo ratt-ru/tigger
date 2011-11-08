@@ -85,9 +85,10 @@ class ImageManager (QWidget):
     for ic in self._imagecons:
       ic.close();
 
-  def loadImage (self,filename=None,duplicate=True,model=None):
+  def loadImage (self,filename=None,duplicate=True,to_top=True,model=None):
     """Loads image. Returns ImageControlBar object.
-    If image is already loaded: returns old ICB if duplicate=False, or else makes a new control bar.
+    If image is already loaded: returns old ICB if duplicate=False (raises to top if to_top=True), 
+    or else makes a new control bar.
     If model is set to a source name, marks the image as associated with a model source. These can be unloaded en masse by calling
     unloadModelImages().
     """;
@@ -110,7 +111,8 @@ class ImageManager (QWidget):
     if not duplicate:
       for ic in self._imagecons:
         if ic.getFilename() and os.path.samefile(filename,ic.getFilename()):
-          self.raiseImage(ic);
+          if to_top:
+            self.raiseImage(ic);
           if model:
             self._model_imagecons.add(id(ic));
           return ic;

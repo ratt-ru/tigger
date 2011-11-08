@@ -226,7 +226,8 @@ class ImageController (QFrame):
 
   def setNumber (self,num):
     self._number = num;
-    self._qa_raise.setShortcut(QKeySequence("Alt+"+chr(ord('A')+num)));
+    self._menu.menuAction().setText("%s: %s"%(chr(ord('a')+self._number),self.name));
+    self._qa_raise.setShortcut(QKeySequence("Meta+"+chr(ord('A')+num)));
     self.setName(self.name);
     
   def getNumber (self):

@@ -180,7 +180,7 @@ class ImageSourceMarker (SourceMarker):
   def __init__ (self,src,l,m,size,model,imgman):
     # load image if needed
     self.imgman = imgman;
-    self.imagecon = imgman.loadImage(src.shape.filename,duplicate=False,model=src.name);
+    self.imagecon = imgman.loadImage(src.shape.filename,duplicate=False,to_top=False,model=src.name);
     # init base class
     SourceMarker.__init__(self,src,l,m,size,model);
 
@@ -1425,6 +1425,7 @@ class SkyModelPlotter (QWidget):
     if self._image:
       self.projection = self._image.projection;
       dprint(1,"using projection from image",self._image.name);
+      ra,dec = self.projection.radec(0,0);
     else:
       self.projection = Projection.SinWCS(*self.model.fieldCenter());
       dprint(1,"using default Sin projection");
