@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 #
-#% $Id$ 
+#% $Id$
 #
 #
 # Copyright (C) 2002-2011
-# The MeqTree Foundation & 
+# The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
 # P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
 #
@@ -20,7 +20,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>,
-# or write to the Free Software Foundation, Inc., 
+# or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
@@ -87,7 +87,7 @@ class ImageManager (QWidget):
 
   def loadImage (self,filename=None,duplicate=True,to_top=True,model=None):
     """Loads image. Returns ImageControlBar object.
-    If image is already loaded: returns old ICB if duplicate=False (raises to top if to_top=True), 
+    If image is already loaded: returns old ICB if duplicate=False (raises to top if to_top=True),
     or else makes a new control bar.
     If model is set to a source name, marks the image as associated with a model source. These can be unloaded en masse by calling
     unloadModelImages().
@@ -360,7 +360,7 @@ class ImageManager (QWidget):
       self._menu.addSeparator();
       self._menu.addAction(self._qa_plot_top);
       self._menu.addAction(self._qa_plot_all);
-      
+
   def computeImage (self,expression=None):
     """Computes image from expression (if expression is None, pops up dialog)""";
     if expression is None:

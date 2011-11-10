@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 #
-#% $Id$ 
+#% $Id$
 #
 #
 # Copyright (C) 2002-2011
-# The MeqTree Foundation & 
+# The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
 # P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
 #
@@ -20,7 +20,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>,
-# or write to the Free Software Foundation, Inc., 
+# or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
@@ -199,6 +199,8 @@ class ImageController (QFrame):
 
     # init image for plotting
     self._image_border = self._image_label = None;
+    # default plot depth of image markers
+    self._z_markers = None;
 
   def close (self):
     if self._control_dialog:
@@ -229,7 +231,7 @@ class ImageController (QFrame):
     self._menu.menuAction().setText("%s: %s"%(chr(ord('a')+self._number),self.name));
     self._qa_raise.setShortcut(QKeySequence("Meta+"+chr(ord('A')+num)));
     self.setName(self.name);
-    
+
   def getNumber (self):
     return self._number;
 
@@ -244,7 +246,7 @@ class ImageController (QFrame):
       self._image_border.setData(*path);
       if self._image_label:
         self._image_label.setValue(path[0][2],path[1][2]);
-      
+
   def addPlotBorder (self,border_pen,label,label_color=None,bg_brush=None):
     # make plot items for image frame
     # make curve for image borders
@@ -253,7 +255,7 @@ class ImageController (QFrame):
     self._image_border = QwtPlotCurve();
     self._image_border.setData([l0,l0,l1,l1,l0],[m0,m1,m1,m0,m0]);
     self._image_border.setPen(self._border_pen);
-    self._image_border.setZ(self.image.z()+1);
+    self._image_border.setZ(self.image.z()+1 if self._z_markers is None else self._z_markers);
     if label:
       self._image_label = QwtPlotMarker();
       self._image_label_text = text = QwtText(" %s "%label);
@@ -262,7 +264,7 @@ class ImageController (QFrame):
       self._image_label.setValue(l1,m1);
       self._image_label.setLabel(text);
       self._image_label.setLabelAlignment(Qt.AlignRight|Qt.AlignVCenter);
-      self._image_label.setZ(self.image.z()+2);
+      self._image_label.setZ(self.image.z()+2 if self._z_markers is None else self._z_markers);
 
   def setPlotBorderStyle (self,border_color=None,label_color=None):
     if border_color:
@@ -276,7 +278,7 @@ class ImageController (QFrame):
     self._image_border.setVisible(show);
     self._image_label.setVisible(show);
 
-  def attachToPlot (self,plot):
+  def attachToPlot (self,plot,z_markers=None):
     for item in self.image,self._image_border,self._image_label:
       if item and item.plot() != plot:
         item.attach(plot);
@@ -325,10 +327,18 @@ class ImageController (QFrame):
         dprint(3,"setting widget",i,"to",slice[iextra]);
         slicer.setCurrentIndex(slice[iextra]);
 
-  def setZ (self,z,top=False,depthlabel=None,can_raise=True):
-    for i,elem in enumerate((self.image,self._image_border,self._image_label)):
+  def setMarkersZ (self,z):
+    self._z_markers = z;
+    for elem in (self._image_border,self._image_label):
       if elem:
-        elem.setZ(z+i);
+        elem.setZ(z);
+
+  def setZ (self,z,top=False,depthlabel=None,can_raise=True):
+    self.image.setZ(z);
+    if self._z_markers is None:
+      for i,elem in enumerate((self._image_border,self._image_label)):
+        if elem:
+          elem.setZ(z+i+1);
     # set the depth label, if any
     label = "%s: %s"%(chr(ord('a')+self._number),self.name);
     # label = "%s %s"%(depthlabel,self.name) if depthlabel else self.name;
@@ -372,7 +382,7 @@ class ImageController (QFrame):
     self._qa_save.setVisible(False);
     self._wsave.hide();
     busy = None;
-    
+
   def _exportImageToPNG (self,filename=None):
     if not filename:
       if not self._export_png_dialog:

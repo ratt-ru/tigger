@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 #
-#% $Id$ 
+#% $Id$
 #
 #
 # Copyright (C) 2002-2011
-# The MeqTree Foundation & 
+# The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
 # P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
 #
@@ -20,7 +20,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>,
-# or write to the Free Software Foundation, Inc., 
+# or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
@@ -181,6 +181,7 @@ class ImageSourceMarker (SourceMarker):
     # load image if needed
     self.imgman = imgman;
     self.imagecon = imgman.loadImage(src.shape.filename,duplicate=False,to_top=False,model=src.name);
+    self.imagecon.setMarkersZ(Z_Source);
     # init base class
     SourceMarker.__init__(self,src,l,m,size,model);
 
@@ -851,7 +852,7 @@ class SkyModelPlotter (QWidget):
         if self._color is not None:
           text.setColor(self._color);
         return text;
-    
+
   class PlotRuler (PlotPicker):
     """This is an ugly kludge to get a QwtPicker in PolygonSelection mode (with a PolygonRubberBand)
     to act as a DragSelection. By default, it is impossible to display a "ruler" that acts like
@@ -868,7 +869,7 @@ class SkyModelPlotter (QWidget):
         ev2 = QMouseEvent(QEvent.MouseButtonRelease,event.pos(),event.button(),event.buttons(),event.modifiers());
         SkyModelPlotter.PlotPicker.transition(self,ev2);
         self.reset();
-        
+
 
   def __init__ (self,parent,mainwin,*args):
     QWidget.__init__(self,parent,*args);
@@ -979,10 +980,10 @@ class SkyModelPlotter (QWidget):
       mouse_menu.addAction(pixmaps.big_plus.icon(),"Select objects",self._currier.curry(self.setMouseMode,self.MouseSelect)),
       mouse_menu.addAction(pixmaps.big_minus.icon(),"Deselect objects",self._currier.curry(self.setMouseMode,self.MouseDeselect)) ];
     self._qa_mm[0].setToolTip("""<P>Puts the mouse in zoom mode. In this mode, hold the left mouse button and drag a rectangle
-        on the plot to zoom in. Middle-click to zoom back out one step, and right-click to zoom out all the way.</P> 
+        on the plot to zoom in. Middle-click to zoom back out one step, and right-click to zoom out all the way.</P>
         <P>As in most other modes, you may hold down
         CTRL and left-click to select individual model sources.</P>""");
-    self._qa_mm[1].setToolTip("""<P>Puts the mouse in measurement mode. 
+    self._qa_mm[1].setToolTip("""<P>Puts the mouse in measurement mode.
         In this mode, click on the plot to look up coordinates (coordinates will also be copied
         to the text console, and to the clipboard), or hold the left mouse button and drag a "ruler"
         to measure separation and position angle. The resulting coordinates and measurements will be</P>
@@ -1196,7 +1197,7 @@ class SkyModelPlotter (QWidget):
       pa += 360*(pa<0);
       msgtext = u"%d\u00B0%02d'%05.2f\"  PA=%.2f\u00B0"%(Rd,Rm,Rs,pa);
       return QwtText(msgtext);
-    
+
   def _measureRuler (self,polygon):
     self._ruler_pos0 = None;
     if not self.projection or polygon.size() < 2:
@@ -1279,10 +1280,10 @@ class SkyModelPlotter (QWidget):
     print msgtext;
     QApplication.clipboard().setText(msgtext+"\n");
     QApplication.clipboard().setText(msgtext+"\n",QClipboard.Selection);
-      
+
   def _showCoordinateToolTip (self,text):
     QToolTip.showText(self.plot.mapToGlobal(QPoint(0,0)),text,self.plot,self.plot.rect());
-    
+
   def _addPlotMarkup (self,items):
     """Adds a list of QwtPlotItems to the markup""";
     self._removePlotMarkup(replot=False);
@@ -1291,7 +1292,7 @@ class SkyModelPlotter (QWidget):
     self._plot_markup = items;
     self.plot.clearDrawCache();
     self.plot.replot();
-    
+
   def _removePlotMarkup (self,replot=True):
     """Removes all markup items, and refreshes the plot if replot=True""";
     for item in self._plot_markup:
