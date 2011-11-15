@@ -97,8 +97,11 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
                     help="Extract sources with the specified tags.");
   parser.add_option("--app-to-int",action="store_true",
                     help="Convert apparent fluxes in input model to intrinsic. Only works for NEWSTAR or NEWSTAR-derived input models.");
+  parser.add_option("--center",type="string",metavar='COORDINATES',
+                    help="Override coordinates of the nominal field center specified in the input model. Use a pyrap.measures direction string of the form "+\
+                    "REF,C1,C2, for example \"j2000,1h5m0.2s,+30d14m15s\", or \"b1950,115.2d,+30.5d\". See the pyrap.measures documentation for more details.");
   parser.add_option("--recenter",type="string",metavar='COORDINATES',
-                    help="Shift the sky model to a different field center. Use a pyrap.measures direction string of the form "+\
+                    help="Shift the sky model from the nominal center to a different field center. Use a pyrap.measures direction string of the form "+\
                     "REF,C1,C2, for example \"j2000,1h5m0.2s,+30d14m15s\", or \"b1950,115.2d,+30.5d\". See the pyrap.measures documentation for more details.");
   parser.add_option("--ref-freq",type="float",metavar="MHz",
                     help="Set or change the reference frequency of the model.");
@@ -130,26 +133,32 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
   else:
     parser.error("Incorrect number of arguments. Use -h for help.");
 
-  # figure out recenter option
-  if options.recenter:
+  def convert_coordinates (coords):
+    """Converts a measures coordinate string into a ra,dec pair (radians at J2000)""";
     try:
       import pyrap.measures
     except:
       traceback.print_exc();
-      print "Failed to import pyrap.measures, which is required by the --recenter option."
+      print "Failed to import pyrap.measures, which is required by the --center/--recenter options."
       print "You probably need to install the 'pyrap' package for this to work."
       sys.exit(1);
     dm = pyrap.measures.measures();
     try:
-      center_dir = dm.direction(*(options.recenter.split(',')));
-      center_dir = dm.measure(center_dir,'j2000');
-      qq = dm.get_value(center_dir);
-      print "Will recenter model to %s"%str(qq);
-      recenter_radec = [ q.get_value('rad') for q in qq ];
+      coord_dir = dm.direction(*(coords.split(',')));
+      coord_dir = dm.measure(coord_dir,'j2000');
+      qq = dm.get_value(coord_dir);
+      return [ q.get_value('rad') for q in qq ];
     except:
-      print "Error parsing or converting --recenter coordinates, see traceback:";
+      print "Error parsing or converting coordinate string '%s', see traceback:"%coords;
       traceback.print_exc();
       sys.exit(1);
+
+
+  # figure out center and recenter option
+  if options.center:
+    center_radec = convert_coordinates(options.center);
+  if options.recenter:
+    recenter_radec = convert_coordinates(options.recenter);
 
   # figure out input type
   try:
@@ -202,6 +211,11 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
     print "Input model %s contains no sources"%skymodel;
     sys.exit(0);
   print "Model contains %d sources"%len(sources);
+  
+  # apply center, if specified
+  if options.center:
+    model.setFieldCenter(*center_radec);
+    print "Center of field set to %s"%options.center;
 
   # apply selection by tag
   if options.tags:
@@ -236,6 +250,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
     
   # recenter
   if options.recenter:
+    print "Shifting model to new center %s"%options.recenter;
     proj_src = Coordinates.Projection.SinWCS(*model.fieldCenter());
     proj_target = Coordinates.Projection.SinWCS(*recenter_radec);
     for src in sources:
