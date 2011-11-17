@@ -103,6 +103,10 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
   parser.add_option("--recenter",type="string",metavar='COORDINATES',
                     help="Shift the sky model from the nominal center to a different field center. Use a pyrap.measures direction string of the form "+\
                     "REF,C1,C2, for example \"j2000,1h5m0.2s,+30d14m15s\", or \"b1950,115.2d,+30.5d\". See the pyrap.measures documentation for more details.");
+  parser.add_option("--select",type="string",metavar='TAG<>VALUE',action="append",
+                    help="Selects a subset of sources by comparing the named TAG to a float VALUE. '<>' "+
+                    "represents the comparison operator, and can be one of ==,!=,<=,<,>,>=. Multiple " +
+                    "select options may be given, in which case the effect is a logical-AND.");
   parser.add_option("--ref-freq",type="float",metavar="MHz",
                     help="Set or change the reference frequency of the model.");
   parser.add_option("--primary-beam",type="string",metavar="EXPR",
@@ -159,6 +163,28 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
     center_radec = convert_coordinates(options.center);
   if options.recenter:
     recenter_radec = convert_coordinates(options.recenter);
+
+  # check the 'select' option
+  select_predicates = {
+    '==':lambda x,y:x==y,
+    '!=':lambda x,y:x!=y,
+    '>=':lambda x,y:x>=y,
+    '<=':lambda x,y:x<=y,
+    '>' :lambda x,y:x>y,
+    '<' :lambda x,y:x<y
+  };
+  selections = [];
+  for selstr in (options.select or []):
+    match = re.match("^(.+)(%s)(.+)"%"|".join(select_predicates.keys()),selstr);
+    if not match:
+      parser.error("Malformed --select string '%s'."%selstr);
+    try:
+      value = float(match.group(3));
+    except:
+      parser.error("Malformed --select string '%s': right-hand side is not a number."%selstr);
+    selections.append((selstr,match.group(1),select_predicates[match.group(2)],value));
+      
+
 
   # figure out input type
   try:
@@ -256,6 +282,22 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
     for src in sources:
       src.pos.ra,src.pos.dec = proj_target.radec(*proj_src.lm(src.pos.ra,src.pos.dec));
     model.setFieldCenter(*recenter_radec);
+
+  # select
+  def getTagValue (src,tag):
+    """Helper function: looks forn the given tag in the source, or in its sub-objects""";
+    for obj in src,src.pos,src.flux,getattr(src,'shape',None),getattr(src,'spectrum',None):
+      if obj is not None and hasattr(obj,tag):
+        return getattr(obj,tag);
+    return None;
+    
+  for selstr,tag,predicate,value in selections:
+    # get tag value
+    srctag = [ (src,getTagValue(src,tag)) for src in model.sources ];
+    sources = [ src for src,tag in srctag if tag is not None and predicate(tag,value) ];
+    print "Selection '%s' leaves %d out of %d sources"%(selstr,len(sources),len(model.sources));
+    if len(sources) != len(model.sources):
+      model.setSources(sources);
 
   # set PB expression and estimate apparent fluxes
   if options.primary_beam:
