@@ -176,8 +176,16 @@ class Projection (object):
 
     def lm (self,ra,dec):
       if numpy.isscalar(ra) and numpy.isscalar(dec):
+        if ra - self.ra0 > math.pi:
+          ra -= 2*math.pi;
+        if ra - self.ra0 < -math.pi:
+          ra += 2*math.pi;
         return self.wcs.wcs2pix(ra/DEG,dec/DEG);
       else:
+        if numpy.isscalar(ra):
+          ra = numpy.array(ra);
+        ra[ra - self.ra0 > math.pi] -= 2*math.pi;
+        ra[ra - self.ra0 < -math.pi] += 2*math.pi;
         ## when fed in arrays of ra/dec, wcs.wcs2pix will return a nested list of
         ## [[l1,m1],[l2,m2],,...]. Convert this to an array and extract columns.
         lm = numpy.array(self.wcs.wcs2pix(ra/DEG,dec/DEG));
@@ -217,8 +225,16 @@ class Projection (object):
 
     def lm (self,ra,dec):
       if numpy.isscalar(ra) and numpy.isscalar(dec):
+        if ra - self.ra0 > math.pi:
+          ra -= 2*math.pi;
+        if ra - self.ra0 < -math.pi:
+          ra += 2*math.pi;
         l,m = self.wcs.wcs2pix(ra/DEG,dec/DEG);
       else:
+        if numpy.isscalar(ra):
+          ra = numpy.array(ra);
+        ra[ra - self.ra0 > math.pi] -= 2*math.pi;
+        ra[ra - self.ra0 < -math.pi] += 2*math.pi;
         lm = numpy.array(self.wcs.wcs2pix(ra/DEG,dec/DEG));
         l,m = lm[...,0],lm[...,1];
       l = (self.xpix0-l)*self.xscale;

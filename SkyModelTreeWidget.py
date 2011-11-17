@@ -194,7 +194,7 @@ class SkyModelTreeWidget (Kittens.widgets.ClickableTreeWidget):
     # scroll to new item, if found
     item = src and self._itemdict.get(src.name);
     if item:
-      item.setHighlighted(True);
+      item.setHighlighted(True,origin is not self);
       if origin is not self:
         self.scrollToItem(item);
 
@@ -261,15 +261,19 @@ class SkyModelTreeWidgetItem (QTreeWidgetItem):
     self.setTextAlignment(ColumnR,Qt.AlignRight);
     self.setTextAlignment(ColumnType,Qt.AlignHCenter);
     # setup source
+    self._highlighted = False;
     self.setSource(src);
 
-  def setHighlighted (self,highlighted=True):
-    global _SLOW_QTREEWIDGETITEM;
-    if not _SLOW_QTREEWIDGETITEM:
-      brush = QApplication.palette().alternateBase() if highlighted else QApplication.palette().base();
-      for col in range(self.columnCount()):
-        self.setBackground(col,brush);
-      self.setFont(0,self._fonts[1] if highlighted else self._fonts[0]);
+  def setHighlighted (self,highlighted=True,visual=False):
+#    global _SLOW_QTREEWIDGETITEM;
+#    if 1: # not _SLOW_QTREEWIDGETITEM:
+    if highlighted != self._highlighted:
+#      brush = QApplication.palette().alternateBase() if highlighted else QApplication.palette().base();
+#      for col in range(self.columnCount()):
+#      self.setBackground(0,brush);
+      if visual:
+        self.setFont(0,self._fonts[1] if highlighted else self._fonts[0]);
+      self._highlighted = highlighted;
 
   def setSource (self,src):
     # name

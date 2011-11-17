@@ -253,7 +253,6 @@ class ModelItem (object):
     if isinstance(value,self.numpy_int_types):
       value = int(value);
     elif isinstance(value,self.numpy_float_types):
-      print value,type(value),numpy.isrealobj(value);
       value = float(value);
     elif numpy.iscomplexobj(value):
       value = complex(value);
