@@ -282,6 +282,12 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
     for src in sources:
       src.pos.ra,src.pos.dec = proj_target.radec(*proj_src.lm(src.pos.ra,src.pos.dec));
     model.setFieldCenter(*recenter_radec);
+   
+  # recompute radial distance
+  if options.center or options.recenter:
+    for src in model.sources:
+      r,pa = Coordinates.angular_dist_pos_angle(src.pos.ra,src.pos.dec,*model.fieldCenter());
+      src.setAttribute('r',r);
 
   # select
   def getTagValue (src,tag):
