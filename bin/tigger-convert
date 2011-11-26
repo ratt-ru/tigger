@@ -291,7 +291,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
 
   # select
   def getTagValue (src,tag):
-    """Helper function: looks forn the given tag in the source, or in its sub-objects""";
+    """Helper function: looks for the given tag in the source, or in its sub-objects""";
     for obj in src,src.pos,src.flux,getattr(src,'shape',None),getattr(src,'spectrum',None):
       if obj is not None and hasattr(obj,tag):
         return getattr(obj,tag);

@@ -110,6 +110,16 @@ class TiggerSkyModel (object):
     """Makes and returns list of compile-time options""";
     # no runtime options, for now
     return self._runtime_opts;
+    
+  # helper function for use with SourceSubsetSelector below
+  @staticmethod
+  def _getTagValue (src,tag):
+    """Helper function: looks for the given tag in the source, or in its sub-objects""";
+    for obj in src,src.pos,src.flux,getattr(src,'shape',None),getattr(src,'spectrum',None):
+      if obj is not None and hasattr(obj,tag):
+        return getattr(obj,tag);
+    return None;
+    
 
   def source_list (self,ns,max_sources=None,**kw):
     """Reads LSM and returns a list of Meow objects.
@@ -128,7 +138,7 @@ class TiggerSkyModel (object):
     sources = sorted(self.lsm.sources,lambda a,b:cmp(b.brightness(),a.brightness()));
 
     # extract subset, if specified
-    sources = SourceSubsetSelector.filter_subset(self.lsm_subset,sources);
+    sources = SourceSubsetSelector.filter_subset(self.lsm_subset,sources,self._getTagValue);
     # get nulls subset
     if self.null_subset:
       nulls = set([src.name for src in SourceSubsetSelector.filter_subset(self.null_subset,sources)]);
@@ -226,7 +236,12 @@ class TiggerSkyModel (object):
 
       msrc.solvable = solvable;
 
-      # copy all extra attrs
+      # copy standard attributes from sub-objects
+      for subobj in src.flux,src.shape,src.spectrum:
+        if subobj:
+          for attr,val in src.flux.getAttributes():
+            msrc.set_attr(attr,val);
+      # copy all extra attrs from source object
       for attr,val in src.getExtraAttributes():
         msrc.set_attr(attr,val);
 
