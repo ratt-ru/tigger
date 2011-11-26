@@ -487,7 +487,7 @@ class FITSImagePlotItem (SkyCubePlotItem):
     ndim = hdr['NAXIS'];
     # setup projection
     # (strip out history from header, as big histories really slow down FITSWCS)
-    hdr1 = pyfits.Header(filter(lambda x:not str(x).startswith('HISTORY'),hdr.ascardlist()));
+    hdr1 = pyfits.Header(filter(lambda x:not str(x).startswith('HISTORY'),hdr.ascard));
     proj = Projection.FITSWCS(hdr1);
     nx = ny = None;
     # find axes

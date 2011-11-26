@@ -368,9 +368,10 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
     # now go over and rename the sources
     # make array of source names
     chars = [ chr(x) for x in range(ord('a'),ord('z')+1) ];
-    names = list(chars);
+    names = morenames = list(chars);
     while len(names) < len(sources):
-      names += [ ch+name for ch in chars for name in names ];
+      morenames = [ ch+name for ch in chars for name in morenames ];
+      names += morenames;
     # make a second version where the single-char names are capitalized
     Names = list(names);
     Names[:26] = [ n.upper() for n in chars ];
@@ -403,6 +404,17 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
       src.setAttribute('cluster',clusname);
       src.setAttribute('cluster_size',clustersize[iclust]);
       src.setAttribute('cluster_flux',clusterflux[iclust]);
+  # check for duplicate names (if renaming, duplicate names cannot happen anyway, unless the naming algorithm above is broken)
+  else:
+    names = dict();
+    sources0 = sources;
+    sources = [];
+    for i,src in enumerate(sources0):
+      if src.name in names:
+        print "Duplicate source '%s' at #%d (first found at #%d), removing"%(src.name,i,names[src.name]);
+      else:
+        names[src.name] = i;
+        sources.append(src);
   # save output
-  print "Saving to %s (%s)"%(output,output_doc);
+  print "Saving model containing %d sources to %s (%s)"%(len(sources),output,output_doc);
   export_func(model,output,sources=sources,format=options.output_format or None);
