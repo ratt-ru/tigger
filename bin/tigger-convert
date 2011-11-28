@@ -105,8 +105,11 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
                     "REF,C1,C2, for example \"j2000,1h5m0.2s,+30d14m15s\", or \"b1950,115.2d,+30.5d\". See the pyrap.measures documentation for more details.");
   parser.add_option("--select",type="string",metavar='TAG<>VALUE',action="append",
                     help="Selects a subset of sources by comparing the named TAG to a float VALUE. '<>' "+
-                    "represents the comparison operator, and can be one of ==,!=,<=,<,>,>=. Multiple " +
-                    "select options may be given, in which case the effect is a logical-AND.");
+                    "represents the comparison operator, and can be one of == (or =),!=,<=,<,>,>=. Alternatively, "+
+                    "you may use the FORTRAN-style operators .eq.,.ne.,.le.,.lt.,.gt.,.ge. Multiple " +
+                    "select options may be given, in which case the effect is a logical-AND. Note that VALUE may be "
+                    "followed by one of the characters d, m or s, in which case it will be converted from degrees, "
+                    "minutes or seconds into radians. This is useful for selections such as \"r<5d\".");
   parser.add_option("--ref-freq",type="float",metavar="MHz",
                     help="Set or change the reference frequency of the model.");
   parser.add_option("--primary-beam",type="string",metavar="EXPR",
@@ -166,25 +169,33 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
 
   # check the 'select' option
   select_predicates = {
+    '=':lambda x,y:x==y,
     '==':lambda x,y:x==y,
     '!=':lambda x,y:x!=y,
     '>=':lambda x,y:x>=y,
     '<=':lambda x,y:x<=y,
     '>' :lambda x,y:x>y,
-    '<' :lambda x,y:x<y
+    '<' :lambda x,y:x<y,
+    '.eq.':lambda x,y:x==y,
+    '.ne.':lambda x,y:x!=y,
+    '.ge.':lambda x,y:x>=y,
+    '.le.':lambda x,y:x<=y,
+    '.gt.' :lambda x,y:x>y,
+    '.lt.' :lambda x,y:x<y
   };
+  select_units = dict(d=DEG,m=DEG/60,s=DEG/3600);
+  
   selections = [];
   for selstr in (options.select or []):
-    match = re.match("^(.+)(%s)(.+)"%"|".join(select_predicates.keys()),selstr);
+    match = re.match("^(?i)([^=<>!.]+)(%s)([^dms]+)([dms])?"%"|".join([ key.replace('.','\.') for key in select_predicates.keys()]),selstr);
     if not match:
       parser.error("Malformed --select string '%s'."%selstr);
     try:
       value = float(match.group(3));
     except:
       parser.error("Malformed --select string '%s': right-hand side is not a number."%selstr);
-    selections.append((selstr,match.group(1),select_predicates[match.group(2)],value));
-      
-
+    scale = select_units.get(match.group(4),1.);
+    selections.append((selstr,match.group(1),select_predicates[match.group(2).lower()],value*scale));
 
   # figure out input type
   try:
