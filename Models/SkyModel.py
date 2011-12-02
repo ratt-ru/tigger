@@ -102,6 +102,9 @@ class Source (ModelItem):
       return iapp;
     else:
       return getattr(self.flux,'I',0.);
+      
+  def get_attr (self,attr,default=None):
+    return getattr(self,attr,default);
 
   def getTagNames (self):
     return [ attr for attr,val in self.getExtraAttributes() if attr[0] != "_" ];
