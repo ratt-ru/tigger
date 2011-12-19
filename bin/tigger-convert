@@ -68,7 +68,6 @@ if __name__ == '__main__':
       
   from Tigger import Coordinates
   import Tigger.Models.Formats
-  import Tigger.Models.ModelClasses
   AUTO = "auto";
   full_formats = Tigger.Models.Formats.listFormatsFull();
   input_formats = [ name for name,(load,save,doc,extensions) in full_formats if load ] + [ AUTO ];
@@ -124,13 +123,6 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
                     help="Rename sources according to the COPART (cluster ordering, P.A., radial distance, type) scheme");
   parser.add_option("--radial-step",type="float",metavar="ARCMIN",
                     help="Size of one step in radial distance for the COPART scheme. Default is %default'.");
-  parser.add_option("--remove-source",type="string",action="append",
-                    metavar="NAME",
-                    help="Removes the named source(s) from the model. NAME may contain * and ? wildcards.");
-  parser.add_option("--add-brick",type="string",action="append",
-                    metavar="NAME:FILE[:PAD_FACTOR:[TAGS:...]]",
-                    help="Adds a uv-brick to the model. NAME is a source name, FILE is a "+
-                    "FITS file, PAD_FACTOR is set to 1 if not specified. TAGS is a list of boolean flags.");
   parser.add_option("-d", "--debug",dest="verbose",type="string",action="append",metavar="Context=Level",
                     help="(for debugging Python code) sets verbosity level of the named Python context. May be used multiple times.");
 
@@ -270,65 +262,6 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
       print "No sources left after selection by tag (-T/--tag) has been applied.";
       sys.exit(0);
     print "Selection by tag (%s) reduces this to %d sources"%(", ".join(options.tags),len(sources));
-    
-  # remove sources
-  if options.remove_source:
-    import fnmatch
-    remove_names = set();
-    for patt in options.remove_source:
-      remove_names.update(fnmatch.filter([src.name for src in sources],patt));
-    print "Removing sources:"," ".join(sorted(remove_names));
-    sources = [ src for src in sources if src.name not in remove_names ];
-    
-  # add brick
-  if options.add_brick:
-    for brickspec in options.add_brick:
-      # get names, check for uniqueness
-      try:
-        ff = brickspec.split(':');
-        srcname = ff[0];
-        fitsfile = ff[1];
-        pad = float(ff[2] or '1') if len(ff)>2 else 1;
-        tags = ff[3:] if len(ff)>3 else [];
-      except:
-        parser.error("Invalid --add-brick setting %s"%brickspec);
-      if [ src.name for src in sources if src.name == name ]:
-        print "Error: model already contains a source named '%s'"%name;
-      # add brick
-      import pyfits
-      from astLib.astWCS import WCS
-      input_hdu = pyfits.open(fitsfile)[0];
-      hdr = input_hdu.header;
-      max_flux = float(input_hdu.data.max());
-      wcs = WCS(hdr,mode='pyfits');
-      # Get reference pixel coordinates
-      # wcs.getCentreWCSCoords() doesn't work, as that gives us the middle of the image
-      # So scan the header to get the CRPIX values
-      ra0 = dec0 = 1;
-      for iaxis in range(hdr['NAXIS']):
-        axs = str(iaxis+1);
-        name = hdr.get('CTYPE'+axs,axs).upper();
-        if name.startswith("RA"):
-          ra0 = hdr.get('CRPIX'+axs,1)-1;
-        elif name.startswith("DEC"):
-          dec0 = hdr.get('CRPIX'+axs,1)-1;
-      # convert pixel to degrees
-      ra0,dec0 = wcs.pix2wcs(ra0,dec0);
-      ra0 *= DEG;
-      dec0 *= DEG;
-      sx,sy = wcs.getHalfSizeDeg();
-      sx *= DEG;
-      sy *= DEG;
-      nx,ny = input_hdu.data.shape[-1:-3:-1];
-      from Tigger.Models import ModelClasses,SkyModel
-      pos = ModelClasses.Position(ra0,dec0);
-      flux = ModelClasses.Flux(max_flux);
-      shape = ModelClasses.FITSImage(sx,sy,0,fitsfile,nx,ny,pad=pad);
-      source = SkyModel.Source(srcname,pos,flux,shape=shape);
-      for tag in tags:
-        source.setAttribute(tag,True);
-      sources.append(source);
-      print "Adding FITS source %s (%s,pad=%f) with tags %s"%(srcname,fitsfile,pad,tags);
 
   # convert apparent flux to intrinsic
   if options.app_to_int:
