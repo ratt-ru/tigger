@@ -90,6 +90,10 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
                     help="Input model type (%s). Default is %%default."%(", ".join(input_formats)));
   parser.add_option("-o","--output-type",choices=output_formats,metavar="TYPE",
                     help="Output model type (%s). Default is %%default."%(", ".join(output_formats)));
+  parser.add_option("-a","--append",metavar="FILENAME",action="append",
+                    help="Append model to input. May be given multiple times.");
+  parser.add_option("--append-type",choices=input_formats,metavar="TYPE",
+                    help="Appended model type (%s). Default is %%default."%(", ".join(input_formats)));
   parser.add_option("--format",type="string",
                     help="""Input format, for ASCII or BBS tables. For ASCII tables, default is "%s". For BBS tables, the default format is specified in the file header."""%ASCII.DefaultDMSFormatString);
   parser.add_option("--output-format",type="string",metavar="FORMAT",
@@ -257,6 +261,30 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
     sys.exit(0);
   print "Model contains %d sources"%len(sources);
   
+  # append, if specified
+  if options.append:
+    for modelnum,filename in enumerate(options.append):
+      # figure out input type
+      try:
+        append_type,append_func,dum,append_doc = Tigger.Models.Formats.resolveFormat(filename,
+            options.append_type if options.append_type != AUTO else None);
+      except:
+        print "Unable to determine model type for %s, please specify one explicitly with the --append-type option."%filename;
+        sys.exit(1);
+      print "Reading %s (%s)"%(filename,append_doc);
+      # read model to be appended
+      model2 = append_func(filename,min_extent=options.min_extent,format=options.format);
+      if model2.sources:
+        sources += model2.sources;
+        for src in model2.sources:
+          src.name = "%s:%s"%(chr(ord('a')+modelnum),src.name);
+        # recompute 'r' attribute (unless --center or --recenter is in effect, in which case it's going to be done anyway below)
+        if not ( options.center or options.recenter ):
+          for src in model2.sources:
+            r,pa = Coordinates.angular_dist_pos_angle(src.pos.ra,src.pos.dec,*model.fieldCenter());
+            src.setAttribute('r',r);
+      print "Appended %d sources from %s (%s)"%(len(model2.sources),filename,append_doc);
+  
   # apply center, if specified
   if options.center:
     model.setFieldCenter(*center_radec);
@@ -327,6 +355,9 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
       source = SkyModel.Source(srcname,pos,flux,shape=shape);
       for tag in tags:
         source.setAttribute(tag,True);
+      if not ( options.center or options.recenter ):
+        r,pa = Coordinates.angular_dist_pos_angle(ra0,dec0,*model.fieldCenter());
+        src.setAttribute('r',r);
       sources.append(source);
       print "Adding FITS source %s (%s,pad=%f) with tags %s"%(srcname,fitsfile,pad,tags);
 
