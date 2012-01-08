@@ -96,6 +96,8 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
                     help="Appended model type (%s). Default is %%default."%(", ".join(input_formats)));
   parser.add_option("--format",type="string",
                     help="""Input format, for ASCII or BBS tables. For ASCII tables, default is "%s". For BBS tables, the default format is specified in the file header."""%ASCII.DefaultDMSFormatString);
+  parser.add_option("--append-format",type="string",default="",
+                    help="""Format of appended file, for ASCII or BBS tables. Default is to use --format.""");
   parser.add_option("--output-format",type="string",metavar="FORMAT",
                     help="""Output format, for ASCII or BBS tables. If the model was originally imported from an ASCII or BBS table, the default output format will be the same as the original format.""");
   parser.add_option("-T","--tags",type="string",action="append",metavar="TAG",
@@ -123,7 +125,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
   parser.add_option("--min-extent",type="float",metavar="ARCSEC",
                     help="Minimal source extent, when importing NEWSTAR or ASCII files. Sources with a smaller extent will be treated as point sources. Default is %default.");
   parser.add_option("--cluster-dist",type="float",metavar="ARCSEC",
-                    help="Distance parameter for source clustering. Default is %default.");
+                    help="Distance parameter for source clustering, 0 to disable. Default is %default.");
   parser.add_option("--rename",action="store_true",
                     help="Rename sources according to the COPART (cluster ordering, P.A., radial distance, type) scheme");
   parser.add_option("--radial-step",type="float",metavar="ARCMIN",
@@ -273,7 +275,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
         sys.exit(1);
       print "Reading %s (%s)"%(filename,append_doc);
       # read model to be appended
-      model2 = append_func(filename,min_extent=options.min_extent,format=options.format);
+      model2 = append_func(filename,min_extent=options.min_extent,format=options.append_format or options.format);
       if model2.sources:
         sources += model2.sources;
         for src in model2.sources:
@@ -452,28 +454,32 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
     m = numpy.zeros(len(sources),float);
     for i,src in enumerate(sources):
       l[i],m[i] = projection.lm(src.pos.ra,src.pos.dec);
-    # now, convert to dist[i,j]: distance between sources i and j
-    dist = numpy.sqrt((l[:,numpy.newaxis]-l[numpy.newaxis,:])**2 + (m[:,numpy.newaxis]-m[numpy.newaxis,:])**2);
-    # cluster[i] is (N,R), where N is cluster number for source #i, and R is rank of that source in the cluster
-    # place source 0 into cluster 0,#0
-    cluster = [ (0,0) ];
-    clustersize = [1];
-    clusterflux = [ sources[0].brightness() ];
-    dist0 = options.cluster_dist*DEG/3600;
-    for i in range(1,len(sources)):
-      src = sources[i];
-      # find closest brighter source, and assign to its cluster if close enough
-      imin = dist[i,:i].argmin();
-      if dist[i,imin] <= dist0:
-        iclust,rank = cluster[imin];
-        cluster.append((iclust,clustersize[iclust]));
-        clustersize[iclust] += 1;
-        clusterflux[iclust] += src.brightness();
-      # else start new cluster from source
-      else:
-        cluster.append((len(clustersize),0));
-        clustersize.append(1);
-        clusterflux.append(src.brightness());
+    if options.cluster_dist:
+      # now, convert to dist[i,j]: distance between sources i and j
+      dist = numpy.sqrt((l[:,numpy.newaxis]-l[numpy.newaxis,:])**2 + (m[:,numpy.newaxis]-m[numpy.newaxis,:])**2);
+      print dist[0,1];
+      # cluster[i] is (N,R), where N is cluster number for source #i, and R is rank of that source in the cluster
+      # place source 0 into cluster 0,#0
+      cluster = [ (0,0) ];
+      clustersize = [1];
+      clusterflux = [ sources[0].brightness() ];
+      dist0 = options.cluster_dist*DEG/3600;
+      for i in range(1,len(sources)):
+        src = sources[i];
+        # find closest brighter source, and assign to its cluster if close enough
+        imin = dist[i,:i].argmin();
+        if dist[i,imin] <= dist0:
+          iclust,rank = cluster[imin];
+          cluster.append((iclust,clustersize[iclust]));
+          clustersize[iclust] += 1;
+          clusterflux[iclust] += src.brightness();
+        # else start new cluster from source
+        else:
+          cluster.append((len(clustersize),0));
+          clustersize.append(1);
+          clusterflux.append(src.brightness());
+    else:
+      cluster = [ (i,0) for i,src in enumerate(sources) ];
     # now go over and rename the sources
     # make array of source names
     chars = [ chr(x) for x in range(ord('a'),ord('z')+1) ];
@@ -506,13 +512,15 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
         else:
           clusname = clustername[iclust] = "%s0"%(Names[iclust]);
         src.name = "%s%s"%(clusname,typecodes.get(src.typecode,''));
-        src.setAttribute('cluster_lead',True);
+        if options.cluster_dist:
+          src.setAttribute('cluster_lead',True);
       else:
         clusname = clustername[iclust];
         src.name = "%s%s%s"%(clusname,names[rank-1],typecodes.get(src.typecode,''));
-      src.setAttribute('cluster',clusname);
-      src.setAttribute('cluster_size',clustersize[iclust]);
-      src.setAttribute('cluster_flux',clusterflux[iclust]);
+      if options.cluster_dist:
+        src.setAttribute('cluster',clusname);
+        src.setAttribute('cluster_size',clustersize[iclust]);
+        src.setAttribute('cluster_flux',clusterflux[iclust]);
   # check for duplicate names (if renaming, duplicate names cannot happen anyway, unless the naming algorithm above is broken)
   else:
     names = dict();
