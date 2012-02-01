@@ -539,7 +539,10 @@ class ImageControlDialog (QDialog):
       self.line.setPen(QPen(color,linewidth,linestyle));
       self.marker = TiggerPlotMarker();
       self.marker.setLabelAlignment(align);
-      self.marker.setSpacing(spacing);
+      try:
+        self.marker.setSpacing(spacing);
+      except AttributeError:
+        pass;
       self.setText(label);
       self.line.setZ(z);
       self.marker.setZ(zlabel if zlabel is not None else z);
@@ -620,7 +623,10 @@ class ImageControlDialog (QDialog):
     label = QwtText("ITF");
     label.setColor(QColor("blue"));
     self._itfmarker.setLabel(label);
-    self._itfmarker.setSpacing(0);
+    try:
+      self._itfmarker.setSpacing(0);
+    except AttributeError:
+      pass;
     self._itfmarker.setLabelAlignment(Qt.AlignTop|Qt.AlignRight);
     self._itfmarker.setZ(120);
     self._itfmarker.attach(self._histplot);

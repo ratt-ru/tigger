@@ -38,16 +38,29 @@ DEG = math.pi/180;
 
 startup_dprint(1,"importing WCS");
 
-# WCS pulls astLib which pulls in pylab and matplotlib.patches, talk about spaghetti dependencies, duh! Override these by dummies,
-# if not already imported
-import sys
-if 'TiggerMain' in sys.modules:
+def make_dummy_pylab ():
+  """WCS pulls astLib which pulls in pylab and matplotlib.patches, talk about spaghetti dependencies, duh! 
+  Override these by dummies, if not already imported."""
   if 'pylab' not in sys.modules:
     # replace the modules referenced by astLib by dummy_module objects, which return a dummy callable for every attribute
     class dummy_module (object):
       def __getattr__ (self,name):
         return lambda *args,**kw:True;
     sys.modules['pylab'] = sys.modules['matplotlib'] = sys.modules['matplotlib.patches'] = dummy_module();
+
+
+# So, if we're running the Tigger main app, fuck pylab with a pitchfork.
+# If we're being imported outside the main app (e.g. a script is trying to read a Tigger model,
+# whether TDL or otherwise), then pylab may be necessary. Since WCS is going to pull it in anyway,
+# we try to import it here, and if that fails, replace it by dummies.
+import sys
+if 'TiggerMain' in sys.modules:
+  make_dummy_pylab();
+else:
+  try:
+    import pylab;
+  except:
+    make_dummy_pylab();
 
 try:
   from astLib.astWCS import WCS
