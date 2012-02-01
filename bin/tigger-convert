@@ -306,8 +306,11 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
     import fnmatch
     remove_names = set();
     for patt in options.remove_source:
-      remove_names.update(fnmatch.filter([src.name for src in sources],patt));
-    print "Removing sources:"," ".join(sorted(remove_names));
+      if patt[0] == "'" and patt[-1] == "'":
+        patt = patt[1:-1]
+      match = fnmatch.filter([src.name for src in sources],patt.replace("\\",""))
+      remove_names.update(match);
+      print "Removing sources: %s matches %s"%(patt,",".join(sorted(match)));
     sources = [ src for src in sources if src.name not in remove_names ];
     
   # add brick
