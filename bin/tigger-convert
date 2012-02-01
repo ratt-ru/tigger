@@ -120,7 +120,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
   parser.add_option("--ref-freq",type="float",metavar="MHz",
                     help="Set or change the reference frequency of the model.");
   parser.add_option("--primary-beam",type="string",metavar="EXPR",
-                    help="""Apply a primary beam expression to estimate apparent fluxes. Any valid Python expression using the variables 'r' and 'fq' is accepted.
+                    help="""Apply a primary beam expression to estimate apparent fluxes. Any valid Python expression using the variables 'r' and 'fq' is accepted. Use "refresh" to re-estimate fluxes using the current expression.
                     Example (for the WSRT-like 25m dish PB): "cos(min(65*fq*1e-9*r,1.0881))**6".""");
   parser.add_option("--min-extent",type="float",metavar="ARCSEC",
                     help="Minimal source extent, when importing NEWSTAR or ASCII files. Sources with a smaller extent will be treated as point sources. Default is %default.");
@@ -417,20 +417,28 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
       model.setSources(sources);
 
   # set PB expression and estimate apparent fluxes
-  if options.primary_beam:
+  pb = options.primary_beam;
+  if pb == "refresh":
+    pb = model.primaryBeam();
+    if pb:
+      print "Recalculating apparent fluxes using the current primary beam expression";
+    else:
+      print "No primary beam expression in model, ignoring --primary-beam refresh";
+  if pb:
     try:
       from math import *
-      pbexp = eval('lambda r,fq:'+options.primary_beam);
+      pbexp = eval('lambda r,fq:'+pb);
       dum = pbexp(0,1e+9); # evaluate at r=0 and 1 GHz as a test
       if not isinstance(dum,float):
         raise TypeError,"does not evaluate to a float";
     except Exception,exc:
-      print "Bad primary beam expression '%s': %s"%(options.primary_beam,str(exc));
+      print "Bad primary beam expression '%s': %s"%(pb,str(exc));
       sys.exit(1);
+    model.setPrimaryBeam(pb);
     # get frequency
     fq = model.refFreq() or 1.4e+9;
     nsrc = 0;
-    print "Using beam expression '%s' with reference frequency %f MHz"%(options.primary_beam,fq*1e-6);
+    print "Using beam expression '%s' with reference frequency %f MHz"%(pb,fq*1e-6);
     # evaluate sources
     for src in sources:
       r = getattr(src,'r',None);
