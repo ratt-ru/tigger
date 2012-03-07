@@ -158,6 +158,10 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
 
   def convert_coordinates (coords):
     """Converts a measures coordinate string into a ra,dec pair (radians at J2000)""";
+    import re
+    match = re.match("^([\d.]+),([-]?[\d.]+)$",coords);
+    if match:
+      return float(match.group(1))*DEG,float(match.group(2))*DEG;
     try:
       import pyrap.measures
     except:
@@ -470,7 +474,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
     if options.cluster_dist:
       # now, convert to dist[i,j]: distance between sources i and j
       dist = numpy.sqrt((l[:,numpy.newaxis]-l[numpy.newaxis,:])**2 + (m[:,numpy.newaxis]-m[numpy.newaxis,:])**2);
-      print dist[0,1];
+#      print dist[0,1];
       # cluster[i] is (N,R), where N is cluster number for source #i, and R is rank of that source in the cluster
       # place source 0 into cluster 0,#0
       cluster = [ (0,0) ];
