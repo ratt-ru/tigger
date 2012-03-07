@@ -24,9 +24,11 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
+import Tigger
 from Tigger import startup_dprint
 startup_dprint(1,"start of Coordinates");
 
+import sys
 import math
 import numpy
 from numpy import sin,cos,arcsin,arccos;
@@ -38,29 +40,15 @@ DEG = math.pi/180;
 
 startup_dprint(1,"importing WCS");
 
-def make_dummy_pylab ():
-  """WCS pulls astLib which pulls in pylab and matplotlib.patches, talk about spaghetti dependencies, duh! 
-  Override these by dummies, if not already imported."""
-  if 'pylab' not in sys.modules:
-    # replace the modules referenced by astLib by dummy_module objects, which return a dummy callable for every attribute
-    class dummy_module (object):
-      def __getattr__ (self,name):
-        return lambda *args,**kw:True;
-    sys.modules['pylab'] = sys.modules['matplotlib'] = sys.modules['matplotlib.patches'] = dummy_module();
-
-
-# So, if we're running the Tigger main app, fuck pylab with a pitchfork.
 # If we're being imported outside the main app (e.g. a script is trying to read a Tigger model,
-# whether TDL or otherwise), then pylab may be necessary. Since WCS is going to pull it in anyway,
-# we try to import it here, and if that fails, replace it by dummies.
-import sys
-if 'TiggerMain' in sys.modules:
-  make_dummy_pylab();
-else:
+# whether TDL or otherwise), then pylab may be needed by that script for decent God-fearing
+# purposes. Since WCS is going to pull it in anyway, we try to import it here, and if that 
+# fails, replace it by dummies.
+if not Tigger.matplotlib_nuked:
   try:
     import pylab;
   except:
-    make_dummy_pylab();
+    Tigger.nuke_matplotlib();
 
 try:
   from astLib.astWCS import WCS

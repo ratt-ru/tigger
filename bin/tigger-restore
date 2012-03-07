@@ -102,6 +102,8 @@ an output image is not specified, makes a name for it automatically.""");
       print "Unable to import the Tigger package. Please check your installation and PYTHONPATH.";
       sys.exit(1);
 
+  Tigger.nuke_matplotlib();  # don't let the door hit you in the ass, sucka
+
   from Tigger.Tools import Imaging
   from Tigger.Tools.Imaging import FWHM,DEG,ARCSEC
 

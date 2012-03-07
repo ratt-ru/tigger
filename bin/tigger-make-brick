@@ -57,6 +57,9 @@ if __name__ == '__main__':
     except:
       print "Unable to import the Tigger package. Please check your installation and PYTHONPATH.";
       sys.exit(1);
+
+  Tigger.nuke_matplotlib();  # don't let the door hit you in the ass, sucka
+      
   from Tigger.Tools import Imaging
   from Tigger.Models import SkyModel,ModelClasses
 

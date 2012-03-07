@@ -39,6 +39,26 @@ try:
 except:
   svn_revision_string = '';
   svn_revision_html = '';
+  
+matplotlib_nuked = False;
+  
+def nuke_matplotlib ():
+  """Some people think nothing of importing matplotlib at every opportunity, with no regard
+  to consequences. Tragically, some of these people also write Python code, and some of them 
+  are responsible for astLib. Seriously man, if I just want to pull in WCS support, why the fuck
+  do I need the monstrous entirety of matplotlib to come along with it, especially since it 
+  kills things like Qt outright?
+  This function prevents such perversitities from happening, by inserting dummy modules
+  into the sys.modules dict. Call nuke_matplotlib() once, and all further attempts to 
+  import matplotlib by any other code will be cheerfully ignored.
+  """;
+  if 'pylab' not in sys.modules:
+    # replace the modules referenced by astLib by dummy_module objects, which return a dummy callable for every attribute
+    class dummy_module (object):
+      def __getattr__ (self,name):
+        return lambda *args,**kw:True;
+    sys.modules['pylab'] = sys.modules['matplotlib'] = sys.modules['matplotlib.patches'] = dummy_module();
+    matplotlib_nuked = True;
 
 # These functions are used for startup timings, and initialized properly by the main "tigger" script.
 # If imported as a module from elsewhere, provide dummy versions
