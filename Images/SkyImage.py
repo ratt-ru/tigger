@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 #
-#% $Id$ 
+#% $Id$
 #
 #
 # Copyright (C) 2002-2011
-# The MeqTree Foundation & 
+# The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
 # P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
 #
@@ -20,7 +20,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>,
-# or write to the Free Software Foundation, Inc., 
+# or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
@@ -93,7 +93,7 @@ class SkyImagePlotItem (QwtPlotItem,QObject):
       self.colormap = cmap;
     if emit:
       self.emit(SIGNAL("repaint"));
-      
+
   def updateCurrentColorMap (self):
     self._cache_qimage = {};
     self.emit(SIGNAL("repaint"));
@@ -176,13 +176,19 @@ class SkyImagePlotItem (QwtPlotItem,QObject):
   def image (self):
     """Returns image array.""";
     return self._image;
-    
+
   def imagePixel (self,x,y):
-    return self._image.data[x,y],self._image.mask[x,y];
+    if numpy.ma.isMA(self._image):
+      return self._image.data[x,y],self._image.mask[x,y];
+    else:
+      return self._image[x,y],False;
 
   def imageMinMax (self):
     if not self._imgminmax:
-      self._imgminmax = measurements.extrema(self._image.compressed())[:2];
+      dprint(3,"computing image min/max");
+      rdata,rmask = self.optimalRavel(self._image);
+      self._imgminmax = measurements.extrema(rdata,labels=rmask,index=None if rmask is None else False)[:2];
+      dprint(3,self._imgminmax);
     return self._imgminmax;
 
   def draw (self,painter,xmap,ymap,rect):
@@ -215,9 +221,16 @@ class SkyImagePlotItem (QwtPlotItem,QObject):
         if self._cache_interp is not None:
           dprint(5,"interpolated data found in cache, reusing");
         else:
+          image = self._image.transpose() if self._data_fortran_order else self._image;
+          spline_order = 2;
+          xsamp = abs(xmap.sDist()/xmap.pDist())/abs(self._dl);
+          ysamp = abs(ymap.sDist()/ymap.pDist())/abs(self._dm);
+          if max(xsamp,ysamp) < .33 or min(xsamp,ysamp) > 2:
+            spline_order = 1;
+          dprint(2,"regenerating drawing cache, sampling factors are",xsamp,ysamp,"spline order is",spline_order);
           self._cache_imap = None;
-          if self._prefilter is None:
-            self._prefilter = interpolation.spline_filter(self._image,order=2);
+          if self._prefilter is None and spline_order>1:
+            self._prefilter = interpolation.spline_filter(image,order=spline_order);
             dprint(2,"spline prefiltering took",time.time()-t0,"secs"); t0 = time.time();
           # make arrays of plot coordinates
           # xp[0],yp[0] corresponds to pixel 0,0, where 0,0 is the upper-left corner of the plot
@@ -243,17 +256,24 @@ class SkyImagePlotItem (QwtPlotItem,QObject):
           ###        interp_image[:,oob_y] = 0;
           ###        self._qimage_cache = self.colormap.colorize(interp_image,self._img_range);
           ###        self._qimage_cache_attrs = (rect,xinfo,yinfo);
+
           # if either axis is oversampled by a factor of 3 or more, switch to nearest-neighbour interpolation by rounding pixel values
-          if abs(xmap.sDist()/xmap.pDist()) < abs(self._dl/3):
+          if xsamp < .33:
             xi = xi.round();
-          if abs(ymap.sDist()/ymap.pDist()) < abs(self._dm/3):
+          if ysamp < .33:
             yi = yi.round();
           # make [2,nx,ny] array of interpolation coordinates
           xy = numpy.zeros((2,len(xi),len(yi)));
           xy[0,:,:] = xi[:,numpy.newaxis];
           xy[1,:,:] = yi[numpy.newaxis,:];
           # interpolate. Use NAN for out of range pixels...
-          interp_image = interpolation.map_coordinates(self._prefilter,xy,order=2 ,cval=numpy.nan,prefilter=False);
+          # for fortran order, tranpose axes for extra speed (flip XY around then)
+          if self._data_fortran_order:
+            xy = xy[-1::-1,...];
+          if spline_order > 1:
+            interp_image = interpolation.map_coordinates(self._prefilter,xy,order=spline_order,cval=numpy.nan,prefilter=False);
+          else:
+            interp_image = interpolation.map_coordinates(image,xy,order=spline_order,cval=numpy.nan);
           # ...and put a mask on them (Colormap.colorize() will make these transparent).
           mask = ~numpy.isfinite(interp_image);
           self._cache_interp = numpy.ma.masked_array(interp_image,mask);
@@ -305,13 +325,54 @@ class SkyCubePlotItem (SkyImagePlotItem):
       self.setNumAxes(ndim);
 
   def setData (self,data,fortran_order=False):
-    """Sets the datacube. fortran_order is a hint, which makes iteration over fortran-order arrays faster when computing min/max and such.""";
-    mask = ~numpy.isfinite(data);
-    data[mask] = 0;
-    self._data = numpy.ma.masked_array(data,mask);
+    """Sets the datacube. fortran_order is a hint, which makes iteration over
+    fortran-order arrays faster when computing min/max and such.""";
+    # Note that iteration order is absolutely critical for large cubes -- if data is in fortran
+    # order in memory, then that's the way we should iterate over it, period. Transposing is too
+    # slow. We therefore create 1D "views" of the data using numpy.ravel(x,order='F'), and use
+    # thse to iterate over the data for things like min/max, masking, etc.
+    if fortran_order:
+      dprint(3,"setData: computing mask (fortran order)");
+      rav = numpy.ravel(data,order='F');
+      rfin = numpy.isfinite(rav);
+      if rfin.all():
+        dprint(3,"setData: phew, all finite, nothing to be masked");
+        self._data = data;
+      else:
+        dprint(3,"setData: setting masked elements to 0");
+        rmask = ~rfin;
+        rav[rmask] = 0;
+        dprint(3,"setData: creating masked array");
+        mask = rmask.reshape(data.shape[-1::-1]).transpose();
+        self._data = numpy.ma.masked_array(data,mask);
+    else:
+      dprint(3,"setData: computing mask (C order)");
+      fin = numpy.isfinite(data);
+      if fin.all():
+        dprint(3,"setData: phew, all finite, nothing to be masked");
+        self._data = data;
+      else:
+        dprint(3,"setData: setting masked elements to 0");
+        mask = ~fin;
+        data[mask] = 0;
+        dprint(3,"setData: creating masked array");
+        self._data = numpy.ma.masked_array(data,mask);
+    dprint(3,"setData: wrapping up");
     self._data_fortran_order = fortran_order;
     self._dataminmax = None;
     self.setNumAxes(data.ndim);
+    ### old slow code
+    #dprint(3,"setData: computing mask");
+    #fin = numpy.isfinite(data);
+    #mask = ~fin;
+    #dprint(3,"setData: setting masked elements to 0");
+    #data[mask] = 0;
+    #dprint(3,"setData: creating masked array");
+    #self._data = numpy.ma.masked_array(data,mask);
+    #dprint(3,"setData: wrapping up");
+    #self._data_fortran_order = fortran_order;
+    #self._dataminmax = None;
+    #self.setNumAxes(data.ndim);
 
   def data (self):
     """Returns datacube""";
@@ -320,9 +381,21 @@ class SkyCubePlotItem (SkyImagePlotItem):
   def isDataInFortranOrder (self):
     return self._data_fortran_order;
 
+  def optimalRavel (self,array):
+    """Returns the "optimal ravel" corresponding to the given array, which is either FORTRAN
+    or C order. The optimal ravel is that over which iteration is fastest.
+    Returns tuple of ravarray,ravmask. If input array is not masked, then ravmask=None."""
+    order = 'F' if self._data_fortran_order else 'C';
+    rarr = numpy.ravel(array,order=order);
+    rmask = numpy.ravel(array.mask,order=order) if numpy.ma.isMA(array) else None;
+    return rarr,rmask;
+
   def dataMinMax (self):
     if not self._dataminmax:
-      self._dataminmax = measurements.extrema(self._data.compressed());
+      rdata,rmask = self.optimalRavel(self._data);
+      dprint(3,"computing data min/max");
+      self._dataminmax = measurements.extrema(rdata,labels=rmask,index=None if rmask is None else False);
+      dprint(3,self._dataminmax);
     return self._dataminmax;
 
   def setNumAxes (self,ndim):
@@ -425,13 +498,13 @@ class SkyCubePlotItem (SkyImagePlotItem):
     return list(self.imgslice);
 
 class FITSImagePlotItem (SkyCubePlotItem):
-  
+
   @staticmethod
   def hasComplexAxis (hdr):
     """Returns True if given FITS header has a complex axis (must be last axis)""";
     nax = hdr['NAXIS'];
     return nax if hdr['CTYPE%d'%nax].strip() == "COMPLEX" else 0;
-    
+
   @staticmethod
   def addComplexAxis (header):
     """Adds a complex axis to the given FITS header, returns new copy of header""";
@@ -457,7 +530,7 @@ class FITSImagePlotItem (SkyCubePlotItem):
         if header.has_key(key):
           del header[key];
     return header;
-  
+
   def __init__ (self,filename=None,name=None,hdu=None):
     SkyCubePlotItem.__init__(self);
     self.name = name;
@@ -478,7 +551,8 @@ class FITSImagePlotItem (SkyCubePlotItem):
     hdr = self.fits_header = hdu.header;
     dprint(3,"reading data");
     data = hdu.data;
-    # NB: all-data operations (such as getting global min/max or computing of histograms) are much faster (almost x2) when data is iterated
+    # NB: all-data operations (such as getting global min/max or computing of histograms) are much faster
+    # (almost x2) when data is iterated
     # over in the proper order. After a transpose(), data is in fortran order. Tell this to setData().
     data = numpy.transpose(data);  # .copy()
     dprint(3,"setting data");
@@ -535,9 +609,10 @@ class FITSImagePlotItem (SkyCubePlotItem):
     self._setupSlice();
 
   def save (self,filename):
-    data = self.data().transpose();
-    data1 = data.data.copy();
-    data1[data.mask] = numpy.NAN;
+    data = data1 = self.data().transpose();
+    if numpy.ma.isMA(data):
+      data1 = data.data.copy();
+      data1[data.mask] = numpy.NAN;
     hdu = pyfits.PrimaryHDU(data1,self.fits_header);
     hdu.verify('silentfix');
     if os.path.exists(filename):

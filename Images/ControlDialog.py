@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 #
-#% $Id$ 
+#% $Id$
 #
 #
 # Copyright (C) 2002-2011
-# The MeqTree Foundation & 
+# The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
 # P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
 #
@@ -20,7 +20,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>,
-# or write to the Free Software Foundation, Inc., 
+# or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
@@ -113,11 +113,11 @@ class ImageControlDialog (QDialog):
     self._whistunzoom  = self.makeButton("",self._unzoomHistogram,icon=pixmaps.full_range.icon());
     self._whistzoomout = self.makeButton("-",self._currier.curry(self._zoomHistogramByFactor,math.sqrt(.1)));
     self._whistzoomin  = self.makeButton("+",self._currier.curry(self._zoomHistogramByFactor,math.sqrt(10)));
-    self._whistzoomin.setToolTip("""<P>Click to zoom into the histogram plot by one step. This does not 
+    self._whistzoomin.setToolTip("""<P>Click to zoom into the histogram plot by one step. This does not
       change the current intensity range.</P>""");
-    self._whistzoomout.setToolTip("""<P>Click to zoom out of the histogram plot by one step. This does not 
+    self._whistzoomout.setToolTip("""<P>Click to zoom out of the histogram plot by one step. This does not
       change the current intensity range.</P>""");
-    self._whistunzoom.setToolTip("""<P>Click to reset the histogram plot back to its full extent. 
+    self._whistunzoom.setToolTip("""<P>Click to reset the histogram plot back to its full extent.
       This does not change the current intensity range.</P>""");
     self._whistzoom = QwtWheel(self);
     self._whistzoom.setOrientation(Qt.Horizontal);
@@ -149,14 +149,14 @@ class ImageControlDialog (QDialog):
     self._wlab_histpos_text = "(hover here for help)";
     self._wlab_histpos = QLabel(self._wlab_histpos_text,self);
     self._wlab_histpos.setToolTip("""
-      <P>The plot shows a histogram of either the full image or its selected subset 
+      <P>The plot shows a histogram of either the full image or its selected subset
       (as per the "Data subset" section below).</P>
       <P>The current intensity range is indicated by the grey box
       in the plot.</P>
-      <P>Use the left mouse button to change the low intensity limit, and the right 
+      <P>Use the left mouse button to change the low intensity limit, and the right
       button (on Macs, use Ctrl-click) to change the high limit.</P>
       <P>Use Shift with the left mouse button to zoom into an area of the histogram,
-      or else use the "zoom wheel" control or the plus/minus toolbuttons above the histogram to zoom in or out. 
+      or else use the "zoom wheel" control or the plus/minus toolbuttons above the histogram to zoom in or out.
       To zoom back out to the full extent of the histogram, click on the rightmost button above the histogram.</P>
       """);
     lo2.addWidget(self._wlab_histpos,1);
@@ -229,8 +229,8 @@ class ImageControlDialog (QDialog):
     lo1.setSpacing(2);
     lo0.addLayout(lo1);
     self._wlab_subset = QLabel("Subset: xxx",self);
-    self._wlab_subset.setToolTip("""<P>This indicates the current data subset to which the histogram 
-      and the stats given here apply. Use the "Reset to" control on the right to change the 
+    self._wlab_subset.setToolTip("""<P>This indicates the current data subset to which the histogram
+      and the stats given here apply. Use the "Reset to" control on the right to change the
       current subset and recompute the histogram and stats.</P>""");
     lo1.addWidget(self._wlab_subset,1);
 #    lo1.addWidget(QLabel("Reset to:",self),0);
@@ -458,7 +458,7 @@ class ImageControlDialog (QDialog):
     if self._geometry:
       dprint(4,"setting geometry");
       self.setGeometry(self._geometry);
-    if self._hist is None:    
+    if self._hist is None:
       busy = BusyIndicator();
       dprint(4,"updating histogram");
       self._updateHistogram();
@@ -529,7 +529,7 @@ class ImageControlDialog (QDialog):
       qimg = self.cmap.colorize(self.imap.remap(xp.reshape((len(xp),1))));
       # plot image
       painter.drawImage(QRect(xp1,y0,xdp,dy),qimg);
-      
+
   class HistogramLineMarker (object):
     """Helper class implementing a line marker for a histogram plot""";
     def __init__ (self,plot,color="black",linestyle=Qt.DotLine,align=Qt.AlignBottom|Qt.AlignRight,z=90,label="",zlabel=None,linewidth=1,spacing=2,
@@ -552,20 +552,20 @@ class ImageControlDialog (QDialog):
       # attach to plot
       self.line.attach(plot);
       self.marker.attach(plot);
-      
+
     def show (self):
-      self.line.show(); 
+      self.line.show();
       self.marker.show();
-      
+
     def hide (self):
-      self.line.hide(); 
+      self.line.hide();
       self.marker.hide();
 
     def setText (self,text):
       label = QwtText(text);
       label.setColor(self.color);
       self.marker.setLabel(label);
-      
+
 
   def _setupHistogramPlot (self):
     self._histplot.setCanvasBackground(QColor("lightgray"));
@@ -674,13 +674,11 @@ class ImageControlDialog (QDialog):
     hmin0,hmax0 = dmin,dmax;
     if hmin0 >= hmax0:
       hmax0 = hmin0+1;
-    subset = self._subset.compressed();
-    if self.image.isDataInFortranOrder():
-      subset = numpy.ravel(subset,order='F');
+    subset,mask = self.image.optimalRavel(self._subset);
     # compute full-subset hi-res histogram, if we don't have one (for percentile stats)
     if self._hist_hires is None:
       dprint(1,"computing histogram for full subset range",hmin0,hmax0);
-      self._hist_hires = measurements.histogram(subset,hmin0,hmax0,self.NumHistBinsHi);
+      self._hist_hires = measurements.histogram(subset,hmin0,hmax0,self.NumHistBinsHi,labels=mask,index=None if mask is None else False);
       self._hist_bins_hires = hmin0 + (hmax0-hmin0)*(numpy.arange(self.NumHistBinsHi)+0.5)/float(self.NumHistBinsHi);
     # if hist limits not specified, then compute lo-res histogram based on the hi-res one
     if hmin is None:
@@ -694,7 +692,7 @@ class ImageControlDialog (QDialog):
       if hmin >= hmax:
         hmax = hmin+1;
       dprint(1,"computing histogram for",self._subset.shape,self._subset.dtype,hmin,hmax);
-      self._hist = measurements.histogram(subset,hmin,hmax,self.NumHistBins);
+      self._hist = measurements.histogram(subset,hmin,hmax,self.NumHistBins,labels=mask,index=None if mask is None else False);
     dprint(1,"histogram computed");
     # compute bins
     self._itf_bins = hmin + (hmax-hmin)*(numpy.arange(self.NumItfBins))/(float(self.NumItfBins)-1);
@@ -727,7 +725,7 @@ class ImageControlDialog (QDialog):
     self._line_halfmax.marker.setValue(hmin,self._hist_max/2);
     # update ITF
     self._updateITF();
-    
+
   def _updateStats (self,subset,minmax):
     """Recomputes subset statistics.""";
     if subset.size <= (2048*2048):
@@ -837,7 +835,7 @@ class ImageControlDialog (QDialog):
     except:
       return;
     self._setCurrentColormapNumber(index,cmap);
-    
+
   def _previewColormapParameters (self,index,cmap):
     """Called to preview a new colormap parameter value""";
     self._histplot.replot();
