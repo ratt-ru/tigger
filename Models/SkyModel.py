@@ -29,6 +29,8 @@ import PlotStyles
 
 import re
 
+from Tigger.Coordinates import angular_dist_pos_angle
+
 class ModelTag (ModelItem):
   mandatory_attrs = [ "name" ];
   optional_attrs = dict([ (attr,None) for attr in PlotStyles.StyleAttributes ]);
@@ -212,14 +214,27 @@ class SkyModel (ModelItem):
   def findSource (self,name):
     return self._src_by_name[name];
 
-  def setSources (self,sources,origin=None):
+  def setSources (self,sources,origin=None,recompute_r=False):
+    # if recompute_r is True, recomputes the 'r' attribute for all sources
     self.sources = list(sources);
     self._src_by_name = dict([(src.name,src) for src in self.sources]);
+    if recompute_r:
+      self.recomputeRadialDistance();
     self.scanTags();
     self.initGroupings();
 
-  def addSources (self,sources):
+  def addSources (self,sources,recompute_r=True):
+    # if recompute_r is True, recomputes the 'r' attribute for new sources
+    if recompute_r:
+      self.recomputeRadialDistance(sources);
     self.setSources(list(self.sources)+list(sources));
+    
+  def recomputeRadialDistance (self,sources=None):
+    # refreshes the radial distance for a group of sources, or all sources in the model
+    if (self.ra0 and self.dec0) is not None:
+      for src in (sources or self.sources):
+        r,pa = angular_dist_pos_angle(src.pos.ra,src.pos.dec,self.ra0,self.dec0);
+        src.setAttribute('r',r);
 
   def scanTags (self,sources=None):
     """Populates self.tagnames with a list of tags present in sources""";

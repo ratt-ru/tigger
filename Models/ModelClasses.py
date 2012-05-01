@@ -27,6 +27,7 @@
 import math
 import os.path
 import numpy
+import copy
 
 from Tigger import startup_dprint
 startup_dprint(1,"starting ModelClasses");
@@ -150,11 +151,24 @@ class ModelItem (object):
     attrs += [ (attr,getattr(self,attr)) for attr in self._extra_attrs ];
     return attrs;
 
-  def copy (self):
+  def __copy__ (self):
     """Returns copy of object. Copies all attributes.""";
     attrs = self.optional_attrs.copy();
-    attrs.update(self._extra_attrs);
-    return self.__class__( *[ (attr,getattr(self,attr)) for attr in self.mandatory_attrs],**attrs);
+    attrs.update(self.getExtraAttributes());
+    return self.__class__( *[ getattr(self,attr) for attr in self.mandatory_attrs],**attrs);
+  
+  def __deepcopy__ (self,memodict):
+    """Returns copy of object. Copies all attributes.""";
+    attrs = self.optional_attrs.copy();
+    attrs.update(self.getExtraAttributes());
+    attrs = copy.deepcopy(attrs,memodict);
+    return self.__class__( *[ copy.deepcopy(getattr(self,attr),memodict) for attr in self.mandatory_attrs],**attrs);
+
+  def copy (self,deep=True):
+    if deep:
+      return copy.deepcopy(self);
+    else:
+      return __copy__(self);
 
   def strAttributes (self,sep=",",label=True,
                                 float_format="%.2g",complex_format="%.2g%+.2gj"):

@@ -62,6 +62,7 @@ startup_dprint(1,"imported WCS");
 def angular_dist_pos_angle (ra1,dec1,ra2,dec2):
   """Computes the angular distance between the two points on a sphere, and 
   the position angle (North through East) of the direction from 1 to 2.""";
+  # I lifted this somewhere
   sind1,sind2 = sin(dec1),sin(dec2);
   cosd1,cosd2 = cos(dec1),cos(dec2);
   cosra,sinra = cos(ra1-ra2),sin(ra1-ra2);
@@ -69,6 +70,38 @@ def angular_dist_pos_angle (ra1,dec1,ra2,dec2):
   adist = numpy.arccos(sind1*sind2 + cosd1*cosd2*cosra);
   pa = numpy.arctan2(-cosd2*sinra,-cosd2*sind1*cosra+sind2*cosd1);
   return adist,pa;
+
+def angular_dist_pos_angle2 (ra1,dec1,ra2,dec2):
+  """Computes the angular distance between the two points on a sphere, and 
+  the position angle (North through East) of the direction from 1 to 2.""";
+  # I re-derived this from Euler angles, but it seems to be identical to the above
+  ra = ra2 - ra1;
+  sind0,sind,cosd0,cosd = sin(dec1),sin(dec2),cos(dec1),cos(dec2);
+  sina,cosa = sin(ra)*cosd,cos(ra)*cosd;
+  x = cosa*sind0 - sind*cosd0;
+  y = sina;
+  z = cosa*cosd0 + sind*sind0;
+  print x,y,z;
+  PA = numpy.arctan2(y,-x);
+  R = numpy.arccos(z);
+  
+  return R,PA;
+
+def angular_dist_pos_angle2 (ra1,dec1,ra2,dec2):
+  """Computes the angular distance between the two points on a sphere, and 
+  the position angle (North through East) of the direction from 1 to 2.""";
+  # I re-derived this from Euler angles, but it seems to be identical to the above
+  ra = ra2 - ra1;
+  sind0,sind,cosd0,cosd = sin(dec1),sin(dec2),cos(dec1),cos(dec2);
+  sina,cosa = sin(ra)*cosd,cos(ra)*cosd;
+  x = cosa*sind0 - sind*cosd0;
+  y = sina;
+  z = cosa*cosd0 + sind*sind0;
+  print x,y,z;
+  PA = numpy.arctan2(y,-x);
+  R = numpy.arccos(z);
+  return R,PA;
+
 
 
 def _deg_to_dms (x,prec=0.01):

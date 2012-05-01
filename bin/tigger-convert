@@ -397,17 +397,24 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
   # recenter
   if options.recenter:
     print "Shifting model to new center %s"%options.recenter;
-    proj_src = Coordinates.Projection.SinWCS(*model.fieldCenter());
-    proj_target = Coordinates.Projection.SinWCS(*recenter_radec);
+    ra0,dec0 = model.fieldCenter();
+    ra1,dec1 = recenter_radec;
+    ddec = dec1 - dec0;
+    cosd0,sind0 = math.cos(ddec),math.sin(ddec);
     for src in sources:
-      src.pos.ra,src.pos.dec = proj_target.radec(*proj_src.lm(src.pos.ra,src.pos.dec));
-    model.setFieldCenter(*recenter_radec);
+      ra,dec = src.pos.ra,src.pos.dec;
+      x,y,z = math.cos(ra-ra0)*math.cos(dec),math.sin(ra-ra0)*math.cos(dec),math.sin(dec);
+      x1 = cosd0*x - sind0*z;
+      y1 = y;
+      z1 = sind0*x + cosd0*z;
+      src.pos.ra = ra1 + (math.atan2(y1,x1) if (x1 or y1) else 0);
+      src.pos.dec = math.asin(z1);
+    # reset model center
+    model.setFieldCenter(ra1,dec1);
    
   # recompute radial distance
   if options.center or options.recenter:
-    for src in model.sources:
-      r,pa = Coordinates.angular_dist_pos_angle(src.pos.ra,src.pos.dec,*model.fieldCenter());
-      src.setAttribute('r',r);
+    model.recomputeRadialDistance();
 
   # select
   def getTagValue (src,tag):
