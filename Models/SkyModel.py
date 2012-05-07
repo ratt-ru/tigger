@@ -252,7 +252,7 @@ class SkyModel (ModelItem):
     if 'default' in self.plotstyles:
       defstyle = PlotStyles.BaselinePlotStyle.copy();
       defstyle.update(self.plotstyles['default']);
-      defstyle.apply = True;
+      defstyle.apply = 1000;  # apply at lowest priority
     else:
       defstyle = self.plotstyles['default'] = PlotStyles.BaselinePlotStyle;
     self.defgroup = Source.Grouping("all sources",func=lambda src:True,sources=self.sources,style=defstyle);
@@ -297,10 +297,10 @@ class SkyModel (ModelItem):
     """Returns PlotStyle object for given source, using the styles in the model grouping.
     Returns tuple of plotstyle,label, or None,None if no source is to be plotted.
     """;
-    # first grouping is the default, so init style from that
-    style0 = style = self.groupings[0].style;
-    # get list of styles from other matching groupings (in reverse order, excluding #0 which is default)
-    styles = [ group.style for group in self.groupings[-1:0:-1] if group.func(src) ];
+    # get list of styles from  groupings to which this source belongs
+    styles = [ group.style for group in self.groupings if group.func(src) ];
+    # sort in order of priority (high apply to low apply)
+    styles.sort(lambda a,b:cmp(b.apply,a.apply));
     # "show_plot" attribute: if at least one group is showing explicitly, show
     # else if at least one group is hiding explicitly, hide
     # else use default setting
@@ -313,14 +313,17 @@ class SkyModel (ModelItem):
       show = bool(style0.show_plot);
     if not show:
       return None,None;
+    # sort styles 
     # Override attributes in style object with non-default attributes found in each matching grouping
     # Go in reverse, so 'current' overrides 'selected' overrides types overrides tags
+    style = None;
     for st in styles:
       if st.apply:
         # make copy-on-write, so we don't overwrite the original style object
-        if style is style0:
-          style = style0.copy();
-        style.update(st);
+        if style is None:
+          style = st.copy();
+        else:
+          style.update(st);
     return style,PlotStyles.makeSourceLabel(style.label,src);
 
   def addTag (self,tag):
@@ -334,9 +337,9 @@ class SkyModel (ModelItem):
     self.tagnames.sort();
     # add to groupings
     self._taggroups[tag] = Source.Grouping("tag: %s"%tag,
-                                                                  lambda src,tag=tag:getattr(src,tag,None) not in [None,False],
-                                                                  sources=self.sources,
-                                                                  style=self.plotstyles.setdefault('tag:%s'%tag,PlotStyles.DefaultPlotStyle));
+        lambda src,tag=tag:getattr(src,tag,None) not in [None,False],
+        sources=self.sources,
+        style=self.plotstyles.setdefault('tag:%s'%tag,PlotStyles.DefaultPlotStyle));
     # reform grouping list
     self._remakeGroupList();
     return True;

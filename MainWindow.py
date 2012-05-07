@@ -499,7 +499,7 @@ class MainWindow (QMainWindow):
       if res == QMessageBox.Cancel:
         return False;
       elif res == QMessageBox.Save:
-        if not self.saveFile(confirm=False):
+        if not self.saveFile(confirm=False,overwrite=True):
           return False;
     # unload model images, unless we are already exiting anyway
     if not self._exiting:
@@ -516,9 +516,12 @@ class MainWindow (QMainWindow):
     self.setLayout(self.LayoutImage if self.imgman.getTopImage() else self.LayoutEmpty);
     return True;
 
-  def saveFile (self,filename=None,confirm=True,force=False):
-    """Saves file using the specified 'filename'. If filename is None, uses current filename, if that is not set, goes to saveFileAs()
-    to open dialog and get a filename.
+  def saveFile (self,filename=None,confirm=False,overwrite=True,non_native=False):
+    """Saves file using the specified 'filename'. If filename is None, uses current filename, if 
+    that is not set, goes to saveFileAs() to open dialog and get a filename.
+    If overwrite=False, will ask for confirmation before overwriting an existing file.
+    If non_native=False, will ask for confirmation before exporting in non-native format.
+    If confirm=True, will ask for confirmation regardless.
     Returns True if saving succeeded, False on error (or if cancelled by user).
     """;
     if isinstance(filename,QStringList):
@@ -533,14 +536,14 @@ class MainWindow (QMainWindow):
       if export_func is None:
         self.showErrorMessage("""Error saving model file %s: unsupported output format"""%filename);
         return;
-      if os.path.exists(filename):
+      if os.path.exists(filename) and not overwrite:
         warning += "<P>The file already exists and will be overwritten.</P>";
-      if filetype != 'Tigger':
+      if filetype != 'Tigger' and not non_native:
         warning += """<P>Please note that you are exporting the model using the external format '%s'. 
               Source types, tags and other model features not supported by this
               format will be omitted during the export.</P>"""%filetype;
       # get confirmation
-      if confirm or (warning and not force):
+      if confirm or warning:
         dialog = QMessageBox.warning if warning else QMessageBox.question;
         if dialog(self,"Saving sky model","<P>Save model to %s?</P>%s"%(filename,warning),
                   QMessageBox.Save|QMessageBox.Cancel,QMessageBox.Save) != QMessageBox.Save:

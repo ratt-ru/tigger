@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #
 #% $Id$ 
 #
@@ -68,9 +69,10 @@ ShowNot = 0;
 ShowDefault = 1;
 ShowAlways = 2;
 
+
 DefaultPlotAttrs = dict(symbol=None,symbol_color=DefaultColor,symbol_size=5,symbol_linewidth=0,
-                                  label=None,label_color=DefaultColor,label_size=10,
-                                  show_list=ShowDefault,show_plot=ShowDefault,apply=False);
+                        label=None,label_color=DefaultColor,label_size=10,
+                        show_list=ShowDefault,show_plot=ShowDefault,apply=0);
 
 class PlotStyle (ModelClasses.ModelItem):
   optional_attrs = DefaultPlotAttrs;
@@ -89,19 +91,19 @@ PlotStyle.registerClass();
 # Default plot style. This must define everything! (I.e. no DefaultValue elements allowed.)
 BaselinePlotStyle = PlotStyle(symbol="plus",symbol_color="yellow",symbol_size=2,symbol_linewidth=0,
                                             label=NoneValue,label_color="blue",label_size=6,
-                                            show_list=ShowAlways,show_plot=ShowAlways,apply=True);
+                                            show_list=ShowAlways,show_plot=ShowAlways,apply=1000);
 
 SelectionPlotStyle = PlotStyle(symbol=DefaultValue,symbol_color="cyan",symbol_size=DefaultValue,symbol_linewidth=DefaultValue,
                                             label="%N",label_color="green",label_size=DefaultValue,
-                                            show_list=ShowAlways,show_plot=ShowAlways,apply=True);
+                                            show_list=ShowAlways,show_plot=ShowAlways,apply=-1);
 
 HighlightPlotStyle = PlotStyle(symbol=DefaultValue,symbol_color="red",symbol_size=DefaultValue,symbol_linewidth=DefaultValue,
                                             label="%N %BJy",label_color="red",label_size=12,
-                                            show_list=ShowAlways,show_plot=ShowAlways,apply=True);
+                                            show_list=ShowAlways,show_plot=ShowAlways,apply=-2);
 
 DefaultPlotStyle = PlotStyle(symbol=DefaultValue,symbol_color=DefaultValue,symbol_size=DefaultValue,symbol_linewidth=DefaultValue,
                                             label=DefaultValue,label_color=DefaultValue,label_size=DefaultValue,
-                                            show_list=ShowDefault,show_plot=ShowDefault,apply=False);
+                                            show_list=ShowDefault,show_plot=ShowDefault,apply=1000);
 
 # cache of precompiled labels
 _compiled_labels = {};

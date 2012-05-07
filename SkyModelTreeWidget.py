@@ -245,14 +245,23 @@ class SkyModelTreeWidget (Kittens.widgets.ClickableTreeWidget):
   TagsWithOwnColumn = set(["Iapp","r"]);
 
 class SkyModelTreeWidgetItem (QTreeWidgetItem):
+  
+  _fonts = None;
+  @staticmethod 
+  def _initFonts ():
+    """Initializes fonts on fitrst call""";
+    if SkyModelTreeWidgetItem._fonts is None:
+      stdfont = QApplication.font();
+      boldfont = QFont(stdfont);
+      boldfont.setBold(True);
+      SkyModelTreeWidgetItem._fonts = [ stdfont,boldfont ];
+      SkyModelTreeWidgetItem._fontmetrics = QFontMetrics(boldfont);
+  
   def __init__ (self,src,*args):
     QTreeWidgetItem.__init__(self,*args);
     self._src = src;
     # fonts
-    stdfont = QApplication.font();
-    boldfont = QFont(stdfont);
-    boldfont.setBold(True);
-    self._fonts = [ stdfont,boldfont ];
+    self._initFonts();
     # array of actual (i.e. numeric) column values
     self._values = [None]*NumColumns;
     # set text alignment
@@ -261,24 +270,30 @@ class SkyModelTreeWidgetItem (QTreeWidgetItem):
     self.setTextAlignment(ColumnR,Qt.AlignRight);
     self.setTextAlignment(ColumnType,Qt.AlignHCenter);
     # setup source
-    self._highlighted = False;
+    self._highlighted = self._highlighted_visual = False;
     self.setSource(src);
 
   def setHighlighted (self,highlighted=True,visual=False):
 #    global _SLOW_QTREEWIDGETITEM;
 #    if 1: # not _SLOW_QTREEWIDGETITEM:
+    visual = True;
+    dprint(3,self._src.name,"highlighted",highlighted,visual);
     if highlighted != self._highlighted:
 #      brush = QApplication.palette().alternateBase() if highlighted else QApplication.palette().base();
 #      for col in range(self.columnCount()):
-#      self.setBackground(0,brush);
-      if visual:
-        self.setFont(0,self._fonts[1] if highlighted else self._fonts[0]);
+#        self.setBackground(col,brush);
+      if highlighted and visual:
+        self.setFont(0,self._fonts[1]);
+      elif not highlighted and self._highlighted_visual:
+        self.setFont(0,self._fonts[0]);
       self._highlighted = highlighted;
+      self._highlighted_visual = visual;
 
   def setSource (self,src):
     # name
     dprint(3,"setSource 1",src.name);
     self.setColumn(ColumnName,src.name);
+    self.setSizeHint(0,QSize(self._fontmetrics.width("x"+src.name),0));
     # coordinates
     self.setColumn(ColumnRa,src.pos.ra,"%2dh%02dm%05.2fs"%src.pos.ra_hms());
     self.setColumn(ColumnDec,src.pos.dec,("%s%2d"+unichr(0xB0)+"%02d'%05.2f\"")%
@@ -389,7 +404,7 @@ class ModelGroupsTable (QWidget):
     self.table.setSelectionMode(QTableWidget.NoSelection);
     # setup basic columns
     self.table.setColumnCount(6+len(self.EditableAttrs));
-    for i,label in enumerate(("grouping","total","selection","","","")):
+    for i,label in enumerate(("grouping","total","selection","list","plot","style")):
       self.table.setHorizontalHeaderItem(i,QTableWidgetItem(label));
     self.table.horizontalHeader().setSectionHidden(self.ColApply,True);
     # setup columns for editable grouping attributes
@@ -412,8 +427,8 @@ class ModelGroupsTable (QWidget):
 
   # setup mappings from the group.show_plot attribute to check state
   ShowAttrToCheckState = {  PlotStyles.ShowNot:Qt.Unchecked,
-                                            PlotStyles.ShowDefault:Qt.PartiallyChecked,
-                                            PlotStyles.ShowAlways:Qt.Checked };
+                            PlotStyles.ShowDefault:Qt.PartiallyChecked,
+                            PlotStyles.ShowAlways:Qt.Checked };
   CheckStateToShowAttr = dict([(val,key) for key,val in ShowAttrToCheckState.iteritems ()]);
 
   def _makeCheckItem (self,name,group,attr):
@@ -479,30 +494,46 @@ class ModelGroupsTable (QWidget):
         self.table.setCellWidget(irow,2,btns);
       # "list" checkbox (not for current and selected groupings: these are always listed)
       if group not in (model.curgroup,model.selgroup):
-        item = self._makeCheckItem("list",group,"show_list");
+        item = self._makeCheckItem("",group,"show_list");
         self.table.setItem(irow,self.ColList,item);
         item.setToolTip("""<P>If checked, sources in this grouping will be listed in the source table. If un-checked, sources will be
             excluded from the table. If partially checked, then the default list/no list setting of "all sources" will be in effect.
             </P>""");
       # "plot" checkbox (not for the current grouping, since that's always plotted)
       if group is not model.curgroup:
-        item = self._makeCheckItem("plot",group,"show_plot");
+        item = self._makeCheckItem("",group,"show_plot");
         self.table.setItem(irow,self.ColPlot,item);
         item.setToolTip("""<P>If checked, sources in this grouping will be included in the plot. If un-checked, sources will be
             excluded from the plot. If partially checked, then the default plot/no plot setting of "all sources" will be in effect.
             </P>""");
-    # "apply" checkbox
-      if group is not model.defgroup:
-        item = QTableWidgetItem("custom:");
-        item.setFlags(Qt.ItemIsEnabled|Qt.ItemIsUserCheckable);
-        item.setCheckState(Qt.Checked if group.style.apply else Qt.Unchecked);
-        self.table.setItem(irow,self.ColApply,item);
-        item.setToolTip("""<P>If "custom" is checked, sources within this grouping will have their own custom plot style, as determined by the controls to the right.</P>""");
-      else:
+      # custom style control
+      # for default, current and selected, this is just a text label
+      if group is model.defgroup:
         item = QTableWidgetItem("default:");
         item.setTextAlignment(Qt.AlignRight|Qt.AlignVCenter);
         item.setToolTip("""<P>This is the default plot style used for all sources for which a custom grouping style is not selected.</P>""");
         self.table.setItem(irow,self.ColApply,item);
+      elif group is model.curgroup:
+        item = QTableWidgetItem("");
+        item.setTextAlignment(Qt.AlignRight|Qt.AlignVCenter);
+        item.setToolTip("""<P>This is the plot style used for the highlighted source, if any.</P>""");
+        self.table.setItem(irow,self.ColApply,item);
+      elif group is model.selgroup:
+        item = QTableWidgetItem("");
+        item.setTextAlignment(Qt.AlignRight|Qt.AlignVCenter);
+        item.setToolTip("""<P>This is the plot style used for the currently selected sources.</P>""");
+        self.table.setItem(irow,self.ColApply,item);
+      # for the rest, a combobox with custom priorities
+      else:
+        cb = QComboBox();
+        cb.addItems(["default"]+["custom %d"%p for p in range(1,10)]);
+        index = max(0,min(group.style.apply,9));
+        cb.setCurrentIndex(index);
+        QObject.connect(cb,SIGNAL("activated(int)"),self._currier.xcurry(self._valueChanged,(irow,self.ColApply)));
+        self.table.setCellWidget(irow,self.ColApply,cb);
+        cb.setToolTip("""<P>This controls whether sources within this group are plotted with a customized 
+            plot style. Customized styles have numeric priority; if a source belongs to multiple groups, then
+            the style with the lowest priority takes precedence.<P>""");
       # attribute comboboxes
       for icol,attr in self.AttrByCol.iteritems():
         # get list of options for this style attribute. If dealing with first grouping (i==0), which is
@@ -528,7 +559,8 @@ class ModelGroupsTable (QWidget):
         self.table.setCellWidget(irow,icol,cb);
         label = attr;
         if irow:
-          cb.setToolTip("""<P>This is the %s used to plot sources in this grouping (if the "custom" checkbox is checked.)<P>"""%label);
+          cb.setToolTip("""<P>This is the %s used to plot sources in this group, when a "custom" style for the group
+          is enabled via the style control.<P>"""%label);
         else:
           cb.setToolTip("<P>This is the default %s used for all sources for which a custom style is not specified below.<P>"%label);
     self.table.resizeColumnsToContents();
@@ -562,7 +594,7 @@ class ModelGroupsTable (QWidget):
           item.setCheckState(Qt.PartiallyChecked);
       group.style.show_plot = self.CheckStateToShowAttr[item.checkState()];
     elif col == self.ColApply:
-      group.style.apply = item.checkState() != Qt.Unchecked;
+      group.style.apply = self.table.cellWidget(row,col).currentIndex();
       # enable/disable editable cells
       for j in self.AttrByCol.keys():
         item1 = self.table.item(row,j);

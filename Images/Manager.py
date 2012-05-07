@@ -224,7 +224,11 @@ class ImageManager (QWidget):
 
   def setLMRectSubset (self,rect):
     if self._imagecons:
-      self._imagecons[0].renderControl().setLMRectSubset(rect);
+      self._imagecons[0].setLMRectSubset(rect);
+      
+  def getLMRectStats (self,rect):
+    if self._imagecons:
+      return self._imagecons[0].renderControl().getLMRectStats(rect);
 
   def unloadModelImages (self):
     """Unloads images associated with model (i.e. loaded with the model=True flag)""";
@@ -276,6 +280,7 @@ class ImageManager (QWidget):
       for j,ic in enumerate(self._imagecons):
         ic.setImageVisible(not j or bool(self._qa_plot_all.isChecked()));
       # issue replot signal
+      self.emit(SIGNAL("imageRaised"));
       self.fastReplot();
     # else simply update labels
     else:

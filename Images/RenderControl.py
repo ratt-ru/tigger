@@ -52,6 +52,10 @@ class RenderControl (QObject):
   """RenderControl represents all the options (slices, color and intensity policy data) associated with an image. This object is shared by various GUI elements
   that control the rendering of images.
   """;
+  
+  SUBSET_FULL = "full";
+  SUBSET_SLICE = "slice";
+  SUBSET_RECT = "rect";
 
   def __init__ (self,image,parent):
     QObject.__init__(self,parent);
@@ -259,24 +263,26 @@ class RenderControl (QObject):
 
   def currentSubset (self):
     """Returns tuple of subset,(dmin,dmax),description for current data subset""";
-    return self._displaydata,self._displaydata_minmax,self._displaydata_desc;
+    return self._displaydata,self._displaydata_minmax,self._displaydata_desc,self._displaydata_type;
 
-  def _resetDisplaySubset (self,subset,desc,range=None,set_display_range=True,write_config=True):
+  def _resetDisplaySubset (self,subset,desc,range=None,set_display_range=True,write_config=True,subset_type=None):
     dprint(4,"setting display subset");
     self._displaydata = subset;
     self._displaydata_desc = desc;
     self._displaydata_minmax = range = range or measurements.extrema(subset)[:2];
+    self._displaydata_type = subset_type;
     dprint(4,"range set");
     self.image.intensityMap().setDataSubset(self._displaydata,minmax=range);
     self.image.setIntensityMap(emit=False);
-    self.emit(SIGNAL("dataSubsetChanged"),subset,range,desc);
+    self.emit(SIGNAL("dataSubsetChanged"),subset,range,desc,subset_type);
     if set_display_range:
       self.setDisplayRange(write_config=write_config,*range);
 
   def setFullSubset (self,display_range=None,write_config=True):
     shapedesc = u"\u00D7".join(["%d"%x for x in list(self.image.imageDims()) + [len(labels) for iaxis,name,labels in self._sliced_axes]]);
     desc = "full cube" if self._sliced_axes else "full image";
-    self._resetDisplaySubset(self.image.data(),desc,self._fullrange,write_config=write_config,set_display_range=False);
+    self._resetDisplaySubset(self.image.data(),desc,range=self._fullrange,subset_type=self.SUBSET_FULL,
+        write_config=write_config,set_display_range=False);
     self.setDisplayRange(write_config=write_config,*(display_range or self._fullrange))
 
   def _makeSliceDesc (self):
@@ -292,7 +298,9 @@ class RenderControl (QObject):
     return "%s plane"%(" ".join(descs),);
 
   def setSliceSubset (self,set_display_range=True,write_config=True):\
-    return self._resetDisplaySubset(self.image.image(),self._makeSliceDesc(),self._slicerange,set_display_range=set_display_range,write_config=write_config);
+    return self._resetDisplaySubset(self.image.image(),self._makeSliceDesc(),self._slicerange,
+        subset_type=self.SUBSET_SLICE,
+        set_display_range=set_display_range,write_config=write_config);
 
   def _setRectangularSubset (self,xx1,xx2,yy1,yy2):
     descs = [];
@@ -304,9 +312,10 @@ class RenderControl (QObject):
     if descs:
       descs.append("in");
     descs.append(self._makeSliceDesc());
-    return self._resetDisplaySubset(self.image.image()[xx1:xx2,yy1:yy2]," ".join(descs));
-
-  def setLMRectSubset (self,rect):
+    return self._resetDisplaySubset(self.image.image()[xx1:xx2,yy1:yy2]," ".join(descs),subset_type=self.SUBSET_RECT);
+    
+  def _lmRectToPix (self,rect):
+    """helper function -- converts an LM rectangle to pixel coordinates""";
     if rect.width() and rect.height():
       # convert to pixel coordinates
       x1,y1,x2,y2 = rect.getCoords();
@@ -322,9 +331,25 @@ class RenderControl (QObject):
       yy1,yy2 = max(yy1,0),min(yy2,ny);
       dprint(2,xx1,yy1,xx2,yy2);
       # check that we actually selected some valid pixels
-      if xx1 >= xx2 or yy1 >= yy2:
-        return;
+      if xx1 < xx2 and yy1 < yy2:
+        return xx1,xx2,yy1,yy2;
+    return None,None,None,None;
+
+  def setLMRectSubset (self,rect):
+    xx1,xx2,yy1,yy2 = self._lmRectToPix(rect);
+    if xx1 is not None:
       return self._setRectangularSubset(xx1,xx2,yy1,yy2);
+      
+  def getLMRectStats (self,rect):
+    xx1,xx2,yy1,yy2 = self._lmRectToPix(rect);
+    if xx1 is not None:
+      subset = self.image.image()[xx1:xx2,yy1:yy2];
+      subset,mask = self.image.optimalRavel(subset);
+      mmin,mmax = measurements.extrema(subset,labels=mask,index=None if mask is None else False)[:2];
+      mean = measurements.mean(subset,labels=mask,index=None if mask is None else False);
+      std = measurements.standard_deviation(subset,labels=mask,index=None if mask is None else False);
+      return xx1,xx2,yy1,yy2,mmin,mmax,mean,std,subset.size;
+    return None;
 
   def setWindowSubset (self,rect=None):
     rect = rect or self.image.currentRectPix();

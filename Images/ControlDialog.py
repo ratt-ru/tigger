@@ -233,21 +233,16 @@ class ImageControlDialog (QDialog):
       and the stats given here apply. Use the "Reset to" control on the right to change the
       current subset and recompute the histogram and stats.</P>""");
     lo1.addWidget(self._wlab_subset,1);
-#    lo1.addWidget(QLabel("Reset to:",self),0);
-    reset_menu = QMenu(self);
-    self._wreset = QToolButton(self);
-    self._wreset.setText("Reset to");
-    self._wreset.setToolTip("""<P>Use this to reset the current data subset and recompute the histogram and stats.</P>""");
-    lo1.addWidget(self._wreset);
-    self._qa_reset_full = reset_menu.addAction("Full datacube" if sliced_axes else "Full image",self._rc.setFullSubset);
+    
+    self._wreset_full = self.makeButton(u"\u2192 full",self._rc.setFullSubset);
+    lo1.addWidget(self._wreset_full);
     if sliced_axes:
-      # do we have >1 extra axes, and one of them is Stokes? Add a "reset to current stokes slice" button
-      if self._stokes_axis is not None and len(sliced_axes)>1:
-        self._qa_reset_stokes = reset_menu.addAction("Stokes plane",self._rc.setFullSubset);
-      self._qa_reset_slice = reset_menu.addAction("Current plane",self._rc.setSliceSubset);
-    self._qa_reset_window = reset_menu.addAction("Current window",self._rc.setWindowSubset);
-    self._wreset.setMenu(reset_menu);
-    self._wreset.setPopupMode(QToolButton.InstantPopup);
+#      if self._stokes_axis is not None and len(sliced_axes)>1:
+#        self._wreset_stokes = self.makeButton(u"\u21920Stokes",self._rc.setFullSubset);
+      self._wreset_slice = self.makeButton(u"\u2192 slice",self._rc.setSliceSubset);
+      lo1.addWidget(self._wreset_slice);
+    else:
+      self._wreset_slice = None;
 
     # min/max controls
     lo1 = QHBoxLayout();
@@ -734,12 +729,14 @@ class ImageControlDialog (QDialog):
       self._wlab_stats.setText(("min: %s  max: %s  np: %d"%(DataValueFormat,DataValueFormat,self._subset.size))%minmax);
       self._wmore_stats.show();
 
-  def _updateDataSubset (self,subset,minmax,desc):
+  def _updateDataSubset (self,subset,minmax,desc,subset_type):
     """Called when the displayed data subset is changed. Updates the histogram.""";
     self._subset = subset;
     self._subset_range = minmax;
     self._wlab_subset.setText("Subset: %s"%desc);
     self._hist = self._hist_hires = None;
+    self._wreset_full.setVisible(subset_type is not RenderControl.SUBSET_FULL);
+    self._wreset_slice and self._wreset_slice.setVisible(subset_type is not RenderControl.SUBSET_SLICE);
     # hide the mean/std markers, they will only be shown when _showMeanStd() is called
     self._line_mean.hide();
     self._line_std.hide();
@@ -754,10 +751,11 @@ class ImageControlDialog (QDialog):
     if busy:
       busy = BusyIndicator();
     dmin,dmax = self._subset_range;
+    subset,mask = self.image.optimalRavel(self._subset);
     dprint(5,"computing mean");
-    mean = self._subset.mean();
+    mean = measurements.mean(subset,labels=mask,index=None if mask is None else False);
     dprint(5,"computing std");
-    std  = self._subset.std();
+    std = measurements.standard_deviation(subset,labels=mask,index=None if mask is None else False);
     dprint(5,"done");
     text = "  ".join([ ("%s: "+DataValueFormat)%(name,value) for name,value in ("min",dmin),("max",dmax),("mean",mean),("std",std) ]+["np: %d"%self._subset.size]);
     self._wlab_stats.setText(text);

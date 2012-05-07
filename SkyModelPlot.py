@@ -926,7 +926,12 @@ class SkyModelPlotter (QWidget):
     self._ruler1.setTrackerMode(QwtPicker.AlwaysOn);
     # markup symbols and colors and pens
     self._plot_markup = [];
-    self._markup_color = QColor("red");
+    self._stats_color = QColor("red");
+    self._stats_pen = QPen(self._stats_color,1);
+#    self._stats_pen.setStyle(Qt.DotLine);
+    self._subset_color = QColor("lightblue");
+    self._subset_pen = QPen(self._subset_color,1);
+    self._markup_color = QColor("cyan");
     self._markup_pen = QPen(self._markup_color,1);
     self._markup_brush = QBrush(Qt.NoBrush);
     self._markup_xsymbol = QwtSymbol(QwtSymbol.XCross,self._markup_brush,self._markup_pen,QSize(16,16));
@@ -963,6 +968,7 @@ class SkyModelPlotter (QWidget):
     # menu and toolbar
     self._menu = QMenu("&Plot",self);
     self._wtoolbar = QToolBar(self);
+    self._wtoolbar.setIconSize(QSize(16,16));
     self._wtoolbar.setOrientation(Qt.Vertical);
     lo.insertWidget(0,self._wtoolbar);
     self._qag_mousemode = QActionGroup(self);
@@ -976,7 +982,7 @@ class SkyModelPlotter (QWidget):
     self._qa_mm = [
       mouse_menu.addAction(pixmaps.zoom_in.icon(),"Zoom",self._currier.curry(self.setMouseMode,self.MouseZoom),Qt.Key_F4),
       mouse_menu.addAction(pixmaps.ruler.icon(),"Measure",self._currier.curry(self.setMouseMode,self.MouseMeasure)),
-      mouse_menu.addAction(pixmaps.zoom_colours.icon(),"Select image subset",self._currier.curry(self.setMouseMode,self.MouseSubset)),
+      mouse_menu.addAction(pixmaps.window_sigma.icon(),"Select image  subset",self._currier.curry(self.setMouseMode,self.MouseSubset)),  # zoom_colours.icon()
       mouse_menu.addAction(pixmaps.big_plus.icon(),"Select objects",self._currier.curry(self.setMouseMode,self.MouseSelect)),
       mouse_menu.addAction(pixmaps.big_minus.icon(),"Deselect objects",self._currier.curry(self.setMouseMode,self.MouseDeselect)) ];
     self._qa_mm[0].setToolTip("""<P>Puts the mouse in zoom mode. In this mode, hold the left mouse button and drag a rectangle
@@ -1008,11 +1014,17 @@ class SkyModelPlotter (QWidget):
         rectangle on the plot to deselect all sources within the rectangle.</P>
          <P>Unlike other modes, you may hold down
         CTRL and left-click to <b>de-select</b> individual model sources.</P>""");
+    self._qa_mm[3].setVisible(False);
+    self._qa_mm[4].setVisible(False);
     for qa in self._qa_mm:
       self._qag_mousemode.addAction(qa);
       qa.setCheckable(True);
       self._wtoolbar.addAction(qa);
     self.setMouseMode(self.MouseZoom);
+    self._qa_colorzoom = self._wtoolbar.addAction(pixmaps.zoom_colours.icon(),"Zoom colourmap into subset",
+        self._colourZoomIntoSubset);
+    self._qa_colorzoom.setVisible(False);
+    self._menu.addAction(self._qa_colorzoom);
     # hide/show tools
     self._menu.addAction(self._liveprofile.getShowQAction());
     self._menu.addAction(self._livezoom.getShowQAction());
@@ -1065,7 +1077,8 @@ class SkyModelPlotter (QWidget):
     im.setZ0(Z_Image);
     im.enableImageBorders(self._image_pen,self._grid_color,self._bg_brush);
     QObject.connect(im,SIGNAL("imagesChanged"),self._currier.curry(self.postUpdateEvent,self.UpdateImages));
-
+    QObject.connect(im,SIGNAL("imageRaised"),self._imageRaised);
+    
   class UpdateEvent (QEvent):
     def __init__ (self,serial):
       QEvent.__init__(self,QEvent.User);
@@ -1132,7 +1145,9 @@ class SkyModelPlotter (QWidget):
     self._picker2.setEnabled(mode in (self.MouseSelect,self.MouseDeselect));
     self._picker3.setLabel("+select",color="green");
     if mode == self.MouseSubset:
-      self._picker1.setLabel("subset ",color="blue");
+      self._picker1.setLabel("stats ",color="red");
+    elif mode == self.MouseMeasure:
+      self._ruler1.setLabel("measure",color="cyan");
     elif mode == self.MouseSelect:
       self._picker1.setLabel("select ",color="green");
       self._picker2.setLabel("+",color="green");
@@ -1196,6 +1211,7 @@ class SkyModelPlotter (QWidget):
       pa *= 180/math.pi;
       pa += 360*(pa<0);
       msgtext = u"%d\u00B0%02d'%05.2f\"  PA=%.2f\u00B0"%(Rd,Rm,Rs,pa);
+      self._ruler1.setLabel("");
       return QwtText(msgtext);
 
   def _measureRuler (self,polygon):
@@ -1284,6 +1300,11 @@ class SkyModelPlotter (QWidget):
   def _showCoordinateToolTip (self,text):
     QToolTip.showText(self.plot.mapToGlobal(QPoint(0,0)),text,self.plot,self.plot.rect());
 
+  def _imageRaised (self):
+    """This is called when an image is raised to the top""";
+    self._removePlotMarkup();
+    self._image_subset = None;
+
   def _addPlotMarkup (self,items):
     """Adds a list of QwtPlotItems to the markup""";
     self._removePlotMarkup(replot=False);
@@ -1298,6 +1319,7 @@ class SkyModelPlotter (QWidget):
     for item in self._plot_markup:
       item.detach();
     if self._plot_markup and replot:
+      QToolTip.showText(QPoint(0,0),"");
       self.plot.clearDrawCache();
       self.plot.replot();
     self._plot_markup = [];
@@ -1356,6 +1378,65 @@ class SkyModelPlotter (QWidget):
     src = self.findNearestSource(pos,world=world,range=range);
     if src:
       self._selectSources([src],mode);
+      
+  def _makeRectMarker (self,rect,pen):
+    x1,y1,x2,y2 = rect.getCoords();
+    line = TiggerPlotCurve();
+    line.setData([x1,x1,x2,x2,x1],[y1,y2,y2,y1,y1]);
+#      line.setBrush(self._stats_brush);
+    line.setPen(pen);
+    label = TiggerPlotMarker();
+    label.setValue(max(x1,x2),max(y1,y2));
+    text = QwtText("stats");
+    text.setColor(pen.color());
+    label.setLabel(text);
+    label.setLabelAlignment(Qt.AlignBottom|Qt.AlignRight);
+    return [ line,label ];
+      
+  def _selectImageSubset (self,rect,image=None):
+    # make zoom button visible if subset is selected
+    self._qa_colorzoom.setVisible(bool(rect));
+    self._image_subset = rect;
+    if rect is None:
+      self._removePlotMarkup();
+    else:
+      # get image stats
+      busy = BusyIndicator();
+      stats = self._imgman.getLMRectStats(self._image_subset);
+      busy = None;
+      if stats is None:
+        self._removePlotMarkup();
+        self._image_subset = None;
+        return;
+      # make tooltip
+      DataValueFormat = "%.4g";
+      stats = list(stats);
+      stats1 = tuple(stats[:4] + [ DataValueFormat%s for s in stats[4:8] ] + stats[8:]);
+      msgtext = "[%d:%d,%d:%d] min %s, max %s, mean %s, std %s, np %d"%stats1;
+      tiptext = """<P><NOBR>Subset: [%d:%d,%d:%d]</NOBR><BR>
+        <NOBR>Stats: min %s, max %s, mean %s, std %s, np %d</NOBR></BR>
+        <NOBR>Use the "Colour zoom" button on the left to set the current intensity 
+        range to this.</NOBR></P>"""%stats1;
+      # make markup on plot to indicate current subset
+      markup_items = self._makeRectMarker(rect,self._stats_pen);
+      # calling QToolTip.showText() directly from here doesn't work, so set a timer on it
+      QTimer.singleShot(10,self._currier.curry(self._showCoordinateToolTip,tiptext));
+      # same deal for markup items
+      for item in markup_items:
+        item.setZ(Z_Markup);
+      QTimer.singleShot(10,self._currier.curry(self._addPlotMarkup,markup_items));
+      print msgtext;
+      QApplication.clipboard().setText(msgtext+"\n");
+      QApplication.clipboard().setText(msgtext+"\n",QClipboard.Selection);
+  
+  def _colourZoomIntoSubset (self):
+    # zoom into current image subset (if any), and hide the zoom button
+    dprint(1,self._image_subset);
+    if self._image_subset is not None:
+      self._imgman.setLMRectSubset(self._image_subset);
+      self._removePlotMarkup();
+      self._image_subset = None;
+    self._qa_colorzoom.setVisible(False);
 
   def _selectRect (self,rect,world=True,mode=SelectionClear|SelectionAdd):
     """Selects sources within the specified rectangle. For meaning of 'mode', see flags above.
@@ -1368,13 +1449,23 @@ class SkyModelPlotter (QWidget):
     if self._mouse_mode == self.MouseZoom:
       return;
     elif self._mouse_mode == self.MouseSubset:
-      dprint(1,"intensity zoom into",rect,"image:",self._image.boundingRect());
-      if not self._image or not rect.intersects(self._image.boundingRect()):
+      image = self._imgman and self._imgman.getTopImage();
+      dprint(1,"subset selection",rect,"image:",image and image.boundingRect());
+      if not image or not rect.intersects(image.boundingRect()):
+        self._selectImageSubset(None);
         return;
-      zoomrect = self._image.boundingRect().intersected(rect);
-      dprint(1,"intensity zoom into",zoomrect);
-      self._imgman.setLMRectSubset(zoomrect);
-      self.setMouseMode(self.MouseZoom);
+      zoomrect = image.boundingRect().intersected(rect);
+      dprint(1,"selecting image subset",zoomrect);
+      self._selectImageSubset(zoomrect,image);
+      ## old code
+      #dprint(1,"intensity zoom into",rect,"image:",self._image.boundingRect());
+      #if not self._image or not rect.intersects(self._image.boundingRect()):
+        #return;
+      #zoomrect = self._image.boundingRect().intersected(rect);
+      #dprint(1,"intensity zoom into",zoomrect);
+      #self._imgman.setLMRectSubset(zoomrect);
+      ## reset mouse mode back to zoom
+      #self.setMouseMode(self.MouseZoom);
     elif self._mouse_mode in (self.MouseSelect,self.MouseDeselect):
       # deselect mouse mode implies removing from selection
       if self._mouse_mode == self.MouseDeselect:
@@ -1402,11 +1493,15 @@ class SkyModelPlotter (QWidget):
     # things are being loaded), or if update is of no concern to us
     if not self._updates_enabled or not what&(SkyModel.UpdateSourceList|SkyModel.UpdateSourceContent|self.UpdateImages):
       return;
+    # clear any plot markup
+    dprint(2,"clearing plot markup");
+    for item in self._plot_markup:
+      item.detach();
+    self._plot_markup = [];
+    self._image_subset = None;
     # clear plot, but do not delete items
     self.projection = None;
     self.plot.clear();
-    # clear any plot markup
-    self._plot_markup = [];
     # get current image (None if no images)
     self._image = self._imgman and self._imgman.getCenterImage();
     # show/hide live zoomer with image
@@ -1586,7 +1681,6 @@ class SkyModelPlotter (QWidget):
       self.emit(SIGNAL("showErrorMessage"),"Error writing %s: %s"%(filename,str(exc)));
       return;
     self.emit(SIGNAL("showMessage"),"Exported plot to file %s"%filename);
-
 
   def setCurrentSource (self,src,src0=None,origin=None):
     dprint(2,"setCurrentSource",src and src.name,src0 and src0.name,origin);

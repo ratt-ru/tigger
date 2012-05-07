@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+## -*- coding: utf-8 -*-
 #
 #% $Id$
 #
@@ -160,6 +160,7 @@ class ImageController (QFrame):
     lo.addWidget(self._wlock);
     QObject.connect(self._wlock,SIGNAL("clicked()"),self._toggleDisplayRangeLock);
     QObject.connect(self.renderControl(),SIGNAL("displayRangeLocked"),self._setDisplayRangeLock);
+    QObject.connect(self.renderControl(),SIGNAL("dataSubsetChanged"),self._dataSubsetChanged);
     lockmenu = QMenu(self);
     lockmenu.addAction(pixmaps.locked.icon(),"Lock all to this",self._currier.curry(imgman.lockAllDisplayRanges,self.renderControl()));
     lockmenu.addAction(pixmaps.unlocked.icon(),"Unlock all",imgman.unlockAllDisplayRanges);
@@ -201,7 +202,20 @@ class ImageController (QFrame):
     self._image_border = self._image_label = None;
     # default plot depth of image markers
     self._z_markers = None;
-
+    
+    # subset markers
+    self._subset_pen = QPen(QColor("Light Blue"));
+    self._subset_border = QwtPlotCurve();
+    self._subset_border.setPen(self._subset_pen);
+    self._subset_border.setVisible(False);
+    self._subset_label = QwtPlotMarker();
+    text = QwtText("subset");
+    text.setColor(self._subset_pen.color());
+    self._subset_label.setLabel(text);
+    self._subset_label.setLabelAlignment(Qt.AlignRight|Qt.AlignBottom);
+    self._subset_label.setVisible(False);
+    self._setting_lmrect = False;
+    
   def close (self):
     if self._control_dialog:
       self._control_dialog.close();
@@ -277,9 +291,9 @@ class ImageController (QFrame):
   def showPlotBorder (self,show=True):
     self._image_border.setVisible(show);
     self._image_label.setVisible(show);
-
+    
   def attachToPlot (self,plot,z_markers=None):
-    for item in self.image,self._image_border,self._image_label:
+    for item in self.image,self._image_border,self._image_label,self._subset_border,self._subset_label:
       if item and item.plot() != plot:
         item.attach(plot);
 
@@ -316,6 +330,25 @@ class ImageController (QFrame):
       return;
     self._rc.setDisplayRange(*newrange);
 
+  def _dataSubsetChanged (self,subset,minmax,desc,subset_type):
+    """Called when the data subset changes (or is reset)""";
+    # hide the subset indicator -- unless we're invoked while we're actually setting the subset itself
+    if not self._setting_lmrect:
+      self._subset = None;
+      self._subset_border.setVisible(False);
+      self._subset_label.setVisible(False);
+
+  def setLMRectSubset (self,rect):
+    self._subset = rect;
+    l0,m0,l1,m1 = rect.getCoords(); 
+    self._subset_border.setData([l0,l0,l1,l1,l0],[m0,m1,m1,m0,m0]);
+    self._subset_border.setVisible(True);
+    self._subset_label.setValue(max(l0,l1),max(m0,m1));
+    self._subset_label.setVisible(True);
+    self._setting_lmrect = True;
+    self.renderControl().setLMRectSubset(rect);
+    self._setting_lmrect = False;
+
   def currentSlice (self):
     return self._rc.currentSlice();
 
@@ -329,14 +362,14 @@ class ImageController (QFrame):
 
   def setMarkersZ (self,z):
     self._z_markers = z;
-    for elem in (self._image_border,self._image_label):
+    for elem in self._image_border,self._image_label,self._subset_border,self._subset_label:
       if elem:
         elem.setZ(z);
 
   def setZ (self,z,top=False,depthlabel=None,can_raise=True):
     self.image.setZ(z);
     if self._z_markers is None:
-      for i,elem in enumerate((self._image_border,self._image_label)):
+      for i,elem in enumerate((self._image_border,self._image_label,self._subset_border,self._subset_label)):
         if elem:
           elem.setZ(z+i+1);
     # set the depth label, if any
