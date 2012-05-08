@@ -27,7 +27,6 @@
 #
 
 import pyfits
-import gaussfitter2
 import math
 import numpy
 
@@ -68,6 +67,7 @@ def fitPsf (filename,cropsize=64):
   psf = psf[(nx-size)/2:(nx+size)/2,(ny-size)/2:(ny+size)/2];
 
   # estimate gaussian parameters, then fit
+  import gaussfitter2
   parms = gaussfitter2.moments(psf,circle=0,rotate=1,vheight=0);
   dprint(2,"Estimates parameters are",parms);
   parms = gaussfitter2.gaussfit(psf,None,parms,autoderiv=1,return_all=0,circle=0,rotate=1,vheight=0);
