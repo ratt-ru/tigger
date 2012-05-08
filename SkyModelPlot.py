@@ -908,9 +908,15 @@ class SkyModelPlotter (QWidget):
     self._zoomer = self.PlotZoomer(self.plot.canvas(),track_callback=self._trackCoordinates,label="zoom");
     zpen = makeDualColorPen("navy","yellow");
     self._zoomer.setRubberBandPen(zpen);
-    self._zoomer.setTrackerPen(QColor("navy"));
+    self._zoomer.setTrackerPen(QColor("yellow"));
     self._zoomer.setTrackerMode(QwtPicker.AlwaysOn);
     QObject.connect(self._zoomer,SIGNAL("zoomed(const QwtDoubleRect &)"),self._plotZoomed);
+    self._zoomer.setMousePattern(QwtEventPattern.MouseSelect1,Qt.LeftButton);
+    self._zoomer.setMousePattern(QwtEventPattern.MouseSelect2,Qt.RightButton,Qt.CTRL);
+    self._zoomer.setMousePattern(QwtEventPattern.MouseSelect3,Qt.RightButton);
+    self._zoomer.setMousePattern(QwtEventPattern.MouseSelect6,Qt.RightButton,Qt.SHIFT);
+#    self._zoomer.setStateMachine(QwtPickerDragRectMachine());
+    self._zoomer.setSelectionFlags(QwtPicker.RectSelection|QwtPicker.DragSelection);
     # attach ruler
 #    self._coordinate_lookup = self.PlotPicker(self.plot.canvas(),"","cyan",
 #      self._lookupCoordinates,mode=QwtPicker.PointSelection);
@@ -1023,6 +1029,7 @@ class SkyModelPlotter (QWidget):
     self.setMouseMode(self.MouseZoom);
     self._qa_colorzoom = self._wtoolbar.addAction(pixmaps.zoom_colours.icon(),"Zoom colourmap into subset",
         self._colourZoomIntoSubset);
+    self._qa_colorzoom.setShortcut(Qt.SHIFT+Qt.Key_F4);
     self._qa_colorzoom.setVisible(False);
     self._menu.addAction(self._qa_colorzoom);
     # hide/show tools
@@ -1078,7 +1085,7 @@ class SkyModelPlotter (QWidget):
     im.enableImageBorders(self._image_pen,self._grid_color,self._bg_brush);
     QObject.connect(im,SIGNAL("imagesChanged"),self._currier.curry(self.postUpdateEvent,self.UpdateImages));
     QObject.connect(im,SIGNAL("imageRaised"),self._imageRaised);
-    
+
   class UpdateEvent (QEvent):
     def __init__ (self,serial):
       QEvent.__init__(self,QEvent.User);
@@ -1378,7 +1385,7 @@ class SkyModelPlotter (QWidget):
     src = self.findNearestSource(pos,world=world,range=range);
     if src:
       self._selectSources([src],mode);
-      
+
   def _makeRectMarker (self,rect,pen):
     x1,y1,x2,y2 = rect.getCoords();
     line = TiggerPlotCurve();
@@ -1392,7 +1399,7 @@ class SkyModelPlotter (QWidget):
     label.setLabel(text);
     label.setLabelAlignment(Qt.AlignBottom|Qt.AlignRight);
     return [ line,label ];
-      
+
   def _selectImageSubset (self,rect,image=None):
     # make zoom button visible if subset is selected
     self._qa_colorzoom.setVisible(bool(rect));
@@ -1413,10 +1420,10 @@ class SkyModelPlotter (QWidget):
       stats = list(stats);
       stats1 = tuple(stats[:4] + [ DataValueFormat%s for s in stats[4:8] ] + stats[8:]);
       msgtext = "[%d:%d,%d:%d] min %s, max %s, mean %s, std %s, np %d"%stats1;
-      tiptext = """<P><NOBR>Subset: [%d:%d,%d:%d]</NOBR><BR>
+      tiptext = """<P><NOBR>Region: [%d:%d,%d:%d]</NOBR><BR>
         <NOBR>Stats: min %s, max %s, mean %s, std %s, np %d</NOBR></BR>
-        <NOBR>Use the "Colour zoom" button on the left to set the current intensity 
-        range to this.</NOBR></P>"""%stats1;
+        <NOBR>Use the "Colour zoom" button on the left (or press Shift+F4) to set the current data subset and
+        intensity range to this image region.</NOBR></P>"""%stats1;
       # make markup on plot to indicate current subset
       markup_items = self._makeRectMarker(rect,self._stats_pen);
       # calling QToolTip.showText() directly from here doesn't work, so set a timer on it
@@ -1428,7 +1435,7 @@ class SkyModelPlotter (QWidget):
       print msgtext;
       QApplication.clipboard().setText(msgtext+"\n");
       QApplication.clipboard().setText(msgtext+"\n",QClipboard.Selection);
-  
+
   def _colourZoomIntoSubset (self):
     # zoom into current image subset (if any), and hide the zoom button
     dprint(1,self._image_subset);
