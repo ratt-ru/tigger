@@ -198,11 +198,12 @@ class ImageController (QFrame):
     self.image.connect(SIGNAL("slice"),self._updateImageSlice);
     QObject.connect(self._rc,SIGNAL("displayRangeChanged"),self._updateDisplayRange);
 
-    # init image for plotting
-    self._image_border = self._image_label = None;
     # default plot depth of image markers
     self._z_markers = None;
-    
+    # and the markers themselves
+    self._image_border = QwtPlotCurve();
+    self._image_label = QwtPlotMarker();
+
     # subset markers
     self._subset_pen = QPen(QColor("Light Blue"));
     self._subset_border = QwtPlotCurve();
@@ -215,7 +216,9 @@ class ImageController (QFrame):
     self._subset_label.setLabelAlignment(Qt.AlignRight|Qt.AlignBottom);
     self._subset_label.setVisible(False);
     self._setting_lmrect = False;
-    
+
+    self._all_markers = [ self._image_border,self._image_label,self._subset_border,self._subset_label ];
+
   def close (self):
     if self._control_dialog:
       self._control_dialog.close();
@@ -266,12 +269,12 @@ class ImageController (QFrame):
     # make curve for image borders
     (l0,l1),(m0,m1) = self.image.getExtents();
     self._border_pen = QPen(border_pen);
-    self._image_border = QwtPlotCurve();
+    self._image_border.show();
     self._image_border.setData([l0,l0,l1,l1,l0],[m0,m1,m1,m0,m0]);
     self._image_border.setPen(self._border_pen);
     self._image_border.setZ(self.image.z()+1 if self._z_markers is None else self._z_markers);
     if label:
-      self._image_label = QwtPlotMarker();
+      self._image_label.show();
       self._image_label_text = text = QwtText(" %s "%label);
       text.setColor(label_color);
       text.setBackgroundBrush(bg_brush);
@@ -291,10 +294,10 @@ class ImageController (QFrame):
   def showPlotBorder (self,show=True):
     self._image_border.setVisible(show);
     self._image_label.setVisible(show);
-    
+
   def attachToPlot (self,plot,z_markers=None):
-    for item in self.image,self._image_border,self._image_label,self._subset_border,self._subset_label:
-      if item and item.plot() != plot:
+    for item in [ self.image ] + self._all_markers:
+      if item.plot() != plot:
         item.attach(plot);
 
   def setImageVisible (self,visible):
@@ -340,7 +343,7 @@ class ImageController (QFrame):
 
   def setLMRectSubset (self,rect):
     self._subset = rect;
-    l0,m0,l1,m1 = rect.getCoords(); 
+    l0,m0,l1,m1 = rect.getCoords();
     self._subset_border.setData([l0,l0,l1,l1,l0],[m0,m1,m1,m0,m0]);
     self._subset_border.setVisible(True);
     self._subset_label.setValue(max(l0,l1),max(m0,m1));
@@ -362,16 +365,14 @@ class ImageController (QFrame):
 
   def setMarkersZ (self,z):
     self._z_markers = z;
-    for elem in self._image_border,self._image_label,self._subset_border,self._subset_label:
-      if elem:
-        elem.setZ(z);
+    for i,elem in enumerate(self._all_markers):
+      elem.setZ(z+i);
 
   def setZ (self,z,top=False,depthlabel=None,can_raise=True):
     self.image.setZ(z);
     if self._z_markers is None:
-      for i,elem in enumerate((self._image_border,self._image_label,self._subset_border,self._subset_label)):
-        if elem:
-          elem.setZ(z+i+1);
+      for i,elem in enumerate(self._all_markers):
+        elem.setZ(z+i+i);
     # set the depth label, if any
     label = "%s: %s"%(chr(ord('a')+self._number),self.name);
     # label = "%s %s"%(depthlabel,self.name) if depthlabel else self.name;

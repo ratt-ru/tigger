@@ -225,7 +225,7 @@ class ImageManager (QWidget):
   def setLMRectSubset (self,rect):
     if self._imagecons:
       self._imagecons[0].setLMRectSubset(rect);
-      
+
   def getLMRectStats (self,rect):
     if self._imagecons:
       return self._imagecons[0].renderControl().getLMRectStats(rect);

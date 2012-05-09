@@ -64,6 +64,7 @@ class SkyImagePlotItem (QwtPlotItem,QObject):
     self._mminmax = (0,0);
     self._cache_qimage = {};
     self._cache_mapping = self._cache_imap = self._cache_interp = None;
+    self._psfsize = 0,0,0;
     # set image, if specified
     if image is not None:
       nx,ny = image.shape;
@@ -290,6 +291,12 @@ class SkyImagePlotItem (QwtPlotItem,QObject):
     t0 = time.time();
     painter.drawImage(xp1,yp2,qimg);
     dprint(2,"drawing took",time.time()-t0,"secs");
+
+  def setPsfSize (self,maj,min,pa):
+    self._psfsize = maj,min,pa;
+
+  def getPsfSize (self):
+    return self._psfsize;
 
 ScalePrefixes = [ "p","n",u"\u03bc","m","","K","M","G","T" ];
 
@@ -602,6 +609,10 @@ class FITSImagePlotItem (SkyCubePlotItem):
         self.setExtraAxis(iaxis,name,labels,values,unit);
     if nx is None or ny is None:
       raise ValueError,"FITS file does not appear to contain an X and/or Y axis";
+    # check for beam parameters
+    psf = [ hdr.get(x,None) for x in 'BMAJ','BMIN','BPA' ];
+    if all([x is not None for x in psf]):
+     self.setPsfSize(*[ p/180*math.pi for p in psf ]);
     self.setSkyAxis(0,iaxis_ra,nx,proj.ra0,-proj.xscale,proj.xpix0);
     self.setSkyAxis(1,iaxis_dec,ny,proj.dec0,proj.yscale,proj.ypix0);
     self.setDefaultProjection(proj);

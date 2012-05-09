@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 
 #
-#% $Id$ 
+#% $Id$
 #
 #
 # Copyright (C) 2002-2011
-# The MeqTree Foundation & 
+# The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
 # P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
 #
@@ -21,12 +21,13 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>,
-# or write to the Free Software Foundation, Inc., 
+# or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
 from Tigger import *
 
+import os
 import os.path
 import time
 import sys
@@ -436,7 +437,7 @@ class MainWindow (QMainWindow):
         self._currier.curry(self.openFile,merge=True));
     self._merge_file_dialog.exec_();
     return;
-      
+
   def openFile (self,filename=None,format=None,merge=False,show=True):
     from Models import ModelClasses
     # check that we can close existing model
@@ -489,6 +490,8 @@ class MainWindow (QMainWindow):
     self.skyplot.close();
     self.imgman.close();
     self.emit(SIGNAL("closing"));
+    dprint(1,"invoking os._exit(0)");
+    os._exit(0);
     QMainWindow.closeEvent(self,event);
 
   def _canCloseExistingModel (self):
@@ -517,7 +520,7 @@ class MainWindow (QMainWindow):
     return True;
 
   def saveFile (self,filename=None,confirm=False,overwrite=True,non_native=False):
-    """Saves file using the specified 'filename'. If filename is None, uses current filename, if 
+    """Saves file using the specified 'filename'. If filename is None, uses current filename, if
     that is not set, goes to saveFileAs() to open dialog and get a filename.
     If overwrite=False, will ask for confirmation before overwriting an existing file.
     If non_native=False, will ask for confirmation before exporting in non-native format.
@@ -539,7 +542,7 @@ class MainWindow (QMainWindow):
       if os.path.exists(filename) and not overwrite:
         warning += "<P>The file already exists and will be overwritten.</P>";
       if filetype != 'Tigger' and not non_native:
-        warning += """<P>Please note that you are exporting the model using the external format '%s'. 
+        warning += """<P>Please note that you are exporting the model using the external format '%s'.
               Source types, tags and other model features not supported by this
               format will be omitted during the export.</P>"""%filetype;
       # get confirmation

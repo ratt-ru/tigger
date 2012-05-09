@@ -786,7 +786,9 @@ class SkyModelPlotter (QWidget):
       return QwtPlotZoomer.rescale(self);
 
     def zoom (self,rect):
-      if isinstance(rect,int) or rect.intersected(self.zoomBase()) == rect:
+      if not isinstance(rect,int):
+        rect = rect.intersected(self.zoomBase());
+      if isinstance(rect,int) or rect.isValid():
         dprint(2,"zoom",rect);
         if not isinstance(rect,int):
           self._zoomrects[self.zoomRectIndex()+1:] = [ QRectF(rect) ];
@@ -795,7 +797,7 @@ class SkyModelPlotter (QWidget):
         QwtPlotZoomer.zoom(self,rect);
         dprint(2,"zoom stack is now",self.zoomStack());
       else:
-        dprint(2,"invalid zoom selected, ignoring");
+        dprint(2,"invalid zoom selected, ignoring",rect);
 
     def trackerText (self,pos):
       return (self._track_callback and self._track_callback(pos)) or (self._label if self.isActive() else QwtText(""));
@@ -988,7 +990,7 @@ class SkyModelPlotter (QWidget):
     self._qa_mm = [
       mouse_menu.addAction(pixmaps.zoom_in.icon(),"Zoom",self._currier.curry(self.setMouseMode,self.MouseZoom),Qt.Key_F4),
       mouse_menu.addAction(pixmaps.ruler.icon(),"Measure",self._currier.curry(self.setMouseMode,self.MouseMeasure)),
-      mouse_menu.addAction(pixmaps.window_sigma.icon(),"Select image  subset",self._currier.curry(self.setMouseMode,self.MouseSubset)),  # zoom_colours.icon()
+      mouse_menu.addAction(pixmaps.window_sigma.icon(),"Get stats",self._currier.curry(self.setMouseMode,self.MouseSubset)),  # zoom_colours.icon()
       mouse_menu.addAction(pixmaps.big_plus.icon(),"Select objects",self._currier.curry(self.setMouseMode,self.MouseSelect)),
       mouse_menu.addAction(pixmaps.big_minus.icon(),"Deselect objects",self._currier.curry(self.setMouseMode,self.MouseDeselect)) ];
     self._qa_mm[0].setToolTip("""<P>Puts the mouse in zoom mode. In this mode, hold the left mouse button and drag a rectangle
@@ -1043,6 +1045,14 @@ class SkyModelPlotter (QWidget):
     QObject.connect(qa,SIGNAL("triggered(bool)"),self._currier.curry(Config.set,"fix-aspect-ratio"));
     self._zoomer.setFixedAspect(qa.isChecked());
     qa.setToolTip("""<P>Enable this to maintain a fixed aspect ratio in the plot.</P>""");
+    # beam
+    self._qa_show_psf = self._menu.addAction("Show PSF (aka beam)");
+    self._qa_show_psf.setCheckable(True);
+    self._qa_show_psf.setChecked(True);
+    self._psf_marker = TiggerPlotCurve();
+    self._psf_marker.setPen(QPen(QColor("lightgreen")));
+    self._psf_marker.setZ(Z_Grid);
+    QObject.connect(self._qa_show_psf,SIGNAL("toggled(bool)"),self._showPsfMarker);
     # grid stepping
     self._grid_step_arcmin = DefaultGridStep_ArcMin;
     gridmenu = self._menu.addMenu("Show grid circles");
@@ -1309,8 +1319,38 @@ class SkyModelPlotter (QWidget):
 
   def _imageRaised (self):
     """This is called when an image is raised to the top""";
+    self._updatePsfMarker(None,replot=True);
     self._removePlotMarkup();
     self._image_subset = None;
+
+  def _showPsfMarker (self,show):
+    self._psf_marker.setVisible(show);
+    self.plot.clearDrawCache();
+    self.plot.replot();
+
+  def _updatePsfMarker (self,rect=None,replot=False):
+      # show PSF if asked to
+      topimage = self._imgman and self._imgman.getTopImage();
+      pmaj,pmin,ppa = topimage and topimage.getPsfSize();
+      self._qa_show_psf.setVisible(topimage and pmaj!=0);
+      self._psf_marker.setVisible(topimage and pmaj!=0 and self._qa_show_psf.isChecked());
+      if self._qa_show_psf.isVisible():
+        rect = rect or self._zoomer.zoomBase();
+        rect &= topimage.boundingRect();
+        dprint(1,"updating PSF for zoom rect",rect);
+        lm = rect.bottomLeft();
+        l00 =  lm.x() + pmaj/1.2;
+        m00 = lm.y() - pmaj/1.2;
+        dprint(1,"drawing PSF at",l00,m00,"z",self._psf_marker.z());
+        arg = numpy.arange(0,1.02,.02)*math.pi*2;
+        mp0,lp0 = pmaj*numpy.cos(arg)/2,pmin*numpy.sin(arg)/2;  # angle 0 is m direction
+        c,s = numpy.cos(ppa),numpy.sin(ppa);
+        lp = lp0*c - mp0*s;
+        mp = lp0*s + mp0*c;
+        self._psf_marker.setData(lp+l00,mp+m00);
+        if replot and self._psf_marker.isVisible():
+          self.plot.clearDrawCache();
+          self.plot.replot();
 
   def _addPlotMarkup (self,items):
     """Adds a list of QwtPlotItems to the markup""";
@@ -1489,6 +1529,7 @@ class SkyModelPlotter (QWidget):
     dprint(2,"zoomed to",rect);
     self._zoomrect = QRectF(rect); # make copy
     self._qa_unzoom.setEnabled(rect != self._zoomer.zoomBase());
+    self._updatePsfMarker(rect,replot=True);
 
   def _setGridCircleStepping (self,arcmin=DefaultGridStep_ArcMin):
     """Changes the visible grid circles. None to disable.""";
@@ -1509,6 +1550,7 @@ class SkyModelPlotter (QWidget):
     # clear plot, but do not delete items
     self.projection = None;
     self.plot.clear();
+    self._psf_marker.attach(self.plot);
     # get current image (None if no images)
     self._image = self._imgman and self._imgman.getCenterImage();
     # show/hide live zoomer with image
@@ -1644,6 +1686,7 @@ class SkyModelPlotter (QWidget):
     # update the PlotZoomer with our set of zooms. This implictly causes a plot update
     dprint(5,"updating zoomer");
     self._zoomer.setZoomStack(zooms,len(zooms)-1);
+    self._updatePsfMarker(None,replot=True);
     # self.plot.replot();
 
   def setModel (self,model):
