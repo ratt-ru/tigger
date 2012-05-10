@@ -89,6 +89,9 @@ if __name__ == "__main__":
     dprint(1,"imported Qt4");
     app = QApplication(sys.argv);
     app.setDesktopSettingsAware(True);
+    from Tigger import pixmaps
+    app.setWindowIcon(pixmaps.tigger_starface.icon());
+
     dprint(1,"created QApplication");
     splash = QSplashScreen(Tigger.pixmaps.tigger_splash.pm());
     splash.showMessage("Welcome to Tigger!",Qt.AlignHCenter|Qt.AlignBottom);

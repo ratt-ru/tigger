@@ -28,6 +28,7 @@ from PyQt4.Qt import *
 from PyQt4.Qwt5 import *
 import math
 import os.path
+import re
 import time
 import numpy
 
@@ -57,7 +58,7 @@ Z_CurrentSource = 10002;
 Z_Markup = 10010;
 
 # default stepping of grid circles
-DefaultGridStep_ArcMin = 30;
+DefaultGridStep_ArcSec = 30*60;
 
 DEG = math.pi/180;
 
@@ -1054,20 +1055,28 @@ class SkyModelPlotter (QWidget):
     self._psf_marker.setZ(Z_Grid);
     QObject.connect(self._qa_show_psf,SIGNAL("toggled(bool)"),self._showPsfMarker);
     # grid stepping
-    self._grid_step_arcmin = DefaultGridStep_ArcMin;
+    self._grid_step_arcsec = DefaultGridStep_ArcSec;
     gridmenu = self._menu.addMenu("Show grid circles");
     qag = QActionGroup(gridmenu);
-    for step in [ None,1,2,5,10,20,30,60,120,300,600 ]:
+    gridsteps = [ None,1,2,5,10,30,60,120,300,600 ];
+    for step in gridsteps:
       if step is None:
         text = "None";
       elif step < 60:
         text = "%d'"%step;
       else:
         text = u"%d\u00B0"%(step/60);
-      qa = gridmenu.addAction(text,self._currier.curry(self._setGridCircleStepping,step));
+      qa = gridmenu.addAction(text,self._currier.curry(self._setGridCircleStepping,step and step*60));
       qa.setCheckable(True);
-      qa.setChecked(step==self._grid_step_arcmin);
+      qa.setChecked(step==self._grid_step_arcsec);
       qag.addAction(qa);
+    qa = self._qa_custom_grid = gridmenu.addAction("Custom...",self._setCustomGridCircleStepping);
+    qa.setCheckable(True);
+    qag.addAction(qa);
+    self._grid_step_arcsec_str = "";
+    if self._grid_step_arcsec/60 not in gridsteps:
+      self._setCustomGridCircleSteppingLabel();
+      qa.setChecked(True);
     # save as PNG file
     self._menu.addAction("Export plot to PNG file...",self._exportPlotToPNG,Qt.CTRL+Qt.Key_F12);
 
@@ -1462,8 +1471,8 @@ class SkyModelPlotter (QWidget):
       msgtext = "[%d:%d,%d:%d] min %s, max %s, mean %s, std %s, np %d"%stats1;
       tiptext = """<P><NOBR>Region: [%d:%d,%d:%d]</NOBR><BR>
         <NOBR>Stats: min %s, max %s, mean %s, std %s, np %d</NOBR></BR>
-        <NOBR>Use the "Colour zoom" button on the left (or press Shift+F4) to set the current data subset and
-        intensity range to this image region.</NOBR></P>"""%stats1;
+        Use the "Colour zoom" button on the left (or press Shift+F4) to set the current data subset and
+        intensity range to this image region.</P>"""%stats1;
       # make markup on plot to indicate current subset
       markup_items = self._makeRectMarker(rect,self._stats_pen);
       # calling QToolTip.showText() directly from here doesn't work, so set a timer on it
@@ -1531,10 +1540,49 @@ class SkyModelPlotter (QWidget):
     self._qa_unzoom.setEnabled(rect != self._zoomer.zoomBase());
     self._updatePsfMarker(rect,replot=True);
 
-  def _setGridCircleStepping (self,arcmin=DefaultGridStep_ArcMin):
+  def _setGridCircleStepping (self,arcsec=DefaultGridStep_ArcSec):
     """Changes the visible grid circles. None to disable.""";
-    self._grid_step_arcmin = arcmin;
+    self._grid_step_arcsec = arcsec;
     self._updateContents();
+
+  def _setCustomGridCircleStepping (self):
+    """Opens dialog to get a custom grid step.""";
+    text,ok = QInputDialog.getText(self,"Set custom grid step","""<P>
+      Specify a custom grid stepping as a value and a unit string.<BR>Recognized unit strings are
+      d or deg, ' (single quote) or arcmin, and " (double quote) or arcsec.<BR>Default is arcmin.</P>""",
+      text=self._grid_step_arcsec_str);
+    if text:
+      match = re.match("([-+]?(\d+(\.\d*)?|\.\d+)([eE][-+]?\d+)?)(d|deg|['\"]|arcmin)?$",text,re.I);
+      try:
+        value = float(match.group(1));
+      except:
+        QMessageBox.warning(self,"Invalid input","Invalid input: \"%s\""%text);
+        return;
+      if round(value) == value:
+        value = int(value);
+      unit = match.group(5);
+      if unit in ("d","deg"):
+        value *= 3600;
+      elif not unit or unit in ("'","arcmin"):
+        value *= 60;
+    self._setGridCircleStepping(value or None);
+    self._setCustomGridCircleSteppingLabel();
+
+  def _setCustomGridCircleSteppingLabel (self):
+    """Changes the label of the custom grid step action.""";
+    step = self._grid_step_arcsec;
+    if not step:
+      self._grid_step_arcsec_str = "";
+    elif step < 60:
+      self._grid_step_arcsec_str = ("%f\"" if isinstance(step,float) else "%d\"")%step;
+    elif step < 3600:
+      self._grid_step_arcsec_str = ("%f'" if step%60 else "%d'")%(step/60.);
+    else:
+      self._grid_step_arcsec_str = ("%fdeg" if step%3600 else "%ddeg")%(step/3600.);
+    if self._grid_step_arcsec_str:
+      self._qa_custom_grid.setText("Custom (%s)..."%self._grid_step_arcsec_str);
+    else:
+      self._qa_custom_grid.setText("Custom...");
 
   def _updateContents (self,what=SkyModel.UpdateAll,origin=None):
     # do nothing if updates are disabled (this is possible on startup, or when multiple
@@ -1627,22 +1675,22 @@ class SkyModelPlotter (QWidget):
 #    self._zoomer.setZoomBase(zbase);
     dprint(5,"drawing grid");
     # add grid lines & circles
-    circstep = self._grid_step_arcmin;
+    circstep = self._grid_step_arcsec;
     if circstep:
       self._grid = [ TiggerPlotCurve(),TiggerPlotCurve() ];
       self._grid[0].setData([lmin,lmax],[0,0]);
       self._grid[1].setData([0,0],[mmin,mmax]);
       # see how many units (of arcminute) fit in max diagonal direction
-      maxr = int(round(math.sqrt(lmax**2+mmax**2)/(DEG/60)));
+      maxr = int(round(math.sqrt(lmax**2+mmax**2)/(DEG/3600)));
       # cache sines and cosines of curve argument
       angles = numpy.array(range(0,361,5))*DEG;
       sines = numpy.sin(angles);
       cosines = numpy.cos(angles);
       # make circles
-      for r in range(circstep,maxr,circstep):
+      for r in numpy.arange(circstep,maxr,circstep):
         # find radius in each direction, by projecting a point
-        rl ,dum= self.projection.offset(r*DEG/60,0);
-        dum,rm = self.projection.offset(0,r*DEG/60);
+        rl ,dum= self.projection.offset(r*DEG/3600,0);
+        dum,rm = self.projection.offset(0,r*DEG/3600);
         # make curve
         curve = TiggerPlotCurve();
         x ,y = rl*cosines,rm*sines;
@@ -1651,8 +1699,14 @@ class SkyModelPlotter (QWidget):
         self._grid.append(curve);
         # make a text label and marker
         marker = TiggerPlotMarker();
-        d,m = divmod(r,60);
-        label = ("%d&deg;%02d'"%(d,m) if m else "%d&deg;"%d) if d else "%02d'"%m;
+        m,s = divmod(r,60);
+        d,m = divmod(m,60);
+        if d:
+          label = "%d&deg;%02d'%02d\""%(d,m,s) if s else ("%d&deg;%02d'"%(d,m) if m else "%d&deg;"%d);
+        elif m:
+          label = "%d'%02d\""%(m,s) if s else "%d'"%m;
+        else:
+          label = "%d\""%s;
         text = QwtText(label,QwtText.RichText);
         text.setColor(self._grid_color);
         marker.setValue(x[0],y[0]);
