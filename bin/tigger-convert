@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 
 #
-#% $Id$ 
+#% $Id$
 #
 #
 # Copyright (C) 2002-2011
-# The MeqTree Foundation & 
+# The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
 # P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
 #
@@ -22,7 +22,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>,
-# or write to the Free Software Foundation, Inc., 
+# or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
@@ -54,7 +54,7 @@ if __name__ == '__main__':
     # go up the directory tree looking for directory "Tigger"
     while len(dirname) > 1:
       if os.path.basename(dirname) == "Tigger":
-	break;
+        break;
       dirname = os.path.dirname(dirname);
     else:
       print "Unable to locate the Tigger directory, it is not a parent of %s. Please check your installation and/or PYTHONPATH."%os.path.realpath(__file__);
@@ -65,9 +65,9 @@ if __name__ == '__main__':
     except:
       print "Unable to import the Tigger package from %s. Please check your installation and PYTHONPATH."%dirname;
       sys.exit(1);
-  
+
   Tigger.nuke_matplotlib();  # don't let the door hit you in the ass, sucka
-      
+
   from Tigger import Coordinates
   import Tigger.Models.Formats
   import Tigger.Models.ModelClasses
@@ -75,7 +75,7 @@ if __name__ == '__main__':
   full_formats = Tigger.Models.Formats.listFormatsFull();
   input_formats = [ name for name,(load,save,doc,extensions) in full_formats if load ] + [ AUTO ];
   output_formats = [ name for name,(load,save,doc,extensions) in full_formats if save ] + [ AUTO ];
-  
+
   from Tigger.Models.Formats import ASCII
 
   # setup some standard command-line option parsing
@@ -105,10 +105,17 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
   parser.add_option("-T","--tags",type="string",action="append",metavar="TAG",
                     help="Extract sources with the specified tags.");
   parser.add_option("--app-to-int",action="store_true",
-                    help="Convert apparent fluxes in input model to intrinsic. Only works for NEWSTAR or NEWSTAR-derived input models.");
+                    help="Treat fluxes as apparent, and rescale them into intrinsic using the "+
+                    "supplied primary beam model (see --primary-beam option).");
+  parser.add_option("--newstar-app-to-int",action="store_true",
+                    help="Convert NEWSTAR apparent fluxes in input model to intrinsic. Only works for NEWSTAR or NEWSTAR-derived input models.");
+  parser.add_option("--prefix",type="string",
+                    help="Prefix all source names with the given string");
   parser.add_option("--center",type="string",metavar='COORDINATES',
                     help="Override coordinates of the nominal field center specified in the input model. Use a pyrap.measures direction string of the form "+\
                     "REF,C1,C2, for example \"j2000,1h5m0.2s,+30d14m15s\", or \"b1950,115.2d,+30.5d\". See the pyrap.measures documentation for more details.");
+  parser.add_option("--refresh-r",action="store_true",
+                    help="Recompute the 'r' (radial distance from center) attribute of each source based on the current field center.");
   parser.add_option("--recenter",type="string",metavar='COORDINATES',
                     help="Shift the sky model from the nominal center to a different field center. Use a pyrap.measures direction string of the form "+\
                     "REF,C1,C2, for example \"j2000,1h5m0.2s,+30d14m15s\", or \"b1950,115.2d,+30.5d\". See the pyrap.measures documentation for more details.");
@@ -159,9 +166,11 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
   def convert_coordinates (coords):
     """Converts a measures coordinate string into a ra,dec pair (radians at J2000)""";
     import re
-    match = re.match("^([\d.]+),([-]?[\d.]+)$",coords);
+    match = re.match("^([\d.]+)(rad|deg|),([-]?[\d.]+)(rad|deg|)$",coords);
     if match:
-      return float(match.group(1))*DEG,float(match.group(2))*DEG;
+      ra = float(match.group(1));
+      dec = float(match.group(3));
+      return ra*(DEG if match.group(2) == "deg" else 1),dec*(DEG if match.group(4) == "deg" else 1);
     try:
       import pyrap.measures
     except:
@@ -180,10 +189,10 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
       traceback.print_exc();
       sys.exit(1);
 
-
   # figure out center and recenter option
   if options.center:
     center_radec = convert_coordinates(options.center);
+    options.refresh_r = True;
   if options.recenter:
     recenter_radec = convert_coordinates(options.recenter);
 
@@ -204,7 +213,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
     '.lt.' :lambda x,y:x<y
   };
   select_units = dict(d=DEG,m=DEG/60,s=DEG/3600);
-  
+
   selections = [];
   for selstr in (options.select or []):
     match = re.match("^(?i)([^=<>!.]+)(%s)([^dms]+)([dms])?"%"|".join([ key.replace('.','\.') for key in select_predicates.keys()]),selstr);
@@ -228,14 +237,14 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
   output_type = None;
   if output is None and options.output_type == AUTO:
     options.output_type = "Tigger";
-    
+
   if options.output_type != AUTO:
     output_type,dum,export_func,output_doc = Tigger.Models.Formats.getFormat(options.output_type);
     output_extensions = Tigger.Models.Formats.getFormatExtensions(options.output_type);
     if not export_func or not extensions:
       print "Output model type '%s' is not supported."%options.output_type;
       sys.exit(1);
-      
+
   # figure out output name, if not specified
   if output is None:
     if not output_type:
@@ -268,7 +277,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
     print "Input model %s contains no sources"%skymodel;
     sys.exit(0);
   print "Model contains %d sources"%len(sources);
-  
+
   # append, if specified
   if options.append:
     for modelnum,filename in enumerate(options.append):
@@ -286,17 +295,16 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
         sources += model2.sources;
         for src in model2.sources:
           src.name = "%s:%s"%(chr(ord('a')+modelnum),src.name);
-        # recompute 'r' attribute (unless --center or --recenter is in effect, in which case it's going to be done anyway below)
-        if not ( options.center or options.recenter ):
+        # recompute 'r' attribute (unless --center is in effect, in which case it's going to be done anyway below)
+        if not options.refresh_r:
           for src in model2.sources:
-            r,pa = Coordinates.angular_dist_pos_angle(src.pos.ra,src.pos.dec,*model.fieldCenter());
-            src.setAttribute('r',r);
+            src.setAttribute('r',Coordinates.angular_dist_pos_angle(ra0,dec0,*model.fieldCenter())[0]);
       print "Appended %d sources from %s (%s)"%(len(model2.sources),filename,append_doc);
-  
+
   # apply center, if specified
   if options.center:
-    model.setFieldCenter(*center_radec);
     print "Center of field set to %s"%options.center;
+    model.setFieldCenter(*center_radec);
 
   # apply selection by tag
   if options.tags:
@@ -306,7 +314,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
       print "No sources left after selection by tag (-T/--tag) has been applied.";
       sys.exit(0);
     print "Selection by tag (%s) reduces this to %d sources"%(", ".join(options.tags),len(sources));
-    
+
   # remove sources
   if options.remove_source:
     import fnmatch
@@ -318,7 +326,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
       remove_names.update(match);
       print "Removing sources: %s matches %s"%(patt,",".join(sorted(match)));
     sources = [ src for src in sources if src.name not in remove_names ];
-    
+
   # add brick
   if options.add_brick:
     for brickspec in options.add_brick:
@@ -366,14 +374,13 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
       source = SkyModel.Source(srcname,pos,flux,shape=shape);
       for tag in tags:
         source.setAttribute(tag,True);
-      if not ( options.center or options.recenter ):
-        r,pa = Coordinates.angular_dist_pos_angle(ra0,dec0,*model.fieldCenter());
-        src.setAttribute('r',r);
+      if not options.refresh_r:
+        src.setAttribute('r',Coordinates.angular_dist_pos_angle(ra0,dec0,*model.fieldCenter())[0]);
       sources.append(source);
       print "Adding FITS source %s (%s,pad=%f) with tags %s"%(srcname,fitsfile,pad,tags);
 
   # convert apparent flux to intrinsic
-  if options.app_to_int:
+  if options.newstar_app_to_int:
     nsrc = 0;
     for src in sources:
       bg = getattr(src,'newstar_beamgain',None);
@@ -385,7 +392,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
         src.removeAttribute('flux_apparent');
         src.setAttribute('flux_intrinsic',True);
         nsrc += 1;
-    print "Converted apparent to intrinsic flux for %d model sources"%nsrc;
+    print "Converted NEWSTAR apparent to intrinsic flux for %d model sources"%nsrc;
     if len(sources) != nsrc:
       print "  (%d sources were skipped for whatever reason.)"%(len(model.sources)-nsrc);
 
@@ -393,12 +400,12 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
   if options.ref_freq >= 0:
     model.setRefFreq(options.ref_freq*1e+6);
     print "Setting reference frequency to %f MHz"%options.ref_freq;
-    
+
   # recenter
   if options.recenter:
     print "Shifting model to new center %s"%options.recenter;
     ra0,dec0 = model.fieldCenter();
-    ra1,dec1 = recenter_radec;
+    field_center = ra1,dec1 = recenter_radec;
     ddec = dec1 - dec0;
     cosd0,sind0 = math.cos(ddec),math.sin(ddec);
     for src in sources:
@@ -411,9 +418,10 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
       src.pos.dec = math.asin(z1);
     # reset model center
     model.setFieldCenter(ra1,dec1);
-   
+
   # recompute radial distance
-  if options.center or options.recenter:
+  if options.refresh_r:
+    print "Recomputing the 'r' attribute based on the field center";
     model.recomputeRadialDistance();
 
   # select
@@ -423,7 +431,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
       if obj is not None and hasattr(obj,tag):
         return getattr(obj,tag);
     return None;
-    
+
   for selstr,tag,predicate,value in selections:
     # get tag value
     srctag = [ (src,getTagValue(src,tag)) for src in model.sources ];
@@ -437,9 +445,16 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
   if pb == "refresh":
     pb = model.primaryBeam();
     if pb:
-      print "Recalculating apparent fluxes using the current primary beam expression";
+      print "Recalculating apparent fluxes";
     else:
-      print "No primary beam expression in model, ignoring --primary-beam refresh";
+      print "No primary beam expression in model, ignoring '--primary-beam refresh' option";
+  if options.app_to_int:
+    pb = pb or model.primaryBeam();
+    if pb:
+      print "Converting apparent fluxes to intrinsic";
+    else:
+      print "No primary beam expression in model and no --primary-beam option given, cannot use --app-to-int.";
+      sys.exit(1);
   if pb:
     try:
       from math import *
@@ -455,18 +470,39 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
     fq = model.refFreq() or 1.4e+9;
     nsrc = 0;
     print "Using beam expression '%s' with reference frequency %f MHz"%(pb,fq*1e-6);
+    # ensure that every source has an 'r' attribute
+    if not options.refresh_r:
+      for src in sources:
+        if not hasattr(src,'r'):
+          src.setAttribute('r',Coordinates.angular_dist_pos_angle(src.pos.ra,src.pos.dec,*mode.fieldCenter())[0]);
     # evaluate sources
-    for src in sources:
-      r = getattr(src,'r',None);
-      if r is not None:
-        bg = pbexp(r,fq);
-        src.setAttribute('beamgain',bg);
-        src.setAttribute('Iapp',src.flux.I*bg);
-        nsrc += 1;
-    print "Applied primary beam expression to %d model sources"%nsrc;
+    if not options.app_to_int:
+      for src in sources:
+        r = getattr(src,'r',None);
+        if r is not None:
+          bg = pbexp(r,fq);
+          src.setAttribute('beamgain',bg);
+          src.setAttribute('Iapp',src.flux.I*bg);
+          nsrc += 1;
+      print "Applied primary beam expression to %d model sources"%nsrc;
+    else:
+      for src in sources:
+        r = getattr(src,'r',None);
+        if r is not None:
+          bg = pbexp(r,fq);
+          src.setAttribute('beamgain',bg);
+          if hasattr(src.flux,'I'):
+            src.setAttribute('Iapp',src.flux.I);
+          for stokes in "IQUV":
+            x = getattr(src.flux,stokes,None);
+            if x is not None:
+              setattr(src.flux,stokes,x/bg);
+          nsrc += 1;
+      print "Converted apparent flux to intrinsic for %d model sources"%nsrc;
     if len(model.sources) != nsrc:
       print "  (%d sources were skipped for whatever reason, probably they didn't have an 'r' attribute)"%(len(model.sources)-nsrc);
 
+  # rename using COPART
   if options.rename:
     print "Renaming sources using the COPART convention"
     typecodes = dict(Gau="G",FITS="F");
@@ -556,6 +592,11 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
       else:
         names[src.name] = i;
         sources.append(src);
+  # assign prefix to source names
+  if options.prefix:
+    print "Prefixing source names with '%s'"%options.prefix;
+    for src in sources:
+      src.name = options.prefix + src.name;
   # save output
   print "Saving model containing %d sources to %s (%s)"%(len(sources),output,output_doc);
   export_func(model,output,sources=sources,format=options.output_format or None);

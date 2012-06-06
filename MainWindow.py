@@ -45,7 +45,7 @@ from Models.Formats import ModelHTML
 import Widgets
 import AboutDialog
 from SkyModelTreeWidget import *
-from SkyModelPlot import *
+from Plot.SkyModelPlot import *
 from Images.Manager import ImageManager
 import Tigger.Tools.source_selector
 
@@ -139,11 +139,14 @@ class MainWindow (QMainWindow):
     # Plot menu
     menubar.addMenu(self.skyplot.getMenu());
 
-    # Edit Menu
-    em = QMenu("&Select",self);
+    # LSM Menu
+    em = QMenu("&LSM",self);
     self._qa_em = menubar.addMenu(em);
     self._qa_em.setVisible(False);
     QObject.connect(self,SIGNAL("hasSkyModel"),self._qa_em.setVisible);
+    self._column_view_menu = QMenu("&Show columns",self);
+    self._qa_cv_menu = em.addMenu(self._column_view_menu);
+    em.addSeparator();
     em.addAction("Select &all",self._selectAll,Qt.CTRL+Qt.Key_A);
     em.addAction("&Invert selection",self._selectInvert,Qt.CTRL+Qt.Key_I);
     em.addAction("Select b&y attribute...",self._showSourceSelector,Qt.CTRL+Qt.Key_Y);
@@ -154,15 +157,6 @@ class MainWindow (QMainWindow):
     QObject.connect(self,SIGNAL("hasSelection"),qa_del_tag.setEnabled);
     qa_del_sel = em.addAction("&Delete selection",self._deleteSelection);
     QObject.connect(self,SIGNAL("hasSelection"),qa_del_sel.setEnabled);
-
-
-    # View menu
-    vm = QMenu("&View",self);
-    self._qa_vm = menubar.addMenu(vm);
-    self._column_view_menu = QMenu("&Columns",self);
-    self._qa_cv_menu = vm.addMenu(self._column_view_menu);
-    QObject.connect(self,SIGNAL("hasSkyModel"),self._qa_vm.setVisible);
-    self._qa_vm.setVisible(False);
 
    # Tools menu
     tm = self._tools_menu = QMenu("&Tools",self);

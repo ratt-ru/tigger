@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 
 #
-#% $Id$ 
+#% $Id$
 #
 #
 # Copyright (C) 2002-2011
-# The MeqTree Foundation & 
+# The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
 # P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
 #
@@ -22,7 +22,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>,
-# or write to the Free Software Foundation, Inc., 
+# or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
@@ -39,14 +39,14 @@ DEG = math.pi/180;
 
 
 if __name__ == '__main__':
-  
+
   import Tigger.Models.Formats
   from Tigger.Models.Formats import ASCII
-  
+
   AUTO = "auto";
   full_formats = Tigger.Models.Formats.listFormatsFull();
   input_formats = [ name for name,(load,save,doc,extensions) in full_formats if load ] + [ AUTO ];
-  
+
   # setup some standard command-line option parsing
   #
   from optparse import OptionParser
@@ -63,8 +63,14 @@ an output image is not specified, makes a name for it automatically.""");
                     help="rescale model fluxes by given factor. If N is given, rescale N brightest only.");
   parser.add_option("-b","--beamsize",dest="beamsize",type="float",action="store",
                     help="restoring beam size (0 for a delta-function.)");
-  parser.add_option("-p","--psf",dest="psf",action="store",
-                    help="name of PSF file to be fitted, if beam size is not specified (default psf.fits)");
+  parser.add_option("--psf",type="float",dest="psf_maj",
+                    help="restoring PSF FWHM, major axis, in arcsec, major axis");
+  parser.add_option("--psf-min",type="float",dest="psf_min",
+                    help="restoring PSF FWHM, minor axis (if different from major axis)");
+  parser.add_option("--psf-pa",type="float",
+                    help="restoring PSF position angle, in degrees, default is 0");
+  parser.add_option("-p","--psf-file",dest="psf",action="store",
+                    help="name of PSF file to be fitted, if major/minor axis is not specified (default psf.fits)");
   parser.add_option("--clear",action="store_true",
                     help="clear contents of FITS file before adding in sources");
   parser.add_option("-f",dest="force",action="store_true",
@@ -73,7 +79,7 @@ an output image is not specified, makes a name for it automatically.""");
                     help="set verbosity level (0 is silent, higher numbers mean more messages)");
   parser.add_option("-T","--timestamps",action="store_true",
                     help="enable timestamps in debug messages (useful for timing)");
-  parser.set_defaults(n=0,fluxscale='1',psf='psf.fits',beam=-1);
+  parser.set_defaults(n=0,fluxscale='1',psf='psf.fits',psf_maj=-1,psf_min=-1,psf_pa=0);
 
   (options,rem_args) = parser.parse_args();
 
@@ -117,7 +123,7 @@ an output image is not specified, makes a name for it automatically.""");
   except:
     print "Unable to determine model type for %s, please specify one explicitly with the -t/--type option."%skymodel;
     sys.exit(1);
-  
+
   print "Reading %s (%s)"%(skymodel,input_doc);
   model = import_func(skymodel,format=options.format);
 
@@ -143,13 +149,15 @@ an output image is not specified, makes a name for it automatically.""");
     for src in sources[:n]:
       src.flux.rescale(0.01);
 
-  if options.beamsize >= 0:
-    gx = gy = options.beam;
-    grot = 0;
-  elif options.psf:
+  if options.psf_maj >= 0:
+    gx = options.psf_maj/(FWHM*ARCSEC);
+    gy = options.psf_min/(FWHM*ARCSEC) if options.psf_min >= 0 else gx;
+    grot = options.psf_pa/DEG;
+    print "Using PSF FWHM %.2f\" by %.2f\" at PA %f deg"%(gx*FWHM*ARCSEC,gy*FWHM*ARCSEC,grot*DEG);
+  else:
     # fit the psf
     gx,gy,grot = Imaging.fitPsf(options.psf);
-    print "Fitted Gaussian PSF to %s, FWHM is %.2f\" by %.2f\" at PA %f deg"%(options.psf,gx*FWHM*ARCSEC,gy*FWHM*ARCSEC,grot*DEG);
+    print "Fitted Gaussian to PSF %s, FWHM is %.2f\" by %.2f\" at PA %f deg"%(options.psf,gx*FWHM*ARCSEC,gy*FWHM*ARCSEC,grot*DEG);
 
   # read, restore, write
   print "Restoring model into input image %s"%input_image;

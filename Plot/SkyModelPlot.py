@@ -41,13 +41,14 @@ _verbosity = Kittens.utils.verbosity(name="plot");
 dprint = _verbosity.dprint;
 dprintf = _verbosity.dprintf;
 
-from Models import ModelClasses,PlotStyles
+from Tigger import pixmaps,Config,ConfigFile
+from Tigger.Models import ModelClasses,PlotStyles
 import Coordinates
 from Coordinates import Projection
 from  Models.SkyModel import SkyModel
-from Tigger import pixmaps,Config
 import MainWindow
 from Tigger.Widgets import TiggerPlotCurve,TiggerPlotMarker
+import MouseModes
 
 # plot Z depths for various classes of objects
 Z_Image = 1000;
@@ -181,6 +182,7 @@ class ImageSourceMarker (SourceMarker):
   def __init__ (self,src,l,m,size,model,imgman):
     # load image if needed
     self.imgman = imgman;
+    dprint(2,"loading Image source",src.shape.filename);
     self.imagecon = imgman.loadImage(src.shape.filename,duplicate=False,to_top=False,model=src.name);
     self.imagecon.setMarkersZ(Z_Source);
     # init base class
@@ -200,10 +202,10 @@ class ImageSourceMarker (SourceMarker):
     if self.imagecon:
       self.imagecon.setPlotBorderStyle(border_color=symbol_color,label_color=label_color);
 
-
 def makeSourceMarker (src,l,m,size,model,imgman):
   """Creates source marker based on source type""";
   shape = getattr(src,'shape',None);
+#  print type(shape),isinstance(shape,ModelClasses.FITSImage),shape.__class__,ModelClasses.FITSImage;
   if isinstance(shape,ModelClasses.FITSImage):
     return ImageSourceMarker(src,l,m,size,model,imgman);
   else:
@@ -722,12 +724,14 @@ class SkyModelPlotter (QWidget):
     def __init__(self,canvas,track_callback=None,label=None):
       QwtPlotZoomer.__init__(self, canvas);
       self.setMaxStackDepth(1000);
+      self._use_wheel = True;
       self._track_callback = track_callback;
       if label:
         self._label = QwtText(label);
       else:
         self._label = QwtText("");
       self._fixed_aspect = False;
+      self._dczoom_button = self._dczoom_modifiers = None;
       # maintain a separate stack of  "desired" (as opposed to actual) zoom rects. When a resize of the plot happens,
       # we recompute the actual zoom rect based on the aspect ratio and the desired rect.
       self._zoomrects = [];
@@ -740,6 +744,9 @@ class SkyModelPlotter (QWidget):
     def setFixedAspect (self,fixed):
       self._fixed_aspect = fixed;
       self._checkAspects();
+
+    def setDoubleClickZoom (self,button,modifiers):
+      self._dczoom_button,self._dczoom_modifiers = button,modifiers;
 
     def _checkAspects (self):
       """If fixed-aspect mode is in effect, goes through zoom rects and adjusts them to the plot aspect""";
@@ -789,6 +796,15 @@ class SkyModelPlotter (QWidget):
     def zoom (self,rect):
       if not isinstance(rect,int):
         rect = rect.intersected(self.zoomBase());
+        # check that it's not too small, ignore if it is
+        x1,y1,x2,y2 = rect.getCoords();
+        x1 = self.plot().transform(self.xAxis(),x1);
+        y1 = self.plot().transform(self.yAxis(),y1);
+        x2 = self.plot().transform(self.xAxis(),x2);
+        y2 = self.plot().transform(self.yAxis(),y2);
+        dprint(2,"zoom by",abs(x1-x2),abs(y1-y2));
+        if abs(x1-x2)<=20 and abs(y1-y2)<=20:
+          return;
       if isinstance(rect,int) or rect.isValid():
         dprint(2,"zoom",rect);
         if not isinstance(rect,int):
@@ -802,6 +818,34 @@ class SkyModelPlotter (QWidget):
 
     def trackerText (self,pos):
       return (self._track_callback and self._track_callback(pos)) or (self._label if self.isActive() else QwtText(""));
+
+    def enableWheel (self,enable):
+      self._use_wheel = enable;
+
+    def widgetMouseDoubleClickEvent (self,ev):
+      x = self.plot().invTransform(self.xAxis(),ev.x());
+      y = self.plot().invTransform(self.yAxis(),ev.y());
+      if int(ev.button()) == self._dczoom_button and int(ev.modifiers()) == self._dczoom_modifiers:
+        self.emit(SIGNAL("provisionalZoom"),x,y,1,10);
+
+    def widgetWheelEvent (self,ev):
+      x = self.plot().invTransform(self.xAxis(),ev.x());
+      y = self.plot().invTransform(self.yAxis(),ev.y());
+      dprint(3,"zoomer wheel",ev.x(),ev.y(),ev.delta(),x,y,self._use_wheel);
+      if self._use_wheel:
+        self.emit(SIGNAL("provisionalZoom"),x,y,(1 if ev.delta() > 0 else -1),200);
+#        if ev.delta() < 0:
+#          if self.zoomRectIndex() > 0:
+#            self.zoom(-1);
+#          else:
+#            dprint(0,"zoomed all the way out, wheel event ignored");
+#        else:
+#          x1,y1,x2,y2 = self.zoomRect().getCoords();
+#          w = (x2-x1)/2;
+#          h = (y2-y1)/2;
+#          # self.zoom(QRectF(x-w/2,y-h/2,w,h));
+#          self.emit(SIGNAL("provisionalZoom"),x,y,1);
+      QwtPlotPicker.widgetWheelEvent(self,ev);
 
   class PlotPicker (QwtPlotPicker):
     """Auguments QwtPlotPicker with functions for selecting objects""";
@@ -873,7 +917,6 @@ class SkyModelPlotter (QWidget):
         SkyModelPlotter.PlotPicker.transition(self,ev2);
         self.reset();
 
-
   def __init__ (self,parent,mainwin,*args):
     QWidget.__init__(self,parent,*args);
     # plot update logic -- handle updates via the event looop
@@ -895,7 +938,6 @@ class SkyModelPlotter (QWidget):
     self.plot.enableAxis(QwtPlot.xBottom,False);
     lo.addWidget(self.plot);
     # setup plot groupings
-    self._zoomer = None;
     self._bg_color = QColor("#808080");
     self.plot.setCanvasBackground(self._bg_color);
     self._bg_brush = QBrush(self._bg_color);
@@ -907,33 +949,9 @@ class SkyModelPlotter (QWidget):
     self._grid_pen.setStyle(Qt.DotLine);
     self._image_pen = QPen(self._grid_color);
     self._image_pen.setStyle(Qt.DashLine);
-    # attach zoomer if None
-    self._zoomer = self.PlotZoomer(self.plot.canvas(),track_callback=self._trackCoordinates,label="zoom");
-    zpen = makeDualColorPen("navy","yellow");
-    self._zoomer.setRubberBandPen(zpen);
-    self._zoomer.setTrackerPen(QColor("yellow"));
-    self._zoomer.setTrackerMode(QwtPicker.AlwaysOn);
-    QObject.connect(self._zoomer,SIGNAL("zoomed(const QwtDoubleRect &)"),self._plotZoomed);
-    self._zoomer.setMousePattern(QwtEventPattern.MouseSelect1,Qt.LeftButton);
-    self._zoomer.setMousePattern(QwtEventPattern.MouseSelect2,Qt.RightButton,Qt.CTRL);
-    self._zoomer.setMousePattern(QwtEventPattern.MouseSelect3,Qt.RightButton);
-    self._zoomer.setMousePattern(QwtEventPattern.MouseSelect6,Qt.RightButton,Qt.SHIFT);
-#    self._zoomer.setStateMachine(QwtPickerDragRectMachine());
-    self._zoomer.setSelectionFlags(QwtPicker.RectSelection|QwtPicker.DragSelection);
-    # attach ruler
-#    self._coordinate_lookup = self.PlotPicker(self.plot.canvas(),"","cyan",
-#      self._lookupCoordinates,mode=QwtPicker.PointSelection);
-#    self._coordinate_lookup.setMousePattern(QwtEventPattern.MouseSelect1,Qt.LeftButton);
-    self._ruler = self.PlotRuler(self.plot.canvas(),"","cyan",self._measureRuler,
-      mode=QwtPicker.PolygonSelection,
-      rubber_band=QwtPicker.PolygonRubberBand,
-      track_callback=self._trackRuler);
-    # this is the initial position of the ruler -- None if ruler is not tracking
-    self._ruler_pos0 = None;
-    # this picker is just to make sure _trackCoordinates is still called in measurement mode
-    self._ruler1 = self.PlotPicker(self.plot.canvas(),"",mode=QwtPicker.PointSelection,track_callback=self._trackCoordinates);
-    self._ruler1.setTrackerMode(QwtPicker.AlwaysOn);
-    # markup symbols and colors and pens
+    # init plot pickers
+    self._initPickers();
+    # init markup symbols and colors and pens
     self._plot_markup = [];
     self._stats_color = QColor("red");
     self._stats_pen = QPen(self._stats_color,1);
@@ -949,18 +967,7 @@ class SkyModelPlotter (QWidget):
     self._markup_a_label.setColor(self._markup_color);
     self._markup_b_label = QwtText("B");
     self._markup_b_label.setColor(self._markup_color);
-    # self._ruler.setRubberBand(QwtPicker.PolygonRubberBand);
-    # self._ruler.setSelectionFlags(QwtPicker.PolygonSelection|QwtPicker.DragSelection);
-    # attach object pickers
-    # selection pickers
-    self._picker1 = self.PlotPicker(self.plot.canvas(),"select","green",self._selectRect,track_callback=self._trackCoordinates);
-    self._picker1.setTrackerMode(QwtPicker.AlwaysOn);
-    self._picker1.setMousePattern(QwtEventPattern.MouseSelect1,Qt.LeftButton);
-    self._picker2 = self.PlotPicker(self.plot.canvas(),"+select","green",curry(self._selectRect,mode=self.SelectionAdd));
-    self._picker2.setMousePattern(QwtEventPattern.MouseSelect1,Qt.LeftButton,Qt.SHIFT);
-    self._picker3 = self.PlotPicker(self.plot.canvas(),"select","green",self._selectNearestSource,mode=QwtPicker.PointSelection);
-    self._picker3.setMousePattern(QwtEventPattern.MouseSelect1,Qt.LeftButton,Qt.CTRL);
-    # live zoomer
+    # init live zoomers
     self._livezoom = LiveImageZoom(self);
     self._liveprofile = LiveProfile(self);
     # other internal init
@@ -988,48 +995,18 @@ class SkyModelPlotter (QWidget):
     self._menu.addAction(self._qa_unzoom);
     # mouse mode controls
     mouse_menu = self._menu.addMenu("Mouse mode");
-    self._qa_mm = [
-      mouse_menu.addAction(pixmaps.zoom_in.icon(),"Zoom",self._currier.curry(self.setMouseMode,self.MouseZoom),Qt.Key_F4),
-      mouse_menu.addAction(pixmaps.ruler.icon(),"Measure",self._currier.curry(self.setMouseMode,self.MouseMeasure)),
-      mouse_menu.addAction(pixmaps.window_sigma.icon(),"Get stats",self._currier.curry(self.setMouseMode,self.MouseSubset)),  # zoom_colours.icon()
-      mouse_menu.addAction(pixmaps.big_plus.icon(),"Select objects",self._currier.curry(self.setMouseMode,self.MouseSelect)),
-      mouse_menu.addAction(pixmaps.big_minus.icon(),"Deselect objects",self._currier.curry(self.setMouseMode,self.MouseDeselect)) ];
-    self._qa_mm[0].setToolTip("""<P>Puts the mouse in zoom mode. In this mode, hold the left mouse button and drag a rectangle
-        on the plot to zoom in. Middle-click to zoom back out one step, and right-click to zoom out all the way.</P>
-        <P>As in most other modes, you may hold down
-        CTRL and left-click to select individual model sources.</P>""");
-    self._qa_mm[1].setToolTip("""<P>Puts the mouse in measurement mode.
-        In this mode, click on the plot to look up coordinates (coordinates will also be copied
-        to the text console, and to the clipboard), or hold the left mouse button and drag a "ruler"
-        to measure separation and position angle. The resulting coordinates and measurements will be</P>
-        <OL>
-        <LI>displayed on-screen in a tooltip</LI>
-        <LI>copied to the clipboard</LI>
-        <LI>printed to the text console from which Tigger was started</LI>
-        </OL>
-        <P>As in most other modes, you may hold down
-        CTRL and left-click to select individual model sources.</P>""");
-    self._qa_mm[2].setToolTip("""<P>Puts the mouse in image selection mode. In this mode, hold the left mouse button and drag a
-        rectangle on the current image to select a window on the image. The current intensity range
-        (and histogram) will be set to the data range of the selected window.</P>
-        <P>As in most other modes, you may hold down
-        CTRL and left-click to select individual model sources.</P>""");
-    self._qa_mm[3].setToolTip("""<P>Puts the mouse in source selection mode. In this mode, hold the left mouse button and drag a
-        rectangle on the plot to select all sources within the rectangle. Hold down SHIFT while you drag to extend to
-        a previous selection.</P>
-        <P>As in most other modes, you may hold down
-        CTRL and left-click to select individual model sources.</P>""");
-    self._qa_mm[4].setToolTip("""<P>Puts the mouse in source deselection mode. In this mode, hold the left mouse button and drag a
-        rectangle on the plot to deselect all sources within the rectangle.</P>
-         <P>Unlike other modes, you may hold down
-        CTRL and left-click to <b>de-select</b> individual model sources.</P>""");
-    self._qa_mm[3].setVisible(False);
-    self._qa_mm[4].setVisible(False);
-    for qa in self._qa_mm:
-      self._qag_mousemode.addAction(qa);
-      qa.setCheckable(True);
-      self._wtoolbar.addAction(qa);
-    self.setMouseMode(self.MouseZoom);
+    # init top of menu
+    mouse_menu.addAction("Show quick mouse reference",self._showMouseModeTooltip,Qt.Key_F1);
+    self._qa_mwzoom = qa = mouse_menu.addAction("Use mouse wheel zoom");
+    qa.setCheckable(True);
+    QObject.connect(qa,SIGNAL("toggled(bool)"),self._zoomer.enableWheel);
+    QObject.connect(qa,SIGNAL("triggered(bool)"),self._currier.curry(Config.set,"mouse-wheel-zoom"));
+    qa.setChecked(Config.getbool("mouse-wheel-zoom",True));
+    self._zoomer.enableWheel(qa.isChecked());
+    mouse_menu.addSeparator();
+    self._mousemodes = MouseModes.MouseModeManager(self,mouse_menu,self._wtoolbar);
+    QObject.connect(self._mousemodes,SIGNAL("setMouseMode"),self._setMouseMode);
+    self._setMouseMode(self._mousemodes.currentMode());
     self._qa_colorzoom = self._wtoolbar.addAction(pixmaps.zoom_colours.icon(),"Zoom colourmap into subset",
         self._colourZoomIntoSubset);
     self._qa_colorzoom.setShortcut(Qt.SHIFT+Qt.Key_F4);
@@ -1133,54 +1110,101 @@ class SkyModelPlotter (QWidget):
         self._update_done = ev.serial;
     return QWidget.event(self,ev);
 
-  def enableMouseMode (self,mode,enable=True):
-    """Enables or disables the given mode.""";
-    qa = self._qa_mm[mode];
-    qa.setVisible(enable);
-    # if disabled the currently checked mode, reset mode to default (zoom)
-    if not enable and qa.isChecked():
-      self._mouse_mode = self.MouseZoom;
-    # call setMouseMode() function to readjust GUI (change shortcuts, etc.)
-    self.setMouseMode(self._mouse_mode);
+  def _initPickers (self):
+    """Called from __init__ to create the various plot pickers for support of mouse modes.""";
+    # this picker is invisible -- it is just there to make sure _trackCoordinates is always called
+    self._tracker = self.PlotPicker(self.plot.canvas(),"",mode=QwtPicker.PointSelection,track_callback=self._trackCoordinates);
+    self._tracker.setTrackerMode(QwtPicker.AlwaysOn);
+    # zoom picker
+    self._zoomer = self.PlotZoomer(self.plot.canvas(),label="zoom");
+    self._zoomer_pen = makeDualColorPen("navy","yellow");
+    self._zoomer.setRubberBandPen(self._zoomer_pen);
+    self._zoomer.setTrackerPen(QColor("yellow"));
+    QObject.connect(self._zoomer,SIGNAL("zoomed(const QwtDoubleRect &)"),self._plotZoomed);
+    QObject.connect(self._zoomer,SIGNAL("provisionalZoom"),self._plotProvisionalZoom);
+    self._zoomer_box = TiggerPlotCurve();
+    self._zoomer_box.setPen(self._zoomer_pen);
+    self._zoomer_label = TiggerPlotMarker();
+    self._zoomer_label_text = QwtText("");
+    self._zoomer_label_text.setColor(QColor("yellow"));
+    self._zoomer_label.setLabel(self._zoomer_label_text);
+    self._zoomer_label.setLabelAlignment(Qt.AlignBottom|Qt.AlignRight);
+    for item in self._zoomer_label,self._zoomer_box:
+      item.setZ(Z_Markup);
+    self._provisional_zoom_timer = QTimer(self);
+    self._provisional_zoom_timer.setSingleShot(True);
+    QObject.connect(self._provisional_zoom_timer,SIGNAL("timeout()"),self._finalizeProvisionalZoom);
+    self._provisional_zoom = None;
 
-  def setMouseMode (self,mode):
-    """Sets the current mouse mode, updates action shortcuts""";
-    dprint(1,"setting mouse mode",mode);
-    self._mouse_mode = mode;
-    self._qa_mm[mode].setChecked(True);
+#    self._zoomer.setStateMachine(QwtPickerDragRectMachine());
+    self._zoomer.setSelectionFlags(QwtPicker.RectSelection|QwtPicker.DragSelection);
+    # ruler picker for measurement mode
+    self._ruler = self.PlotRuler(self.plot.canvas(),"measure","cyan",self._measureRuler,
+      mode=QwtPicker.PolygonSelection,
+      rubber_band=QwtPicker.PolygonRubberBand,
+      track_callback=self._trackRuler);
+    # this is the initial position of the ruler -- None if ruler is not tracking
+    self._ruler_pos0 = None;
+    # stats picker
+    self._picker_stats = self.PlotPicker(self.plot.canvas(),"stats","red",self._selectRectStats);
+    # model selection pickers
+    self._picker1 = self.PlotPicker(self.plot.canvas(),"select","green",self._selectRect);
+    self._picker2 = self.PlotPicker(self.plot.canvas(),"+select","green",curry(self._selectRect,mode=self.SelectionAdd));
+    self._picker3 = self.PlotPicker(self.plot.canvas(),"-select","red",curry(self._selectRect,mode=self.SelectionRemove));
+    self._picker4 = self.PlotPicker(self.plot.canvas(),"","green",self._selectNearestSource,mode=QwtPicker.PointSelection);
+    for picker in self._zoomer,self._ruler,self._picker1,self._picker2,self._picker3,self._picker4:
+      for sel in QwtEventPattern.MouseSelect1,QwtEventPattern.MouseSelect2,QwtEventPattern.MouseSelect3,QwtEventPattern.MouseSelect4:
+        picker.setMousePattern(sel,0,0);
+      picker.setTrackerMode(QwtPicker.ActiveOnly);
+#    for picker in self._ruler,self._picker1,self._picker2,self._picker3:
+#      QObject.connect(picker,SIGNAL("wheelEvent"),self._zoomer.widgetWheelEvent);
+
+  def _showMouseModeTooltip (self):
+    tooltip = self._mousemodes.currentMode().tooltip;
+    if self._qa_mwzoom.isChecked():
+      tooltip += """<P>You also have mouse-wheel zoom enabled. Rolling the wheel up will zoom in at the current zoom point.
+      Rolling the wheel down will zoom back out.</P>""";
+    QMessageBox.information(self,"Quick mouse reference",tooltip);
+#    self._showCoordinateToolTip(self._mousemodes.currentMode().tooltip,rect=False);
+
+  @staticmethod
+  def _setPickerPattern (picker,patt,func,mousemode,auto_disable=True):
+    """Helper function, sets mouse/key pattern for picker from the mode patterns dict""";
+    mpat,kpat = mousemode.patterns.get(func,((0,0),(0,0)));
+    if auto_disable:
+      picker.setEnabled(mpat[0] or kpat[0]);
+    elif mpat[0] or kpat[0]:
+      picker.setEnabled(True);
+    picker.setMousePattern(patt,*mpat);
+    picker.setKeyPattern(patt,*kpat);
+
+  def _setMouseMode (self,mode):
+    """Sets the current mouse mode from patterns (see MouseModes), updates action shortcuts.
+    'mode' is MouseModes.MouseModeManager.MouseMode object. This has a patterns dict.
+    For each MM_xx function defined in MouseModes, patterns[MM_xx] = (mouse_patt,key_patt)
+    Each pattern is either None, or a (button,state) pair. If MM_xx is not in the dict, then thatfunction is
+    disabled.""";
+    dprint(1,"setting mouse mode",mode.id);
+    self._mouse_mode = mode.id;
     # remove markup
     self._removePlotMarkup();
-    # remove shortcuts from all actions
-    for qa in self._qa_mm:
-      qa.setShortcut(QKeySequence());
-    # set shortcut on the next visible action after the checked one
-    self._qa_mm[mode].setChecked(True);
-    next = (mode+1)%len(self._qa_mm);
-    while not self._qa_mm[next].isVisible():
-      next = (next+1)%len(self._qa_mm);
-    self._qa_mm[next].setShortcut(Qt.Key_F4);
     # disable/enable pickers accordingly
-    # picker1 is for selecting rectangles: active for intensity zoom mode, and for selection modes
-    # picker2 is for selecting rectangles with SHIFT. Active for selection modes only.
-    # picker3 is for selecting sources with CTRL. Always active.
-    self._zoomer.setEnabled(mode == self.MouseZoom);
-    self._ruler.setEnabled(mode == self.MouseMeasure);
-    self._ruler1.setEnabled(mode == self.MouseMeasure);
-#    self._coordinate_lookup.setEnabled(mode == self.MouseMeasure);
-    self._picker1.setEnabled(mode > self.MouseMeasure);
-    self._picker2.setEnabled(mode in (self.MouseSelect,self.MouseDeselect));
-    self._picker3.setLabel("+select",color="green");
-    if mode == self.MouseSubset:
-      self._picker1.setLabel("stats ",color="red");
-    elif mode == self.MouseMeasure:
-      self._ruler1.setLabel("measure",color="cyan");
-    elif mode == self.MouseSelect:
-      self._picker1.setLabel("select ",color="green");
-      self._picker2.setLabel("+",color="green");
-    elif mode == self.MouseDeselect:
-      self._picker1.setLabel("-select",color="red");
-      for p in self._picker2,self._picker3:
-        p.setLabel("",color="red");
+    self._zoomer.setEnabled(True);
+    self._setPickerPattern(self._zoomer,QwtEventPattern.MouseSelect1,MouseModes.MM_ZWIN,mode,auto_disable=False);
+    if MouseModes.MM_ZWIN in mode.patterns:
+      self._zoomer.setDoubleClickZoom(*mode.patterns[MouseModes.MM_ZWIN][0]);
+    else:
+      self._zoomer.setDoubleClickZoom(0,0);
+    self._setPickerPattern(self._zoomer,QwtEventPattern.MouseSelect2,MouseModes.MM_UNZOOM,mode,auto_disable=False);
+    self._setPickerPattern(self._zoomer,QwtEventPattern.MouseSelect3,MouseModes.MM_ZUNDO,mode,auto_disable=False);
+    self._setPickerPattern(self._zoomer,QwtEventPattern.MouseSelect6,MouseModes.MM_ZREDO,mode,auto_disable=False);
+    self._setPickerPattern(self._ruler,QwtEventPattern.MouseSelect1,MouseModes.MM_MEAS,mode);
+    self._setPickerPattern(self._picker_stats,QwtEventPattern.MouseSelect1,MouseModes.MM_STATS,mode);
+    self._setPickerPattern(self._picker1,QwtEventPattern.MouseSelect1,MouseModes.MM_SELWIN,mode);
+    self._setPickerPattern(self._picker2,QwtEventPattern.MouseSelect1,MouseModes.MM_SELWINPLUS,mode);
+    self._setPickerPattern(self._picker3,QwtEventPattern.MouseSelect1,MouseModes.MM_DESEL,mode);
+    self._setPickerPattern(self._picker4,QwtEventPattern.MouseSelect1,MouseModes.MM_SELSRC,mode);
+    dprint(2,"picker4 pattern:",mode.patterns.get(MouseModes.MM_SELSRC,None));
 
   def findNearestSource (self,pos,world=True,range=10):
     """Returns source object nearest to the specified point (within range, in pixels), or None if nothing is in range.
@@ -1237,7 +1261,7 @@ class SkyModelPlotter (QWidget):
       pa *= 180/math.pi;
       pa += 360*(pa<0);
       msgtext = u"%d\u00B0%02d'%05.2f\"  PA=%.2f\u00B0"%(Rd,Rm,Rs,pa);
-      self._ruler1.setLabel("");
+      # self._ruler1.setLabel("");
       return QwtText(msgtext);
 
   def _measureRuler (self,polygon):
@@ -1313,6 +1337,8 @@ class SkyModelPlotter (QWidget):
       line.setBrush(self._markup_brush);
       line.setPen(self._markup_pen);
       markup_items = [ marka,markb,line ];
+    # since this is going to hide the stats box, hide the colour zoom button too
+    self._qa_colorzoom.setVisible(False);
     # calling QToolTip.showText() directly from here doesn't work, so set a timer on it
     QTimer.singleShot(10,self._currier.curry(self._showCoordinateToolTip,tiptext));
     # same deal for markup items
@@ -1323,8 +1349,12 @@ class SkyModelPlotter (QWidget):
     QApplication.clipboard().setText(msgtext+"\n");
     QApplication.clipboard().setText(msgtext+"\n",QClipboard.Selection);
 
-  def _showCoordinateToolTip (self,text):
-    QToolTip.showText(self.plot.mapToGlobal(QPoint(0,0)),text,self.plot,self.plot.rect());
+  def _showCoordinateToolTip (self,text,rect=True):
+    dprint(2,text);
+    if rect:
+      QToolTip.showText(self.plot.mapToGlobal(QPoint(0,0)),text,self.plot,self.plot.rect());
+    else:
+      QToolTip.showText(self.plot.mapToGlobal(QPoint(0,0)),text);
 
   def _imageRaised (self):
     """This is called when an image is raised to the top""";
@@ -1340,9 +1370,9 @@ class SkyModelPlotter (QWidget):
   def _updatePsfMarker (self,rect=None,replot=False):
       # show PSF if asked to
       topimage = self._imgman and self._imgman.getTopImage();
-      pmaj,pmin,ppa = topimage and topimage.getPsfSize();
-      self._qa_show_psf.setVisible(topimage and pmaj!=0);
-      self._psf_marker.setVisible(topimage and pmaj!=0 and self._qa_show_psf.isChecked());
+      pmaj,pmin,ppa = topimage.getPsfSize() if topimage else (0,0,0);
+      self._qa_show_psf.setVisible(bool(topimage and pmaj!=0));
+      self._psf_marker.setVisible(bool(topimage and pmaj!=0 and self._qa_show_psf.isChecked()));
       if self._qa_show_psf.isVisible():
         rect = rect or self._zoomer.zoomBase();
         rect &= topimage.boundingRect();
@@ -1358,8 +1388,12 @@ class SkyModelPlotter (QWidget):
         mp = lp0*s + mp0*c;
         self._psf_marker.setData(lp+l00,mp+m00);
         if replot and self._psf_marker.isVisible():
-          self.plot.clearDrawCache();
-          self.plot.replot();
+          self._replot();
+
+  def _replot (self):
+      dprint(1,"replot");
+      self.plot.clearDrawCache();
+      self.plot.replot();
 
   def _addPlotMarkup (self,items):
     """Adds a list of QwtPlotItems to the markup""";
@@ -1367,8 +1401,7 @@ class SkyModelPlotter (QWidget):
     for item in items:
       item.attach(self.plot);
     self._plot_markup = items;
-    self.plot.clearDrawCache();
-    self.plot.replot();
+    self._replot();
 
   def _removePlotMarkup (self,replot=True):
     """Removes all markup items, and refreshes the plot if replot=True""";
@@ -1376,8 +1409,7 @@ class SkyModelPlotter (QWidget):
       item.detach();
     if self._plot_markup and replot:
       QToolTip.showText(QPoint(0,0),"");
-      self.plot.clearDrawCache();
-      self.plot.replot();
+      self._replot();
     self._plot_markup = [];
 
   def _trackCoordinates (self,pos):
@@ -1494,17 +1526,7 @@ class SkyModelPlotter (QWidget):
       self._image_subset = None;
     self._qa_colorzoom.setVisible(False);
 
-  def _selectRect (self,rect,world=True,mode=SelectionClear|SelectionAdd):
-    """Selects sources within the specified rectangle. For meaning of 'mode', see flags above.
-        Note that _mouse_mode == MouseDeselect will force mode=SelectionRemove.
-        'rect' is a QRectF/QwtDoubleRect object in lm coordinates if world=True, else a QRect object in screen coordinates."""
-    dprint(1,"selectRect",rect);
-    if not world:
-      rect = self.plot.screenRectToLm(rect);
-    # in mouse-zoom mode, do nothing (not supposed to be called anyway)
-    if self._mouse_mode == self.MouseZoom:
-      return;
-    elif self._mouse_mode == self.MouseSubset:
+  def _selectRectStats (self,rect):
       image = self._imgman and self._imgman.getTopImage();
       dprint(1,"subset selection",rect,"image:",image and image.boundingRect());
       if not image or not rect.intersects(image.boundingRect()):
@@ -1513,29 +1535,59 @@ class SkyModelPlotter (QWidget):
       zoomrect = image.boundingRect().intersected(rect);
       dprint(1,"selecting image subset",zoomrect);
       self._selectImageSubset(zoomrect,image);
-      ## old code
-      #dprint(1,"intensity zoom into",rect,"image:",self._image.boundingRect());
-      #if not self._image or not rect.intersects(self._image.boundingRect()):
-        #return;
-      #zoomrect = self._image.boundingRect().intersected(rect);
-      #dprint(1,"intensity zoom into",zoomrect);
-      #self._imgman.setLMRectSubset(zoomrect);
-      ## reset mouse mode back to zoom
-      #self.setMouseMode(self.MouseZoom);
-    elif self._mouse_mode in (self.MouseSelect,self.MouseDeselect):
-      # deselect mouse mode implies removing from selection
-      if self._mouse_mode == self.MouseDeselect:
-        mode = self.SelectionRemove;
-      # convert rectangle to lm coordinates
-      if not world:
-        rect = self.plot.screenRectToLm(rect);
-      # find sources
-      sources = [ marker.source() for marker in self._markers.itervalues() if marker.isVisible() and rect.contains(marker.lmQPointF()) ];
-      if sources:
-        self._selectSources(sources,mode);
+
+  def _selectRect (self,rect,world=True,mode=SelectionClear|SelectionAdd):
+    """Selects sources within the specified rectangle. For meaning of 'mode', see flags above.
+        'rect' is a QRectF/QwtDoubleRect object in lm coordinates if world=True, else a QRect object in screen coordinates."""
+    dprint(1,"selectRect",rect);
+    if not world:
+      rect = self.plot.screenRectToLm(rect);
+    sources = [ marker.source() for marker in self._markers.itervalues() if marker.isVisible() and rect.contains(marker.lmQPointF()) ];
+    if sources:
+      self._selectSources(sources,mode);
+
+  def _finalizeProvisionalZoom(self):
+    if self._provisional_zoom is not None:
+      self._zoomer.zoom(self._provisional_zoom);
+
+  def _plotProvisionalZoom (self,x,y,level,timeout=200):
+    """Called when mouse wheel is used to zoom in our out""";
+    self._provisional_zoom_level += level;
+    self._zoomer_box.setVisible(False);
+    self._zoomer_label.setVisible(False);
+    if self._provisional_zoom_level > 0:
+      # make zoom box of size 2^level smaller than current screen
+      x1,y1,x2,y2 = self._zoomer.zoomRect().getCoords();
+      w = (x2-x1)/2**self._provisional_zoom_level;
+      h = (y2-y1)/2**self._provisional_zoom_level;
+      self._provisional_zoom = QRectF(x-w/2,y-h/2,w,h);
+      x1,y1,x2,y2 = self._provisional_zoom.getCoords();
+      self._zoomer_box.setData([x1,x2,x2,x1,x1],[y1,y1,y2,y2,y1]);
+      self._zoomer_label.setValue(max(x1,x2),max(y1,y2));
+      self._zoomer_label_text.setText("zoom");
+      self._zoomer_label.setLabel(self._zoomer_label_text);
+      self._zoomer_box.setVisible(True);
+      self._zoomer_label.setVisible(True);
+    else:
+      maxout = -self._zoomer.zoomRectIndex();
+      self._provisional_zoom_level = level = max(self._provisional_zoom_level,maxout);
+      if self._provisional_zoom_level < 0:
+        self._zoomer_label.setValue(x,y);
+        self._zoomer_label_text.setText("zoom out %d"%abs(level) if level != maxout else "zoom out full");
+        self._zoomer_label.setLabel(self._zoomer_label_text);
+        self._zoomer_label.setVisible(True);
+        self._provisional_zoom = int(self._provisional_zoom_level);
+      else:
+        self._provisional_zoom = None;
+    QTimer.singleShot(5,self._replot);
+    self._provisional_zoom_timer.start(timeout);
 
   def _plotZoomed (self,rect):
     dprint(2,"zoomed to",rect);
+    self._zoomer_box.setVisible(False);
+    self._zoomer_label.setVisible(False);
+    self._provisional_zoom = None;
+    self._provisional_zoom_level = 0;
     self._zoomrect = QRectF(rect); # make copy
     self._qa_unzoom.setEnabled(rect != self._zoomer.zoomBase());
     self._updatePsfMarker(rect,replot=True);
@@ -1599,6 +1651,10 @@ class SkyModelPlotter (QWidget):
     self.projection = None;
     self.plot.clear();
     self._psf_marker.attach(self.plot);
+    self._zoomer_box.attach(self.plot);
+    self._zoomer_label.attach(self.plot);
+    self._zoomer_box.setVisible(False);
+    self._zoomer_label.setVisible(False);
     # get current image (None if no images)
     self._image = self._imgman and self._imgman.getCenterImage();
     # show/hide live zoomer with image
@@ -1606,9 +1662,7 @@ class SkyModelPlotter (QWidget):
       for tool in self._livezoom,self._liveprofile:
         tool.makeAvailable(bool(self._image));
     # enable or disable mouse modes as appropriate
-    self.enableMouseMode(self.MouseSubset,bool(self._image));
-    self.enableMouseMode(self.MouseSelect,bool(self.model));
-    self.enableMouseMode(self.MouseDeselect,bool(self.model));
+    self._mousemodes.setContext(has_image=bool(self._image),has_model=bool(self.model));
     # do nothing if no image and no model
     if not self._image and not self.model:
       self.plot.setEnabled(False);
@@ -1665,6 +1719,7 @@ class SkyModelPlotter (QWidget):
         dprint(2,"will restore zoomed area",rect);
         zooms.append(rect);
     self._qa_unzoom.setEnabled(len(zooms)>1);
+    self._provisional_zoom_level = 0;
 #    dprint(2,"adjusted for aspect ratio",lmin,lmax,mmin,mmax);
     # reset plot limits   -- X axis inverted (L increases to left)
 #    lmin,lmax,mmin,mmax = zbase.left(),zbase.right(),zbase.top(),zbase.bottom();

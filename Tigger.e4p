@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE Project SYSTEM "Project-4.6.dtd">
 <!-- eric4 project file for project Tigger -->
-<!-- Saved: 2010-10-19, 15:00:28 -->
-<!-- Copyright (C) 2010 ,  -->
+<!-- Saved: 2012-06-06, 16:42:28 -->
+<!-- Copyright (C) 2012 ,  -->
 <Project version="4.6">
   <Language></Language>
   <ProgLanguage mixed="0">Python</ProgLanguage>
@@ -12,10 +12,8 @@
   <Author></Author>
   <Email></Email>
   <Sources>
-    <Source>lsmtest.py</Source>
     <Source>MainWindow.py</Source>
     <Source>__init__.py</Source>
-    <Source>SkyModelPlot.py</Source>
     <Source>Widgets.py</Source>
     <Source>SkyModelTreeWidget.py</Source>
     <Source>Tools/__init__.py</Source>
@@ -27,11 +25,9 @@
     <Source>Coordinates.py</Source>
     <Source>tigger</Source>
     <Source>Models/PlotStyles.py</Source>
-    <Source>Models/ModelHTML.py</Source>
     <Source>Models/SkyModel.py</Source>
     <Source>Models/ModelClasses.py</Source>
     <Source>Models/__init__.py</Source>
-    <Source>Models/Import.py</Source>
     <Source>Images/__init__.py</Source>
     <Source>Images/ColormapTables/__init__.py</Source>
     <Source>Images/ColormapTables/Karma.py</Source>
@@ -44,10 +40,19 @@
     <Source>Images/ControlDialog.py</Source>
     <Source>Tools/add_brick.py</Source>
     <Source>Tools/restore_image.py</Source>
-    <Source>bin/restore-sky-model.py</Source>
-    <Source>bin/convert-model.py</Source>
-    <Source>bin/make-model-brick.py</Source>
     <Source>AboutDialog.py</Source>
+    <Source>Images/FITSHeaders.py</Source>
+    <Source>Plot/__init__.py</Source>
+    <Source>Plot/SkyModelPlot.py</Source>
+    <Source>Plot/MouseModes.py</Source>
+    <Source>bin/tigger-convert</Source>
+    <Source>bin/tigger-restore</Source>
+    <Source>bin/tigger-make-brick</Source>
+    <Source>Models/Formats/BBS.py</Source>
+    <Source>Models/Formats/__init__.py</Source>
+    <Source>Models/Formats/NEWSTAR.py</Source>
+    <Source>Models/Formats/ASCII.py</Source>
+    <Source>Models/Formats/ModelHTML.py</Source>
   </Sources>
   <Forms>
   </Forms>

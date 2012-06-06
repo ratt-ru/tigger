@@ -233,7 +233,7 @@ class ImageControlDialog (QDialog):
       and the stats given here apply. Use the "Reset to" control on the right to change the
       current subset and recompute the histogram and stats.</P>""");
     lo1.addWidget(self._wlab_subset,1);
-    
+
     self._wreset_full = self.makeButton(u"\u2192 full",self._rc.setFullSubset);
     lo1.addWidget(self._wreset_full);
     if sliced_axes:
@@ -675,6 +675,7 @@ class ImageControlDialog (QDialog):
       dprint(1,"computing histogram for full subset range",hmin0,hmax0);
       self._hist_hires = measurements.histogram(subset,hmin0,hmax0,self.NumHistBinsHi,labels=mask,index=None if mask is None else False);
       self._hist_bins_hires = hmin0 + (hmax0-hmin0)*(numpy.arange(self.NumHistBinsHi)+0.5)/float(self.NumHistBinsHi);
+      self._hist_binsize_hires =  (hmax0-hmin0)/self.NumHistBins;
     # if hist limits not specified, then compute lo-res histogram based on the hi-res one
     if hmin is None:
       hmin,hmax = hmin0,hmax0;
@@ -867,9 +868,17 @@ class ImageControlDialog (QDialog):
     # delta: we need the [delta,100-delta] interval of the total distribution
     delta = self._subset.size*((100.-percent)/200.);
     # get F(x): cumulative sum
-    cumsum = numpy.cumsum(self._hist_hires);
-    # use interpolation to find value inerval corresponding to [delta,100-delta] of the distribution
-    x0,x1 = numpy.interp([delta,self._subset.size-delta],cumsum,self._hist_bins_hires);
+    cumsum = numpy.zeros(len(self._hist_hires)+1,dtype=int);
+    cumsum[1:] = numpy.cumsum(self._hist_hires);
+    bins = numpy.zeros(len(self._hist_hires)+1,dtype=float);
+    bins[0] = self._subset_range[0];
+    bins[1:] = self._hist_bins_hires + self._hist_binsize_hires/2;
+    # use interpolation to find value interval corresponding to [delta,100-delta] of the distribution
+    dprint(0,self._subset.size,delta,self._subset.size-delta);
+    dprint(0,cumsum);
+    dprint(0,self._hist_bins_hires);
+    # if first bin is already > delta, then set colour range to first bin
+    x0,x1 = numpy.interp([delta,self._subset.size-delta],cumsum,bins);
     # and change the display range (this will also cause a histplot.replot() via _updateDisplayRange above)
     self._rc.setDisplayRange(x0,x1);
 

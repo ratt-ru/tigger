@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 #
-#% $Id$ 
+#% $Id$
 #
 #
 # Copyright (C) 2002-2011
-# The MeqTree Foundation & 
+# The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
 # P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
 #
@@ -20,7 +20,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>,
-# or write to the Free Software Foundation, Inc., 
+# or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
@@ -230,7 +230,7 @@ class MakeBrickDialog (QDialog):
     # save fits file
     try:
       # pyfits seems to produce an exception:
-      # 	TypeError: formatwarning() takes exactly 4 arguments (5 given)
+      #         TypeError: formatwarning() takes exactly 4 arguments (5 given)
       # when attempting to overwrite a file. As a workaround, remove the file first.
       if os.path.exists(filename):
         os.remove(filename);
@@ -275,7 +275,7 @@ class MakeBrickDialog (QDialog):
       for src in sources:
         if isinstance(getattr(src,'shape',None),ModelClasses.FITSImage) and os.path.samefile(src.shape.filename,filename):
           # update source parameters
-          src.position.ra,src.position.dec = ra0,dec0;
+          src.pos.ra,src.pos.dec = ra0,dec0;
           src.flux.I = max_flux;
           src.shape.ex,src.shape.ey = sx,sy;
           src.shape.nx,src.shape.ny = nx,ny;

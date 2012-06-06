@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 #
-#% $Id$ 
+#% $Id$
 #
 #
 # Copyright (C) 2002-2011
-# The MeqTree Foundation & 
+# The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
 # P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
 #
@@ -20,7 +20,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>,
-# or write to the Free Software Foundation, Inc., 
+# or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
@@ -39,17 +39,17 @@ try:
 except:
   svn_revision_string = '';
   svn_revision_html = '';
-  
+
 matplotlib_nuked = False;
-  
+
 def nuke_matplotlib ():
   """Some people think nothing of importing matplotlib at every opportunity, with no regard
-  to consequences. Tragically, some of these people also write Python code, and some of them 
+  to consequences. Tragically, some of these people also write Python code, and some of them
   are responsible for astLib. Seriously man, if I just want to pull in WCS support, why the fuck
-  do I need the monstrous entirety of matplotlib to come along with it, especially since it 
+  do I need the monstrous entirety of matplotlib to come along with it, especially since it
   kills things like Qt outright?
   This function prevents such perversitities from happening, by inserting dummy modules
-  into the sys.modules dict. Call nuke_matplotlib() once, and all further attempts to 
+  into the sys.modules dict. Call nuke_matplotlib() once, and all further attempts to
   import matplotlib by any other code will be cheerfully ignored.
   """;
   if 'pylab' not in sys.modules:
@@ -76,7 +76,9 @@ else:
   pixmaps = Kittens.pixmaps.PixmapCache("tigger");
 
   import Kittens.config
-  ConfigFile = Kittens.config.DualConfigParser("tigger.conf");
+  import os.path
+  ConfigFileName = ".tigger.conf";
+  ConfigFile = Kittens.config.DualConfigParser("tigger.conf",["/usr/lib/Tigger",os.path.dirname(__file__)]);
   Config = Kittens.config.SectionParser(ConfigFile,"Tigger");
 
   from Kittens.widgets import BusyIndicator

@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 #
-#% $Id$ 
+#% $Id$
 #
 #
 # Copyright (C) 2002-2011
-# The MeqTree Foundation & 
+# The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
 # P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
 #
@@ -20,7 +20,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>,
-# or write to the Free Software Foundation, Inc., 
+# or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
@@ -55,7 +55,7 @@ class RestoreImageDialog (QDialog):
     lo1 = QHBoxLayout();
     lo.addLayout(lo1);
     lo1.setContentsMargins(0,0,0,0);
-    lo1.addWidget(QLabel("Beam FWHM, major axis:",self));
+    lo1.addWidget(QLabel("PSF FWHM, major axis:",self));
     self.wbmaj = QLineEdit(self);
     lo1.addWidget(self.wbmaj);
     lo1.addWidget(QLabel("\"     minor axis:",self));
@@ -70,7 +70,7 @@ class RestoreImageDialog (QDialog):
     lo1 = QHBoxLayout();
     lo.addLayout(lo1);
     lo1.setContentsMargins(0,0,0,0);
-    self.wfile_psf = FileSelector(self,label="Fill beam parameters by fitting PSF image:",dialog_label="PSF FITS file",default_suffix="fits",file_types="FITS files (*.fits *.FITS)",file_mode=QFileDialog.ExistingFile);
+    self.wfile_psf = FileSelector(self,label="Fill PSF parameters by fitting PSF image:",dialog_label="PSF FITS file",default_suffix="fits",file_types="FITS files (*.fits *.FITS)",file_mode=QFileDialog.ExistingFile);
     lo1.addSpacing(32);
     lo1.addWidget(self.wfile_psf);
     # selection only

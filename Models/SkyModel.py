@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 #
-#% $Id$ 
+#% $Id$
 #
 #
 # Copyright (C) 2002-2011
-# The MeqTree Foundation & 
+# The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
 # P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
 #
@@ -20,7 +20,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>,
-# or write to the Free Software Foundation, Inc., 
+# or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
@@ -104,7 +104,7 @@ class Source (ModelItem):
       return iapp;
     else:
       return getattr(self.flux,'I',0.);
-      
+
   def get_attr (self,attr,default=None):
     return getattr(self,attr,default);
 
@@ -158,7 +158,7 @@ class SkyModel (ModelItem):
 
   def filename (self):
     return self._filename;
-    
+
   def setCurrentSource (self,src,origin=None):
     """Changes the current source. If it has indeed changed, emits a currentSourceChanged signal. Arguments passed with the signal:
     src: the new current source.
@@ -228,7 +228,7 @@ class SkyModel (ModelItem):
     if recompute_r:
       self.recomputeRadialDistance(sources);
     self.setSources(list(self.sources)+list(sources));
-    
+
   def recomputeRadialDistance (self,sources=None):
     # refreshes the radial distance for a group of sources, or all sources in the model
     if (self.ra0 and self.dec0) is not None:
@@ -313,7 +313,7 @@ class SkyModel (ModelItem):
       show = bool(style0.show_plot);
     if not show:
       return None,None;
-    # sort styles 
+    # sort styles
     # Override attributes in style object with non-default attributes found in each matching grouping
     # Go in reverse, so 'current' overrides 'selected' overrides types overrides tags
     style = None;
@@ -358,6 +358,9 @@ class SkyModel (ModelItem):
 
   def refFreq (self):
     return self.freq0;
+
+  def hasFieldCenter (self):
+    return self.ra0 is not None and self.dec0 is not None;
 
   def fieldCenter (self):
     """Returns center of field. If this is not explicitly specified in the model, uses the average position of all sources.""";

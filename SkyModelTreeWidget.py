@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 #
-#% $Id$ 
+#% $Id$
 #
 #
 # Copyright (C) 2002-2011
-# The MeqTree Foundation & 
+# The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
 # P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
 #
@@ -20,7 +20,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>,
-# or write to the Free Software Foundation, Inc., 
+# or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
@@ -245,9 +245,9 @@ class SkyModelTreeWidget (Kittens.widgets.ClickableTreeWidget):
   TagsWithOwnColumn = set(["Iapp","r"]);
 
 class SkyModelTreeWidgetItem (QTreeWidgetItem):
-  
+
   _fonts = None;
-  @staticmethod 
+  @staticmethod
   def _initFonts ():
     """Initializes fonts on fitrst call""";
     if SkyModelTreeWidgetItem._fonts is None:
@@ -256,7 +256,7 @@ class SkyModelTreeWidgetItem (QTreeWidgetItem):
       boldfont.setBold(True);
       SkyModelTreeWidgetItem._fonts = [ stdfont,boldfont ];
       SkyModelTreeWidgetItem._fontmetrics = QFontMetrics(boldfont);
-  
+
   def __init__ (self,src,*args):
     QTreeWidgetItem.__init__(self,*args);
     self._src = src;
@@ -326,10 +326,10 @@ class SkyModelTreeWidgetItem (QTreeWidgetItem):
     dprint(3,"setSource 3",src.name);
     # Tags. Tags are all extra attributes that do not have a dedicated column (i.e. not Iapp or r), and do not start
     # with "_" (which is reserved for internal attributes)
-    
+
     ## the complexity below seems entirely unnecessary, since sorting the tag strings automatically puts "_" first,
     ## "-" second, and alphabet afterwards
-    
+
     #truetags = [];
     #falsetags = [];
     #othertags = [];
@@ -344,7 +344,7 @@ class SkyModelTreeWidgetItem (QTreeWidgetItem):
     #for tags in truetags,falsetags,othertags:
       #tags.sort();
     #self.setColumn(ColumnTags,tags," ".join(truetags+falsetags+othertags));
-    
+
     # so instead:
     tags = [ "+"+attr if val is True else "-"+attr if val is False else "%s=%s"%(attr,str(val))
       for attr,val in src.getExtraAttributes()
@@ -528,10 +528,11 @@ class ModelGroupsTable (QWidget):
         cb = QComboBox();
         cb.addItems(["default"]+["custom %d"%p for p in range(1,10)]);
         index = max(0,min(group.style.apply,9));
+#        dprint(0,group.name,"apply",index);
         cb.setCurrentIndex(index);
         QObject.connect(cb,SIGNAL("activated(int)"),self._currier.xcurry(self._valueChanged,(irow,self.ColApply)));
         self.table.setCellWidget(irow,self.ColApply,cb);
-        cb.setToolTip("""<P>This controls whether sources within this group are plotted with a customized 
+        cb.setToolTip("""<P>This controls whether sources within this group are plotted with a customized
             plot style. Customized styles have numeric priority; if a source belongs to multiple groups, then
             the style with the lowest priority takes precedence.<P>""");
       # attribute comboboxes
