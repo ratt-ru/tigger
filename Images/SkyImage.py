@@ -566,12 +566,29 @@ class FITSImagePlotItem (SkyCubePlotItem):
     self.setData(data,fortran_order=True);
     dprint(3,"reading header");
     ndim = hdr['NAXIS'];
+    if ndim < 2:
+      raise ValueError,"Cannot load a one-dimensional FITS file";
     # setup projection
     # (strip out history from header, as big histories really slow down FITSWCS)
     hdr1 = pyfits.Header(filter(lambda x:not str(x).startswith('HISTORY'),hdr.ascard));
     proj = Projection.FITSWCS(hdr1);
     nx = ny = None;
-    # find axes
+    # find X and Y axes
+    for iaxis in range(ndim):
+      axs = str(iaxis+1);
+      npix = hdr['NAXIS'+axs];
+      name = hdr.get('CTYPE'+axs,axs).strip().upper();
+      # have we found the coordinate axes?
+      if FITSHeaders.isAxisTypeX(name):
+        nx = npix;
+        iaxis_ra = iaxis;
+      elif FITSHeaders.isAxisTypeY(name):
+        ny = npix;
+        iaxis_dec = iaxis;
+    # check that we have them
+    if nx is None or ny is None:
+      iaxis_ra,iaxis_dec = 0,1;
+      nx,ny = hdr.get('NAXIS1'),hdr.get('NAXIS2');
     for iaxis in range(ndim):
       axs = str(iaxis+1);
       # get axis description
@@ -581,15 +598,8 @@ class FITSImagePlotItem (SkyCubePlotItem):
       crpix = hdr.get('CRPIX'+axs,1) -1;
       name = hdr.get('CTYPE'+axs,axs).strip().upper();
       unit = hdr.get('CUNIT'+axs);
-      # have we found the coordinate axes?
-      if FITSHeaders.isAxisTypeX(name):
-        nx = npix;
-        iaxis_ra = iaxis;
-      elif FITSHeaders.isAxisTypeY(name):
-        ny = npix;
-        iaxis_dec = iaxis;
-      # else add axis to slicers
-      else:
+      # if this is not an X/Y axis, add it to the slicers
+      if iaxis not in (iaxis_ra,iaxis_dec):
         # values becomes a list of axis values
         values = list(crval + (numpy.arange(npix) - crpix)*cdelt);
         unit = unit and unit.lower().capitalize();
@@ -606,9 +616,7 @@ class FITSImagePlotItem (SkyCubePlotItem):
           # else set labels to None: setExtraAxis() will figure it out
           else:
             labels = None;
-        self.setExtraAxis(iaxis,name,labels,values,unit);
-    if nx is None or ny is None:
-      raise ValueError,"FITS file does not appear to contain an X and/or Y axis";
+        self.setExtraAxis(iaxis,name or ("axis "+axs),labels,values,unit);
     # check for beam parameters
     psf = [ hdr.get(x,None) for x in 'BMAJ','BMIN','BPA' ];
     if all([x is not None for x in psf]):

@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 #
-#% $Id$ 
+#% $Id$
 #
 #
 # Copyright (C) 2002-2011
-# The MeqTree Foundation & 
+# The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
 # P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
 #
@@ -20,7 +20,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>,
-# or write to the Free Software Foundation, Inc., 
+# or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
@@ -42,7 +42,7 @@ startup_dprint(1,"importing WCS");
 
 # If we're being imported outside the main app (e.g. a script is trying to read a Tigger model,
 # whether TDL or otherwise), then pylab may be needed by that script for decent God-fearing
-# purposes. Since WCS is going to pull it in anyway, we try to import it here, and if that 
+# purposes. Since WCS is going to pull it in anyway, we try to import it here, and if that
 # fails, replace it by dummies.
 if not Tigger.matplotlib_nuked:
   try:
@@ -52,7 +52,7 @@ if not Tigger.matplotlib_nuked:
 
 try:
   from astLib.astWCS import WCS
-  import PyWCSTools.wcs 
+  import PyWCSTools.wcs
 except ImportError:
   print "Failed to import the astLib.astWCS and/or PyWCSTools module. Please install the astLib package (http://astlib.sourceforge.net/)."
   raise;
@@ -60,19 +60,19 @@ except ImportError:
 startup_dprint(1,"imported WCS");
 
 def angular_dist_pos_angle (ra1,dec1,ra2,dec2):
-  """Computes the angular distance between the two points on a sphere, and 
+  """Computes the angular distance between the two points on a sphere, and
   the position angle (North through East) of the direction from 1 to 2.""";
   # I lifted this somewhere
   sind1,sind2 = sin(dec1),sin(dec2);
   cosd1,cosd2 = cos(dec1),cos(dec2);
   cosra,sinra = cos(ra1-ra2),sin(ra1-ra2);
-  
+
   adist = numpy.arccos(sind1*sind2 + cosd1*cosd2*cosra);
   pa = numpy.arctan2(-cosd2*sinra,-cosd2*sind1*cosra+sind2*cosd1);
   return adist,pa;
 
 def angular_dist_pos_angle2 (ra1,dec1,ra2,dec2):
-  """Computes the angular distance between the two points on a sphere, and 
+  """Computes the angular distance between the two points on a sphere, and
   the position angle (North through East) of the direction from 1 to 2.""";
   # I re-derived this from Euler angles, but it seems to be identical to the above
   ra = ra2 - ra1;
@@ -84,11 +84,11 @@ def angular_dist_pos_angle2 (ra1,dec1,ra2,dec2):
   print x,y,z;
   PA = numpy.arctan2(y,-x);
   R = numpy.arccos(z);
-  
+
   return R,PA;
 
 def angular_dist_pos_angle2 (ra1,dec1,ra2,dec2):
-  """Computes the angular distance between the two points on a sphere, and 
+  """Computes the angular distance between the two points on a sphere, and
   the position angle (North through East) of the direction from 1 to 2.""";
   # I re-derived this from Euler angles, but it seems to be identical to the above
   ra = ra2 - ra1;
@@ -157,8 +157,12 @@ class _Projector (object):
     * Proj.lm_radec(l,m,ra0,dec0)
     * Proj.offset_lm(dra,ddec,ra0,dec0)
     """
-    def __init__ (self,ra0,dec0):
+    def __init__ (self,ra0,dec0,has_projection=False):
       self.ra0,self.dec0,self.sin_dec0,self.cos_dec0 = ra0,dec0,sin(dec0),cos(dec0);
+      self._has_projection = has_projection;
+
+    def has_projection (self):
+      return bool(self._has_projection);
 
     def __eq__ (self,other):
       """By default, two projections are the same if their classes match, and their ra0/dec0 match."""
@@ -202,13 +206,22 @@ class Projection (object):
         header = pyfits.open(header)[0].header;
       else:
         self.wcs = WCS(header,mode="pyfits");
-      ra0,dec0 = self.wcs.getCentreWCSCoords();
-      self.xpix0,self.ypix0 = self.wcs.wcs2pix(*self.wcs.getCentreWCSCoords());
-      self.xscale = self.wcs.getXPixelSizeDeg()*DEG;
-      self.yscale = self.wcs.getYPixelSizeDeg()*DEG;
-      _Projector.__init__(self,ra0*DEG,dec0*DEG);
+      try:
+        ra0,dec0 = self.wcs.getCentreWCSCoords();
+        self.xpix0,self.ypix0 = self.wcs.wcs2pix(*self.wcs.getCentreWCSCoords());
+        self.xscale = self.wcs.getXPixelSizeDeg()*DEG;
+        self.yscale = self.wcs.getYPixelSizeDeg()*DEG;
+        has_projection = True;
+      except:
+        print "No WCS in FITS file, falling back to pixel coordinates.";
+        ra0 = dec0 = self.xpix0 = self.ypix0 = 0;
+        self.xscale = self.yscale = DEG/3600;
+        has_projection = False;
+      _Projector.__init__(self,ra0*DEG,dec0*DEG,has_projection=has_projection);
 
     def lm (self,ra,dec):
+      if not self.has_projection():
+        return numpy.sin(ra)/self.xscale,numpy.sin(dec)/self.yscale;
       if numpy.isscalar(ra) and numpy.isscalar(dec):
         if ra - self.ra0 > math.pi:
           ra -= 2*math.pi;
@@ -226,6 +239,8 @@ class Projection (object):
         return lm[...,0],lm[...,1];
 
     def radec (self,l,m):
+      if not self.has_projection():
+        return numpy.arcsin(l*self.xscale),numpy.arcsin(m*self.yscale);
       if numpy.isscalar(l) and numpy.isscalar(m):
         ra,dec = self.wcs.pix2wcs(l,m);
       else:
@@ -258,6 +273,8 @@ class Projection (object):
       Projection.FITSWCSpix.__init__(self,header);
 
     def lm (self,ra,dec):
+      if not self.has_projection():
+        return -numpy.sin(ra)/self.xscale,numpy.sin(dec)/self.yscale;
       if numpy.isscalar(ra) and numpy.isscalar(dec):
         if ra - self.ra0 > math.pi:
           ra -= 2*math.pi;
@@ -276,6 +293,8 @@ class Projection (object):
       return l,m;
 
     def radec (self,l,m):
+      if not self.has_projection():
+        return numpy.arcsin(-l),numpy.arcsin(m);
       if numpy.isscalar(l) and numpy.isscalar(m):
         ra,dec = self.wcs.pix2wcs(self.xpix0-l/self.xscale,self.ypix0+m/self.yscale);
       else:
