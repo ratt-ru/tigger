@@ -139,6 +139,9 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
                     help="Rename sources according to the COPART (cluster ordering, P.A., radial distance, type) scheme");
   parser.add_option("--radial-step",type="float",metavar="ARCMIN",
                     help="Size of one step in radial distance for the COPART scheme. Default is %default'.");
+  parser.add_option("--merge-clusters",type="string",metavar="TAG(S)",
+                    help="Merge source clusters bearing the specified tags, replacing them with a "+ "single point source. Multiple tags may be given separated by commas. "+
+                    "Use 'ALL' to merge all clusters.");
   parser.add_option("--remove-source",type="string",action="append",
                     metavar="NAME",
                     help="Removes the named source(s) from the model. NAME may contain * and ? wildcards.");
@@ -294,7 +297,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
       if model2.sources:
         sources += model2.sources;
         for src in model2.sources:
-          src.name = "%s:%s"%(chr(ord('a')+modelnum),src.name);
+          src.name = "M%d:%s"%(modelnum,src.name);
         # recompute 'r' attribute (unless --center is in effect, in which case it's going to be done anyway below)
         if not options.refresh_r:
           for src in model2.sources:
@@ -597,6 +600,35 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
     print "Prefixing source names with '%s'"%options.prefix;
     for src in sources:
       src.name = options.prefix + src.name;
+  # merge clusters
+  if options.merge_clusters:
+    tags = set(options.merge_clusters.split(',')) if options.merge_clusters != "ALL" else None;
+    # build up dict of clusters
+    clusters = dict();
+    for src in sources:
+      clusname = getattr(src,'cluster','');
+      clusters.setdefault(clusname,{})[src.name] = src;
+    # unclustered sources copied over as-is
+    new_sources = clusters.pop('',{}).values();
+    # next, deal with each cluster
+    for clusname,srcdict in clusters.iteritems():
+      # leading source has the same name as the cluster
+      src0 = srcdict.get(clusname);
+      # if no leading source, or leading source not tagged, or length 1, then copy cluster as-is
+      if not src0 or len(srcdict)<2 or (tags is not None and 
+        not any([getattr(src0,tag,None) for tag in tags]) ):
+        new_sources += srcdict.values();
+      else:
+        # sum fluxes
+        for x in 'IQUV':
+          if hasattr(src0.flux,x):
+            setattr(src0.flux,x,sum([getattr(s.flux,x,0) for s in srcdict.itervalues()]));
+        if hasattr(src0,'Iapp'):
+          src0.Iapp = sum([getattr(s,'Iapp',0) for s in srcdict.itervalues()]);
+        new_sources.append(src0);
+        print "Merged cluster %s (%d sources)"%(src0.name,len(srcdict));
+    sources = new_sources;
+    model.setSources(sources);
   # save output
   print "Saving model containing %d sources to %s (%s)"%(len(sources),output,output_doc);
   export_func(model,output,sources=sources,format=options.output_format or None);
