@@ -61,10 +61,8 @@ an output image is not specified, makes a name for it automatically.""");
                     help="Only restore the NSRC brightest sources");
   parser.add_option("-s","--scale",dest="fluxscale",metavar="FLUXSCALE[,N]",action="store",
                     help="rescale model fluxes by given factor. If N is given, rescale N brightest only.");
-  parser.add_option("-b","--beamsize",dest="beamsize",type="float",action="store",
-                    help="restoring beam size (0 for a delta-function.)");
   parser.add_option("--psf",type="float",dest="psf_maj",
-                    help="restoring PSF FWHM, major axis, in arcsec, major axis");
+                    help="restoring PSF FWHM, major axis, in arcsec");
   parser.add_option("--psf-min",type="float",dest="psf_min",
                     help="restoring PSF FWHM, minor axis (if different from major axis)");
   parser.add_option("--psf-pa",type="float",
@@ -73,6 +71,10 @@ an output image is not specified, makes a name for it automatically.""");
                     help="name of PSF file to be fitted, if major/minor axis is not specified (default psf.fits)");
   parser.add_option("--clear",action="store_true",
                     help="clear contents of FITS file before adding in sources");
+  parser.add_option("--pb",action="store_true",
+                    help="apply model primary beam function during restoration");
+  parser.add_option("--freq",type="float",metavar="MHz",default=0,
+                    help="use this frequency (for spectral indices and primary beams)");
   parser.add_option("-f",dest="force",action="store_true",
                     help="overwrite output image even if it already exists");
   parser.add_option("-v","--verbose",dest="verbose",type="int",action="store",
@@ -159,12 +161,29 @@ an output image is not specified, makes a name for it automatically.""");
     gx,gy,grot = Imaging.fitPsf(options.psf);
     print "Fitted Gaussian to PSF %s, FWHM is %.2f\" by %.2f\" at PA %f deg"%(options.psf,gx*FWHM*ARCSEC,gy*FWHM*ARCSEC,grot*DEG);
 
+  pbexp = None;
+  freq = options.freq*1e+6 or model.refFreq();
+  
+  if options.pb and model.primaryBeam():
+    try:
+      from math import *
+      pbexp = eval('lambda r,fq:'+model.primaryBeam());
+      dum = pbexp(0,1e+9); # evaluate at r=0 and 1 GHz as a test
+      if not isinstance(dum,float):
+        raise TypeError,"Primary beam expression does not evaluate to a float";
+    except Exception,exc:
+      print "Bad primary beam expression '%s': %s"%(pb,str(exc));
+      sys.exit(1);
+    if not freq:
+      print "Model must contain a reference requency, or else specify one with --freq.";
+      sys.exit(1);
+    
   # read, restore, write
   print "Restoring model into input image %s"%input_image;
   input_hdu = pyfits.open(input_image)[0];
   if options.clear:
     input_hdu.data[...] = 0;
-  Imaging.restoreSources(input_hdu,sources,gx,gy,grot);
+  Imaging.restoreSources(input_hdu,sources,gx,gy,grot,primary_beam=pbexp,freq=freq);
 
   print "Writing output image %s"%output_image;
   if os.path.exists(output_image):

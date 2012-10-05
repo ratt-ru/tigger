@@ -317,7 +317,7 @@ def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_bea
   # loop over sources in model
   for src in sources:
     # get normalized intensity, if spectral info is available
-    if freq is not None and hasattr(src,'spectrum'):
+    if freq is not None and getattr(src,'spectrum',None):
       ni = src.spectrum.normalized_intensity(freq);
       dprintf(3,"Source %s: normalized spectral intensity is %f\n",src.name,ni);
     else:
