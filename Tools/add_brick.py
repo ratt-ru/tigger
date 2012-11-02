@@ -26,7 +26,8 @@
 
 from PyQt4.Qt import *
 import math
-import pyfits
+import Kittens.utils
+pyfits = Kittens.utils.import_pyfits();
 import os.path
 
 from Kittens.widgets import BusyIndicator

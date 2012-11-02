@@ -27,7 +27,6 @@
 from PyQt4.Qt import *
 import math
 import numpy
-import pyfits
 import re
 import os.path
 import time
@@ -35,6 +34,7 @@ import traceback
 import sys
 
 import Kittens.utils
+pyfits = Kittens.utils.import_pyfits();
 from Kittens.utils import curry,PersistentCurrier
 from Kittens.widgets import BusyIndicator
 

@@ -42,6 +42,24 @@ except:
 
 matplotlib_nuked = False;
 
+def import_pyfits ():
+  """Helper function to import pyfits and return it. Provides a workaround for
+  pyfits-2.3, which is actually arrogant enough (fuck you with a bargepole, pyfits!) 
+  to replace the standard warnings.formatwarning function with its own BROKEN version, 
+  thus breaking all other code that uses the warnings module.""";
+  if 'pyfits' not in sys.modules:
+    import pyfits
+    import warnings
+    if getattr(pyfits,'formatwarning',None) is warnings.formatwarning:
+      def why_is_pyfits_overriding_warnings_formatwarning_with_a_broken_one_damn_you_pyfits (message,category,  filename,lineno,line=None):
+        return str(message)+'\n';
+      warnings.formatwarning = why_is_pyfits_overriding_warnings_formatwarning_with_a_broken_one_damn_you_pyfits;
+    if getattr(pyfits,'showwarning',None) is warnings.showwarning:
+      def showwarning_damn_you_pyfits_damn_you_sincerely (message,category,filename,lineno,file=None,line=None):
+        pyfits.showwarning(message,category,filename,lineno,file=file);
+      warnings.showwarning = showwarning_damn_you_pyfits_damn_you_sincerely;
+  return pyfits
+
 def nuke_matplotlib ():
   """Some people think nothing of importing matplotlib at every opportunity, with no regard
   to consequences. Tragically, some of these people also write Python code, and some of them

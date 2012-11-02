@@ -26,7 +26,8 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-import pyfits
+import Kittens.utils
+pyfits = Kittens.utils.import_pyfits();
 import math
 import numpy
 

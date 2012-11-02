@@ -34,10 +34,10 @@ from PyQt4.Qt import *
 from PyQt4.Qwt5 import *
 import  numpy
 import numpy.ma
-import pyfits
 from scipy.ndimage import interpolation,measurements
 
 import Kittens.utils
+pyfits = Kittens.utils.import_pyfits();
 
 from Tigger.Coordinates import Projection
 import Colormaps

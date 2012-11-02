@@ -33,7 +33,10 @@ import math
 import numpy
 from numpy import sin,cos,arcsin,arccos;
 startup_dprint(1,"imported numpy");
-import pyfits
+
+
+import Kittens.utils
+pyfits = Kittens.utils.import_pyfits();
 startup_dprint(1,"imported pyfits");
 
 DEG = math.pi/180;
