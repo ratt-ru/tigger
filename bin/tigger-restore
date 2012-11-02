@@ -73,7 +73,7 @@ an output image is not specified, makes a name for it automatically.""");
                     help="clear contents of FITS file before adding in sources");
   parser.add_option("--pb",action="store_true",
                     help="apply model primary beam function during restoration");
-  parser.add_option("--freq",type="float",metavar="MHz",default=0,
+  parser.add_option("-F","--freq",type="float",metavar="MHz",default=0,
                     help="use this frequency (for spectral indices and primary beams)");
   parser.add_option("-f",dest="force",action="store_true",
                     help="overwrite output image even if it already exists");
@@ -162,7 +162,7 @@ an output image is not specified, makes a name for it automatically.""");
     print "Fitted Gaussian to PSF %s, FWHM is %.2f\" by %.2f\" at PA %f deg"%(options.psf,gx*FWHM*ARCSEC,gy*FWHM*ARCSEC,grot*DEG);
 
   pbexp = None;
-  freq = options.freq*1e+6 or model.refFreq();
+  freq = options.freq*1e+6 or model.refFreq() or 1400*1e+6;
   
   if options.pb and model.primaryBeam():
     try:

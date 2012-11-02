@@ -149,7 +149,7 @@ while the brick itself will be added (as a FITS image component), and a new sky 
       print "Primary beam expression is ",options.primary_beam;
 
   # get frequency
-  freq = (options.freq or 1)*1e+6;
+  freq = (options.freq or model.refFreq() or 1400)*1e+6;
   print "Brick frequency is %f MHz"%(freq*1e-6);
 
   # read fits file
