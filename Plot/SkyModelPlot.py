@@ -1781,7 +1781,8 @@ class SkyModelPlotter (QWidget):
     if self.model:
       dprint(5,"making skymodel markers");
       # compute min/max brightness
-      b = [ abs(src.brightness()) for src in self.model.sources ];
+      # brightnesses <=1e-20 are specifically excluded (as they're probably "dummy" sources, etc.)
+      b = [ abs(src.brightness()) for src in self.model.sources if abs(src.brightness()) > 1e-20 ];
       self._min_bright = min(b) if b else 0;
       self._max_bright = max(b) if b else 0;
       # make items for every object in the model
@@ -1868,4 +1869,4 @@ class SkyModelPlotter (QWidget):
       self.plot.replot();
 
   def getSymbolSize (self,src):
-    return (math.log10(abs(src.brightness())) - math.log10(self._min_bright)+1)*3;
+    return (max(math.log10(abs(src.brightness())) - math.log10(self._min_bright)+1,1))*3;
