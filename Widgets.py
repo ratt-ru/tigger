@@ -239,6 +239,23 @@ class AddTagDialog (QDialog):
 
   def _check_tag_text (self,text):
     self.wokbtn.setEnabled(bool(str(text)!=""));
+    
+  def accept (self):
+    """When dialog is accepted with a default (bool) tag type,
+    check if the user hasn't entered a name=value entry in the tag name field.
+    This is a common mistake, and should be treated as a shortcut for setting string tags.""";
+    if isinstance(self.valedit.getValue(),bool):
+      tagval = str(self.wtagsel.currentText()).split("=",1);
+      if len(tagval) > 1:
+#        print tagval;
+        if QMessageBox.warning(self,
+            "Set a string tag instead?","""<P>You have included an "=" sign in the tag name. 
+            Perhaps you actually mean to set tag "%s" to the string value "%s"?</P>"""%tuple(tagval),
+                  QMessageBox.Yes|QMessageBox.No,QMessageBox.Yes) == QMessageBox.No:
+          return;
+        self.wtagsel.setEditText(tagval[0]);
+        self.valedit.setValue(tagval[1]);
+    return QDialog.accept(self);
 
   def getTag (self):
     return str(self.wtagsel.currentText()),self.valedit.getValue();
