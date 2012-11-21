@@ -86,6 +86,8 @@ to set a tag on the selected sources to a value of a specific type, or TAG=VALUE
 automatically, or +TAG to set a bool True tag, !TAG to set a False tag, and /TAG to remove a tag."""
 );
 
+  parser.add_option("-l","--list",action="store_true",
+                    help="Simply lists selected sources, does not apply any tags.");
   parser.add_option("-o","--output",metavar="FILENAME",type="string",
                     help="Saves changes to different output model. Default is to save in place.");
   parser.add_option("-f","--force",action="store_true",
@@ -134,9 +136,14 @@ automatically, or +TAG to set a bool True tag, !TAG to set a False tag, and /TAG
   # This is where we put the selection when we hit the first tagging argument.
   selection = None;
   
+  # this is set to true when the selection is listed
+  listed = False;
+  
   def apply_selection (sel,selstr):
     global selection;
     global selected_ids;
+    global listed;
+    listed = False;
     """Helper function: applies selection argument""";
     # if selection is not None, then we've already selected and tagged something, so we need
     # to reset the selection to empty and start again. If selected_ids is None, this is the first selection
@@ -165,11 +172,15 @@ automatically, or +TAG to set a bool True tag, !TAG to set a False tag, and /TAG
       # no explicit selection: use entire model
       if selected_ids is None:
         selection = model.sources;
-        print "No explicit selection, applying to all sources:";
+        print "No explicit selection, using all sources.";
       # else use selected set
       else:
         selection = [ src for src in model.sources if id(src) in selected_ids ];
-        print "Applying to %d selected sources:"%len(selection);
+        print "Using %d selected sources:"%len(selection);
+    if options.list:
+      print "Sources: %s"%(" ".join([x.name for x in selection]));
+      global listed;
+      listed = True;
     return selection;
 
   def getTagValue (src,tag):
@@ -202,6 +213,9 @@ automatically, or +TAG to set a bool True tag, !TAG to set a False tag, and /TAG
       apply_selection([ src for src in model.sources if fnmatch.fnmatch(src.name,arg) ],arg);
     elif m1:
       sources = retrieve_selection();
+      if options.list:
+        print "--list in effect, ignoring tagging commands";
+        continue;
       tagname,typespec,typename,value = m1.groups();
       # if type is specified, use it to explicitly convert the value
       # first bool: allow True/False/T/F
@@ -241,6 +255,9 @@ automatically, or +TAG to set a bool True tag, !TAG to set a False tag, and /TAG
         src.setAttribute(tagname,newval);
     elif m2:
       sources = retrieve_selection();
+      if options.list:
+        print "--list in effect, ignoring tagging commands";
+        continue;
       op,tagname = m2.groups();
       if op == "+":
         print "  setting tag %s=True"%tagname;
@@ -255,9 +272,18 @@ automatically, or +TAG to set a bool True tag, !TAG to set a False tag, and /TAG
         for src in sources:
           src.removeAttribute(tagname);
 
+  if options.list:
+    if not listed:
+      retrieve_selection();
+    sys.exit(0);
+          
   # prompt
   if not options.force:
-    raw_input("Press ENTER to save model or Ctrl+C to cancel: ");
+    try:
+      raw_input("Press ENTER to save model or Ctrl+C to cancel: ");
+    except:
+      print "Cancelling";
+      sys.exit(1);
 
   # save output
   if options.output:

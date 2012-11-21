@@ -188,7 +188,11 @@ class SkyImagePlotItem (QwtPlotItem,QObject):
     if not self._imgminmax:
       dprint(3,"computing image min/max");
       rdata,rmask = self.optimalRavel(self._image);
-      self._imgminmax = measurements.extrema(rdata,labels=rmask,index=None if rmask is None else False)[:2];
+      try:
+        self._imgminmax = measurements.extrema(rdata,labels=rmask,index=None if rmask is None else False)[:2];
+      except:
+        # when all data is masked, some versions of extrema() throw an exception
+        self._imgminmax = numpy.nan,numpy.nan;
       dprint(3,self._imgminmax);
     return self._imgminmax;
 
@@ -401,7 +405,11 @@ class SkyCubePlotItem (SkyImagePlotItem):
     if not self._dataminmax:
       rdata,rmask = self.optimalRavel(self._data);
       dprint(3,"computing data min/max");
-      self._dataminmax = measurements.extrema(rdata,labels=rmask,index=None if rmask is None else False);
+      try:
+        self._dataminmax = measurements.extrema(rdata,labels=rmask,index=None if rmask is None else False);
+      except:
+        # when all data is masked, some versions of extrema() throw an exception
+        self._dataminmax = numpy.nan,numpy.nan;
       dprint(3,self._dataminmax);
     return self._dataminmax;
 
