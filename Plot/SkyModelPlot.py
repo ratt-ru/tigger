@@ -184,7 +184,10 @@ class ImageSourceMarker (SourceMarker):
     self.imgman = imgman;
     dprint(2,"loading Image source",src.shape.filename);
     self.imagecon = imgman.loadImage(src.shape.filename,duplicate=False,to_top=False,model=src.name);
-    self.imagecon.setMarkersZ(Z_Source);
+    # this will return None if the image fails to load, in which case we still produce a marker,
+    # but nothing else
+    if self.imagecon:
+      self.imagecon.setMarkersZ(Z_Source);
     # init base class
     SourceMarker.__init__(self,src,l,m,size,model);
 

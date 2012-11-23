@@ -75,7 +75,8 @@ if __name__ == '__main__':
   parser = OptionParser(usage="""%prog: sky_model [NAME or SELTAG<>SELVAL] [TAG=[TYPE:]VALUE or +TAG or !TAG or /TAG ...]""",
                         description=
 """Sets or changes tags of selected sources in the sky model.
-Use NAME (with shell-style wildcards allowed) to select sources by name, or SELTAG<>SELVAL to
+Use NAME (with shell-style wildcards allowed) to select sources by name, or 
+=SELTAG to select sources having the specified (non-zero) tag, or SELTAG<>SELVAL to
 select sources by comparing a tag to a value, where '<>'  represents a comparison
 operator, and can be one of == (or =),!=,<=,<,>,>= (or the FORTRAN-style
 operators .eq.,.ne.,.le.,.lt.,.gt.,.ge.). SELVAL may also be followed by one of the characters 
@@ -138,6 +139,8 @@ automatically, or +TAG to set a bool True tag, !TAG to set a False tag, and /TAG
   
   # this is set to true when the selection is listed
   listed = False;
+  # set to true when the model is modified
+  modified = False;
   
   def apply_selection (sel,selstr):
     global selection;
@@ -194,13 +197,14 @@ automatically, or +TAG to set a bool True tag, !TAG to set a False tag, and /TAG
   for arg in rem_args[1:]:
   # Match either the SELTAG<>SELVAL, or the TAG=[TYPE:]VALUE, or the [+!/]TAG forms
   # If none match, assume the NAME form
-    m0 = re.match("^(?i)([^=<>!.]+)(%s)([^dms]+)([dms])?"%"|".join([ key.replace('.','\.') for key in select_predicates.keys()]),arg);
-    m1 = re.match("^(.*)=((bool|int|str|float|complex):)?(.*)$",arg);
-    m2 = re.match("^([+!/])(.*)$",arg);
+    mselcomp = re.match("^(?i)([^=<>!.]+)(%s)([^dms]+)([dms])?"%"|".join([ key.replace('.','\.') for key in select_predicates.keys()]),arg);
+    mseltag = re.match("=(.+)$",arg); 
+    mset = re.match("^(.+)=((bool|int|str|float|complex):)?(.+)$",arg);
+    msetbool = re.match("^([+!/])(.+)$",arg);
     
     # SELTAG<>SELVAL selection
-    if m0:
-      seltag,oper,selval,unit = m0.groups();
+    if mselcomp:
+      seltag,oper,selval,unit = mselcomp.groups();
       try:  
         selval = float(selval)*select_units.get(unit,1.);
       except:
@@ -209,14 +213,17 @@ automatically, or +TAG to set a bool True tag, !TAG to set a False tag, and /TAG
       # get tag value
       srctag = [ (src,getTagValue(src,seltag)) for src in model.sources ];
       apply_selection([ src for src,tag in srctag if tag is not None and predicate(tag,selval) ],arg);
-    elif not m1 and not m2 and not m0:
+    elif mseltag:
+      seltag = mseltag.groups()[0];
+      apply_selection([ src for src in model.sources if getTagValue(src,seltag) ],arg);
+    elif not msel and not mselcomp and not mset and not msetbool:
       apply_selection([ src for src in model.sources if fnmatch.fnmatch(src.name,arg) ],arg);
-    elif m1:
+    elif mset:
       sources = retrieve_selection();
       if options.list:
         print "--list in effect, ignoring tagging commands";
         continue;
-      tagname,typespec,typename,value = m1.groups();
+      tagname,typespec,typename,value = mset.groups();
       # if type is specified, use it to explicitly convert the value
       # first bool: allow True/False/T/F
       if typename == "bool":
@@ -250,31 +257,42 @@ automatically, or +TAG to set a bool True tag, !TAG to set a False tag, and /TAG
       # ok, value determined
       if type(newval) is str:
         value = '"%s"'%value;
-      print "  setting tag %s=%s (type '%s')"%(tagname,value,type(newval).__name__);
-      for src in sources:
-        src.setAttribute(tagname,newval);
-    elif m2:
+      if sources:
+        print "  setting tag %s=%s (type '%s')"%(tagname,value,type(newval).__name__);
+        for src in sources:
+          src.setAttribute(tagname,newval);
+        modified = True;
+      else:
+        print "No sources selected, ignoring tagging commands";
+    elif msetbool:
       sources = retrieve_selection();
       if options.list:
         print "--list in effect, ignoring tagging commands";
         continue;
-      op,tagname = m2.groups();
-      if op == "+":
-        print "  setting tag %s=True"%tagname;
-        for src in sources:
-          src.setAttribute(tagname,True);
-      elif op == "!":
-        print "  setting tag %s=False"%tagname;
-        for src in sources:
-          src.setAttribute(tagname,False);
-      elif op == "/":
-        print "  removing tag %s"%tagname;
-        for src in sources:
-          src.removeAttribute(tagname);
+      if sources:
+        op,tagname = msetbool.groups();
+        if op == "+":
+          print "  setting tag %s=True"%tagname;
+          for src in sources:
+            src.setAttribute(tagname,True);
+        elif op == "!":
+          print "  setting tag %s=False"%tagname;
+          for src in sources:
+            src.setAttribute(tagname,False);
+        elif op == "/":
+          print "  removing tag %s"%tagname;
+          for src in sources:
+            src.removeAttribute(tagname);
+        modified = True;
+      else:
+        print "No sources selected, ignoring tagging commands";
 
   if options.list:
     if not listed:
       retrieve_selection();
+    
+  if not modified:
+    print "Model was not modified";
     sys.exit(0);
           
   # prompt
