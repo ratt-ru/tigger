@@ -193,6 +193,19 @@ automatically, or +TAG to set a bool True tag, !TAG to set a False tag, and /TAG
         return getattr(obj,tag);
     return None;
 
+  def lookupObject (src,tagname):
+    """helper function to look into sub-objects of a Source object.
+    Given src and "a", returns src,"a"
+    Given src and "a.b", returns src.a and "b"
+    """;
+    tags = tagname.split(".");
+    for subobj in tags[:-1]:
+      src = getattr(src,subobj,None);
+      if src is None:
+        print "Can't resolve attribute %s for source %s"%(tagname,src.name);
+        sys.exit(1);
+    return src,tags[-1];
+    
   # loop over all arguments
   for arg in rem_args[1:]:
   # Match either the SELTAG<>SELVAL, or the TAG=[TYPE:]VALUE, or the [+!/]TAG forms
@@ -260,7 +273,8 @@ automatically, or +TAG to set a bool True tag, !TAG to set a False tag, and /TAG
       if sources:
         print "  setting tag %s=%s (type '%s')"%(tagname,value,type(newval).__name__);
         for src in sources:
-          src.setAttribute(tagname,newval);
+          obj,tag = lookupObject(src,tagname);
+          obj.setAttribute(tag,newval);
         modified = True;
       else:
         print "No sources selected, ignoring tagging commands";
@@ -273,16 +287,19 @@ automatically, or +TAG to set a bool True tag, !TAG to set a False tag, and /TAG
         op,tagname = msetbool.groups();
         if op == "+":
           print "  setting tag %s=True"%tagname;
-          for src in sources:
-            src.setAttribute(tagname,True);
+          method = 'setAttribute';
+          args = (tagname,True);
         elif op == "!":
           print "  setting tag %s=False"%tagname;
-          for src in sources:
-            src.setAttribute(tagname,False);
+          method = 'setAttribute';
+          args = (tagname,False);
         elif op == "/":
           print "  removing tag %s"%tagname;
-          for src in sources:
-            src.removeAttribute(tagname);
+          method = 'removeAttribute';
+          args = (tagname,);
+        for src in sources:
+          obj,tag = lookupObject(src,tagname);
+          getattr(obj,method)(*args);
         modified = True;
       else:
         print "No sources selected, ignoring tagging commands";
