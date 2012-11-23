@@ -216,7 +216,7 @@ automatically, or +TAG to set a bool True tag, !TAG to set a False tag, and /TAG
     elif mseltag:
       seltag = mseltag.groups()[0];
       apply_selection([ src for src in model.sources if getTagValue(src,seltag) ],arg);
-    elif not msel and not mselcomp and not mset and not msetbool:
+    elif not mseltag and not mselcomp and not mset and not msetbool:
       apply_selection([ src for src in model.sources if fnmatch.fnmatch(src.name,arg) ],arg);
     elif mset:
       sources = retrieve_selection();
