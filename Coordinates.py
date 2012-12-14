@@ -53,6 +53,11 @@ if not Tigger.matplotlib_nuked:
   except:
     Tigger.nuke_matplotlib();
 
+# some locales cause WCS to complain that "." is not the decimal separator, so reset it to "C"
+import locale
+locale.setlocale(locale.LC_NUMERIC, 'C')
+      
+
 try:
   from astLib.astWCS import WCS
   import PyWCSTools.wcs

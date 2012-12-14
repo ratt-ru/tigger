@@ -107,7 +107,7 @@ if __name__ == "__main__":
 
     mainwin = Tigger.MainWindow.MainWindow(None);
     dprint(1,"created main window");
-
+    
   # add optional tools
     for name,callback in Tigger.Tools.getRegisteredTools():
       mainwin.addTool(name,callback);
