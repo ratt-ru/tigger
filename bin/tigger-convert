@@ -107,8 +107,13 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
   parser.add_option("--app-to-int",action="store_true",
                     help="Treat fluxes as apparent, and rescale them into intrinsic using the "+
                     "supplied primary beam model (see --primary-beam option).");
+  parser.add_option("--int-to-app",action="store_true",
+                    help="Treat fluxes as intrinsic, and rescale them into apparent using the "+
+                    "supplied primary beam model (see --primary-beam option).");
   parser.add_option("--newstar-app-to-int",action="store_true",
                     help="Convert NEWSTAR apparent fluxes in input model to intrinsic. Only works for NEWSTAR or NEWSTAR-derived input models.");
+  parser.add_option("--newstar-int-to-app",action="store_true",
+                    help="Convert NEWSTAR intrinsic fluxes in input model to apparent. Only works for NEWSTAR or NEWSTAR-derived input models.");
   parser.add_option("--prefix",type="string",
                     help="Prefix all source names with the given string");
   parser.add_option("--center",type="string",metavar='COORDINATES',
@@ -165,6 +170,11 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
     skymodel,output = rem_args;
   else:
     parser.error("Incorrect number of arguments. Use -h for help.");
+    
+  if options.app_to_int and options.int_to_app:
+    parser.error("Can't use --app-to-int and --int-to-app together.");
+  if options.newstar_app_to_int and options.newstar_int_to_app:
+    parser.error("Can't use --newstar-app-to-int and --newstar-int-to-app together.");
 
   def convert_coordinates (coords):
     """Converts a measures coordinate string into a ra,dec pair (radians at J2000)""";
@@ -382,7 +392,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
       sources.append(source);
       print "Adding FITS source %s (%s,pad=%f) with tags %s"%(srcname,fitsfile,pad,tags);
 
-  # convert apparent flux to intrinsic
+  # convert apparent flux to intrinsic using the NEWSTAR beam gain
   if options.newstar_app_to_int:
     nsrc = 0;
     for src in sources:
@@ -394,6 +404,21 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
             setattr(src.flux,pol,getattr(src.flux,pol)/bg);
         src.removeAttribute('flux_apparent');
         src.setAttribute('flux_intrinsic',True);
+        nsrc += 1;
+    print "Converted NEWSTAR apparent to intrinsic flux for %d model sources"%nsrc;
+    if len(sources) != nsrc:
+      print "  (%d sources were skipped for whatever reason.)"%(len(model.sources)-nsrc);
+  elif options.newstar_int_to_app:
+    nsrc = 0;
+    for src in sources:
+      bg = getattr(src,'newstar_beamgain',None);
+      if getattr(src,'flux_intrinsic',None) and bg is not None:
+        src.setAttribute('Iapp',src.flux.I*bg);
+        for pol in 'IQUV':
+          if hasattr(src.flux,pol):
+            setattr(src.flux,pol,getattr(src.flux,pol)*bg);
+        src.removeAttribute('flux_intrinsic');
+        src.setAttribute('flux_apparent',True);
         nsrc += 1;
     print "Converted NEWSTAR apparent to intrinsic flux for %d model sources"%nsrc;
     if len(sources) != nsrc:
@@ -451,12 +476,12 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
       print "Recalculating apparent fluxes";
     else:
       print "No primary beam expression in model, ignoring '--primary-beam refresh' option";
-  if options.app_to_int:
+  if options.app_to_int or options.int_to_app:
     pb = pb or model.primaryBeam();
     if pb:
-      print "Converting apparent fluxes to intrinsic";
+      print "Converting apparent fluxes to intrinsic" if options.app_to_int else "Converting intrinsic fluxes to apparent";
     else:
-      print "No primary beam expression in model and no --primary-beam option given, cannot use --app-to-int.";
+      print "No primary beam expression in model and no --primary-beam option given, cannot convert between apparent and intrinsic.";
       sys.exit(1);
   if pb:
     try:
@@ -479,7 +504,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
         if not hasattr(src,'r'):
           src.setAttribute('r',Coordinates.angular_dist_pos_angle(src.pos.ra,src.pos.dec,*mode.fieldCenter())[0]);
     # evaluate sources
-    if not options.app_to_int:
+    if not (options.app_to_int or options.int_to_app):
       for src in sources:
         r = getattr(src,'r',None);
         if r is not None:
@@ -495,11 +520,11 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
           bg = pbexp(r,fq);
           src.setAttribute('beamgain',bg);
           if hasattr(src.flux,'I'):
-            src.setAttribute('Iapp',src.flux.I);
+            src.setAttribute('Iapp',src.flux.I if options.app_to_int else src.flux.I*bg);
           for stokes in "IQUV":
             x = getattr(src.flux,stokes,None);
             if x is not None:
-              setattr(src.flux,stokes,x/bg);
+              setattr(src.flux,stokes,x/bg if options.app_to_int else x*bg);
           nsrc += 1;
       print "Converted apparent flux to intrinsic for %d model sources"%nsrc;
     if len(model.sources) != nsrc:
