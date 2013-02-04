@@ -74,7 +74,7 @@ def nuke_matplotlib ():
     # replace the modules referenced by astLib by dummy_module objects, which return a dummy callable for every attribute
     class dummy_module (object):
       def __getattr__ (self,name):
-        return lambda *args,**kw:True;
+        return 'nowhere' if name == '__file__' else (lambda *args,**kw:True);
     sys.modules['pylab'] = sys.modules['matplotlib'] = sys.modules['matplotlib.patches'] = dummy_module();
     matplotlib_nuked = True;
 
