@@ -45,7 +45,11 @@ StyleAttributeTypes = dict(symbol_size=int,symbol_linewidth=int,label_size=int);
 # list of known colors
 ColorList = [ "black","blue","lightblue","green","lightgreen","cyan","red","orange red","purple","magenta","yellow","white" ];
 DefaultColor = "black";
-QColor.setAllowX11ColorNames(True);
+# Ignore this (non-existent) attribute on non-X11 platforms like the Mac
+try:
+    QColor.setAllowX11ColorNames(True);
+except AttributeError:
+    pass
 
 # dict and method to pick a contrasting color (i.e. suitable as background for specified color)
 ContrastColor = dict(white="#404040",yellow="#404040");
