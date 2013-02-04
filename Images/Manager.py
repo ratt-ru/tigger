@@ -38,9 +38,9 @@ pyfits = Kittens.utils.import_pyfits();
 from Kittens.utils import curry,PersistentCurrier
 from Kittens.widgets import BusyIndicator
 
-from Controller import ImageController,dprint,dprintf
+from Tigger.Images.Controller import ImageController,dprint,dprintf
 
-import SkyImage
+from Tigger.Images import SkyImage
 from Tigger.Images import  FITS_ExtensionList
 
 class ImageManager (QWidget):

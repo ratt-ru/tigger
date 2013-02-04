@@ -41,7 +41,7 @@ _verbosity = Kittens.utils.verbosity(name="rc");
 dprint = _verbosity.dprint;
 dprintf = _verbosity.dprintf;
 
-from Images import SkyImage,Colormaps
+from Tigger.Images import SkyImage,Colormaps
 from Tigger import pixmaps,ConfigFile
 from Tigger.Widgets import FloatValidator
 

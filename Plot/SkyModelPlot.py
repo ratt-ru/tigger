@@ -43,12 +43,11 @@ dprintf = _verbosity.dprintf;
 
 from Tigger import pixmaps,Config,ConfigFile
 from Tigger.Models import ModelClasses,PlotStyles
-import Coordinates
-from Coordinates import Projection
-from  Models.SkyModel import SkyModel
-import MainWindow
+from Tigger import Coordinates
+from Tigger.Coordinates import Projection
+from Tigger.Models.SkyModel import SkyModel
 from Tigger.Widgets import TiggerPlotCurve,TiggerPlotMarker
-import MouseModes
+from Tigger.Plot import MouseModes
 
 # plot Z depths for various classes of objects
 Z_Image = 1000;

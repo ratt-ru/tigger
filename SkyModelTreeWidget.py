@@ -32,8 +32,8 @@ import Kittens.utils
 from Kittens.utils import PersistentCurrier
 from Kittens.widgets import BusyIndicator
 
-from Models import ModelClasses,PlotStyles
-from Models.SkyModel import SkyModel
+from Tigger.Models import ModelClasses,PlotStyles
+from Tigger.Models.SkyModel import SkyModel
 
 _verbosity = Kittens.utils.verbosity(name="tw");
 dprint = _verbosity.dprint;
