@@ -78,7 +78,7 @@ class TiggerSkyModel (object):
     if not self._compile_opts:
       self._compile_opts = [
         TDLOption("filename","Tigger LSM file",
-                   TDLFileSelect("*."+ModelHTML.DefaultExtension,default=self.filename,exist=True),
+                   TDLFileSelect("Tigger models (*."+ModelHTML.DefaultExtension+");;All files (*)",default=self.filename,exist=True),
                    namespace=self),
         TDLOption('lsm_subset',"Source subset",["all"],more=str,namespace=self,
                   doc=SourceSubsetSelector.docstring),
