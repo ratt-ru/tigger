@@ -41,7 +41,7 @@ def _initFormats ():
   """Initializes all known formats by importing their modules""";
   global _FormatsInitialized;
   if not _FormatsInitialized:
-    for format in [ "ModelHTML","ASCII","BBS","NEWSTAR" ]:
+    for format in [ "ModelHTML","ASCII","BBS","NEWSTAR","AIPSCC" ]:
       try:
         __import__(format,globals(),locals());
       except:

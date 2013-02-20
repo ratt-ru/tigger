@@ -154,7 +154,9 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
                     metavar="NAME:FILE[:PAD_FACTOR:[TAGS:...]]",
                     help="Adds a uv-brick to the model. NAME is a source name, FILE is a "+
                     "FITS file, PAD_FACTOR is set to 1 if not specified. TAGS is a list of boolean flags.");
-  parser.add_option("-d", "--debug",dest="verbose",type="string",action="append",metavar="Context=Level",
+  parser.add_option("-v", "--verbose",action="store_true",
+                    help="increases verbosity.");
+  parser.add_option("-d", "--debug",dest="debug",type="string",action="append",metavar="Context=Level",
                     help="(for debugging Python code) sets verbosity level of the named Python context. May be used multiple times.");
 
   parser.set_defaults(cluster_dist=60,min_extent=0,format=None,type='auto',output_type='auto',radial_step=10,ref_freq=-1);
@@ -203,11 +205,14 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
       sys.exit(1);
 
   # figure out center and recenter option
+  if options.recenter:
+    recenter_radec = convert_coordinates(options.recenter);
   if options.center:
     center_radec = convert_coordinates(options.center);
     options.refresh_r = True;
-  if options.recenter:
-    recenter_radec = convert_coordinates(options.recenter);
+  else:
+    center_radec = None;
+  
 
   # check the 'select' option
   select_predicates = {
@@ -284,7 +289,13 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
   print "Reading %s (%s)"%(skymodel,input_doc);
 
   # load the model
-  model = import_func(skymodel,min_extent=options.min_extent,format=options.format);
+  try:
+    model = import_func(skymodel,min_extent=options.min_extent,format=options.format,center=center_radec);
+  except Exception,exc:
+    if options.verbose:
+      traceback.print_exc();
+    print "Error loading model:",str(exc);
+    sys.exit(1);
   sources = model.sources;
   if not sources:
     print "Input model %s contains no sources"%skymodel;
