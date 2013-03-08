@@ -47,7 +47,7 @@ DefaultDMSFormatString = "name ra_h ra_m ra_s dec_d dec_m dec_s i q u v spi rm e
 
 DEG = math.pi/180;
 
-def load (filename,format=None,freq0=None,center_on_brightest=False,min_extent=0):
+def load (filename,format=None,freq0=None,center_on_brightest=False,min_extent=0,**kw):
   """Imports an ASCII table
   The 'format' argument can be either a dict (such as the DefaultDMSFormat dict above), or a string such as DefaultDMSFormatString.
   (Other possible field names are "ra_d", "ra_rad", "dec_rad", "dec_sign".)
