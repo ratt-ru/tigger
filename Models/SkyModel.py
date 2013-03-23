@@ -228,6 +228,23 @@ class SkyModel (ModelItem):
     if recompute_r:
       self.recomputeRadialDistance(sources);
     self.setSources(list(self.sources)+list(sources));
+    
+  def __len__ (self):
+    return len(self.sources);
+    
+  def __getitem__ (self,key):
+    if isinstance(key,(int,slice)):
+      return self.sources[key];
+    elif isinstance(key,str):
+      return self.findSource(key);
+    else:
+      raise TypeError("cannot index SkyModel with key of type %s"%str(type(key)));
+    
+  def __setitem__ (self,key,value):
+    raise TypeError("cannot assign to items of SkyModel, use the setSources() method instead");
+  
+  def __iter__ (self):
+    return iter(self.sources);
 
   def recomputeRadialDistance (self,sources=None):
     # refreshes the radial distance for a group of sources, or all sources in the model
