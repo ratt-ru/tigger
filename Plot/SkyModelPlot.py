@@ -1388,8 +1388,8 @@ class SkyModelPlotter (QWidget):
         arg = numpy.arange(0,1.02,.02)*math.pi*2;
         mp0,lp0 = pmaj*numpy.cos(arg)/2,pmin*numpy.sin(arg)/2;  # angle 0 is m direction
         c,s = numpy.cos(ppa),numpy.sin(ppa);
-        lp = lp0*c - mp0*s;
-        mp = lp0*s + mp0*c;
+        lp = lp0*c + mp0*s;
+        mp = - lp0*s + mp0*c;
         self._psf_marker.setData(lp+l00,mp+m00);
         if replot and self._psf_marker.isVisible():
           self._replot();

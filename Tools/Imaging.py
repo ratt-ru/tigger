@@ -115,6 +115,13 @@ def getImageCube (fitshdu,filename="",extra_axes=None):
   other_axes_ctype = [];
   remove_axes = [];
   remove_axes_ctype = [];
+  # match axis ctype
+  # this makes FREQ equivalent to FELO*
+  def match_ctype (ctype,ctype_list):
+    for i,ct in enumerate(ctype_list):
+      if ct == ctype or ( ct == "FREQ" and ctype.startswith("FELO") ) or ( ctype == "FREQ" and ct.startswith("FELO") ):
+	return i;
+    return None;
   # identify X, Y and stokes axes
   for n in range(naxis):
     iax = naxis-1-n;
@@ -153,15 +160,16 @@ def getImageCube (fitshdu,filename="",extra_axes=None):
   if extra_axes:
     # if a fixed order for the extra axes is specified, add the ones we found
     for ctype in extra_axes:
-      if ctype in other_axes_ctype:
-        iax = other_axes[other_axes_ctype.index(ctype)];
+      i = match_ctype(ctype,other_axes_ctype);
+      if i is not None:
+        iax = other_axes[i];
         axes.append(iax);
         shape.append(data.shape[iax]);
       else:
         shape.append(1);
     # add the ones that were not found into the remove list
     for iaxis,ctype in zip(other_axes,other_axes_ctype):
-      if ctype not in extra_axes:
+      if match_ctype(ctype,extra_axes) is None:
         axes.append(iaxis);
         remove_axes.append(iaxis); 
         remove_axes_ctype.append(ctype);
@@ -313,7 +321,7 @@ def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_bea
     box_radius = 5*(max(gmaj,gmin))/min(abs(proj.xscale),abs(proj.yscale));
     dprintf(2,"Will use a box of radius %f pixels for restoration\n",box_radius);
     cos_rot = math.cos(grot);
-    sin_rot = math.sin(grot);
+    sin_rot = math.sin(-grot);  # rotation is N->E, so swap the sign
   conv_kernels = {};
   # loop over sources in model
   for src in sources:
@@ -422,11 +430,15 @@ def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_bea
       # in which case we need to add the same model slice to all N data slices. The loop below puts together a series
       # of index tuples representing each per-slice operation.
       # These two initial slices correspond to the x/y axes. Additional indices will be appended to these in a loop
-      slices = [([data_x_slice,data_y_slice],[slice(None),slice(None)])];
+      slices0 = [([data_x_slice,data_y_slice],[slice(None),slice(None)])];
       # work out Stokes axis
-      for dst,mst in enumerate(model_stp):
-        if mst >= 0:
-          slices = [ (sd0+[dst],sm0+[mst]) for sd0,sm0 in slices ];
+      sd0 = [data_x_slice,data_y_slice];
+      sm0 = [slice(None),slice(None)];
+      slices = [];
+      slices = [ (sd0+[dst],sm0+[mst]) for dst,mst in enumerate(model_stp) if mst >= 0 ]; 
+      #for dst,mst in enumerate(model_stp):
+        #if mst >= 0:
+          #slices = [ (sd0+[dst],sm0+[mst]) for sd0,sm0 in slices ];
       # now loop over extra axes
       for axis in range(3,len(extra_data_axes)+3):
         # list of data image indices to iterate over for this axis, 0...N-1

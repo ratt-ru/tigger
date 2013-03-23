@@ -320,7 +320,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
         for src in model2.sources:
           src.name = "M%d:%s"%(modelnum,src.name);
         # recompute 'r' attribute (unless --center is in effect, in which case it's going to be done anyway below)
-        if not options.refresh_r:
+        if options.refresh_r:
           for src in model2.sources:
             src.setAttribute('r',Coordinates.angular_dist_pos_angle(ra0,dec0,*model.fieldCenter())[0]);
       print "Appended %d sources from %s (%s)"%(len(model2.sources),filename,append_doc);
