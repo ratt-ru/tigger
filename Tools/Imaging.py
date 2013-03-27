@@ -413,10 +413,10 @@ def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_bea
           ex,ey,pa = convolveGaussian(ex0,ey0,pa0,gmaj,gmin,grot);
           # normalize flux by beam/extent ratio
           stokes_vec *= (gmaj*gmin)/(ex*ey);
-          print "%3dx%-3d@%3d * %3dx%-3d@%3d -> %3dx%-3d@%3d"%(
-            ex0 *FWHM*ARCSEC,ey0 *FWHM*ARCSEC,(pa0-math.pi/2)*DEG,
-            gmaj*FWHM*ARCSEC,gmin*FWHM*ARCSEC,(grot-math.pi/2)*DEG,
-            ex  *FWHM*ARCSEC,ey  *FWHM*ARCSEC,(pa-math.pi/2)*DEG);
+          #print "%3dx%-3d@%3d * %3dx%-3d@%3d -> %3dx%-3d@%3d"%(
+            #ex0 *FWHM*ARCSEC,ey0 *FWHM*ARCSEC,(pa0-math.pi/2)*DEG,
+            #gmaj*FWHM*ARCSEC,gmin*FWHM*ARCSEC,(grot-math.pi/2)*DEG,
+            #ex  *FWHM*ARCSEC,ey  *FWHM*ARCSEC,(pa-math.pi/2)*DEG);
         else:
           # normalize flux by pixel/extent ratio
           ex,ey,pa = ex0,ey0,pa0;
