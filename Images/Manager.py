@@ -75,7 +75,10 @@ class ImageManager (QWidget):
     self._qa_plot_top.setChecked(True);
     QObject.connect(self._qa_plot_all,SIGNAL("toggled(bool)"),self._displayAllImages);
     self._closing = False;
-
+    
+    self._qa_load_clipboard = None;
+    self._clipboard_mode = QClipboard.Clipboard;
+    QObject.connect(QApplication.clipboard(),SIGNAL("changed(QClipboard::Mode)"),self._checkClipboardPath);
     # populate the menu
     self._repopulateMenu();
 
@@ -346,10 +349,22 @@ class ImageManager (QWidget):
         ic.setImageVisible(False);
     self.replot();
 
+  def _checkClipboardPath (self,mode=QClipboard.Clipboard):
+    if self._qa_load_clipboard:
+      self._clipboard_mode = mode;
+      path = str(QApplication.clipboard().text(mode));
+      self._qa_load_clipboard.setEnabled(bool(path and os.path.isfile(path)));
+      
+  def _loadClipboardPath (self):
+    path = QApplication.clipboard().text(self._clipboard_mode);
+    self.loadImage(path);
+    
   def _repopulateMenu (self):
     self._menu.clear();
     self._menu.addAction("&Load image...",self.loadImage,Qt.CTRL+Qt.Key_L);
     self._menu.addAction("&Compute image...",self.computeImage,Qt.CTRL+Qt.Key_M);
+    self._qa_load_clipboard = self._menu.addAction("Load from clipboard &path",self._loadClipboardPath,Qt.CTRL+Qt.Key_P);
+    self._checkClipboardPath();
     if self._imagecons:
       self._menu.addSeparator();
       # add controls to cycle images and planes

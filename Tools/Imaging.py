@@ -47,9 +47,9 @@ dprintf = _verbosity.dprintf;
 DEG = 180/math.pi;
 ARCMIN = DEG*60;
 ARCSEC = ARCMIN*60;
-FWHM = 2.3548;
+FWHM = math.sqrt(math.log(256));  # which is 2.3548;
 
-def fitPsf (filename,cropsize=64):
+def fitPsf (filename,cropsize=None):
   # read PSF from file
   psf = pyfits.open(filename)[0];
   hdr = psf.header;
@@ -62,17 +62,31 @@ def fitPsf (filename,cropsize=64):
     psf = psf[0,:,:];
   else:
     raise RuntimeError,"illegal PSF shape %s"+psf.shape;
-  # crop the central region
   nx,ny = psf.shape;
-  size = 64;
-  psf = psf[(nx-size)/2:(nx+size)/2,(ny-size)/2:(ny+size)/2];
+  # crop the central region
+  if cropsize:
+    size = cropsize;
+    psf = psf[(nx-size)//2:(nx+size)//2,(ny-size)//2:(ny+size)//2];
+  # if size not specified, then auto-crop by looking for the first negative value starting from the center
+  else:
+    ix = numpy.where(psf[:,ny//2]<0)[0];
+    ix0 = max(ix[ix<nx//2]);
+    ix1 = min(ix[ix>nx//2]);
+    iy = numpy.where(psf[nx//2,:]<0)[0];
+    iy0 = max(iy[iy<ny//2]);
+    iy1 = min(iy[iy>ny//2]);
+    print ix0,ix1,iy0,iy1;
+    psf = psf[ix0:ix1,iy0:iy1];
+  psf[psf<0] = 0;
 
   # estimate gaussian parameters, then fit
   import gaussfitter2
-  parms = gaussfitter2.moments(psf,circle=0,rotate=1,vheight=0);
-  dprint(2,"Estimates parameters are",parms);
-  parms = gaussfitter2.gaussfit(psf,None,parms,autoderiv=1,return_all=0,circle=0,rotate=1,vheight=0);
-  dprint(2,"Fitted parameters are",parms);
+  parms0 = gaussfitter2.moments(psf,circle=0,rotate=1,vheight=0);
+  print parms0;
+  dprint(2,"Estimated parameters are",parms0);
+  parms = gaussfitter2.gaussfit(psf,None,parms0,autoderiv=1,return_all=0,circle=0,rotate=1,vheight=0);
+  dprint(0,"Fitted parameters are",parms);
+  
   # now swap x and y around, since our axes are in reverse order
   ampl,y0,x0,sy,sx,rot = parms;
 
@@ -86,10 +100,7 @@ def fitPsf (filename,cropsize=64):
   if sx_rad < sy_rad:
     sx_rad,sy_rad = sy_rad,sx_rad;
     rot -= 90;
-  while rot > 180:
-    rot -= 360;
-  while rot < -180:
-    rot += 360;
+  rot %= 180;
 
   dprintf(1,"Fitted gaussian PSF FWHM of %f x %f pixels (%f x %f arcsec), PA %f deg\n",sx*FWHM,sy*FWHM,sx_rad*FWHM*ARCSEC,sy_rad*FWHM*ARCSEC,rot);
 
@@ -318,8 +329,6 @@ def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_bea
   if gmaj > 0:
     if gmin == 0:
       gmin = gmaj;
-    box_radius = 5*(max(gmaj,gmin))/min(abs(proj.xscale),abs(proj.yscale));
-    dprintf(2,"Will use a box of radius %f pixels for restoration\n",box_radius);
     cos_rot = math.cos(grot);
     sin_rot = math.sin(-grot);  # rotation is N->E, so swap the sign
   conv_kernels = {};
@@ -339,15 +348,34 @@ def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_bea
         ni *= pb;
         dprintf(3,"Source %s: r=%g pb=%f, normalized intensity is %f\n",src.name,r,pb,ni);
     # process point sources
-    if src.typecode == 'pnt':
+    if src.typecode in ('pnt','Gau'):
       # pixel coordinates of source
       xsrc,ysrc = proj.lm(src.pos.ra,src.pos.dec);
       # form up stokes vector
       for i,st in enumerate(stokes):
          stokes_vec[i] = getattr(src.flux,st,0)*ni;
       dprintf(3,"Source %s, %s Jy, at pixel %f,%f\n",src.name,stokes_vec,xsrc,ysrc);
+      # for gaussian sources, dilate by gmaj 
+      if src.typecode == 'Gau':
+        pa = src.shape.pa+math.pi/2;
+        dcos,dsin = abs(math.cos(grot-pa)),abs(math.sin(grot-pa));
+        dx = math.sqrt((gmaj*dcos)**2+(gmin*dsin)**2);
+        dy = math.sqrt((gmaj*dsin)**2+(gmin*dcos)**2);
+#        print pa*DEG,"dilation is",dx*ARCSEC*FWHM,dy*ARCSEC*FWHM;
+        ex,ey = src.shape.ex/FWHM,src.shape.ey/FWHM;
+        ex,ey = ex+dx,ey+dy;
+        # total flux has to be adjusted by the beam_size/(beam_size+source_size)
+        # ratio to get peak flux
+        stokes_vec *= dx*dy/((ex+dx)*(ey+dy));
+      else:
+        ex,ey,pa = gmaj,gmin,grot;
       # gmaj != 0: use gaussian.
-      if gmaj > 0:
+      if ex > 0 or ey > 0:
+        # work out restoring box 
+        box_radius = 5*(max(ex,ey))/min(abs(proj.xscale),abs(proj.yscale));
+        dprintf(2,"Will use a box of radius %f pixels for restoration\n",box_radius);
+        cos_pa = math.cos(pa);
+        sin_pa = math.sin(-pa);  # rotation is N->E, so swap the sign
         # pixel coordinates of box around source in which we evaluate the gaussian
         i1 = max(0,int(math.floor(xsrc-box_radius)));
         i2 = min(nx,int(math.ceil(xsrc+box_radius)));
@@ -360,10 +388,10 @@ def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_bea
         xi = (numpy.arange(i1,i2) - xsrc)*proj.xscale;
         yj = (numpy.arange(j1,j2) - ysrc)*proj.yscale;
         # work out rotated coordinates
-        xi1 = (xi*cos_rot)[x_indexer] - (yj*sin_rot)[y_indexer];
-        yj1 = (xi*sin_rot)[x_indexer] + (yj*cos_rot)[y_indexer];
+        xi1 = (xi*cos_pa)[x_indexer] - (yj*sin_pa)[y_indexer];
+        yj1 = (xi*sin_pa)[x_indexer] + (yj*cos_pa)[y_indexer];
         # evaluate gaussian at these, scale up by stokes vector
-        gg = stokes_vec[stokes_indexer]*numpy.exp(-((xi1/gmaj)**2+(yj1/gmin)**2)/2.);
+        gg = stokes_vec[stokes_indexer]*numpy.exp(-((xi1/ex)**2+(yj1/ey)**2)/2.);
         # add into data
         data[i1:i2,j1:j2,...] += gg;
       # else gmaj=0: use delta functions

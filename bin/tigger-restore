@@ -61,14 +61,11 @@ an output image is not specified, makes a name for it automatically.""");
                     help="Only restore the NSRC brightest sources");
   parser.add_option("-s","--scale",dest="fluxscale",metavar="FLUXSCALE[,N]",action="store",
                     help="rescale model fluxes by given factor. If N is given, rescale N brightest only.");
-  parser.add_option("--psf",type="float",dest="psf_maj",
-                    help="restoring PSF FWHM, major axis, in arcsec");
-  parser.add_option("--psf-min",type="float",dest="psf_min",
-                    help="restoring PSF FWHM, minor axis (if different from major axis)");
-  parser.add_option("--psf-pa",type="float",
-                    help="restoring PSF position angle, in degrees, default is 0");
+  parser.add_option("-b","--restoring-beam",type="string",metavar="ARCSEC[,ARCSEC,DEG]",
+                    help="restoring beam size. Use one FWHM value (in arcsec) for circular beam, or else "+
+                    "supply major/minor FWHM and position angle.");
   parser.add_option("-p","--psf-file",dest="psf",action="store",
-                    help="name of PSF file to be fitted, if major/minor axis is not specified (default psf.fits)");
+                    help="name of PSF file to be fitted to get the restoring beam (default psf.fits, if --restoring-beam not specified)");
   parser.add_option("--clear",action="store_true",
                     help="clear contents of FITS file before adding in sources");
   parser.add_option("--pb",action="store_true",
@@ -151,15 +148,26 @@ an output image is not specified, makes a name for it automatically.""");
     for src in sources[:n]:
       src.flux.rescale(0.01);
 
-  if options.psf_maj >= 0:
-    gx = options.psf_maj/(FWHM*ARCSEC);
-    gy = options.psf_min/(FWHM*ARCSEC) if options.psf_min >= 0 else gx;
-    grot = options.psf_pa/DEG;
-    print "Using PSF FWHM %.2f\" by %.2f\" at PA %f deg"%(gx*FWHM*ARCSEC,gy*FWHM*ARCSEC,grot*DEG);
+  if options.restoring_beam:
+    ff = options.restoring_beam.split(":");
+    try:
+      if len(ff) == 1:
+        gx = gy = float(ff[0]);
+        grot = 0;
+        print "Using a restoring beam of %.2f\""%gx;
+      else:
+        gx,gy,grot = map(float,ff);
+        print "Using a restoring beam of %.2f\" by %.2f\" at PA %.2f deg"%(gx,gy,grot);
+    except:
+      print "Invalid -b/--restoring-beam setting.";
+      sys.exit(1);
+    gx /= FWHM*ARCSEC;
+    gy /= FWHM*ARCSEC;
+    grot /= DEG;
   else:
     # fit the psf
     gx,gy,grot = Imaging.fitPsf(options.psf);
-    print "Fitted Gaussian to PSF %s, FWHM is %.2f\" by %.2f\" at PA %f deg"%(options.psf,gx*FWHM*ARCSEC,gy*FWHM*ARCSEC,grot*DEG);
+    print "Fitted restoring beam to PSF file %s: %.2f\" by %.2f\" at PA %.2f deg"%(options.psf,gx*FWHM*ARCSEC,gy*FWHM*ARCSEC,grot*DEG);
 
   pbexp = None;
   freq = options.freq*1e+6 or model.refFreq() or 1400*1e+6;
