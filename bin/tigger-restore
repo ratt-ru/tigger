@@ -32,11 +32,7 @@ import re
 import os.path
 import os
 import pyfits
-
-
 import math
-DEG = math.pi/180;
-
 
 if __name__ == '__main__':
 
@@ -62,10 +58,11 @@ an output image is not specified, makes a name for it automatically.""");
   parser.add_option("-s","--scale",dest="fluxscale",metavar="FLUXSCALE[,N]",action="store",
                     help="rescale model fluxes by given factor. If N is given, rescale N brightest only.");
   parser.add_option("-b","--restoring-beam",type="string",metavar="ARCSEC[,ARCSEC,DEG]",
-                    help="restoring beam size. Use one FWHM value (in arcsec) for circular beam, or else "+
+                    help="specify restoring beam size, overriding BMAJ/BMIN/BPA keywords in input image. "+
+                    "Use one FWHM value (in arcsec) for circular beam, or else "+
                     "supply major/minor FWHM and position angle.");
   parser.add_option("-p","--psf-file",dest="psf",action="store",
-                    help="name of PSF file to be fitted to get the restoring beam (default psf.fits, if --restoring-beam not specified)");
+                    help="determine restoring beam size by fitting PSF file, overriding BMAJ/BMIN/BPA keywords in input image.");
   parser.add_option("--clear",action="store_true",
                     help="clear contents of FITS file before adding in sources");
   parser.add_option("--pb",action="store_true",
@@ -78,7 +75,7 @@ an output image is not specified, makes a name for it automatically.""");
                     help="set verbosity level (0 is silent, higher numbers mean more messages)");
   parser.add_option("-T","--timestamps",action="store_true",
                     help="enable timestamps in debug messages (useful for timing)");
-  parser.set_defaults(n=0,fluxscale='1',psf='psf.fits',psf_maj=-1,psf_min=-1,psf_pa=0);
+  parser.set_defaults(n=0,fluxscale='1');
 
   (options,rem_args) = parser.parse_args();
 
@@ -148,26 +145,42 @@ an output image is not specified, makes a name for it automatically.""");
     for src in sources[:n]:
       src.flux.rescale(0.01);
 
+  # open input image
+  input_hdu = pyfits.open(input_image)[0];
+
+  # get restoring beam size
   if options.restoring_beam:
     ff = options.restoring_beam.split(":");
     try:
       if len(ff) == 1:
         gx = gy = float(ff[0]);
         grot = 0;
-        print "Using a restoring beam of %.2f\""%gx;
+        print "User-specified restoring beam of %.2f\""%gx;
       else:
         gx,gy,grot = map(float,ff);
-        print "Using a restoring beam of %.2f\" by %.2f\" at PA %.2f deg"%(gx,gy,grot);
+        print "User-specified restoring beam of %.2f\" by %.2f\" at PA %.2f deg"%(gx,gy,grot);
     except:
       print "Invalid -b/--restoring-beam setting.";
       sys.exit(1);
     gx /= FWHM*ARCSEC;
     gy /= FWHM*ARCSEC;
     grot /= DEG;
-  else:
-    # fit the psf
+  elif options.psf:
+    # fit the PSF 
     gx,gy,grot = Imaging.fitPsf(options.psf);
     print "Fitted restoring beam to PSF file %s: %.2f\" by %.2f\" at PA %.2f deg"%(options.psf,gx*FWHM*ARCSEC,gy*FWHM*ARCSEC,grot*DEG);
+  else:
+    # else look in input header
+    gx,gy,grot = [ input_hdu.header.get(x,None) for x in 'BMAJ','BMIN','BPA' ];
+    if any([x is None for x in gx,gy,grot]):
+      print "Unable to determine restoring beam size, no BMAJ/BMIN/BPA keywords in input image.",
+      print "Try using the -b/-p options to specify an explicit restoring beam.";
+      sys.exit(1);
+    print "Restoring beam (as per input header) is %.2f\" by %.2f\" at PA %.2f deg"%(gx*3600,gy*3600,grot);
+    gx /= DEG*FWHM
+    gy /= DEG*FWHM
+    grot /= DEG
+    
 
   pbexp = None;
   freq = options.freq*1e+6 or model.refFreq() or 1400*1e+6;
@@ -188,7 +201,6 @@ an output image is not specified, makes a name for it automatically.""");
     
   # read, restore, write
   print "Restoring model into input image %s"%input_image;
-  input_hdu = pyfits.open(input_image)[0];
   if options.clear:
     input_hdu.data[...] = 0;
   Imaging.restoreSources(input_hdu,sources,gx,gy,grot,primary_beam=pbexp,freq=freq);

@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 
 #
-#% $Id$ 
+#% $Id$
 #
 #
 # Copyright (C) 2002-2011
-# The MeqTree Foundation & 
+# The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
 # P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
 #
@@ -22,7 +22,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>,
-# or write to the Free Software Foundation, Inc., 
+# or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
@@ -50,6 +50,11 @@ ARCSEC = ARCMIN*60;
 FWHM = math.sqrt(math.log(256));  # which is 2.3548;
 
 def fitPsf (filename,cropsize=None):
+  """Fits a Gaussian PSF to the FITS file given by 'filename'.
+  If cropsize is specified, crops the central cropsize X cropsize pixels before fitting.
+  Else determines cropsize by looking for the first negative sidelobe from the centre outwards.
+  Returns maj_sigma,min_sigma,pa_NE (in radians)
+  """;
   # read PSF from file
   psf = pyfits.open(filename)[0];
   hdr = psf.header;
@@ -68,6 +73,7 @@ def fitPsf (filename,cropsize=None):
     size = cropsize;
     psf = psf[(nx-size)//2:(nx+size)//2,(ny-size)//2:(ny+size)//2];
   # if size not specified, then auto-crop by looking for the first negative value starting from the center
+  # this will break on very extended diagonal PSFs, but that's a pathological case
   else:
     ix = numpy.where(psf[:,ny//2]<0)[0];
     ix0 = max(ix[ix<nx//2]);
@@ -86,7 +92,7 @@ def fitPsf (filename,cropsize=None):
   dprint(2,"Estimated parameters are",parms0);
   parms = gaussfitter2.gaussfit(psf,None,parms0,autoderiv=1,return_all=0,circle=0,rotate=1,vheight=0);
   dprint(0,"Fitted parameters are",parms);
-  
+
   # now swap x and y around, since our axes are in reverse order
   ampl,y0,x0,sy,sx,rot = parms;
 
@@ -106,8 +112,48 @@ def fitPsf (filename,cropsize=None):
 
   return sx_rad,sy_rad,rot/DEG;
 
+def convolveGaussian (x1,y1,p1,x2,y2,p2):
+    """convolves a Gaussian with extents x1,y1 and position angle p1
+    with another Gaussian given by x2,y2,p2, and returns the extents 
+    and angle of the resulting Gaussian."""
+    # convert to Fourier plane extents, FT transforms a -> pi^2/a
+    u1,v1,u2,v2 = [ (math.pi**2)*2*a**2 for a in x1,y1,x2,y2 ];
+#    print "uv coeffs",u1,v1,u2,v2;
+    c1,s1 = math.cos(p1),math.sin(p1);
+    c2,s2 = math.cos(p2),math.sin(p2);
+    # in the FT, this is a product of two Gaussians, each of the form:
+    #   exp(-( u*(cx+sy)^2 + v*(cx-sy)^2))
+    # note how we rotate BACK through the position angle
+    # The product is necessarily a Gaussian itself, of the form
+    #   exp(-(a.u^2+2b.u.v+c.v^2))
+    # So we just need to collect the rotated Gaussian coefficients into a, b and c
+    a = u1*c1**2+v1*s1**2+u2*c2**2+v2*s2**2
+    c = u1*s1**2+v1*c1**2+u2*s2**2+v2*c2**2
+    b = c1*s1*(u1-v1)+c2*s2*(u2-v2)
+#    print "a,b,c",a,b,c;
+    # ok, find semi-major axes a1, b1 using the formula from http://mathworld.wolfram.com/Ellipse.html eq. 21-22
+    # to go from a general quadratic curve (with a,b,c given above, d=f=0, g=-1) to semi-axes a',b'
+    D = math.sqrt((a-c)**2+4*b**2)
+    E = a+c
+    a1 = math.sqrt(2/(E-D))
+    b1 = math.sqrt(2/(E+D))
+#    print "a',b'",a1,b1,"coeffs",1/(a1**2),1/(b1**2)
+    # and derive rotation angle
+    if b:
+        p1 = math.atan2(2*b,a-c)/2 + math.pi/2
+#        if a > c:
+#          p1 += math.pi/2
+    else:
+        p1 = 0 if a <= c else math.pi/2
+#    print "rotation",p1/DEG
+    # ok, convert a1,b1 from uv-plane to image plane 
+    x1 = math.sqrt(1/(2*math.pi**2*a1**2))
+    y1 = math.sqrt(1/(2*math.pi**2*b1**2))
+    # note that because of reciprocality, y1 becomes the major axis and x1 the minor axis, so adjust for that
+    return y1,x1,(p1-math.pi/2)%math.pi;  
+  
 def getImageCube (fitshdu,filename="",extra_axes=None):
-  """Converts a FITS HDU (consisting of a header and data) into a 4+-dim numpy array where the 
+  """Converts a FITS HDU (consisting of a header and data) into a 4+-dim numpy array where the
   first two axes are x and y, the third is Stokes (possibly of length 1, if missing in the
   original image), and the rest are either as found in the FITS header (if extra_axes=None),
   or in the order specified by CTYPE in extra_axes (if present, else a dummy axis of size 1 is inserted),
@@ -131,7 +177,7 @@ def getImageCube (fitshdu,filename="",extra_axes=None):
   def match_ctype (ctype,ctype_list):
     for i,ct in enumerate(ctype_list):
       if ct == ctype or ( ct == "FREQ" and ctype.startswith("FELO") ) or ( ctype == "FREQ" and ct.startswith("FELO") ):
-	return i;
+        return i;
     return None;
   # identify X, Y and stokes axes
   for n in range(naxis):
@@ -141,7 +187,7 @@ def getImageCube (fitshdu,filename="",extra_axes=None):
     if ix is None and FITSHeaders.isAxisTypeX(ctype):
       ix = iax; # in numpy order, axes are reversed
     elif iy is None and FITSHeaders.isAxisTypeY(ctype):
-      iy = iax; 
+      iy = iax;
     elif ctype == 'STOKES':
       if istokes is not None:
         raise ValueError,"duplicate STOKES axis in FITS file %s"%filename;
@@ -150,7 +196,7 @@ def getImageCube (fitshdu,filename="",extra_axes=None):
       cdelt = hdr.get('CDELT'+axs,1);
       crpix = hdr.get('CRPIX'+axs,1)-1;
       values = map(int,list(crval + (numpy.arange(data.shape[iax]) - crpix)*cdelt));
-      stokes_names = [ (FITSHeaders.StokesNames[i] 
+      stokes_names = [ (FITSHeaders.StokesNames[i]
                         if i>0 and i<len(FITSHeaders.StokesNames) else "%d"%i) for i in values ];
     else:
       other_axes.append(iax);
@@ -182,7 +228,7 @@ def getImageCube (fitshdu,filename="",extra_axes=None):
     for iaxis,ctype in zip(other_axes,other_axes_ctype):
       if match_ctype(ctype,extra_axes) is None:
         axes.append(iaxis);
-        remove_axes.append(iaxis); 
+        remove_axes.append(iaxis);
         remove_axes_ctype.append(ctype);
   # return all extra axes found in header
   else:
@@ -196,14 +242,14 @@ def getImageCube (fitshdu,filename="",extra_axes=None):
     data = data[[Ellipsis]+[0]*len(remove_axes)];
   # reshape and return
   return data.reshape(shape),stokes_names,extra_axes,remove_axes_ctype;
-  
-  
+
+
 class ImageResampler (object):
   """This class resamples images from one projection ("source") to another ("target").""";
   def __init__(self,sproj,tproj,sl,sm,tl,tm):
     """Creates resampler.
     sproj,tproj are the source and target Projection objects.
-    sl,sm is a (sorted, ascending) list of l,m coordinates in the source image 
+    sl,sm is a (sorted, ascending) list of l,m coordinates in the source image
     tl,tm is a (sorted, ascending) list of l,m coordinates in the target image
     """
     # convert tl,tm to to source coordinates
@@ -221,7 +267,7 @@ class ImageResampler (object):
     tl = tl[tx1:tx2];
     tm = tm[ty1:ty2];
     dprint(4,"overlap target pixels are %d:%d and %d:%d"%(tx1,tx2,ty1,ty2));
-    
+
     #### The code below works but can be very slow  (~minutes) when doing large images, because of WCS
     ## make target lm matrix
     #tmat = numpy.zeros((2,len(tl),len(tm)));
@@ -234,22 +280,22 @@ class ImageResampler (object):
     #tls,tms = sproj.lm(ra,dec);
     #tmat[0,...] = tls.reshape((len(tl),len(tm)));
     #tmat[1,...] = tms.reshape((len(tl),len(tm)));
-    
+
     #### my alternative conversion code
     ## source to target is always an affine transform (one image projected into the plane of another, right?), so
     ## use WCS to map the corners, and figure out a linear transform from there
-    
+
     # this maps three corners
     t00 = sproj.lm(*tproj.radec(tl[0],tm[0]));
     t1x = sproj.lm(*tproj.radec(tl[-1],tm[0]));
     t1y = sproj.lm(*tproj.radec(tl[0],tm[-1]));
-    
+
     tmat = numpy.zeros((2,len(tl),len(tm)));
     tlnorm = (tl-tl[0])/(tl[-1]-tl[0]);
     tmnorm = (tm-tm[0])/(tm[-1]-tm[0]);
     tmat[0,...] = t00[0] + (tlnorm*(t1x[0]-t00[0]))[:,numpy.newaxis] + (tmnorm*(t1y[0]-t00[0]))[numpy.newaxis,:];
     tmat[1,...] = t00[1] + (tmnorm*(t1y[1]-t00[1]))[numpy.newaxis,:] + (tlnorm*(t1x[1]-t00[1]))[:,numpy.newaxis];
-    
+
     dprint(4,"setting up slices");
     # ok, now find pixels in tmat that are within the source image extent
     tmask = (sl[0]<=tmat[0,...])&(tmat[0,...]<=sl[-1])&(sm[0]<=tmat[1,...])&(tmat[1,...]<=sm[-1]);
@@ -268,7 +314,7 @@ class ImageResampler (object):
     dprint(4,"slices are",ix0,ix1,iy0,iy1);
     # make [2,nx,ny] array of interpolation coordinates
     self._target_coords = tmat[:,ix0:ix1,iy0:iy1];
-    
+
   def targetSlice (self):
     return self._target_slice;
 
@@ -277,16 +323,16 @@ class ImageResampler (object):
       return 0;
     else:
       return map_coordinates(image,self._target_coords);
-    
+
 def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_beam=None):
   """Restores sources (into the given FITSHDU) using a Gaussian PSF given by gmaj/gmin/grot, in radians.
-  grot is PA in the North thru East convention (PA=0 is N).
+  gmaj/gmin is major/minor sigma parameter; grot is PA in the North thru East convention (PA=0 is N).
+
   If gmaj=0, uses delta functions instead.
   If freq is specified, converts flux to the specified frequency.
   If primary_beam is specified, uses it to apply a PB gain to each source. This must be a function of two arguments:
   r and freq, returning the power beam gain.
   """;
-  grot += math.pi/2;  # convert from N-E to W-N (which is the more conventional mathematical definition of these things), so X is major axis
   hdr = fits_hdu.header;
   data,stokes,extra_data_axes,dum = getImageCube(fits_hdu);
   # create projection object, using pixel coordinates
@@ -318,7 +364,7 @@ def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_bea
     return tuple(indexer);
   x_indexer = make_axis_indexer(0);
   y_indexer = make_axis_indexer(1);
-  # figure out stokes 
+  # figure out stokes
   nstokes = len(stokes);
   stokes_vec = numpy.zeros((nstokes,));
   stokes_indexer = make_axis_indexer(2);
@@ -327,10 +373,14 @@ def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_bea
   # get pixel sizes, in radians
   # gmaj != 0: use gaussian. Estimate PSF box size. We want a +/-5 sigma box
   if gmaj > 0:
+    # convert grot from N-E to W-N (which is the more conventional mathematical definition of these things), so X is major axis
+    grot += math.pi/2;  
     if gmin == 0:
       gmin = gmaj;
     cos_rot = math.cos(grot);
     sin_rot = math.sin(-grot);  # rotation is N->E, so swap the sign
+  else:
+    gmaj = gmin = grot = 0;
   conv_kernels = {};
   # loop over sources in model
   for src in sources:
@@ -355,23 +405,27 @@ def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_bea
       for i,st in enumerate(stokes):
          stokes_vec[i] = getattr(src.flux,st,0)*ni;
       dprintf(3,"Source %s, %s Jy, at pixel %f,%f\n",src.name,stokes_vec,xsrc,ysrc);
-      # for gaussian sources, dilate by gmaj 
+      # for gaussian sources, convolve with beam
       if src.typecode == 'Gau':
-        pa = src.shape.pa+math.pi/2;
-        dcos,dsin = abs(math.cos(grot-pa)),abs(math.sin(grot-pa));
-        dx = math.sqrt((gmaj*dcos)**2+(gmin*dsin)**2);
-        dy = math.sqrt((gmaj*dsin)**2+(gmin*dcos)**2);
-#        print pa*DEG,"dilation is",dx*ARCSEC*FWHM,dy*ARCSEC*FWHM;
-        ex,ey = src.shape.ex/FWHM,src.shape.ey/FWHM;
-        ex,ey = ex+dx,ey+dy;
-        # total flux has to be adjusted by the beam_size/(beam_size+source_size)
-        # ratio to get peak flux
-        stokes_vec *= dx*dy/((ex+dx)*(ey+dy));
+        pa0 = src.shape.pa+math.pi/2;  # convert PA from N->E to conventional W->N
+        ex0,ey0 = src.shape.ex/FWHM,src.shape.ey/FWHM;  # convert extents from FWHM to sigmas, since gmaj/gmin is in same scale
+        if gmaj > 0:
+          ex,ey,pa = convolveGaussian(ex0,ey0,pa0,gmaj,gmin,grot);
+          # normalize flux by beam/extent ratio
+          stokes_vec *= (gmaj*gmin)/(ex*ey);
+          print "%3dx%-3d@%3d * %3dx%-3d@%3d -> %3dx%-3d@%3d"%(
+            ex0 *FWHM*ARCSEC,ey0 *FWHM*ARCSEC,(pa0-math.pi/2)*DEG,
+            gmaj*FWHM*ARCSEC,gmin*FWHM*ARCSEC,(grot-math.pi/2)*DEG,
+            ex  *FWHM*ARCSEC,ey  *FWHM*ARCSEC,(pa-math.pi/2)*DEG);
+        else:
+          # normalize flux by pixel/extent ratio
+          ex,ey,pa = ex0,ey0,pa0;
+          stokes_vec *= (abs(proj.xscale*proj.yscale))/(ex*ey);
       else:
         ex,ey,pa = gmaj,gmin,grot;
       # gmaj != 0: use gaussian.
       if ex > 0 or ey > 0:
-        # work out restoring box 
+        # work out restoring box
         box_radius = 5*(max(ex,ey))/min(abs(proj.xscale),abs(proj.yscale));
         dprintf(2,"Will use a box of radius %f pixels for restoration\n",box_radius);
         cos_pa = math.cos(pa);
@@ -452,9 +506,9 @@ def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_bea
         conv_kernel = numpy.exp(-((xi1/gmaj)**2+(yj1/gmin)**2)/2.);
         conv_kernels[modelproj.xscale,modelproj.yscale] = conv_kernel;
       # Work out data slices that we need to loop over.
-      # For every 2D slice in the data image cube (assuming other axes besides x/y), we need to apply a 
-      # convolution to the corresponding model slice, and add it in to the data slice. The complication 
-      # is that any extra axis may be of length 1 in the model and of length N in the data (e.g. frequency axis), 
+      # For every 2D slice in the data image cube (assuming other axes besides x/y), we need to apply a
+      # convolution to the corresponding model slice, and add it in to the data slice. The complication
+      # is that any extra axis may be of length 1 in the model and of length N in the data (e.g. frequency axis),
       # in which case we need to add the same model slice to all N data slices. The loop below puts together a series
       # of index tuples representing each per-slice operation.
       # These two initial slices correspond to the x/y axes. Additional indices will be appended to these in a loop
@@ -463,7 +517,7 @@ def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_bea
       sd0 = [data_x_slice,data_y_slice];
       sm0 = [slice(None),slice(None)];
       slices = [];
-      slices = [ (sd0+[dst],sm0+[mst]) for dst,mst in enumerate(model_stp) if mst >= 0 ]; 
+      slices = [ (sd0+[dst],sm0+[mst]) for dst,mst in enumerate(model_stp) if mst >= 0 ];
       #for dst,mst in enumerate(model_stp):
         #if mst >= 0:
           #slices = [ (sd0+[dst],sm0+[mst]) for sd0,sm0 in slices ];

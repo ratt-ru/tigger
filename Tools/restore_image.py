@@ -56,14 +56,14 @@ class RestoreImageDialog (QDialog):
     lo1 = QHBoxLayout();
     lo.addLayout(lo1);
     lo1.setContentsMargins(0,0,0,0);
-    lo1.addWidget(QLabel("PSF FWHM, major axis:",self));
+    lo1.addWidget(QLabel("Restoring beam FWHM, major axis:",self));
     self.wbmaj = QLineEdit(self);
     lo1.addWidget(self.wbmaj);
     lo1.addWidget(QLabel("\"     minor axis:",self));
     self.wbmin = QLineEdit(self);
     lo1.addWidget(self.wbmin);
     lo1.addWidget(QLabel("\"     P.A.:",self));
-    self.wbpa = QLineEdit("0",self);
+    self.wbpa = QLineEdit(self);
     lo1.addWidget(self.wbpa);
     lo1.addWidget(QLabel(u"\u00B0",self));
     for w in self.wbmaj,self.wbmin,self.wbpa:
@@ -71,7 +71,7 @@ class RestoreImageDialog (QDialog):
     lo1 = QHBoxLayout();
     lo.addLayout(lo1);
     lo1.setContentsMargins(0,0,0,0);
-    self.wfile_psf = FileSelector(self,label="Fill PSF parameters by fitting PSF image:",dialog_label="PSF FITS file",default_suffix="fits",file_types="FITS files (*.fits *.FITS)",file_mode=QFileDialog.ExistingFile);
+    self.wfile_psf = FileSelector(self,label="Set restoring beam by fitting PSF image:",dialog_label="PSF FITS file",default_suffix="fits",file_types="FITS files (*.fits *.FITS)",file_mode=QFileDialog.ExistingFile);
     lo1.addSpacing(32);
     lo1.addWidget(self.wfile_psf);
     # selection only
@@ -96,6 +96,7 @@ class RestoreImageDialog (QDialog):
     self.setMinimumWidth(384);
     # signals
     QObject.connect(self.wfile_in,SIGNAL("filenameSelected"),self._fileSelected);
+    QObject.connect(self.wfile_in,SIGNAL("filenameSelected"),self._inputFileSelected);
     QObject.connect(self.wfile_out,SIGNAL("filenameSelected"),self._fileSelected);
     QObject.connect(self.wfile_psf,SIGNAL("filenameSelected"),self._psfFileSelected);
     # internal state
@@ -109,7 +110,28 @@ class RestoreImageDialog (QDialog):
 
   def _fileSelected (self,filename):
     self.wokbtn.setEnabled(bool(self.wfile_in.filename() and self.wfile_out.filename()));
-
+    
+  def _inputFileSelected (self,filename):
+    if filename:
+      try:
+        header = pyfits.open(filename)[0].header;
+      except:
+        self.qerrmsg.showMessage("Error reading FITS file %s: %s"%(filename,str(err)));
+        self.wfile_in.setFilename("");
+        return;
+      # try to get beam extents
+      gx,gy,grot = [ header.get(x,None) for x in 'BMAJ','BMIN','BPA' ];
+      if all([x is not None for x in gx,gy,grot]):
+        # if beam size is already set, ask before overwriting
+        print [ str(x.text()) for x in self.wbmaj,self.wbmin,self.wbpa ]
+        if any([ bool(str(x.text())) for x in self.wbmaj,self.wbmin,self.wbpa ]) and \
+          QMessageBox.question(self,"Set restoring beam","Also reset restoring beam size from this FITS file?",
+            QMessageBox.Yes|QMessageBox.No) != QMessageBox.Yes:
+          return;
+        self.wbmaj.setText("%.2f"%(gx*3600));
+        self.wbmin.setText("%.2f"%(gy*3600));
+        self.wbpa.setText("%.2f"%grot);
+    
   def _psfFileSelected (self,filename):
     busy = BusyIndicator();
     filename = str(filename);
@@ -152,7 +174,7 @@ class RestoreImageDialog (QDialog):
     try:
       bmaj = float(str(self.wbmaj.text()));
       bmin = float(str(self.wbmin.text()));
-      pa = float(str(self.wbpa.text()));
+      pa = float(str(self.wbpa.text()) or "0");
     except Exception,err:
       busy = None;
       self.qerrmsg.showMessage("Invalid beam size specified");

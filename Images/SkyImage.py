@@ -628,7 +628,7 @@ class FITSImagePlotItem (SkyCubePlotItem):
     # check for beam parameters
     psf = [ hdr.get(x,None) for x in 'BMAJ','BMIN','BPA' ];
     if all([x is not None for x in psf]):
-     self.setPsfSize(*[ p/180*math.pi for p in psf ]);
+      self.setPsfSize(*[ p/180*math.pi for p in psf ]);
     self.setSkyAxis(0,iaxis_ra,nx,proj.ra0,-proj.xscale,proj.xpix0);
     self.setSkyAxis(1,iaxis_dec,ny,proj.dec0,proj.yscale,proj.ypix0);
     self.setDefaultProjection(proj);
