@@ -352,11 +352,17 @@ class ImageManager (QWidget):
   def _checkClipboardPath (self,mode=QClipboard.Clipboard):
     if self._qa_load_clipboard:
       self._clipboard_mode = mode;
-      path = str(QApplication.clipboard().text(mode));
+      try:
+        path = str(QApplication.clipboard().text(mode));
+      except:
+        path = None;
       self._qa_load_clipboard.setEnabled(bool(path and os.path.isfile(path)));
       
   def _loadClipboardPath (self):
-    path = QApplication.clipboard().text(self._clipboard_mode);
+    try:
+      path = QApplication.clipboard().text(self._clipboard_mode);
+    except:
+      return;
     self.loadImage(path);
     
   def _repopulateMenu (self):
