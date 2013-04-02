@@ -874,9 +874,8 @@ class ImageControlDialog (QDialog):
     bins[0] = self._subset_range[0];
     bins[1:] = self._hist_bins_hires + self._hist_binsize_hires/2;
     # use interpolation to find value interval corresponding to [delta,100-delta] of the distribution
-    dprint(0,self._subset.size,delta,self._subset.size-delta);
-    dprint(0,cumsum);
-    dprint(0,self._hist_bins_hires);
+    dprint(2,self._subset.size,delta,self._subset.size-delta);
+    dprint(2,cumsum,self._hist_bins_hires);
     # if first bin is already > delta, then set colour range to first bin
     x0,x1 = numpy.interp([delta,self._subset.size-delta],cumsum,bins);
     # and change the display range (this will also cause a histplot.replot() via _updateDisplayRange above)

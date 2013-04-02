@@ -45,6 +45,39 @@ DefaultDMSFormat = dict(name=0,
 
 DefaultDMSFormatString = "name ra_h ra_m ra_s dec_d dec_m dec_s i q u v spi rm emaj_s emin_s pa_d freq0 tags...";
 
+FormatHelp = """
+ASCII files are treated as columns of whitespace-separated values. The order
+of the columns is determined by a format string, which can be specified in
+the first line of the file (prefixed by "#format:"), or supplied by the
+user.  Note that in subsequent lines the "#" character is treated as a
+comment delimiter, everything following a "#" is ignored.
+
+The format string contains a simple list of field names, such as "name ra_d
+dec_d i".  Fields with unrecognized names are simply ignored -- a good way
+to skip over unwanted columns is to use a name like 'dummy'.
+
+The following field names are recognized. Note that only a subset of these
+needs to be present (as a minimum, coordinates and I flux needs to be
+supplied, but the rest is optional):
+
+name:             source name
+ra_{rad,d,h,m,s}: R.A. or R.A. component,
+                  (in radians, degrees, hours, minutes or seconds)
+dec_{rad,d,m,s}:  declination or declination component
+dec_sign:         declination sign (+ or -)
+i,q,u,v:          IQUV fluxes
+pol_frac:         linear polarization fraction 
+                  (will interpret both "0.1" and "10%" correctly)
+pol_pa_{rad,d}:   linear polarization angle
+rm:               rotation measure (freq0 must be supplied as well)
+spi:              spectral index (freq0 must be supplied as well)
+freq0:            reference frequency, for rm and/or spi
+emaj_{rad,d,m,s}: source extent, major axis (for Gaussian sources)
+emin_{rad,d,m,s}: source extent, minor axis (for Gaussian sources)
+pa_{rad,d}:       position angle (for Gaussian sources)
+tags:             comma-separated source tags
+""";
+
 DEG = math.pi/180;
 
 def load (filename,format=None,freq0=None,center_on_brightest=False,min_extent=0,**kw):
@@ -115,14 +148,21 @@ def load (filename,format=None,freq0=None,center_on_brightest=False,min_extent=0
         dec_field,dec_scale = format['dec_rad'],1.;
       else:
         raise ValueError,"ASCII format specification lacks mandatory Declination field ('dec_d' or 'dec_rad')";
+      # polarization as QUV
       try:
         quv_fields = [ format[x] for x in ['q','u','v'] ];
       except KeyError:
         quv_fields = None;
+      # linear polarization as fraction and angle
+      polfrac_field = format.get('pol_frac',None);
+      if polfrac_field is not None:
+        polpa_field,polpa_scale = format.get('pol_pa_d',None),(math.pi/180);
+        if not polpa_field is not None:
+          polpa_field,polpa_scale = format.get('pol_pa_rad',None),1;
       # fields for extent parameters
       ext_fields = [];
       for ext in 'emaj','emin','pa':
-        for field,scale in (ext,1.),(ext+'_d',DEG),(ext+'_m',DEG/60),(ext+'_s',DEG/3600):
+        for field,scale in (ext,1.),(ext+"_rad",1.),(ext+'_d',DEG),(ext+'_m',DEG/60),(ext+'_s',DEG/3600):
           if field in format:
             ext_fields.append((format[field],scale));
             break;
@@ -179,6 +219,13 @@ def load (filename,format=None,freq0=None,center_on_brightest=False,min_extent=0
           q,u,v = map(float,[fields[x] for x in quv_fields]);
         except IndexError:
           pass;
+      if polfrac_field is not None:
+        pf = fields[polfrac_field];
+        pf = float(pf[:-1])/100 if pf.endswith("%") else float(pf);
+        ppa = float(fields[polpa_field])*polpa_scale if polpa_field is not None else 0;
+        q = i*pf*math.cos(2*ppa);
+        u = i*pf*math.sin(2*ppa);
+        v = 0;
       # see if we have RM as well. Create flux object (unpolarized, polarized, polarized w/RM)
       if q is None:
         flux = ModelClasses.Polarization(i,0,0,0);
@@ -348,10 +395,19 @@ def save (model,filename,sources=None,format=None,**kw):
       field = format.get(stokes.lower());
       if field is not None:
         fval[field] = str(getattr(src.flux,stokes,0));
+    # fractional polarization
+    if 'pol_frac' in format:
+      i,q,u = [ getattr(src.flux,stokes,0) for stokes in "IQU" ];
+      fval[format['pol_frac']] = str(math.sqrt(q*q+u*u)/i);
+      pa = math.atan2(u,q)/2;
+      for field,scale in ('pol_pa_rad',1.),('pol_pa_d',DEG):
+        ifield = format.get(field);
+        if ifield is not None:
+          fval[ifield] = str(pa/scale);
     # shape
     if src.shape:
       for parm,sparm in ("emaj","ex"),("emin","ey"),("pa","pa"):
-        for field,scale in (parm,1.),(parm+'_d',DEG),(parm+'_m',DEG/60),(parm+'_s',DEG/3600):
+        for field,scale in (parm,1.),(parm+'_rad',DEG),(parm+'_d',DEG),(parm+'_m',DEG/60),(parm+'_s',DEG/3600):
           ifield = format.get(field.lower());
           if ifield is not None:
             fval[ifield] = str(getattr(src.shape,sparm,0)/scale);

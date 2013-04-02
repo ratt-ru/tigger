@@ -102,6 +102,8 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
                     help="""Format of appended file, for ASCII or BBS tables. Default is to use --format.""");
   parser.add_option("--output-format",type="string",metavar="FORMAT",
                     help="""Output format, for ASCII or BBS tables. If the model was originally imported from an ASCII or BBS table, the default output format will be the same as the original format.""");
+  parser.add_option("--help-format",action="store_true",
+                    help="Prints help on format strings.");
   parser.add_option("-T","--tags",type="string",action="append",metavar="TAG",
                     help="Extract sources with the specified tags.");
   parser.add_option("--app-to-int",action="store_true",
@@ -163,6 +165,10 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
 
   (options,rem_args) = parser.parse_args();
   min_extent = (options.min_extent/3600)*DEG;
+  
+  if options.help_format:
+    print ASCII.FormatHelp;
+    sys.exit(0);
 
   # get filenames
   if len(rem_args) == 1:
