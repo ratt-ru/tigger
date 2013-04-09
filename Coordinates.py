@@ -75,7 +75,7 @@ def angular_dist_pos_angle (ra1,dec1,ra2,dec2):
   cosd1,cosd2 = cos(dec1),cos(dec2);
   cosra,sinra = cos(ra1-ra2),sin(ra1-ra2);
 
-  adist = numpy.arccos(sind1*sind2 + cosd1*cosd2*cosra);
+  adist = numpy.arccos(min(sind1*sind2 + cosd1*cosd2*cosra,1));
   pa = numpy.arctan2(-cosd2*sinra,-cosd2*sind1*cosra+sind2*cosd1);
   return adist,pa;
 

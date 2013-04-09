@@ -29,7 +29,7 @@ import PlotStyles
 
 import re
 
-from Tigger.Coordinates import angular_dist_pos_angle
+from Tigger.Coordinates import angular_dist_pos_angle,DEG
 
 class ModelTag (ModelItem):
   mandatory_attrs = [ "name" ];
@@ -113,6 +113,9 @@ class Source (ModelItem):
 
   def getTags (self):
     return [ (attr,val) for attr,val in self.getExtraAttributes() if attr[0] != "_" ];
+
+  getTag = get_attr;
+  setTag = ModelItem.setAttribute;
 
   class Grouping (object):
     # show_plot settings
@@ -393,6 +396,9 @@ class SkyModel (ModelItem):
     Formats.save(self,filename,format=format);
 
   _re_bynumber = re.compile("^([!-])?(\\d+)?:(\\d+)?$");
+
+  def getSourcesNear (self,ra,dec,tolerance=DEG/60):
+    return [ src for src in self.sources if angular_dist_pos_angle(src.pos.ra,src.pos.dec,ra,dec)[0]<tolerance ];
 
   def getSourceSubset (self,selection=None):
     """Gets list of sources matching the given selection string (if None, then all sources are returned.)""";
