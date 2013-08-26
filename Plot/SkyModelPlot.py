@@ -1505,10 +1505,10 @@ class SkyModelPlotter (QWidget):
       # make tooltip
       DataValueFormat = "%.4g";
       stats = list(stats);
-      stats1 = tuple(stats[:4] + [ DataValueFormat%s for s in stats[4:8] ] + stats[8:]);
-      msgtext = "[%d:%d,%d:%d] min %s, max %s, mean %s, std %s, np %d"%stats1;
+      stats1 = tuple(stats[:4] + [ DataValueFormat%s for s in stats[4:9] ] + stats[9:]);
+      msgtext = "[%d:%d,%d:%d] min %s, max %s, mean %s, std %s, sum %s, np %d"%stats1;
       tiptext = """<P><NOBR>Region: [%d:%d,%d:%d]</NOBR><BR>
-        <NOBR>Stats: min %s, max %s, mean %s, std %s, np %d</NOBR></BR>
+        <NOBR>Stats: min %s, max %s, mean %s, std %s, sum %s, np %d</NOBR></BR>
         Use the "Colour zoom" button on the left (or press Shift+F4) to set the current data subset and
         intensity range to this image region.</P>"""%stats1;
       # make markup on plot to indicate current subset

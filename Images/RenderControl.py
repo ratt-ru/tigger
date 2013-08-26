@@ -348,7 +348,8 @@ class RenderControl (QObject):
       mmin,mmax = measurements.extrema(subset,labels=mask,index=None if mask is None else False)[:2];
       mean = measurements.mean(subset,labels=mask,index=None if mask is None else False);
       std = measurements.standard_deviation(subset,labels=mask,index=None if mask is None else False);
-      return xx1,xx2,yy1,yy2,mmin,mmax,mean,std,subset.size;
+      ssum = measurements.sum(subset,labels=mask,index=None if mask is None else False);
+      return xx1,xx2,yy1,yy2,mmin,mmax,mean,std,ssum,subset.size;
     return None;
 
   def setWindowSubset (self,rect=None):
