@@ -296,7 +296,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
 
   # load the model
   try:
-    model = import_func(skymodel,min_extent=options.min_extent,format=options.format,center=center_radec);
+    model = import_func(skymodel,min_extent=min_extent,format=options.format,center=center_radec);
   except Exception,exc:
     if options.verbose:
       traceback.print_exc();
@@ -320,7 +320,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
         sys.exit(1);
       print "Reading %s (%s)"%(filename,append_doc);
       # read model to be appended
-      model2 = append_func(filename,min_extent=options.min_extent,format=options.append_format or options.format);
+      model2 = append_func(filename,min_extent=min_extent,format=options.append_format or options.format);
       if model2.sources:
         sources += model2.sources;
         for src in model2.sources:
