@@ -308,8 +308,8 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
   sources = model.sources;
   if not sources:
     print "Input model %s contains no sources"%skymodel;
-    sys.exit(0);
-  print "Model contains %d sources"%len(sources);
+  else:
+    print "Model contains %d sources"%len(sources);
 
   # append, if specified
   if options.append:
