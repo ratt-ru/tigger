@@ -275,7 +275,10 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
       print "An output filename and/or an explicit output model type (-o/--output-type) must be specfified.";
       sys.exit(1);
     # get base input name
-    basename = os.path.splitext(os.path.splitext(skymodel)[0])[0];
+    # if input extension is "lsm.html", then split off two extensions, not just one
+    basename = os.path.splitext(skymodel)[0];
+    if skymodel.endswith(".lsm.html"):
+      basename = os.path.splitext(basename)[0];
     output = basename + output_extensions[0];
   # else output name is specified, use this to determine format unless it is explicitly set
   elif not output_type:

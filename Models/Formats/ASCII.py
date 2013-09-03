@@ -97,6 +97,7 @@ def load (filename,format=None,freq0=None,center_on_brightest=False,min_extent=0
 
   # now process file line-by-line
   linenum = 0;
+  format_str = ''
   for line in file(filename):
     # for the first line, firgure out the file format
     if not linenum:
