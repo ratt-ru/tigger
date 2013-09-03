@@ -408,7 +408,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
       for tag in tags:
         source.setAttribute(tag,True);
       if not options.refresh_r:
-        src.setAttribute('r',Coordinates.angular_dist_pos_angle(ra0,dec0,*model.fieldCenter())[0]);
+        source.setAttribute('r',Coordinates.angular_dist_pos_angle(ra0,dec0,*model.fieldCenter())[0]);
       sources.append(source);
       print "Adding FITS source %s (%s,pad=%f) with tags %s"%(srcname,fitsfile,pad,tags);
 
