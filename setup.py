@@ -52,5 +52,6 @@ setup(
     author = "Oleg Smirnov",
     author_email = "osmirnov@gmail.com",
     url = "https://github.com/ska-sa/tigger",
+    requires=['kittens', 'PyQt4', 'numpy'],
 )
 
