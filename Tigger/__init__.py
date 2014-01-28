@@ -91,7 +91,7 @@ else:
   dprintf = _verbosity.dprintf;
 
   import Kittens.pixmaps
-  pixmaps = Kittens.pixmaps.PixmapCache("tigger");
+  pixmaps = Kittens.pixmaps.PixmapCache("Tigger");
 
   import Kittens.config
   import os.path
