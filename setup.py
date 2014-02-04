@@ -37,10 +37,16 @@ if root_dir != '':
 for dirpath, dirnames, filenames in os.walk('Tigger'):
     # Ignore dirnames that start with '.'
     dirnames[:] = [d for d in dirnames if not d.startswith('.') and d != '__pycache__']
-    if '__init__.py' in filenames:
-        tigger_packages.append('.'.join(fullsplit(dirpath)))
-    elif filenames:
-        tigger_data_files.append([dirpath, [os.path.join(dirpath, f) for f in filenames]])
+    if filenames:
+        if '__init__.py' in filenames:
+            tigger_packages.append('.'.join(fullsplit(dirpath)))
+        data_files = []
+        for filename in filenames:
+            if not (filename.endswith('.py') or filename.endswith('.pyc')):
+                data_files.append(filename) 
+        if data_files:
+            tigger_data_files.append([dirpath, [os.path.join(dirpath, f) for f in data_files]])
+
 
 setup(
     name = "tigger",
