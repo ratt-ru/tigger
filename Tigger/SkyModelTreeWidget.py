@@ -316,7 +316,11 @@ class SkyModelTreeWidgetItem (QTreeWidgetItem):
         self.setColumn(ColumnRm,src.flux.rm,"%.2f"%src.flux.rm);
     # spi
     if isinstance(src.spectrum,ModelClasses.SpectralIndex):
-      self.setColumn(ColumnSpi,src.spectrum.spi,"%.2f"%getattr(src.spectrum,'spi',''));
+      spi = getattr(src.spectrum,'spi',0);
+      if not isinstance(spi,(list,tuple)):
+        spi = [spi];
+      spi = ",".join([ "%.2f"%x for x in spi]);
+      self.setColumn(ColumnSpi,src.spectrum.spi,spi );
     # shape
     shape = getattr(src,'shape',None);
     if isinstance(shape,ModelClasses.ModelItem):

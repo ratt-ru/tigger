@@ -71,6 +71,7 @@ pol_frac:         linear polarization fraction
 pol_pa_{rad,d}:   linear polarization angle
 rm:               rotation measure (freq0 must be supplied as well)
 spi:              spectral index (freq0 must be supplied as well)
+spi2,3,4...:      spectral curvature
 freq0:            reference frequency, for rm and/or spi
 emaj_{rad,d,m,s}: source extent, major axis (for Gaussian sources)
 emin_{rad,d,m,s}: source extent, minor axis (for Gaussian sources)
@@ -174,6 +175,7 @@ def load (filename,format=None,freq0=None,center_on_brightest=False,min_extent=0
       freq0_field = format.get('freq0',None);
       rm_field = format.get('rm',None);
       spi_field = format.get('spi',None);
+      spi2_field = [ format.get('spi%d'%i,None) for i in range(2,10) ];
       tags_slice = format.get('tags',None);
     # now go on to process the line
     linenum += 1;
@@ -238,7 +240,15 @@ def load (filename,format=None,freq0=None,center_on_brightest=False,min_extent=0
       if f0 is None or spi_field is None or spi_field >= len(fields):
         spectrum = None;
       else:
-        spectrum = ModelClasses.SpectralIndex(float(fields[spi_field]),f0);
+        spi = [ float(fields[spi_field]) ] + \
+              [ (float(fields[x]) if x is not None else 0) for x in spi2_field ];
+        # if any higher-order spectral terms are specified, include them here
+        # but trim off all trailing zeroes
+        while len(spi)>1 and not spi[-1]:
+          del spi[-1];
+        if len(spi) == 1:
+          spi = spi[0];
+        spectrum = ModelClasses.SpectralIndex(spi,f0);
       # see if we have extent parameters
       ex=ey=pa=0;
       if ext_fields:
