@@ -1,3 +1,0 @@
-[submodule "debian"]
-	path = debian
-	url = git@github.com:gijzelaerr/tigger-debian.git
