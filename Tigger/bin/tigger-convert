@@ -119,13 +119,14 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
   parser.add_option("--prefix",type="string",
                     help="Prefix all source names with the given string");
   parser.add_option("--center",type="string",metavar='COORDINATES',
-                    help="Override coordinates of the nominal field center specified in the input model. Use a pyrap.measures direction string of the form "+\
-                    "REF,C1,C2, for example \"j2000,1h5m0.2s,+30d14m15s\", or \"b1950,115.2d,+30.5d\". See the pyrap.measures documentation for more details.");
+                    help="Override coordinates of the nominal field center specified in the input model. Use the form "+
+                    "\"Xdeg,Ydeg\" or \"Xdeg,Yrad\" to specify RA,Dec in degrees or radians, or else a "+
+                    "a pyrap.measures direction string of the form "+\
+                    "REF,C1,C2, for example \"j2000,1h5m0.2s,+30d14m15s\". See the pyrap.measures documentation for more details.");
   parser.add_option("--refresh-r",action="store_true",
                     help="Recompute the 'r' (radial distance from center) attribute of each source based on the current field center.");
   parser.add_option("--recenter",type="string",metavar='COORDINATES',
-                    help="Shift the sky model from the nominal center to a different field center. Use a pyrap.measures direction string of the form "+\
-                    "REF,C1,C2, for example \"j2000,1h5m0.2s,+30d14m15s\", or \"b1950,115.2d,+30.5d\". See the pyrap.measures documentation for more details.");
+                    help="Shift the sky model from the nominal center to a different field center. COORDINATES specified as per the --center option.");
   parser.add_option("--select",type="string",metavar='TAG<>VALUE',action="append",
                     help="Selects a subset of sources by comparing the named TAG to a float VALUE. '<>' "+
                     "represents the comparison operator, and can be one of == (or =),!=,<=,<,>,>=. Alternatively, "+
