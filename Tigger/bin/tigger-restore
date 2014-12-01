@@ -57,10 +57,10 @@ an output image is not specified, makes a name for it automatically.""");
                     help="Only restore the NSRC brightest sources");
   parser.add_option("-s","--scale",dest="fluxscale",metavar="FLUXSCALE[,N]",action="store",
                     help="rescale model fluxes by given factor. If N is given, rescale N brightest only.");
-  parser.add_option("-b","--restoring-beam",type="string",metavar="ARCSEC[,ARCSEC,DEG]",
+  parser.add_option("-b","--restoring-beam",type="string",metavar="BMAJ[,BMIN,PA]",
                     help="specify restoring beam size, overriding BMAJ/BMIN/BPA keywords in input image. "+
-                    "Use one FWHM value (in arcsec) for circular beam, or else "+
-                    "supply major/minor FWHM and position angle.");
+                    "Use a single value (arcsec) for circular beam, or else "+
+                    "supply major/minor size and position angle (deg).");
   parser.add_option("-p","--psf-file",dest="psf",action="store",
                     help="determine restoring beam size by fitting PSF file, overriding BMAJ/BMIN/BPA keywords in input image.");
   parser.add_option("--clear",action="store_true",
@@ -152,7 +152,7 @@ an output image is not specified, makes a name for it automatically.""");
 
   # get restoring beam size
   if options.restoring_beam:
-    ff = options.restoring_beam.split(":");
+    ff = options.restoring_beam.split(",");
     try:
       if len(ff) == 1:
         gx = gy = float(ff[0]);

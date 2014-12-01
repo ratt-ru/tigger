@@ -375,7 +375,14 @@ class SpectralIndex (Spectrum):
   mandatory_attrs  = [ "spi","freq0" ];
   def normalized_intensity (self,freq):
     """Returns the normalized intensity for a given frequency, normalized to unity at the reference frequency (if any)"""
-    return (freq/self.freq0)**self.spi;
+    if isinstance(self.spi,(list,tuple)):
+      spi = self.spi[0];
+      logfreq = numpy.log(freq/self.freq0);
+      for i,x in enumerate(self.spi[1:]):
+        spi = spi + x*(logfreq**(i+1));
+    else:
+      spi = self.spi;
+    return (freq/self.freq0)**spi;
 
 class Shape (ModelItem):
   """Abstract base class for a source's brightness distribution.
