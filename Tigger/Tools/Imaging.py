@@ -324,7 +324,7 @@ class ImageResampler (object):
     else:
       return map_coordinates(image,self._target_coords);
 
-def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_beam=None):
+def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_beam=None,apply_beamgain=False):
   """Restores sources (into the given FITSHDU) using a Gaussian PSF given by gmaj/gmin/grot, in radians.
   gmaj/gmin is major/minor sigma parameter; grot is PA in the North thru East convention (PA=0 is N).
 
@@ -332,6 +332,7 @@ def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_bea
   If freq is specified, converts flux to the specified frequency.
   If primary_beam is specified, uses it to apply a PB gain to each source. This must be a function of two arguments:
   r and freq, returning the power beam gain.
+  If apply_beamgain is true, applies beamgain atribute instead, if this exists.
   """;
   hdr = fits_hdu.header;
   data,stokes,extra_data_axes,dum = getImageCube(fits_hdu);
@@ -391,7 +392,9 @@ def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_bea
     else:
       ni = 1;
     #  multiply that by PB gain, if given
-    if primary_beam:
+    if apply_beamgain and hasattr(src,'beamgain'):
+      ni *= getattr(src,'beamgain');
+    elif primary_beam:
       r = getattr(src,'r',None);
       if r is not None:
         pb = primary_beam(r,freq);
