@@ -80,86 +80,106 @@ if __name__ == '__main__':
 
   # setup some standard command-line option parsing
   #
-  from optparse import OptionParser
+  from optparse import OptionParser,OptionGroup
   parser = OptionParser(usage="""%prog: sky_model [output_model]""",
                         description="""Converts sky models into Tigger format and/or applies various processing options.
 Input 'sky_model' may be any model format importable by Tigger, recognized by extension, or explicitly specified via an option switch.
 'output_model' is always a native Tigger model. If an output model is not specfied, the conversion is done in-place if the input model
 is a Tigger model (-f switch must be specified to allow overwriting), or else a new filename is generated.""");
-  parser.add_option("-f","--force",action="store_true",
+
+  group = OptionGroup(parser,"Input/output and conversion options")
+  parser.add_option_group(group);
+  group.add_option("-f","--force",action="store_true",
                     help="Forces overwrite of output model.");
-  parser.add_option("-t","--type",choices=input_formats,
+  group.add_option("-t","--type",choices=input_formats,
                     help="Input model type (%s). Default is %%default."%(", ".join(input_formats)));
-  parser.add_option("-o","--output-type",choices=output_formats,metavar="TYPE",
+  group.add_option("-o","--output-type",choices=output_formats,metavar="TYPE",
                     help="Output model type (%s). Default is %%default."%(", ".join(output_formats)));
-  parser.add_option("-a","--append",metavar="FILENAME",action="append",
-                    help="Append model to input. May be given multiple times.");
-  parser.add_option("--append-type",choices=input_formats,metavar="TYPE",
+  group.add_option("-a","--append",metavar="FILENAME",action="append",
+                    help="Append another model to input model. May be given multiple times.");
+  group.add_option("--append-type",choices=input_formats,metavar="TYPE",
                     help="Appended model type (%s). Default is %%default."%(", ".join(input_formats)));
-  parser.add_option("--format",type="string",
+  group.add_option("--format",type="string",
                     help="""Input format, for ASCII or BBS tables. For ASCII tables, default is "%s". For BBS tables, the default format is specified in the file header."""%ASCII.DefaultDMSFormatString);
-  parser.add_option("--append-format",type="string",default="",
+  group.add_option("--append-format",type="string",default="",
                     help="""Format of appended file, for ASCII or BBS tables. Default is to use --format.""");
-  parser.add_option("--output-format",type="string",metavar="FORMAT",
+  group.add_option("--output-format",type="string",metavar="FORMAT",
                     help="""Output format, for ASCII or BBS tables. If the model was originally imported from an ASCII or BBS table, the default output format will be the same as the original format.""");
-  parser.add_option("--help-format",action="store_true",
+  group.add_option("--help-format",action="store_true",
                     help="Prints help on format strings.");
-  parser.add_option("-T","--tags",type="string",action="append",metavar="TAG",
+  group.add_option("--min-extent",type="float",metavar="ARCSEC",
+                    help="Minimal source extent, when importing NEWSTAR or ASCII files. Sources with a smaller extent will be treated as point sources. Default is %default.");
+
+  group = OptionGroup(parser,"Options to select a subset of the input")
+  parser.add_option_group(group);
+  group.add_option("-T","--tags",type="string",action="append",metavar="TAG",
                     help="Extract sources with the specified tags.");
-  parser.add_option("--app-to-int",action="store_true",
-                    help="Treat fluxes as apparent, and rescale them into intrinsic using the "+
-                    "supplied primary beam model (see --primary-beam option).");
-  parser.add_option("--int-to-app",action="store_true",
-                    help="Treat fluxes as intrinsic, and rescale them into apparent using the "+
-                    "supplied primary beam model (see --primary-beam option).");
-  parser.add_option("--newstar-app-to-int",action="store_true",
-                    help="Convert NEWSTAR apparent fluxes in input model to intrinsic. Only works for NEWSTAR or NEWSTAR-derived input models.");
-  parser.add_option("--newstar-int-to-app",action="store_true",
-                    help="Convert NEWSTAR intrinsic fluxes in input model to apparent. Only works for NEWSTAR or NEWSTAR-derived input models.");
-  parser.add_option("--prefix",type="string",
-                    help="Prefix all source names with the given string");
-  parser.add_option("--center",type="string",metavar='COORDINATES',
-                    help="Override coordinates of the nominal field center specified in the input model. Use the form "+
-                    "\"Xdeg,Ydeg\" or \"Xdeg,Yrad\" to specify RA,Dec in degrees or radians, or else a "+
-                    "a pyrap.measures direction string of the form "+\
-                    "REF,C1,C2, for example \"j2000,1h5m0.2s,+30d14m15s\". See the pyrap.measures documentation for more details.");
-  parser.add_option("--refresh-r",action="store_true",
-                    help="Recompute the 'r' (radial distance from center) attribute of each source based on the current field center.");
-  parser.add_option("--recenter",type="string",metavar='COORDINATES',
-                    help="Shift the sky model from the nominal center to a different field center. COORDINATES specified as per the --center option.");
-  parser.add_option("--select",type="string",metavar='TAG<>VALUE',action="append",
+  group.add_option("--select",type="string",metavar='TAG<>VALUE',action="append",
                     help="Selects a subset of sources by comparing the named TAG to a float VALUE. '<>' "+
                     "represents the comparison operator, and can be one of == (or =),!=,<=,<,>,>=. Alternatively, "+
                     "you may use the FORTRAN-style operators .eq.,.ne.,.le.,.lt.,.gt.,.ge. Multiple " +
                     "select options may be given, in which case the effect is a logical-AND. Note that VALUE may be "
                     "followed by one of the characters d, m or s, in which case it will be converted from degrees, "
                     "minutes or seconds into radians. This is useful for selections such as \"r<5d\".");
-  parser.add_option("--ref-freq",type="float",metavar="MHz",
-                    help="Set or change the reference frequency of the model.");
-  parser.add_option("--primary-beam",type="string",metavar="EXPR",
+  group.add_option("--remove-nans",action="store_true",
+                    help="Removes the named source(s) from the model. NAME may contain * and ? wildcards.");
+  
+  group = OptionGroup(parser,"Options to manipulate fluxes etc.")
+  parser.add_option_group(group);
+  group.add_option("--app-to-int",action="store_true",
+                    help="Treat fluxes as apparent, and rescale them into intrinsic using the "+
+                    "supplied primary beam model (see --primary-beam option).");
+  group.add_option("--int-to-app",action="store_true",
+                    help="Treat fluxes as intrinsic, and rescale them into apparent using the "+
+                    "supplied primary beam model (see --primary-beam option).");
+  group.add_option("--newstar-app-to-int",action="store_true",
+                    help="Convert NEWSTAR apparent fluxes in input model to intrinsic. Only works for NEWSTAR or NEWSTAR-derived input models.");
+  group.add_option("--newstar-int-to-app",action="store_true",
+                    help="Convert NEWSTAR intrinsic fluxes in input model to apparent. Only works for NEWSTAR or NEWSTAR-derived input models.");
+  group.add_option("--primary-beam",type="string",metavar="EXPR",
                     help="""Apply a primary beam expression to estimate apparent fluxes. Any valid Python expression using the variables 'r' and 'fq' is accepted. Use "refresh" to re-estimate fluxes using the current expression.
                     Example (for the WSRT-like 25m dish PB): "cos(min(65*fq*1e-9*r,1.0881))**6".""");
-  parser.add_option("--min-extent",type="float",metavar="ARCSEC",
-                    help="Minimal source extent, when importing NEWSTAR or ASCII files. Sources with a smaller extent will be treated as point sources. Default is %default.");
-  parser.add_option("--cluster-dist",type="float",metavar="ARCSEC",
+  group.add_option("--center",type="string",metavar='COORDINATES',
+                    help="Override coordinates of the nominal field center specified in the input model. Use the form "+
+                    "\"Xdeg,Ydeg\" or \"Xdeg,Yrad\" to specify RA,Dec in degrees or radians, or else a "+
+                    "a pyrap.measures direction string of the form "+\
+                    "REF,C1,C2, for example \"j2000,1h5m0.2s,+30d14m15s\". See the pyrap.measures documentation for more details.");
+  group.add_option("--refresh-r",action="store_true",
+                    help="Recompute the 'r' (radial distance from center) attribute of each source based on the current field center.");
+  group.add_option("--ref-freq",type="float",metavar="MHz",
+                    help="Set or change the reference frequency of the model.");
+
+  group = OptionGroup(parser,"Options to cluster and rename sources")
+  parser.add_option_group(group);
+  group.add_option("--cluster-dist",type="float",metavar="ARCSEC",
                     help="Distance parameter for source clustering, 0 to disable. Default is %default.");
-  parser.add_option("--rename",action="store_true",
+  group.add_option("--rename",action="store_true",
                     help="Rename sources according to the COPART (cluster ordering, P.A., radial distance, type) scheme");
-  parser.add_option("--radial-step",type="float",metavar="ARCMIN",
+  group.add_option("--radial-step",type="float",metavar="ARCMIN",
                     help="Size of one step in radial distance for the COPART scheme. Default is %default'.");
-  parser.add_option("--merge-clusters",type="string",metavar="TAG(S)",
+  group.add_option("--merge-clusters",type="string",metavar="TAG(S)",
                     help="Merge source clusters bearing the specified tags, replacing them with a "+ "single point source. Multiple tags may be given separated by commas. "+
                     "Use 'ALL' to merge all clusters.");
-  parser.add_option("--remove-source",type="string",action="append",
+  group.add_option("--prefix",type="string",
+                    help="Prefix all source names with the given string");
+
+  group = OptionGroup(parser,"Other model manipulation options")
+  parser.add_option_group(group);
+  group.add_option("--remove-source",type="string",action="append",
                     metavar="NAME",
                     help="Removes the named source(s) from the model. NAME may contain * and ? wildcards.");
-  parser.add_option("--add-brick",type="string",action="append",
+  group.add_option("--add-brick",type="string",action="append",
                     metavar="NAME:FILE[:PAD_FACTOR:[TAGS:...]]",
                     help="Adds a uv-brick to the model. NAME is a source name, FILE is a "+
                     "FITS file, PAD_FACTOR is set to 1 if not specified. TAGS is a list of boolean flags.");
-  parser.add_option("-v", "--verbose",action="store_true",
+  group.add_option("--recenter",type="string",metavar='COORDINATES',
+                    help="Shift the sky model from the nominal center to a different field center. COORDINATES specified as per the --center option.");
+
+  group = OptionGroup(parser,"Debugging and verbosity options")
+  parser.add_option_group(group);
+  group.add_option("-v", "--verbose",action="store_true",
                     help="increases verbosity.");
-  parser.add_option("-d", "--debug",dest="debug",type="string",action="append",metavar="Context=Level",
+  group.add_option("-d", "--debug",dest="debug",type="string",action="append",metavar="Context=Level",
                     help="(for debugging Python code) sets verbosity level of the named Python context. May be used multiple times.");
 
   parser.set_defaults(cluster_dist=60,min_extent=0,format=None,type='auto',output_type='auto',radial_step=10,ref_freq=-1);
@@ -300,7 +320,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
 
   # load the model
   try:
-    model = import_func(skymodel,min_extent=min_extent,format=options.format,center=center_radec);
+    model = import_func(skymodel,min_extent=min_extent,format=options.format,center=center_radec,verbose=options.verbose);
   except Exception,exc:
     if options.verbose:
       traceback.print_exc();
@@ -342,12 +362,24 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
 
   # apply selection by tag
   if options.tags:
-    for tag in options.tags:
+    tags = [];
+    for ot in options.tags:
+      tags += ot.split(",");
+    for tag in tags:
       sources = [ src for src in sources if getattr(src,tag,False) ];
     if not sources:
-      print "No sources left after selection by tag (-T/--tag) has been applied.";
+      print "No sources left after selection by tag (-T/--tags) has been applied.";
       sys.exit(0);
-    print "Selection by tag (%s) reduces this to %d sources"%(", ".join(options.tags),len(sources));
+    print "Selection by tags (%s) reduces this to %d sources"%(", ".join(tags),len(sources));
+
+  # apply selection by NaN
+  if options.remove_nans:
+    sources = [ src for src in sources if not any([ math.isnan(x) 
+      for x in src.pos.ra,src.pos.dec,src.flux.I ]) ];
+    if not sources:
+      print "No sources left after applying --remove-nans.";
+      sys.exit(0);
+    print "Removing NaN positions and fluxes reduces this to %d sources"%len(sources);
 
   # remove sources
   if options.remove_source:

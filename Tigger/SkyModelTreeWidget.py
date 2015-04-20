@@ -39,12 +39,15 @@ _verbosity = Kittens.utils.verbosity(name="tw");
 dprint = _verbosity.dprint;
 dprintf = _verbosity.dprintf;
 
-
-ViewColumns = [ "name","RA","Dec","r","type","Iapp","I","Q","U","V","RM","spi","shape","tags" ];
+ViewColumns = [ "name","RA","RA err","Dec","Dec err","r","type",
+  "Iapp","I","I err","Q","Q err","U","U err","V","V err","RM","RM err","spi","spi err",
+  "shape","shape err","tags" ];
 
 for icol,col in enumerate(ViewColumns):
-    globals()["Column%s"%col.capitalize()] = icol;
+    globals()["Column%s"%col.capitalize().replace(" ","_")] = icol;
 NumColumns = len(ViewColumns);
+
+DEG = math.pi/180;
 
 # Qt-4.6 and up (PyQt 4.7 and up) has very slow QTreeWidgetItem updates, determine version here
 from PyQt4 import QtCore
@@ -89,16 +92,21 @@ class SkyModelTreeWidget (Kittens.widgets.ClickableTreeWidget):
     self._column_views = [];
     self._column_widths = {};
     self.addColumnCategory("Position",[ColumnRa,ColumnDec]);
+    self.addColumnCategory("Position errors",[ColumnRa_err,ColumnDec_err],False);
     self.addColumnCategory("Type",[ColumnType]);
     self.addColumnCategory("Flux",[ColumnIapp,ColumnI]);
+    self.addColumnCategory("Flux errors",[ColumnI_err],False);
     self.addColumnCategory("Polarization",[ColumnQ,ColumnU,ColumnV,ColumnRm]);
+    self.addColumnCategory("Polarization errors",[ColumnQ_err,ColumnU_err,ColumnV_err,ColumnRm_err],False);
     self.addColumnCategory("Spectrum",[ColumnSpi]);
+    self.addColumnCategory("Spectrum errors",[ColumnSpi_err],False);
     self.addColumnCategory("Shape",[ColumnShape]);
+    self.addColumnCategory("Shape errors",[ColumnShape_err],False);
     self.addColumnCategory("Tags",[ColumnTags]);
 
   def _showColumn (self,col,show=True):
     """Shows or hides the specified column.
-    (When hiding, saves width of column to internal array so that it can be restored grouperly.)"""
+    (When hiding, saves width of column to internal array so that it can be restored properly.)"""
     hdr = self.header();
     hdr.setSectionHidden(col,not show)
     if show:
@@ -136,10 +144,12 @@ class SkyModelTreeWidget (Kittens.widgets.ClickableTreeWidget):
       self.model.setCurrentSource(None,origin=self);
     return QTreeWidget.viewportEvent(self,event);
 
-  def addColumnCategory (self,name,columns):
+  def addColumnCategory (self,name,columns,visible=True):
     qa = QAction(name,self);
     qa.setCheckable(True);
-    qa.setChecked(True);
+    qa.setChecked(visible);
+    if not visible:
+      self._showColumnCategory(columns,False)
     QObject.connect(qa,SIGNAL("toggled(bool)"),self._currier.curry(self._showColumnCategory,columns));
     self._column_views.append((name,qa,columns));
 
@@ -289,6 +299,18 @@ class SkyModelTreeWidgetItem (QTreeWidgetItem):
       self._highlighted = highlighted;
       self._highlighted_visual = visual;
 
+  @staticmethod
+  def _angErrToStr (value):
+    """helper method: converts angular error to string representation in deg or arcmin or arcsec""";
+    arcsec = (value/DEG)*3600;
+    if arcsec < 60:
+      return unichr(0xB1)+"%.2g\""%arcsec;
+    elif arcsec < 3600:
+      return unichr(0xB1)+"%.2f'"%(arcsec*60);
+    else:
+      return unichr(0xB1)+"%.2f%s"%(arcsec*3600,unichr(0xB0));
+
+
   def setSource (self,src):
     # name
     dprint(3,"setSource 1",src.name);
@@ -298,6 +320,10 @@ class SkyModelTreeWidgetItem (QTreeWidgetItem):
     self.setColumn(ColumnRa,src.pos.ra,"%2dh%02dm%05.2fs"%src.pos.ra_hms());
     self.setColumn(ColumnDec,src.pos.dec,("%s%2d"+unichr(0xB0)+"%02d'%05.2f\"")%
         src.pos.dec_sdms());
+    if src.pos.ra_err is not None:
+      self.setColumn(ColumnRa_err,src.pos.ra_err,self._angErrToStr(src.pos.ra_err));
+    if src.pos.dec_err is not None:
+      self.setColumn(ColumnDec_err,src.pos.dec_err,self._angErrToStr(src.pos.dec_err));
     if hasattr(src,'r'):
       self.setColumn(ColumnR,src.r,"%.1f'"%(src.r*180*60/math.pi));
     # type
@@ -305,15 +331,17 @@ class SkyModelTreeWidgetItem (QTreeWidgetItem):
     # flux
     if hasattr(src,'Iapp'):
       self.setColumn(ColumnIapp,src.Iapp,"%.3g"%src.Iapp);
-    self.setColumn(ColumnI,src.flux.I,"%.3g"%src.flux.I);
-    dprint(3,"setSource 2",src.name);
-    # polarization
-    if isinstance(src.flux,ModelClasses.Polarization):
-      self.setColumn(ColumnQ,src.flux.Q,"%.2g"%src.flux.Q);
-      self.setColumn(ColumnU,src.flux.U,"%.2g"%src.flux.U);
-      self.setColumn(ColumnV,src.flux.V,"%.2g"%src.flux.V);
-      if hasattr(src.flux,'rm'):
-        self.setColumn(ColumnRm,src.flux.rm,"%.2f"%src.flux.rm);
+    for stokes in "IQUV":
+      stk = getattr(src.flux,stokes,None);
+      stk_err = getattr(src.flux,stokes+"_err",None);
+      if stk is not None:
+        self.setColumn(globals()['Column'+stokes],stk,"%.3g"%stk);
+      if stk_err is not None:
+        self.setColumn(globals()['Column'+stokes+"_err"],stk_err,unichr(0xB1)+"%.2g"%stk_err);
+    if hasattr(src.flux,'rm'):
+      self.setColumn(ColumnRm,src.flux.rm,"%.2f"%src.flux.rm);
+      if hasattr(src.flux,'rm_err'):
+        self.setColumn(ColumnRm_err,src.flux.rm_err,unichr(0xB1)+"%.2f"%src.flux.rm);
     # spi
     if isinstance(src.spectrum,ModelClasses.SpectralIndex):
       spi = getattr(src.spectrum,'spi',0);
@@ -321,12 +349,22 @@ class SkyModelTreeWidgetItem (QTreeWidgetItem):
         spi = [spi];
       spi = ",".join([ "%.2f"%x for x in spi]);
       self.setColumn(ColumnSpi,src.spectrum.spi,spi );
+      spierr = getattr(src.spectrum,'spi_err',None);
+      if spierr is not None:
+        if not isinstance(spierr,(list,tuple)):
+          spierr = [spierr];
+        spi = ",".join([ "%.2f"%x for x in spi]);
+        self.setColumn(ColumnSpi_err,src.spectrum.spi_err,unichr(0xB1)+spi);
     # shape
     shape = getattr(src,'shape',None);
     if isinstance(shape,ModelClasses.ModelItem):
-      shapeval = [ val for attr,val in shape.getAttributes() ];
-      shapestr = shape.strDesc(label=False);
+      shapeval = shape.getShape();
+      shapestr = shape.strDesc(delimiters=('"',unichr(0xD7),unichr(0x21BA),unichr(0xB0)));
       self.setColumn(ColumnShape,shapeval,shapestr);
+      errval = shape.getShapeErr();
+      if errval:
+        errstr = shape.strDescErr(delimiters=('"',unichr(0xD7),unichr(0x21BA),unichr(0xB0)));
+        self.setColumn(ColumnShape_err,errval,unichr(0xB1)+errstr);
     dprint(3,"setSource 3",src.name);
     # Tags. Tags are all extra attributes that do not have a dedicated column (i.e. not Iapp or r), and do not start
     # with "_" (which is reserved for internal attributes)
