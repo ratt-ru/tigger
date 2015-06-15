@@ -24,10 +24,7 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-import sys
-import traceback
-import math
-import  numpy
+import sys,traceback,math,numpy,re
 
 import Kittens.utils
 
@@ -54,34 +51,50 @@ comment delimiter, everything following a "#" is ignored.
 
 The format string contains a simple list of field names, such as "name ra_d
 dec_d i".  Fields with unrecognized names are simply ignored -- a good way
-to skip over unwanted columns is to use a name like 'dummy'.
+to skip over unwanted columns is to use a name like 'dummy' or '-'.
 
 The following field names are recognized. Note that only a subset of these
 needs to be present (as a minimum, coordinates and I flux needs to be
 supplied, but the rest is optional):
 
 name:             source name
-ra_{rad,d,h,m,s}: R.A. or R.A. component,
+ra_{rad,d,h,m,s}: RA or RA component,
                   (in radians, degrees, hours, minutes or seconds)
+ra_err_{rad,d,h,m,s}: error on RA (in appropriate units)
 dec_{rad,d,m,s}:  declination or declination component
 dec_sign:         declination sign (+ or -)
+dec_err_{rad,d,m,s}: error on dec (in appropriate units)
 i,q,u,v:          IQUV fluxes
+{i,q,u,v}_err:    errors on fluxes   
 pol_frac:         linear polarization fraction 
                   (will interpret both "0.1" and "10%" correctly)
 pol_pa_{rad,d}:   linear polarization angle
 rm:               rotation measure (freq0 must be supplied as well)
+rm_err:           error on rotation measures
 spi:              spectral index (freq0 must be supplied as well)
 spi2,3,4...:      spectral curvature
+spi_err,spi2_err,...: error on spectral index and curvature
 freq0:            reference frequency, for rm and/or spi
 emaj_{rad,d,m,s}: source extent, major axis (for Gaussian sources)
 emin_{rad,d,m,s}: source extent, minor axis (for Gaussian sources)
+{emin,emaj}_err_{rad,d,m,s}:  error on source extent
 pa_{rad,d}:       position angle (for Gaussian sources)
+pa_err_{ra,d}:    error on position angle
 tags:             comma-separated source tags
+tags...:          absorb all remaining fields as source tags
+:TYPE:ATTR        custom attribute. Contents of field will be converted to Python TYPE
+                  (bool, int, float, complex, str) and associated with custom source atribute "ATTR"
 """;
 
 DEG = math.pi/180;
 
-def load (filename,format=None,freq0=None,center_on_brightest=False,min_extent=0,**kw):
+# dict of angulr units with their scale in radians
+ANGULAR_UNITS = dict(rad=1,d=DEG,m=DEG/60,s=DEG/3600,h=DEG*15)
+# subsets of angular units for leading RA or Dec column
+ANGULAR_UNITS_RA = dict(rad=1,d=DEG,h=DEG*15)
+ANGULAR_UNITS_DEC = dict(rad=1,d=DEG)
+
+def load (filename,format=None,freq0=None,center_on_brightest=False,min_extent=0,verbose=0,**kw):
   """Imports an ASCII table
   The 'format' argument can be either a dict (such as the DefaultDMSFormat dict above), or a string such as DefaultDMSFormatString.
   (Other possible field names are "ra_d", "ra_rad", "dec_rad", "dec_sign".)
@@ -96,11 +109,39 @@ def load (filename,format=None,freq0=None,center_on_brightest=False,min_extent=0
   maxbright = 0;
   brightest_name = radec0 = None;
 
+  # Get column number associated with field from format dict, as well as the error 
+  # column number. Returns tuple of indices, with None index indicating no such column
+  def get_field (name):
+    return format.get(name,None),format.get(name+"_err",None);
+  # Get column number associated with field from format dict, as well as the error 
+  # column number. Field is an angle thus will be suffixed with _{rad,d,h,m,s}. 
+  # Returns tuple of 
+  #     column,scale,err_column,err_scale
+  # with None index indicating no such column. Scale is scaling factor to convert
+  # quantity in column to radians
+  def get_ang_field (name,units=ANGULAR_UNITS):
+    column = err_column = colunit = errunit = None
+    units = units or ANGULAR_UNITS;
+    for unit,scale in units.iteritems():
+      if column is None:
+        column = format.get("%s_%s"%(name,unit));
+        if column is not None:
+          colunit = scale;
+      if err_column is None:
+        err_column = format.get("%s_err_%s"%(name,unit))
+        if err_column is not None:
+          errunit = scale;
+    return column,colunit,err_column,errunit;
+
+  # helper function: returns element #num from the fields list, multiplied by scale, or None if no such field
+  def getval (num,scale=1):
+    return None if ( num is None or len(fields) <= num ) else float(fields[num])*scale;
+
   # now process file line-by-line
   linenum = 0;
   format_str = ''
   for line in file(filename):
-    # for the first line, firgure out the file format
+    # for the first line, figure out the file format
     if not linenum:
       if not format and line.startswith("#format:"):
         format = line[len("#format:"):].strip();
@@ -122,39 +163,35 @@ def load (filename,format=None,freq0=None,center_on_brightest=False,min_extent=0
         format = dict(fields);
       elif not isinstance(format,dict):
         raise TypeError,"invalid 'format' argument of type %s"%(type(format))
-        nf = max(format.itervalues())+1;
-        fields = ['---']*nf;
-        for field,number in format.iteritems():
-          fields[number] = field;
-        format_str = " ".join(fields);
+        # nf = max(format.itervalues())+1;
+        # fields = ['---']*nf;
+        # for field,number in format.iteritems():
+        #   fields[number] = field;
+        # format_str = " ".join(fields);
+      # get list of custom attributes from format
+      custom_attrs = [];
+      for name,col in format.iteritems():
+        if name.startswith(":"):
+          m = re.match("^:(bool|int|float|complex|str):([\w]+)$",name);
+          if not m:
+            raise TypeError,"invalid field specification '%s' in format string"%name;
+          custom_attrs.append((eval(m.group(1)),m.group(2),col));
       # get minimum necessary fields from format
       name_field = format.get('name',None);
       # flux
-      try:
-        i_field = format['i'];
-      except KeyError:
+      i_field,i_err_field = get_field("i");
+      if i_field is None:
         raise ValueError,"ASCII format specification lacks mandatory flux field ('i')";
       # main RA field
-      if 'ra_h' in format:
-        ra_field,ra_scale = format['ra_h'],(math.pi/12);
-      elif 'ra_d' in format:
-        ra_field,ra_scale = format['ra_d'],(math.pi/180);
-      elif 'ra_rad' in format:
-        ra_field,ra_scale = format['ra_rad'],1.;
-      else:
+      ra_field,ra_scale,ra_err_field,ra_err_scale = get_ang_field('ra',ANGULAR_UNITS_RA);
+      if ra_field is None:
         raise ValueError,"ASCII format specification lacks mandatory Right Ascension field ('ra_h', 'ra_d' or 'ra_rad')";
       # main Dec field
-      if 'dec_d' in format:
-        dec_field,dec_scale = format['dec_d'],(math.pi/180);
-      elif 'dec_rad' in format:
-        dec_field,dec_scale = format['dec_rad'],1.;
-      else:
+      dec_field,dec_scale,dec_err_field,dec_err_scale = get_ang_field('dec',ANGULAR_UNITS_DEC);
+      if dec_field is None:
         raise ValueError,"ASCII format specification lacks mandatory Declination field ('dec_d' or 'dec_rad')";
       # polarization as QUV
-      try:
-        quv_fields = [ format[x] for x in ['q','u','v'] ];
-      except KeyError:
-        quv_fields = None;
+      quv_fields = [ get_field(x) for x in ['q','u','v'] ];
       # linear polarization as fraction and angle
       polfrac_field = format.get('pol_frac',None);
       if polfrac_field is not None:
@@ -162,20 +199,14 @@ def load (filename,format=None,freq0=None,center_on_brightest=False,min_extent=0
         if not polpa_field is not None:
           polpa_field,polpa_scale = format.get('pol_pa_rad',None),1;
       # fields for extent parameters
-      ext_fields = [];
-      for ext in 'emaj','emin','pa':
-        for field,scale in (ext,1.),(ext+"_rad",1.),(ext+'_d',DEG),(ext+'_m',DEG/60),(ext+'_s',DEG/3600):
-          if field in format:
-            ext_fields.append((format[field],scale));
-            break;
-      # if not all three accumulated, ignore
-      if len(ext_fields) != 3:
-        ext_fields = None;
+      extent_fields = [ get_ang_field(x,ANGULAR_UNITS) for x in 'emaj','emin','pa' ];
+      # all three must be present, else ignore
+      if any( [ x[0] is None for x in extent_fields ] ):
+        extent_fields = None;
       # fields for reference freq and RM and SpI
       freq0_field = format.get('freq0',None);
-      rm_field = format.get('rm',None);
-      spi_field = format.get('spi',None);
-      spi2_field = [ format.get('spi%d'%i,None) for i in range(2,10) ];
+      rm_field,rm_err_field = get_field('rm');
+      spi_fields = [ get_field('spi') ] + [ get_field('spi%d'%i) for i in range(2,10) ];
       tags_slice = format.get('tags',None);
     # now go on to process the line
     linenum += 1;
@@ -190,16 +221,19 @@ def load (filename,format=None,freq0=None,center_on_brightest=False,min_extent=0
       fields = line.split();
       # get  name
       name = fields[name_field] if name_field is not None else str(len(srclist)+1);
-      i = float(fields[i_field]);
+      i = getval(i_field);
+      i_err = getval(i_err_field);
       # get position: RA
-      ra = float(fields[ra_field]);
+      ra = getval(ra_field);
+      ra_err = getval(ra_err_field,ra_scale);
       if 'ra_m' in format:
         ra += float(fields[format['ra_m']])/60.;
       if 'ra_s' in format:
         ra += float(fields[format['ra_s']])/3600.;
       ra *= ra_scale;
       # position: Dec. Separate treatment of sign
-      dec = abs(float(fields[dec_field]));
+      dec = abs(getval(dec_field));
+      dec_err = getval(dec_err_field,dec_scale);
       if 'dec_m' in format:
         dec += float(fields[format['dec_m']])/60.;
       if 'dec_s' in format:
@@ -207,6 +241,8 @@ def load (filename,format=None,freq0=None,center_on_brightest=False,min_extent=0
       if fields[format.get('dec_sign',dec_field)][0] == '-':
         dec = -dec;
       dec *= dec_scale;
+      # for up position object
+      pos = ModelClasses.Position(ra,dec,ra_err=ra_err,dec_err=dec_err);
       # see if we have freq0
       try:
         f0 = freq0 or (freq0_field and float(fields[freq0_field]));
@@ -216,12 +252,7 @@ def load (filename,format=None,freq0=None,center_on_brightest=False,min_extent=0
       if f0 is not None and freq0 is None:
         freq0 = f0;
       # see if we have Q/U/V
-      q=u=v=None;
-      if quv_fields:
-        try:
-          q,u,v = map(float,[fields[x] for x in quv_fields]);
-        except IndexError:
-          pass;
+      (q,q_err),(u,u_err),(v,v_err) = [ (getval(x),getval(x_err)) for x,x_err in quv_fields ];
       if polfrac_field is not None:
         pf = fields[polfrac_field];
         pf = float(pf[:-1])/100 if pf.endswith("%") else float(pf);
@@ -230,35 +261,44 @@ def load (filename,format=None,freq0=None,center_on_brightest=False,min_extent=0
         u = i*pf*math.sin(2*ppa);
         v = 0;
       # see if we have RM as well. Create flux object (unpolarized, polarized, polarized w/RM)
+      rm,rm_err = getval(rm_field),getval(rm_err_field);
       if q is None:
-        flux = ModelClasses.Polarization(i,0,0,0);
-      elif f0 is None or rm_field is None or rm_field >= len(fields):
-        flux = ModelClasses.Polarization(i,q,u,v);
+        flux = ModelClasses.Polarization(i,0,0,0,I_err=i_err);
+      elif f0 is None or rm is None:
+        flux = ModelClasses.Polarization(i,q,u,v,I_err=i_err,Q_err=q_err,U_err=u_err,V_err=v_err);
       else:
-        flux = ModelClasses.PolarizationWithRM(i,q,u,v,float(fields[rm_field]),f0);
+        flux = ModelClasses.PolarizationWithRM(i,q,u,v,rm,f0,I_err=i_err,Q_err=q_err,U_err=u_err,V_err=v_err,rm_err=rm_err);
       # see if we have a spectral index
-      if f0 is None or spi_field is None or spi_field >= len(fields):
+      if f0 is None:
         spectrum = None;
       else:
-        spi = [ float(fields[spi_field]) ] + \
-              [ (float(fields[x]) if x is not None else 0) for x in spi2_field ];
-        # if any higher-order spectral terms are specified, include them here
-        # but trim off all trailing zeroes
-        while len(spi)>1 and not spi[-1]:
+        spi = [ getval(x) for x,xerr in spi_fields ];
+        spi_err = [ getval(xerr) for x,xerr in spi_fields ];
+        # if any higher-order spectral terms are specified, include them here but trim off all trailing zeroes
+        while spi and not spi[-1]:
           del spi[-1];
-        if len(spi) == 1:
-          spi = spi[0];
-        spectrum = ModelClasses.SpectralIndex(spi,f0);
+          del spi_err[-1]
+        if not spi:
+          spectrum = None;
+        elif len(spi) == 1:
+          spectrum = ModelClasses.SpectralIndex(spi[0],f0);
+          if spi_err[0] is not None:
+            spectrum.spi_err = spi_err[0];
+        else:
+          spectrum = ModelClasses.SpectralIndex(spi,f0);
+          if any([ x is not None for x in spi_err ]):
+            spectrum.spi_err = spi_err;
       # see if we have extent parameters
-      ex=ey=pa=0;
-      if ext_fields:
-        try:
-          ex,ey,pa = [ float(fields[num])*scale for num,scale in ext_fields ];
-        except IndexError:
-          pass;
+      ex = ey = pa = 0;
+      if extent_fields:
+        ex,ey,pa = [ ( getval(x[0],x[1]) or 0 ) for x in extent_fields ];
+        extent_errors = [ getval(x[2],x[3]) for x in extent_fields ];
       # form up shape object
       if (ex or ey) and max(ex,ey) >= min_extent:
         shape = ModelClasses.Gaussian(ex,ey,pa);
+        for ifield,field in enumerate(['ex','ey','pa']):
+          if extent_errors[ifield] is not None:
+            shape.setAttribute(field+"_err",extent_errors[ifield]);
       else:
         shape = None;
       # get tags
@@ -286,13 +326,15 @@ def load (filename,format=None,freq0=None,center_on_brightest=False,min_extent=0
             else:
               tagname,value = tagstr,True;
             tagdict[tagname] = value;
-
       # OK, now form up the source object
-      # position
-      pos = ModelClasses.Position(ra,dec);
       # now create a source object
       dprint(3,name,ra,dec,i,q,u,v);
       src = SkyModel.Source(name,pos,flux,shape=shape,spectrum=spectrum,**tagdict);
+      # get custom attributes
+      for type_,attr,column in custom_attrs:
+        if column is not None and len(fields) > column:
+          src.setAttribute(attr,type_(fields[column]));
+      # add to source list
       srclist.append(src);
       # check if it's the brightest
       brightness = src.brightness();
@@ -301,6 +343,8 @@ def load (filename,format=None,freq0=None,center_on_brightest=False,min_extent=0
         brightest_name = src.name;
         radec0 = ra,dec;
     except:
+      if verbose:
+        traceback.print_exc();
       dprintf(0,"%s:%d: %s, skipping\n",filename,linenum,str(sys.exc_info()[1]));
   dprintf(2,"imported %d sources from file %s\n",len(srclist),filename);
   # create model

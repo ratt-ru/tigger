@@ -53,7 +53,7 @@ class ModelItem (object):
 
   # list of mandatory item attributes
   mandatory_attrs  = [];
-  # dict of optional item attributes (key is name, value id default value)
+  # dict of optional item attributes (key is name, value is default value)
   optional_attrs   = {};
   # True is arbitrary extra attributes are allowed
   allow_extra_attrs = False;
@@ -129,7 +129,8 @@ class ModelItem (object):
   registerClass = classmethod(registerClass);
 
   def setAttribute (self,attr,value):
-    self._extra_attrs.add(attr);
+    if attr not in self.mandatory_attrs and attr not in self.optional_attrs:
+      self._extra_attrs.add(attr);
     setattr(self,attr,value);
 
   def removeAttribute (self,attr):
@@ -318,6 +319,7 @@ def _deg_to_dms (x,prec=0.01):
 
 class Position (ModelItem):
   mandatory_attrs  = [ "ra","dec" ];
+  optional_attrs = dict(ra_err=None,dec_err=None);
 
   @staticmethod
   def ra_hms_static (rad,scale=12,prec=0.01):
@@ -351,11 +353,13 @@ class Position (ModelItem):
 
 class Flux (ModelItem):
   mandatory_attrs  = [ "I" ];
+  optional_attrs = dict(I_err=None);
   def rescale (self,scale):
     self.I *= scale;
 
 class Polarization (Flux):
   mandatory_attrs  = Flux.mandatory_attrs + [ "Q","U","V" ];
+  optional_attrs = dict(I_err=None,Q_err=None,U_err=None,V_err=None);
   def rescale (self,scale):
     for stokes in "IQUV":
       setattr(self,stokes,getattr(self,stokes)*scale);
@@ -373,6 +377,7 @@ class Spectrum (ModelItem):
 
 class SpectralIndex (Spectrum):
   mandatory_attrs  = [ "spi","freq0" ];
+  optional_attrs = dict(spi_err=None);
   def normalized_intensity (self,freq):
     """Returns the normalized intensity for a given frequency, normalized to unity at the reference frequency (if any)"""
     if isinstance(self.spi,(list,tuple)):
@@ -388,12 +393,24 @@ class Shape (ModelItem):
   """Abstract base class for a source's brightness distribution.
   The ex/ey/pa attributes give the overall shape of the source."""
   mandatory_attrs  = [ "ex","ey","pa" ];
-  pass;
+  optional_attrs = dict(ex_err=None,ey_err=None,pa_err=None);
+  def getShape (self):
+    return self.ex,self.ey,self.pa
+  def getShapeErr (self):
+    err = [ getattr(self,a+'_err',None) for a in self.mandatory_attrs ] 
+    if all([ a is None for a in err ]):
+      return None
+    return tuple(err)
 
 class Gaussian (Shape):
   typecode = "Gau";
-  def strDesc (self,**kw):
-    return """%d"x%d"@%ddeg"""%(round(self.ex*DEG*3600),round(self.ey*DEG*3600),round(self.pa*DEG));
+  def strDesc (self,delimiters=('"',"x","@","deg"),**kw):
+    return """%.2g%s%s%.2g%s%s%d%s"""%(self.ex*DEG*3600,delimiters[0],delimiters[1],self.ey*DEG*3600,delimiters[0],
+                                       delimiters[2],round(self.pa*DEG),delimiters[3]);
+  def strDescErr (self,delimiters=('"',"x","@","deg"),**kw):
+    err = self.getShapeErr();
+    return err and """%.2g%s%s%.2g%s%s%d%s"""%(err[0]*DEG*3600,delimiters[0],delimiters[1],err[1]*DEG*3600,delimiters[0],
+                                       delimiters[2],round(err[2]*DEG),delimiters[3]);
 
 
 class FITSImage (Shape):
