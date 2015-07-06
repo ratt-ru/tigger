@@ -366,6 +366,7 @@ class Polarization (Flux):
 
 class PolarizationWithRM (Polarization):
   mandatory_attrs = Polarization.mandatory_attrs + [ "rm","freq0" ];
+  optional_attrs = dict(Polarization.optional_attrs,rm_err=None)
 
 class Spectrum (ModelItem):
   """The Spectrum class is an abstract representation of spectral information. The base implementation corresponds
