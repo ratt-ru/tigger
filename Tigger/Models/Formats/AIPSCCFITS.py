@@ -44,8 +44,9 @@ from Tigger import Coordinates
 from Tigger.Models.Formats import dprint,dprintf
 from math import cos,sin,acos,asin,atan2,sqrt,pi
 
-ARCSEC = (math.pi/180)/(60*60);
 DEG = math.pi/180
+ARCMIN = DEG/60
+ARCSEC = ARCMIN/60
 
 """
 Loads an AIPS-format clean component list
@@ -64,6 +65,11 @@ def lm_to_radec (l,m,ra0,dec0):
     dec = asin( cos(cc)*sin(dec0) + m*sin(cc)*cos(dec0)/rho );
   return ra,dec;
 
+_units = dict(DEG=DEG, DEGREE=DEG, DEGREES=DEG,
+              RAD=1, RADIAN=1, RADIANS=1,
+              ARCMIN=ARCMIN, ARCMINS=ARCMIN,
+              ARCSEC=ARCSEC, ARCSECS=ARCSEC
+              )
 
 def load (filename,center=None,**kw):
   """Imports an AIPS clean component list from FITS table
@@ -74,17 +80,22 @@ def load (filename,center=None,**kw):
   ff = pyfits.open(filename);
   
   if center is None:
-    ra = ff[0].header['CRVAL1'];
-    dec = ff[0].header['CRVAL2'];
-    print "Using FITS image centre (%.4f, %.4f deg) as field centre"%(ra,dec);
-    center = ra*DEG,dec*DEG;
+    hdr = ff[0].header
+    ra  = hdr['CRVAL1'] * _units[hdr.get('CUNIT1','DEG').strip()]
+    dec = hdr['CRVAL2'] * _units[hdr.get('CUNIT2','DEG').strip()]
+
+    print "Using FITS image centre (%.4f, %.4f deg) as field centre" % (ra/DEG, dec/DEG)
+    center = ra, dec
 
   # now process file line-by-line
   cclist = ff[1].data;
+  hdr = ff[1].header
+  ux = _units[hdr.get('TUNIT2','DEG').strip()]
+  uy = _units[hdr.get('TUNIT3','DEG').strip()]
   for num,ccrec in enumerate(cclist):
     stokes_i,dx,dy = map(float,ccrec);
     # convert dx/dy to real positions
-    l,m = sin(dx*ARCSEC),sin(dy*ARCSEC);
+    l,m = sin(dx*ux), sin(dy*uy);
     ra,dec = lm_to_radec(l,m,*center);
     pos = ModelClasses.Position(ra,dec);
     flux = ModelClasses.Flux(stokes_i);
