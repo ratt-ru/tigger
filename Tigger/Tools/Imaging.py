@@ -210,7 +210,7 @@ def getImageCube (fitshdu,filename="",extra_axes=None):
   # add stokes axis
   if istokes is None:
     shape.append(1);
-    stokes_labels = ("I",);
+    stokes_names = ("I",);
   else:
     shape.append(data.shape[istokes]);
     axes.append(istokes);
