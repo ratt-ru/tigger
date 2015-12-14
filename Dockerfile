@@ -1,4 +1,4 @@
-FROM radioastro/casa:4.2
+FROM radioastro/base:0.1
 
 MAINTAINER gijsmolenaar@gmail.com
 
@@ -11,7 +11,7 @@ RUN apt-get update && \
         python-numpy \
         python-qt4 \
         python-qwt5-qt4 \
-        libicu48 \
+        libicu52 \
     &&  \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
