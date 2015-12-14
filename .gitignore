@@ -1,5 +1,3 @@
 debian/
 build/
-MANIFEST
-astro_tigger.egg-info/
-dist/
+
