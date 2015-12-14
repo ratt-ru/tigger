@@ -1,0 +1,16 @@
+language: python
+sudo: false
+python:
+- '2.7'
+install:
+- python setup.py install
+script:
+- true
+deploy:
+  provider: pypi
+  user: gijzelaerr
+  password:
+    secure: aIDXiNaACehmVpDT3HZVv4021OHCOoveRJBS5i88wOkkil78RcjQTPojvT6l2K6aHwPLkE9UV48lnRgWgpXqKmqPW+85F0fCJ2PgA90avK2VOxpcmCzxlIJkxUIP9w45gGyPmPcOpuVd5498X+bGq6fvfY3SJGeIB5U8PK3V41k=
+  on:
+    tags: true
+    repo: ska-sa/tigger
