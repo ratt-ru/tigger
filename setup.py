@@ -1,63 +1,33 @@
 #!/usr/bin/env python
 
 import os
-from distutils.core import setup
-from distutils.command.install import INSTALL_SCHEMES
+from setuptools import setup, find_packages
+from Tigger.version import __version__
 
-scripts_dir = "Tigger/bin/"
-tigger_scripts = [scripts_dir + i for i in os.listdir(scripts_dir)]
+scripts = [
+    'Tigger/bin/tigger-convert',
+    'Tigger/bin/tigger-make-brick',
+    'Tigger/bin/tigger-restore',
+    'Tigger/bin/tigger-tag',
+    'Tigger/tigger',
+]
 
-
-def fullsplit(path, result=None):
-    """
-    Split a pathname into components (the opposite of os.path.join) in a
-    platform-neutral way.
-    """
-    if result is None:
-        result = []
-    head, tail = os.path.split(path)
-    if head == '':
-        return [tail] + result
-    if head == path:
-        return result
-    return fullsplit(head, [tail] + result)
-
-# Tell distutils not to put the data_files in platform-specific installation
-# locations. See here for an explanation:
-# http://groups.google.com/group/comp.lang.python/browse_thread/thread/35ec7b2fed36eaec/2105ee4d9e8042cb
-for scheme in INSTALL_SCHEMES.values():
-    scheme['data'] = scheme['purelib']
-
-tigger_packages = []
-tigger_data_files = []
-root_dir = os.path.dirname(__file__)
-if root_dir != '':
-    os.chdir(root_dir)
-
-for dirpath, dirnames, filenames in os.walk('Tigger'):
-    # Ignore dirnames that start with '.'
-    dirnames[:] = [d for d in dirnames if not d.startswith('.') and d != '__pycache__']
-    if filenames:
-        if '__init__.py' in filenames:
-            tigger_packages.append('.'.join(fullsplit(dirpath)))
-        data_files = []
-        for filename in filenames:
-            if not (filename.endswith('.py') or filename.endswith('.pyc')):
-                data_files.append(filename) 
-        if data_files:
-            tigger_data_files.append([dirpath, [os.path.join(dirpath, f) for f in data_files]])
+package_data = {'tigger': [
+    'icons/*.png',
+    'tigger.conf',
+] }
 
 
 setup(
-    name = "tigger",
-    version = "1.3.0",
-    packages = tigger_packages,
-    scripts = tigger_scripts,
-    data_files=tigger_data_files,
+    name = "astro-tigger",
+    version = __version__,
+    packages = find_packages(),
+    scripts = scripts,
+    package_data = package_data,
     description = "yet another FITS image viewer",
     author = "Oleg Smirnov",
     author_email = "osmirnov@gmail.com",
     url = "https://github.com/ska-sa/tigger",
-    requires=['kittens', 'PyQt4', 'numpy' 'astlib'],
+    requires=['astro_kittens', 'PyQt4', 'numpy' 'astlib'],
 )
 

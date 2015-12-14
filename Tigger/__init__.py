@@ -26,19 +26,13 @@
 
 import sys
 
-# version numbers
-try:
-  import version_info.release
-  release_string = 'version %s'%version_info.release.release;
-except:
-  release_string = 'using svn version';
-try:
-  import version_info.svn_revision
-  svn_revision_string = "(svn revision %s)"%version_info.svn_revision.svn_revision;
-  svn_revision_html = "<p align='right'>(svn revision %s)</p>"%version_info.svn_revision.svn_revision;
-except:
-  svn_revision_string = '';
-  svn_revision_html = '';
+
+from Tigger.version import __version__
+
+release_string = __version__
+svn_revision_string = __version__
+svn_revision_html = __version__
+
 
 matplotlib_nuked = False;
 
@@ -101,4 +95,4 @@ else:
 
   from Kittens.widgets import BusyIndicator
 
-from Tigger.Models.Formats import load,save,listFormats
+  from Tigger.Models.Formats import load,save,listFormats
