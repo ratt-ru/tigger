@@ -1,4 +1,4 @@
-FROM radioastro/base:0.1
+FROM radioastro/base:0.2
 
 MAINTAINER gijsmolenaar@gmail.com
 
@@ -12,6 +12,7 @@ RUN apt-get update && \
         python-qt4 \
         python-qwt5-qt4 \
         python-setuptools \
+        python-pip \
         libicu52 \
         lofar \
     &&  \
@@ -19,6 +20,6 @@ RUN apt-get update && \
 
 ADD . /tmp/tigger
 
-RUN cd /tmp/tigger && python setup.py install
+RUN cd /tmp/tigger && pip install .
 
 ENTRYPOINT /usr/local/bin/tigger
