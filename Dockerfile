@@ -11,7 +11,9 @@ RUN apt-get update && \
         python-numpy \
         python-qt4 \
         python-qwt5-qt4 \
+        python-setuptools \
         libicu52 \
+        lofar \
     &&  \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
