@@ -405,7 +405,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
 
   # load the model
   try:
-    model = import_func(skymodel,min_extent=min_extent,format=options.format,center=center_radec);
+    model = import_func(skymodel,min_extent=min_extent,format=options.format,center=center_radec,verbose=options.verbose);
   except Exception,exc:
     if options.verbose:
       traceback.print_exc();
@@ -447,12 +447,24 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
 
   # apply selection by tag
   if options.tags:
-    for tag in options.tags:
-      sources = [ src for src in sources if getattr(src,tag,False) ];
+    tags = []
+    for ot in options.tags:
+      tags += ot.split(",")
+    for tag in tags:
+      sources = [ src for src in sources if getattr(src,tag,False) ]
     if not sources:
       print "No sources left after selection by tag (-T/--tag) has been applied.";
       sys.exit(0);
     print "Selection by tag (%s) reduces this to %d sources"%(", ".join(options.tags),len(sources));
+
+  # apply selection by NaN
+  if options.remove_nans:
+    sources = [ src for src in sources if not any([ math.isnan(x) 
+      for x in src.pos.ra,src.pos.dec,src.flux.I ]) ];
+    if not sources:
+      print "No sources left after applying --remove-nans.";
+      sys.exit(0);
+    print "Removing NaN positions and fluxes reduces this to %d sources"%len(sources);
 
   # remove sources
   if options.remove_source:
@@ -787,7 +799,8 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
               src.setAttribute('beamgain',bg);
               iquv0 = numpy.matrix([[getattr(src.flux,stokes,0.)] for stokes in "IQUV" ])
               iquv = mueller*iquv0
-              print "%s: from %s to %s" % (src.name, iquv0.T, iquv.T)
+              if options.verbose > 1:
+                print "%s: from %s to %s" % (src.name, iquv0.T, iquv.T)
               if options.app_to_int and hasattr(src.flux,"I"):
                 src.setAttribute("Iapp",src.flux.I)
               for i,stokes in enumerate("IQUV"):
@@ -833,7 +846,8 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
                   ispiVal=getattr(src_spectrum,'spi',None)
                   setattr(src,'spectrum',Tigger.Models.ModelClasses.SpectralIndex(ispiVal-spi,beamRefFreq) if options.app_to_int else Tigger.Models.ModelClasses.SpectralIndex(ispiVal+spi,beamRefFreq));
                   
-            print ("%s: beamgain"%src.name),bg,"spi",spi,"clipped" if nobeam else "";
+            if options.verbose:
+                print ("%s: beamgain"%src.name),bg,"spi",spi,"clipped" if nobeam else "";
 #            if spiBg is not None:
 #              print src.name,repr(freqgrid),repr(spiBg.mean(0));
             
