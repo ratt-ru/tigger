@@ -353,8 +353,8 @@ class SkyModelTreeWidgetItem (QTreeWidgetItem):
       if spierr is not None:
         if not isinstance(spierr,(list,tuple)):
           spierr = [spierr];
-        spi = ",".join([ "%.2f"%x for x in spi]);
-        self.setColumn(ColumnSpi_err,src.spectrum.spi_err,unichr(0xB1)+spi);
+        spierr = ",".join([ "%.2f"%x for x in spierr]);
+        self.setColumn(ColumnSpi_err,src.spectrum.spi_err,unichr(0xB1)+spierr);
     # shape
     shape = getattr(src,'shape',None);
     if isinstance(shape,ModelClasses.ModelItem):

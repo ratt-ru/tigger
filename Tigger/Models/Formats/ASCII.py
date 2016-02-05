@@ -274,6 +274,7 @@ def load (filename,format=None,freq0=None,center_on_brightest=False,min_extent=0
       else:
         spi = [ getval(x) for x,xerr in spi_fields ];
         spi_err = [ getval(xerr) for x,xerr in spi_fields ];
+        dprint(4,name,"spi is",spi,"err is",spi_err)
         # if any higher-order spectral terms are specified, include them here but trim off all trailing zeroes
         while spi and not spi[-1]:
           del spi[-1];

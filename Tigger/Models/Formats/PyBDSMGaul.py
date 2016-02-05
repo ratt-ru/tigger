@@ -50,7 +50,7 @@ format_mapping = dict(
   Total_V="v",E_Total_V="v_err",
   DC_Maj="emaj_d",DC_Min="emin_d",DC_PA="pa_d",
   E_DC_Maj="emaj_err_d",E_DC_Min="emin_err_d",E_DC_PA="pa_err_d",
-  SpI="spi",
+  SpI="spi",Spec_Indx="spi",E_Spec_Indx="spi_err",
   S_Code=":str:_pybdsm_S_Code"
 );
 
@@ -65,9 +65,9 @@ def load (filename,freq0=None,**kw):
   format = {};
   # look for format string and reference freq, and build up format dict
   for line in file(filename):
-    m = re.match("# Reference frequency .*\w([0-9.eE+-]+)\s*Hz",line);
+    m = re.match("# Reference frequency .*?([0-9.eE+-]+)\s*Hz",line);
     if m:
-      freq0 = freq0 or float(m.group(1));
+      freq0 = kw['freq0'] = freq0 or float(m.group(1));
       dprint(2,"found reference frequency %g"%freq0);
     elif re.match("#(\s*[\w:]+\s+)+",line) and line.find("Gaus_id") > 0:
       dprint(2,"found format string",line);
@@ -76,6 +76,7 @@ def load (filename,freq0=None,**kw):
       # a "pybdsm_" prefix
       for i,name in enumerate(line[1:].split()):
         if name in format_mapping:
+          dprint(2,"Field",format_mapping[name],name,"is column",i)
           format[format_mapping[name]] = i;
         else:
           format[":float:_pybdsm_%s"%name] = i;
