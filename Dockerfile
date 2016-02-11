@@ -22,4 +22,4 @@ ADD . /tmp/tigger
 
 RUN cd /tmp/tigger && pip install .
 
-ENTRYPOINT /usr/local/bin/tigger
+CMD /usr/local/bin/tigger
