@@ -252,7 +252,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
 
   group = OptionGroup(parser,"Debugging and verbosity options")
   parser.add_option_group(group);
-  group.add_option("-v", "--verbose",action="store_true",
+  group.add_option("-v", "--verbose",action="count",
                     help="increases verbosity.");
   group.add_option("-d", "--debug",dest="debug",type="string",action="append",metavar="Context=Level",
                     help="(for debugging Python code) sets verbosity level of the named Python context. May be used multiple times.");
