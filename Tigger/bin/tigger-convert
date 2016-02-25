@@ -849,9 +849,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
                 bw = options.beam_spi*1e+6/2;
                 # make a frequency grid of 10 points across the band
                 #freqgrid = numpy.arange(beamRefFreq-bw,beamRefFreq+bw,bw/5);
-                freq0,freq1 = beamRefFreq-bw,beamRefFreq+bw;
-                freqgrid = vbs[0]._freqgrid;
-                freqgrid = freqgrid[(freqgrid>=freq0)&(freqgrid<=freq1)];
+                freqgrid = numpy.arange(beamRefFreq-bw,beamRefFreq+bw*1.01,bw/5)
                 gxx=vbs[0].interpolate(l,m,freq=freqgrid,freqaxis=2)
                 gyy=vbs[3].interpolate(l,m,freq=freqgrid,freqaxis=2)
                 spiBg=(gxx*gxx.conj()+gyy*gyy.conj()).real
