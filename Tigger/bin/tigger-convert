@@ -673,7 +673,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
           # make FITS images or nulls for real and imaginary part
           filenames = [ make_beam_filename(pb,corr,'re'), make_beam_filename(pb,corr,'im') ]
           print 'Loading FITS Beams',filenames[0],filenames[1]
-          vb = InterpolatedBeams.LMVoltageBeam(verbose=options.verbose-2,l_axis=options.fits_l_axis,m_axis=options.fits_m_axis)
+          vb = InterpolatedBeams.LMVoltageBeam(verbose=(options.verbose or 0)-2,l_axis=options.fits_l_axis,m_axis=options.fits_m_axis)
           vb.read(*filenames)
           vbs.append(vb)
 
