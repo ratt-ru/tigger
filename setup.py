@@ -12,7 +12,7 @@ scripts = [
     'Tigger/tigger',
 ]
 
-package_data = {'tigger': [
+package_data = {'Tigger': [
     'icons/*.png',
     'tigger.conf',
 ] }
