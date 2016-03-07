@@ -104,7 +104,10 @@ if __name__ == '__main__':
       print "Unable to import the Tigger package from %s. Please check your installation and PYTHONPATH."%dirname;
       sys.exit(1);
 
-  Tigger.nuke_matplotlib();  # don't let the door hit you in the ass, sucka
+  # some things can implicitly invoke matplotlib, which can cry when no X11 is around
+  # so to make sure thingfs work in pipelines, we explicitly disable this here, unless we're asked for plots
+  if not "--enable-plots" in sys.argv:
+    Tigger.nuke_matplotlib();  # don't let the door hit you in the ass, sucka
   
   from Tigger import Coordinates
   import Tigger.Models.Formats
@@ -213,6 +216,9 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
   group.add_option("--beam-nopol",action="store_true",
                     help="apply intensity beam model only, ignoring polarization. Default is to use polarization."
                     );
+  group.add_option("--beam-diag",action="store_true",
+                    help="use diagonal Jones terms only for beam model. Default is to use all four terms if available."
+                    );
   group.add_option("--pa",type="float",default=None,
                     help="Rotate the primary beam pattern through a parallactic angle (in degrees).");
   group.add_option("--pa-range",type="str",default=None,metavar="FROM,TO",
@@ -220,7 +226,10 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
   group.add_option("--pa-from-ms",type="str",default=None,metavar="MS[:FIELD]",
                     help="Rotate the primary beam pattern through a range of parallactic angles as given by the MS and field ID (default 0), "+
                     "and take the average over time. This is more accurate than --pa-range.");
-
+  group.add_option("--beam-average-jones",action="store_true",
+                    help="Correct approach to rotational averaging is to convert Jones(PA) to Mueller(PA), then average "+
+                    "over PA. Tigger versions<=1.3.3 took the incorrect approach of averaging Jones over PA, then converting "+
+                    "to Mueller. Use this option to mimic the old approach.");
 
   group = OptionGroup(parser,"Options to cluster and rename sources")
   parser.add_option_group(group);
@@ -256,6 +265,8 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
                     help="increases verbosity.");
   group.add_option("-d", "--debug",dest="debug",type="string",action="append",metavar="Context=Level",
                     help="(for debugging Python code) sets verbosity level of the named Python context. May be used multiple times.");
+  group.add_option("--enable-plots",action="store_true",
+                    help="enables various diagnostic plots");
 
   parser.set_defaults(cluster_dist=60,min_extent=0,format=None,type='auto',output_type='auto',radial_step=10,ref_freq=-1);
 
@@ -628,7 +639,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
 
       #Following code is nicked from Cattery/Siamese/OMS/pybeams_fits.py
       CORRS_XY = "xx","xy","yx","yy"
-      CORRS_RL = "rr","rl","lr","rr"
+      CORRS_RL = "rr","rl","lr","ll"
       REIM = "re","im";
       REALIMAG = dict(re="real",im="imag");
 
@@ -649,21 +660,22 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
           RealImag=REALIMAG[reim].title());
 
       """Makes beam interpolator node for the given filename pattern."""
-      filename_real = [];
-      filename_imag = [];
-      for corr in ( CORRS_XY if options.linear_pol else CORRS_RL ):
-        # make FITS images or nulls for real and imaginary part
-        filename_real.append(make_beam_filename(pb,corr,'re'));
-        filename_imag.append(make_beam_filename(pb,corr,'im'));
-
+      filename_real = []
+      filename_imag = []
       #load beam interpolator
-      print 'Loading FITS Beams'
       import Siamese.OMS.InterpolatedBeams as InterpolatedBeams
       vbs=[]
-      for (reFits,imFits) in zip(filename_real,filename_imag):        
-        vb=InterpolatedBeams.LMVoltageBeam(verbose=options.verbose,l_axis=options.fits_l_axis,m_axis=options.fits_m_axis)
-        vb.read(reFits,imFits)
-        vbs.append(vb)
+      for icorr,corr in enumerate( CORRS_XY if options.linear_pol else CORRS_RL ):
+        if icorr in (1,2):
+          print '  omitting %s beam due to --beam-diag'%corr
+          vbs.append(0)
+        else:
+          # make FITS images or nulls for real and imaginary part
+          filenames = [ make_beam_filename(pb,corr,'re'), make_beam_filename(pb,corr,'im') ]
+          print 'Loading FITS Beams',filenames[0],filenames[1]
+          vb = InterpolatedBeams.LMVoltageBeam(verbose=(options.verbose or 0)-2,l_axis=options.fits_l_axis,m_axis=options.fits_m_axis)
+          vb.read(*filenames)
+          vbs.append(vb)
 
       model.setPrimaryBeam(vbs);
       # get frequency
@@ -736,12 +748,14 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
             pa1 = [ (dm.do_frame(dm.epoch("UTC",dq.quantity(t,"s"))) and dm.posangle(fld,zenith).get_value("rad")) for t in times ];
             pas += pa1;
             pa1 = numpy.array(pa1)/DEG;
-            import pylab
-            pylab.plot((times-times[0])/3600,pa1);
-            pylab.xlabel("Time since beginning of observation, hours")
-            pylab.ylabel("PA, degrees"); 
-            pylab.savefig(os.path.basename(ms)+".parange.png");
-            print "MS %s, PA range is %f to %f"%(ms,pa1[0],pa1[-1]);
+            if options.enable_plots:
+              import pylab
+              pylab.plot((times-times[0])/3600,pa1);
+              pylab.xlabel("Time since beginning of observation, hours")
+              pylab.ylabel("PA, degrees"); 
+              pylab.savefig(os.path.basename(ms)+".parangle.png")
+              print "Saved plot "+os.path.basename(ms)+".parangle.png"
+            print "MS %s, PA range is %fdeg to %fdeg"%(ms,pa1[0],pa1[-1]);
           # get lm's rotated through those ranges
           pa_range = numpy.array(pas);
         elif options.pa_range is not None:
@@ -749,11 +763,16 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
             ang0,ang1 = map(float,options.pa_range.split(",",1));
           except:
             parser.error("Incorrect --pa-range option. FROM,TO values expected.");
-          pa_range = numpy.arange(ang0,ang1,1);
+          pa_range = numpy.arange(ang0,ang1+1,1)*DEG
         elif options.pa is not None:
-          pa_range = options.pa;
+          pa_range = options.pa*DEG;
         else:
           pa_range = None;
+        if options.verbose:
+          print "PA (deg):"," ".join([ "%f"%(x/DEG) for x in pa_range ]) if numpy.iterable(pa_range) else pa_range
+      if options.enable_plots:
+        import pylab
+        pylab.figure()
       for src in sources:
         r = getattr(src,'r',None);
         if r is not None:
@@ -769,14 +788,31 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
             # rotate through (range of) PA value(s), if such option is supplied above
             if pa_range is not None:
               l,m = rotatelm(l,m,pa_range);
-              
-            #determine Stokes parameter beam gains
-            #if (l,m) is an array interpolate() returns the average beam gain
-            bgJones = numpy.matrix([[vbs[0].interpolate(l,m,freq=beamRefFreq).mean(),vbs[1].interpolate(l,m,freq=beamRefFreq).mean()],
-                      [vbs[2].interpolate(l,m,freq=beamRefFreq).mean(),vbs[3].interpolate(l,m,freq=beamRefFreq).mean()]])
-            mueller = Jones2Mueller_linear(bgJones) if options.linear_pol else Jones2Mueller_circular(bgJones)
+            
+            Jones2Mueller = Jones2Mueller_linear if options.linear_pol else Jones2Mueller_circular
+             
+            jones = [ vb.interpolate(l,m,freq=beamRefFreq) if vb else numpy.array(0) for vb in vbs ]
+            # incorrect old-style Jones averaging
+            if options.beam_average_jones: 
+              a,b,c,d = [ j.mean() for j in jones ]
+              mueller = Jones2Mueller(numpy.matrix([[a,b],[c,d]]))
+              if options.verbose > 1:
+                print "%s: jones11 mean %f std %f"%(src.name,abs(a),abs(jones[0]).std())
+                print "%s: jones22 mean %f std %f"%(src.name,abs(d),abs(jones[3]).std())
+              if options.enable_plots:
+                pylab.plot(abs(jones[0]),label="|J11| "+src.name)
+            # new-style averaging of Mueller matrix
+            else:
+              muellers = [ Jones2Mueller(numpy.matrix([[a,b],[c,d]])) for a,b,c,d in numpy.broadcast(*jones) ]
+              mueller = sum(muellers) / len(muellers)
+              if options.enable_plots:
+                pylab.plot([ m[0,0] for m in muellers ],label='M11 '+src.name)
+              if options.verbose > 1:
+                print "%s: jones11 mean %f std %f"%(src.name,abs(jones[0].mean()),abs(jones[0]).std())
+                print "%s: jones22 mean %f std %f"%(src.name,abs(jones[3].mean()),abs(jones[3]).std())
+                print "%s: mueller11 mean %f std %f"%(src.name,mueller[0,0],numpy.std([ m[0,0] for m in muellers ]))
             bg = mueller[0,0]
-##          OMS 6/7/2015: let's do full inversion now to correct all four polarizations
+            ##          OMS 6/7/2015: let's do full inversion now to correct all four polarizations
             if options.app_to_int:
               if options.beam_nopol:
                 mueller = 1/bg
@@ -785,11 +821,10 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
             else:
               if options.beam_nopol:
                 mueller = bg
-##            #for now, ignore full Stokes and just use Stokes' I
-#            src.setAttribute('beamgain',bg);
+            ##            #for now, ignore full Stokes and just use Stokes' I
+            #            src.setAttribute('beamgain',bg);
             nobeam = ( bg < options.beam_clip );
             spi = freqgrid = spiBg = None;
-#            print "%s: beamgain = %f"%bg
             # if no beam gain at this position, set appropriate tag
             if nobeam:
               src.setAttribute('nobeam',True);
@@ -814,9 +849,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
                 bw = options.beam_spi*1e+6/2;
                 # make a frequency grid of 10 points across the band
                 #freqgrid = numpy.arange(beamRefFreq-bw,beamRefFreq+bw,bw/5);
-                freq0,freq1 = beamRefFreq-bw,beamRefFreq+bw;
-                freqgrid = vbs[0]._freqgrid;
-                freqgrid = freqgrid[(freqgrid>=freq0)&(freqgrid<=freq1)];
+                freqgrid = numpy.arange(beamRefFreq-bw,beamRefFreq+bw*1.01,bw/5)
                 gxx=vbs[0].interpolate(l,m,freq=freqgrid,freqaxis=2)
                 gyy=vbs[3].interpolate(l,m,freq=freqgrid,freqaxis=2)
                 spiBg=(gxx*gxx.conj()+gyy*gyy.conj()).real
@@ -848,8 +881,8 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
                   
             if options.verbose:
                 print ("%s: beamgain"%src.name),bg,"spi",spi,"clipped" if nobeam else "";
-#            if spiBg is not None:
-#              print src.name,repr(freqgrid),repr(spiBg.mean(0));
+            #            if spiBg is not None:
+            #              print src.name,repr(freqgrid),repr(spiBg.mean(0));
             
           else:
             bg = pbexp(r,fq);
@@ -861,7 +894,11 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
               if x is not None:
                 setattr(src.flux,stokes,x/bg if options.app_to_int else x*bg);
           nsrc += 1;
-      print "Converted apparent flux to intrinsic for %d model sources"%nsrc;
+      if options.enable_plots:
+        pylab.legend()
+        pylab.savefig("beamgains.png")
+        print "Saved plot beamgains.png"
+      print "Converted between apparent/intrinsic flux for %d model sources"%nsrc;
     if len(model.sources) != nsrc:
       print "  (%d sources were skipped for whatever reason, probably they didn't have an 'r' attribute)"%(len(model.sources)-nsrc);
 

@@ -95,13 +95,13 @@ class AboutDialog (QDialog):
     def languageChange(self):
         self.setWindowTitle(self.__tr("About Tigger"))
         self.title_label.setText(self.__tr( \
-          """<h3>Tigger (%s)</h3>%s
+          """<h3>Tigger %s</h3>
           <p>(C) 2010-2012 Oleg Smirnov & ASTRON<br>(Netherlands Institude for Radioastronomy)<br>
           Oude Hoogeveensedijk 4<br>
           7991 PD Dwingeloo, The Netherlands<br>
           http://www.astron.nl<br>
           <br>Please direct feedback and bug reports to osmirnov@gmail.com</p>
-          """%(release_string,svn_revision_html) \
+          """%(release_string) \
           ));
 
         self.btn_ok.setText(self.__tr("&OK"))
