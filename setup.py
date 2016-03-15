@@ -2,7 +2,8 @@
 
 import os
 from setuptools import setup, find_packages
-from Tigger.version import __version__
+
+__version__ = "1.3.5"
 
 scripts = [
     'Tigger/bin/tigger-convert',

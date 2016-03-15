@@ -27,12 +27,16 @@
 import sys
 
 from Tigger.Models.Formats import load, save, listFormats
-from Tigger.version import __version__
 from Kittens.widgets import BusyIndicator
 import Kittens.pixmaps
 import Kittens.utils
 import Kittens.config
 import os.path
+
+try:
+        __version__ = pkg_resources.require("Tigger")[0].version
+except pkg_resources.DistributionNotFound:
+        __version__ = "devel"
 
 release_string = __version__
 svn_revision_string = __version__
