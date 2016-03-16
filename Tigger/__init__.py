@@ -34,8 +34,9 @@ import Kittens.config
 import os.path
 
 try:
+        import pkg_resources
         __version__ = pkg_resources.require("Tigger")[0].version
-except pkg_resources.DistributionNotFound:
+except: #  pkg_resources.DistributionNotFound:
         __version__ = "devel"
 
 release_string = __version__
