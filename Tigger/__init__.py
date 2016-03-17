@@ -32,6 +32,8 @@ import Kittens.pixmaps
 import Kittens.utils
 import Kittens.config
 import os.path
+import pkg_resources
+
 
 try:
         __version__ = pkg_resources.require("Tigger")[0].version
