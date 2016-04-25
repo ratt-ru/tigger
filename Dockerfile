@@ -4,6 +4,7 @@ MAINTAINER gijsmolenaar@gmail.com
 
 RUN apt-get update && \
     apt-get install -y \
+	python-meqtrees-cattery \
         python-kittens \
         python-pyfits \
         python-astlib \
