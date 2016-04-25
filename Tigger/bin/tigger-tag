@@ -37,8 +37,36 @@ import traceback
 import fnmatch
 
 DEG = math.pi/180;
+ARCSEC = DEG/3600
 
 NATIVE = "Tigger";
+
+
+def transfer_tags(fromlsm,lsm,output,tags,tolerance,tigger):
+
+  """Transfers tags from a reference LSM to the given LSM. That is, for every tag
+  in the given list, finds all sources with those tags in 'fromlsm', then applies 
+  these tags to all nearby sources in 'lsm' (within a radius of 'tolerance'). 
+  Saves the result to an LSM file given by 'output'.
+  """
+  # now, set dE tags on sources
+  tagset = frozenset(tags.split());
+  print("Transferring tags %s from %s to %s (%.2f\" tolerance)"%(",".join(tagset),fromlsm,lsm,tolerance));
+
+  refmodel = tigger.load(fromlsm);
+  model = tigger.load(lsm);
+  # for each dE-tagged source in the reference model, find all nearby sources
+  # in our LSM, and tag them
+  for src0 in refmodel.getSourceSubset(",".join(["="+x for x in tagset])):
+    for src in model.getSourcesNear(src0.pos.ra,src0.pos.dec,tolerance=tolerance*ARCSEC):
+      for tag in tagset:
+        tagval = src0.getTag(tag,None);
+        if tagval is not None:
+          if src.getTag(tag,None) != tagval:
+            src.setTag(tag,tagval);
+            print("setting tag %s=%s on source %s (from reference source %s)"%(tag,tagval,src.name,src0.name))
+  model.save(output);
+
 
 if __name__ == '__main__':
   import Kittens.utils
@@ -93,6 +121,12 @@ automatically, or +TAG to set a bool True tag, !TAG to set a False tag, and /TAG
                     help="Saves changes to different output model. Default is to save in place.");
   parser.add_option("-f","--force",action="store_true",
                     help="Saves changes to model without prompting. Default is to prompt.");
+  parser.add_option("-t", "--transfer-tags",dest="transfer_tags",type="string",metavar="FROM_LSM:TOL",
+                    help="""Transfers tags from a reference LSM (FROM_LSM) to the given LSM (sky_model). 
+That is, for every tag in the given list, finds all sources with those tags in the reference LSM, 
+then applies these tags to all nearby sources in LSM  (within a radius of 'tolerance' [ARCSEC]). 
+Saves the result to an LSM file given by -o/--output.
+""");
   parser.add_option("-d", "--debug",dest="verbose",type="string",action="append",metavar="Context=Level",
                     help="(for debugging Python code) sets verbosity level of the named Python context. May be used multiple times.");
 
@@ -111,6 +145,12 @@ automatically, or +TAG to set a bool True tag, !TAG to set a False tag, and /TAG
     print "Input model %s contains no sources"%skymodel;
     sys.exit(0);
   print "Input model contains %d sources"%len(model.sources);
+
+  if options.transfer_tags:
+    fromlsm, tolerance = options.transfer_tags.split(":")
+    tags = " ".join(rem_args[1:])
+    transfer_tags(fromlsm, skymodel, options.output, tags, float(tolerance), Tigger)
+    sys.exit(0)
   
   # comparison predicates for the SELTAG<>SELVAL option
   select_predicates = {
@@ -327,3 +367,4 @@ automatically, or +TAG to set a bool True tag, !TAG to set a False tag, and /TAG
   else:
     model.save(skymodel);
     print "Saved updated model";
+
