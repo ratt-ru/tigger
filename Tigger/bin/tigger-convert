@@ -704,7 +704,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
     if not options.refresh_r:
       for src in sources:
         if not hasattr(src,'r'):
-          src.setAttribute('r',Coordinates.angular_dist_pos_angle(src.pos.ra,src.pos.dec,*mode.fieldCenter())[0]);
+          src.setAttribute('r',Coordinates.angular_dist_pos_angle(src.pos.ra,src.pos.dec,*model.fieldCenter())[0]);
     # evaluate sources
     if not (options.app_to_int or options.int_to_app):
       for src in sources:
