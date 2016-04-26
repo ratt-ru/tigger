@@ -719,21 +719,32 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
       # precompute PAs if fitsBeams are used
       if fitsBeam:
         if options.pa_from_ms is not None:
-          match = re.match("^(.*?)(:[0-9]+)?$",options.pa_from_ms);
-          if match:
-            msname,field = match.group(1), int(match.group(2)[1:]) if match.group(2) else 0;
+          ms_strings = options.pa_from_ms.split(",")
+          ms_field = []
+          if len(ms_strings)>1:
+            for ms_string in ms_strings:
+              match = re.match("^(.*?)(:[0-9]+)?$",ms_string);
+              if match:
+                msname,field = match.group(1), int(match.group(2)[1:]) if match.group(2) else 0;
+              else:
+                msname,field = options.pa_from_ms,0;
+              ms_field.append( (msname, field) )
           else:
-            msname,field = options.pa_from_ms,0;
-          if os.path.exists(msname+"/SUBMSS"):
-            mslist = [ ms for ms in glob.glob(msname+"/SUBMSS/*") if os.path.isdir(ms) ];
-          else:
-            mslist = [ msname ];
-          print "Getting PA range from MS %s, field %d"%(" ".join(mslist),field);
+            ms_string = ms_strings[0]
+            match = re.match("^(.*?)(:[0-9]+)?$",ms_string);
+            if match:
+              msname,field = match.group(1), int(match.group(2)[1:]) if match.group(2) else 0;
+              if os.path.exists(msname+"/SUBMSS"):
+                ms_field = [ (ms,field) for ms in glob.glob(msname+"/SUBMSS/*") if os.path.isdir(ms) ];
+              else:
+                ms_field = [ [msname, 0] ];
           from pyrap.tables import table
           dm,dq = pyrap_dmdq();
           pas = [];
           zenith = dm.direction('AZEL','0deg','90deg')
-          for ms in mslist:
+          print ms_field
+          for ms,field in ms_field:
+            print "Getting PA range from MS %s, field %d"%(ms, field);
             tab = table(ms)
             antpos = table(tab.getkeyword("ANTENNA")).getcol("POSITION");
             ra,dec = table(tab.getkeyword("FIELD")).getcol("PHASE_DIR",field,1)[0][0]
