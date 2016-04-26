@@ -223,7 +223,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
                     help="Rotate the primary beam pattern through a parallactic angle (in degrees).");
   group.add_option("--pa-range",type="str",default=None,metavar="FROM,TO",
                     help="Rotate the primary beam pattern through a range of parallactic angles (in degrees) and use the average value over PA.");
-  group.add_option("--pa-from-ms",type="str",default=None,metavar="MS[:FIELD]",
+  group.add_option("--pa-from-ms",type="str",default=None,metavar="MS1[:FIELD1],MS2:[FIELD2],...",
                     help="Rotate the primary beam pattern through a range of parallactic angles as given by the MS and field ID (default 0), "+
                     "and take the average over time. This is more accurate than --pa-range.");
   group.add_option("--beam-average-jones",action="store_true",
@@ -742,7 +742,6 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
           dm,dq = pyrap_dmdq();
           pas = [];
           zenith = dm.direction('AZEL','0deg','90deg')
-          print ms_field
           for ms,field in ms_field:
             print "Getting PA range from MS %s, field %d"%(ms, field);
             tab = table(ms)
