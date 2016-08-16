@@ -578,7 +578,7 @@ class FITSImagePlotItem (SkyCubePlotItem):
       raise ValueError,"Cannot load a one-dimensional FITS file";
     # setup projection
     # (strip out history from header, as big histories really slow down FITSWCS)
-    hdr1 = pyfits.Header(filter(lambda x:not str(x).startswith('HISTORY'),hdr.ascard));
+    hdr1 = pyfits.Header(filter(lambda x:not str(x).startswith('HISTORY'),hdr.cards));
     proj = Projection.FITSWCS(hdr1);
     nx = ny = None;
     # find X and Y axes
