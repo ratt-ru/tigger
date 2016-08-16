@@ -526,11 +526,11 @@ class FITSImagePlotItem (SkyCubePlotItem):
     hdr = header.copy();
     nax = hdr['NAXIS']+1;
     hdr['NAXIS'] = nax;
-    hdr.update('NAXIS%d'%nax,2,"complex image");
-    hdr.update('CTYPE%d'%nax,"COMPLEX","complex image");
-    hdr.update('CRPIX%d'%nax,1);
-    hdr.update('CRVAL%d'%nax,1);
-    hdr.update('CDELT%d'%nax,1);
+    hdr.set('NAXIS%d'%nax,2,"complex image");
+    hdr.set('CTYPE%d'%nax,"COMPLEX","complex image");
+    hdr.set('CRPIX%d'%nax,1);
+    hdr.set('CRVAL%d'%nax,1);
+    hdr.set('CDELT%d'%nax,1);
     return hdr;
 
   @staticmethod
