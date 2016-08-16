@@ -317,17 +317,17 @@ class Projection (object):
   @staticmethod
   def SinWCS (ra0,dec0):
     hdu = pyfits.PrimaryHDU();
-    hdu.header['NAXIS'] = 2;
-    hdu.header['NAXIS1'] = 3;
-    hdu.header['NAXIS2'] = 3;
-    hdu.header['CTYPE1'] = 'RA---SIN';
-    hdu.header['CDELT1'] = -1./60;
-    hdu.header['CRPIX1'] = 2;
-    hdu.header['CRVAL1'] = ra0/DEG;
-    hdu.header['CUNIT1'] = 'deg     ';
-    hdu.header['CTYPE2'] = 'DEC--SIN';
-    hdu.header['CDELT2'] = 1./60;
-    hdu.header['CRPIX2'] = 2;
-    hdu.header['CRVAL2'] = dec0/DEG;
-    hdu.header['CUNIT2'] = 'deg     ';
+    hdu.header.set('NAXIS',2);
+    hdu.header.set('NAXIS1',3);
+    hdu.header.set('NAXIS2',3);
+    hdu.header.set('CTYPE1','RA---SIN');
+    hdu.header.set('CDELT1',-1./60);
+    hdu.header.set('CRPIX1',2);
+    hdu.header.set('CRVAL1',ra0/DEG);
+    hdu.header.set('CUNIT1','deg     ');
+    hdu.header.set('CTYPE2','DEC--SIN');
+    hdu.header.set('CDELT2',1./60);
+    hdu.header.set('CRPIX2',2);
+    hdu.header.set('CRVAL2',dec0/DEG);
+    hdu.header.set('CUNIT2','deg     ');
     return Projection.FITSWCS(hdu.header);
