@@ -54,22 +54,28 @@ format_mapping = dict(
   S_Code=":str:_pybdsm_S_Code"
 );
 
-def load (filename,freq0=None,**kw):
+
+def load (filename, freq0=None,**kw):
   """Imports a gaul table
   The 'freq0' argument supplies a default reference frequency (if one is not contained in the file.)
   If 'center_on_brightest' is True, the mpodel field center will be set to the brightest source.
   'min_extent' is minimal source extent (in radians), above which a source will be treated as a Gaussian rather than a point component.
   """
   srclist = [];
-  dprint(1,"importing PyBDSM gaul file",filename);
+  id = None
+  dprint(1,"importing PyBDSM gaul/srl file",filename);
   format = {};
+  extension = filename.split(".")[-1]
+  if extension == "srl":
+    format_mapping['Source_id'] = format_mapping.pop('Gaus_id')
+    id = "Source_id"
   # look for format string and reference freq, and build up format dict
   for line in file(filename):
     m = re.match("# Reference frequency .*?([0-9.eE+-]+)\s*Hz",line);
     if m:
       freq0 = kw['freq0'] = freq0 or float(m.group(1));
       dprint(2,"found reference frequency %g"%freq0);
-    elif re.match("#(\s*[\w:]+\s+)+",line) and line.find("Gaus_id") > 0:
+    elif re.match("#(\s*[\w:]+\s+)+",line) and line.find(id if id else "Gaus_id") > 0:
       dprint(2,"found format string",line);
       fields = dict([ (name,i) for i,name in enumerate(line[1:].split()) ]); 
       # map known fields to their ASCII equivalents, the rest copy as custom float attributes with
@@ -88,4 +94,4 @@ def load (filename,freq0=None,**kw):
   kw['format'] = format;
   return ASCII.load(filename,**kw)
 
-Tigger.Models.Formats.registerFormat("Gaul",load,"PyBDSM .gaul file",(".gaul",));
+Tigger.Models.Formats.registerFormat("Gaul",load,"PyBDSM .gaul/.srl file",(".gaul",".srl",));
