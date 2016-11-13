@@ -390,10 +390,10 @@ class SkyModel (ModelItem):
       self.dec0 = reduce(lambda x,y:x+y,[ src.pos.dec for src in self.sources ])/len(self.sources)  if self.sources else 0;
     return self.ra0,self.dec0;
 
-  def save (self,filename,format=None):
+  def save (self,filename,format=None, verbose=True):
     """Convenience function, saves model to file. Format may be specified explicitly, or determined from filename.""";
     import Formats
-    Formats.save(self,filename,format=format);
+    Formats.save(self,filename,format=format, verbose=verbose);
 
   _re_bynumber = re.compile("^([!-])?(\\d+)?:(\\d+)?$");
 
