@@ -37,6 +37,6 @@ setup(
     author = "Oleg Smirnov",
     author_email = "osmirnov@gmail.com",
     url = "https://github.com/ska-sa/tigger",
-    install_requires=['astro_kittens', 'numpy', 'scipy', 'astlib', 'pyfits<3.4']
+    install_requires=['astro_kittens', 'numpy', 'scipy', 'astlib', 'pyfits']
 )
 
