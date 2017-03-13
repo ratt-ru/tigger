@@ -2,6 +2,13 @@
 Tigger Changelog
 ================
 
+1.3.8
+====
+
+changes since 1.3.7:
+ * hack around problem with pkg_resources package bug
+
+
 1.3.5
 =====
 

@@ -32,13 +32,9 @@ import Kittens.pixmaps
 import Kittens.utils
 import Kittens.config
 import os.path
-import pkg_resources
 
 
-try:
-        __version__ = pkg_resources.require("Tigger")[0].version
-except pkg_resources.DistributionNotFound:
-        __version__ = "devel"
+__version__ = "1.3.8"
 
 release_string = __version__
 svn_revision_string = __version__

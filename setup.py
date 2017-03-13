@@ -11,7 +11,7 @@ except ImportError:
           'may need to install vext.pyqt4', file=sys.stderr)
     sys.exit(1)
 
-__version__ = "1.3.7"
+__version__ = "1.3.8"
 
 scripts = [
     'Tigger/bin/tigger-convert',
