@@ -190,8 +190,10 @@ class TiggerSkyModel (object):
           U=      getattr(src.flux,'U',None),
           V=      getattr(src.flux,'V',None),
           RM=     getattr(src.flux,'rm',None),
-          freq0=  getattr(src.flux,'freq0',None) or (src.spectrum and getattr(src.spectrum,'freq0',None)),
-          spi=    src.spectrum and getattr(src.spectrum,'spi',None)
+          freq0=  getattr(src.flux,'freq0',None) or (src.spectrum and getattr(src.spectrum,'freq0',None))
+                  or getattr(src,'freq0',None),
+          spi=    src.spectrum and getattr(src.spectrum,'spi',None),
+          linewidth= getattr(src,"sp_linewidth",None)
         );
       if not is_null and isinstance(src.shape,ModelClasses.Gaussian):
         attrs['lproj'] = src.shape.ex*math.sin(src.shape.pa);
@@ -213,18 +215,17 @@ class TiggerSkyModel (object):
 
       # construct a direction
       direction = Meow.Direction(ns,src.name,attrs['ra'],attrs['dec'],static=not solvable or not self.solve_pos);
-
       # construct a point source or gaussian or FITS image, depending on source shape class
       if src.shape is None or is_null:
         msrc = Meow.PointSource(ns,name=src.name,
                 I=attrs['I'],Q=attrs['Q'],U=attrs['U'],V=attrs['V'],
                 direction=direction,
-                spi=attrs['spi'],freq0=attrs['freq0'],RM=attrs['RM']);
+                spi=attrs['spi'],freq0=attrs['freq0'],linewidth=attrs['linewidth'],RM=attrs['RM']);
       elif isinstance(src.shape,ModelClasses.Gaussian):
         msrc = Meow.GaussianSource(ns,name=src.name,
                 I=attrs['I'],Q=attrs['Q'],U=attrs['U'],V=attrs['V'],
                 direction=direction,
-                spi=attrs['spi'],freq0=attrs['freq0'],
+                spi=attrs['spi'],freq0=attrs['freq0'],linewidth=attrs['linewidth'],
                 lproj=attrs['lproj'],mproj=attrs['mproj'],ratio=attrs['ratio']);
         if solvable and 'shape' in subgroups:
           subgroups['pos'] += direction.get_solvables();
