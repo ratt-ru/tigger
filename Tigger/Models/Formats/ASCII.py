@@ -65,8 +65,8 @@ dec_{rad,d,m,s}:  declination or declination component
 dec_sign:         declination sign (+ or -)
 dec_err_{rad,d,m,s}: error on dec (in appropriate units)
 i,q,u,v:          IQUV fluxes
-{i,q,u,v}_err:    errors on fluxes   
-pol_frac:         linear polarization fraction 
+{i,q,u,v}_err:    errors on fluxes
+pol_frac:         linear polarization fraction
                   (will interpret both "0.1" and "10%" correctly)
 pol_pa_{rad,d}:   linear polarization angle
 rm:               rotation measure (freq0 must be supplied as well)
@@ -109,13 +109,13 @@ def load (filename,format=None,freq0=None,center_on_brightest=False,min_extent=0
   maxbright = 0;
   brightest_name = radec0 = None;
 
-  # Get column number associated with field from format dict, as well as the error 
+  # Get column number associated with field from format dict, as well as the error
   # column number. Returns tuple of indices, with None index indicating no such column
   def get_field (name):
     return format.get(name,None),format.get(name+"_err",None);
-  # Get column number associated with field from format dict, as well as the error 
-  # column number. Field is an angle thus will be suffixed with _{rad,d,h,m,s}. 
-  # Returns tuple of 
+  # Get column number associated with field from format dict, as well as the error
+  # column number. Field is an angle thus will be suffixed with _{rad,d,h,m,s}.
+  # Returns tuple of
   #     column,scale,err_column,err_scale
   # with None index indicating no such column. Scale is scaling factor to convert
   # quantity in column to radians
@@ -244,13 +244,26 @@ def load (filename,format=None,freq0=None,center_on_brightest=False,min_extent=0
       # for up position object
       pos = ModelClasses.Position(ra,dec,ra_err=ra_err,dec_err=dec_err);
       # see if we have freq0
-      try:
-        f0 = freq0 or (freq0_field and float(fields[freq0_field]));
-      except IndexError:
-        f0 = None;
-      # set model refrence frequency
-      if f0 is not None and freq0 is None:
-        freq0 = f0;
+
+      # Use explicitly provided reference frequency for this source if available
+      if freq0_field is not None:
+        try:
+          f0 = float(fields[freq0_field])
+          # If no default reference frequency for the model was supplied,
+          # initialise from first source with a reference frequency
+          if freq0 is None:
+            freq0 = f0
+            dprint(0,"Set default freq0 to %s "
+                     "from source on line %s." % (f0, linenum));
+
+        except IndexError:
+          f0 = None
+
+      # Otherwise use default reference frequency (derived from args
+      # or first reference frequency found in source)
+      if f0 is None and freq0 is not None:
+        f0 = freq0
+
       # see if we have Q/U/V
       (q,q_err),(u,u_err),(v,v_err) = [ (getval(x),getval(x_err)) for x,x_err in quv_fields ];
       if polfrac_field is not None:
