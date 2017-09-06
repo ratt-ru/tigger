@@ -1,26 +1,12 @@
-FROM radioastro/base:0.2
+FROM kernsuite/base:2
 
 MAINTAINER gijsmolenaar@gmail.com
 
-RUN apt-get update && \
-    apt-get install -y \
-	python-meqtrees-cattery \
-        python-kittens \
-        python-pyfits \
-        python-astlib \
-        python-scipy \
-        python-numpy \
-        python-qt4 \
-        python-qwt5-qt4 \
-        python-setuptools \
-        python-pip \
-        libicu52 \
-        lofar \
-    &&  \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+RUN docker-apt-install python-qt4 \
+        python-qwt5-qt4
 
 ADD . /tmp/tigger
 
-RUN cd /tmp/tigger && pip install .
+RUN pip install /tmp/tigger
 
 CMD /usr/local/bin/tigger
