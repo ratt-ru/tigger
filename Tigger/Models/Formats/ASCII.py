@@ -246,6 +246,7 @@ def load (filename,format=None,freq0=None,center_on_brightest=False,min_extent=0
       # see if we have freq0
 
       # Use explicitly provided reference frequency for this source if available
+      f0 = None
       if freq0_field is not None:
         try:
           f0 = float(fields[freq0_field])
