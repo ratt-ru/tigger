@@ -56,3 +56,8 @@ Open an issue on github
 https://github.com/ska-sa/tigger
 
 
+Travis
+======
+
+.. image:: https://travis-ci.org/ska-sa/tigger.svg?branch=master
+    :target: https://travis-ci.org/ska-sa/tigger

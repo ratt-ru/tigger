@@ -2,8 +2,9 @@ FROM kernsuite/base:2
 
 MAINTAINER gijsmolenaar@gmail.com
 
-RUN docker-apt-install python-qt4 \
-        python-qwt5-qt4
+RUN docker-apt-install \
+    python-qt4 \
+    python-qwt5-qt4
 
 ADD . /tmp/tigger
 

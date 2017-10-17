@@ -1,9 +1,11 @@
 language: python
-sudo: false
+sudo: required
+services:
+- docker
 python:
 - '2.7'
 install:
-- python setup.py install
+- docker build . -t tigger -f
 script:
 - true
 deploy:
