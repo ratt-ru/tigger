@@ -2,8 +2,18 @@
 Tigger Changelog
 ================
 
+1.3.9
+=====
+
+Changes since 1.3.8:
+ 
+* Improve freq0 parsing logic (#84)
+* Install vext.pyqt4 if in virtualenv (#86)
+* Use KERN-2 in Dockerfile
+* Define f0 outside the "if" block #87
+
 1.3.8
-====
+=====
 
 changes since 1.3.7:
  * hack around problem with pkg_resources package bug
