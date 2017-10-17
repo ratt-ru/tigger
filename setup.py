@@ -19,7 +19,7 @@ except ImportError:
         raise ImportError('PyQt4 not found. Please install it first. If using a virtualenv, you '
           'may need to install vext.pyqt4')
 
-__version__ = "1.3.8"
+__version__ = "1.3.9"
 
 scripts = [
     'Tigger/bin/tigger-convert',
