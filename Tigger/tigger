@@ -20,15 +20,15 @@
 # or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-from optparse import OptionParser
-import traceback
-import os
-import Tigger
-import Kittens.utils
-from PyQt4.Qt import *
-
-
 if __name__ == "__main__":
+    from optparse import OptionParser
+    import traceback
+    import Tigger
+    import Kittens.utils
+    from PyQt4.Qt import *
+
+    Tigger.init_gui()
+
     _verbosity = Kittens.utils.verbosity(name="startup")
     dprint = _verbosity.dprint
     dprintf = _verbosity.dprintf
@@ -76,11 +76,16 @@ if __name__ == "__main__":
     app.setDesktopSettingsAware(True)
     from Tigger import pixmaps
     app.setWindowIcon(pixmaps.tigger_starface.icon())
+    # Need for PlotStyles colors -- ignore error on non-X11 platforms like the Mac
+    try:
+        QColor.setAllowX11ColorNames(True)
+    except AttributeError:
+        pass
 
     dprint(1,"created QApplication")
-    splash = QSplashScreen(Tigger.pixmaps.tigger_splash.pm())
-    splash.showMessage("Welcome to Tigger!",Qt.AlignHCenter|Qt.AlignBottom)
-    splash.show()
+    #splash = QSplashScreen(Tigger.pixmaps.tigger_splash.pm())
+    #splash.showMessage("Welcome to Tigger!",Qt.AlignHCenter|Qt.AlignBottom)
+    #splash.show()
 
     import Tigger.Images
     import Tigger.MainWindow
@@ -108,7 +113,7 @@ if __name__ == "__main__":
     # load images first
     for img in images:
       print "Loading image",img
-      splash.showMessage("Loading image %s"%img,Qt.AlignHCenter|Qt.AlignBottom)
+      #splash.showMessage("Loading image %s"%img,Qt.AlignHCenter|Qt.AlignBottom)
       mainwin.loadImage(img)
       dprint(1,"loaded image",img)
 
@@ -122,7 +127,7 @@ if __name__ == "__main__":
         print "Error loading model %s"%mod
         os._exit(0)
 
-      splash.showMessage("Loading model %s"%mod,Qt.AlignHCenter|Qt.AlignBottom)
+      #splash.showMessage("Loading model %s"%mod,Qt.AlignHCenter|Qt.AlignBottom)
       dprint(1,"loaded model",mod)
 
     # start updating the plot
@@ -142,6 +147,6 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT,sigint_handler)
     dprint(1,"added signal handler")
 
-    splash.finish(mainwin)
+    #splash.finish(mainwin)
 
     app.exec_()

@@ -27,9 +27,6 @@
 import sys
 
 from Tigger.Models.Formats import load, save, listFormats
-from Kittens.widgets import BusyIndicator
-import Kittens.pixmaps
-import Kittens.utils
 import Kittens.config
 import os.path
 
@@ -40,18 +37,24 @@ release_string = __version__
 svn_revision_string = __version__
 svn_revision_html = __version__
 
-
 matplotlib_nuked = False
+
+# initializes GUI-related globals. Only called from the viewer
+def init_gui():
+    from Kittens.widgets import BusyIndicator
+    import Kittens.pixmaps
+    import Kittens.utils
+    global pixmaps, Config, ConfigFile, ConfigFileName
+    pixmaps = Kittens.pixmaps.PixmapCache("Tigger")
+    ConfigFileName = ".tigger.conf"
+    ConfigFile = Kittens.config.DualConfigParser("tigger.conf",["/usr/lib/Tigger", os.path.dirname(__file__)])
+    Config = Kittens.config.SectionParser(ConfigFile,"Tigger")
 
 
 startup_dprint = startup_dprintf = lambda *dum:None
 _verbosity = Kittens.utils.verbosity(name="tigger")
 dprint = _verbosity.dprint
 dprintf = _verbosity.dprintf
-pixmaps = Kittens.pixmaps.PixmapCache("Tigger")
-ConfigFileName = ".tigger.conf"
-ConfigFile = Kittens.config.DualConfigParser("tigger.conf",["/usr/lib/Tigger", os.path.dirname(__file__)])
-Config = Kittens.config.SectionParser(ConfigFile,"Tigger")
 
 
 
