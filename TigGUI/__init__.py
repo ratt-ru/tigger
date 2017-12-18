@@ -47,7 +47,7 @@ def init_gui():
     pixmaps = Kittens.pixmaps.PixmapCache("TigGUI")
     ConfigFileName = ".tigger.conf"
     ConfigFile = Kittens.config.DualConfigParser("tigger.conf",["/usr/lib/TigGUI", os.path.dirname(__file__)])
-    Config = Kittens.config.SectionParser(ConfigFile,"TigGUI")
+    Config = Kittens.config.SectionParser(ConfigFile,"Tigger")
 
 
 startup_dprint = startup_dprintf = lambda *dum:None

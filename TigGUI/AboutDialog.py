@@ -63,12 +63,12 @@ class AboutDialog (QDialog):
 
         lo_logos = QHBoxLayout(None)
         lo_top.addLayout(lo_logos);
-        for logo in ("astron",):
-          icon = QLabel(LayoutWidget)
-          icon.setSizePolicy(QSizePolicy.Fixed,QSizePolicy.Fixed);
-          icon.setPixmap(getattr(pixmaps,logo+"_logo").pm());
-          icon.setAlignment(Qt.AlignCenter)
-          lo_logos.addWidget(icon)
+        # for logo in ("astron",):
+        #   icon = QLabel(LayoutWidget)
+        #   icon.setSizePolicy(QSizePolicy.Fixed,QSizePolicy.Fixed);
+        #   icon.setPixmap(getattr(pixmaps,logo+"_logo").pm());
+        #   icon.setAlignment(Qt.AlignCenter)
+        #   lo_logos.addWidget(icon)
 
         lo_mainbtn = QHBoxLayout(None)
         lo_mainbtn.addItem(QSpacerItem(20,20,QSizePolicy.Expanding,QSizePolicy.Minimum))
@@ -93,14 +93,11 @@ class AboutDialog (QDialog):
         self.connect(self.btn_ok,SIGNAL("clicked()"),self.accept)
 
     def languageChange(self):
-        self.setWindowTitle(self.__tr("About TigGUI"))
+        self.setWindowTitle(self.__tr("About Tigger"))
         self.title_label.setText(self.__tr( \
-          """<h3>TigGUI %s</h3>
-          <p>(C) 2010-2012 Oleg Smirnov & ASTRON<br>(Netherlands Institude for Radioastronomy)<br>
-          Oude Hoogeveensedijk 4<br>
-          7991 PD Dwingeloo, The Netherlands<br>
-          http://www.astron.nl<br>
-          <br>Please direct feedback and bug reports to osmirnov@gmail.com</p>
+          """<h3>Tigger %s</h3>
+          <p>(C) 2010-2017 Oleg Smirnov & Rhodes University & SKA SA<br>
+          <br>Please direct feedback and bug reports at https://github.com/ska-sa/tigger</p>
           """%(release_string) \
           ));
 

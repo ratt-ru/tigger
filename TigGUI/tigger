@@ -58,7 +58,7 @@ if __name__ == "__main__":
 
     TigGUI.nuke_matplotlib();  # don't let the door hit you in the ass, sucka
 
-    print "Welcome to TigGUI " + TigGUI.release_string
+    print "Welcome to Tigger " + TigGUI.release_string
     print "Please wait a second while the GUI starts up."
 
     ## ugly hack to get around UGLY FSCKING ARROGNAT (misspelling fully intentional) pyfits-2.3 bug

@@ -64,7 +64,7 @@ class MainWindow (QMainWindow):
     for icol,col in enumerate(self.ViewModelColumns):
         setattr(self,"Column%s"%col.capitalize(),icol);
     # init GUI
-    self.setWindowTitle("TigGUI");
+    self.setWindowTitle("Tigger");
     # self.setIcon(pixmaps.purr_logo.pm());
     cw = QWidget(self);
     self.setCentralWidget(cw);
@@ -403,7 +403,7 @@ class MainWindow (QMainWindow):
       self.tw.addColumnViewActionsTo(self._column_view_menu);
     else:
       self.model = None;
-      self.setWindowTitle("TigGUI");
+      self.setWindowTitle("Tigger");
       self.emit(SIGNAL("hasSelection"),False);
       self.emit(SIGNAL("isUpdated"),False);
       self.emit(SIGNAL("hasSkyModel"),False);
@@ -534,7 +534,7 @@ class MainWindow (QMainWindow):
         return;
       if os.path.exists(filename) and not overwrite:
         warning += "<P>The file already exists and will be overwritten.</P>";
-      if filetype != 'TigGUI' and not non_native:
+      if filetype != 'Tigger' and not non_native:
         warning += """<P>Please note that you are exporting the model using the external format '%s'.
               Source types, tags and other model features not supported by this
               format will be omitted during the export.</P>"""%filetype;
@@ -679,5 +679,5 @@ class MainWindow (QMainWindow):
     self._model_updated = updated;
     self.emit(SIGNAL("isUpdated"),updated);
     if self.model:
-      self.setWindowTitle("TigGUI - %s%s"%((self._display_filename or "(unnamed)"," (modified)" if updated else "")));
+      self.setWindowTitle("Tigger - %s%s"%((self._display_filename or "(unnamed)"," (modified)" if updated else "")));
 

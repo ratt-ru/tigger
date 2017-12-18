@@ -131,7 +131,7 @@ class ImageManager (QWidget):
     except:
         busy = None;
         traceback.print_exc();
-        self.showErrorMessage("""<P>Error loading FITS image %s: %s. This may be due to a bug in TigGUI; if the FITS file loads fine in another viewer,
+        self.showErrorMessage("""<P>Error loading FITS image %s: %s. This may be due to a bug in Tigger; if the FITS file loads fine in another viewer,
           please send the FITS file, along with a copy of any error messages from the text console, to osmirnov@gmail.com.</P>"""%(filename,str(sys.exc_info()[1])));
         return None;
     # create control bar, add to widget stack
