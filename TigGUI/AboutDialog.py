@@ -21,7 +21,7 @@
 # or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-from Tigger import release_string,svn_revision_html,pixmaps
+from TigGUI import release_string,svn_revision_html,pixmaps
 
 import os.path
 import time
@@ -93,9 +93,9 @@ class AboutDialog (QDialog):
         self.connect(self.btn_ok,SIGNAL("clicked()"),self.accept)
 
     def languageChange(self):
-        self.setWindowTitle(self.__tr("About Tigger"))
+        self.setWindowTitle(self.__tr("About TigGUI"))
         self.title_label.setText(self.__tr( \
-          """<h3>Tigger %s</h3>
+          """<h3>TigGUI %s</h3>
           <p>(C) 2010-2012 Oleg Smirnov & ASTRON<br>(Netherlands Institude for Radioastronomy)<br>
           Oude Hoogeveensedijk 4<br>
           7991 PD Dwingeloo, The Netherlands<br>

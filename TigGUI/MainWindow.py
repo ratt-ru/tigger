@@ -25,7 +25,7 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-from Tigger import *
+from TigGUI import *
 
 import os
 import os.path
@@ -39,15 +39,15 @@ from PyQt4.Qt import *
 import Kittens.utils
 from Kittens.utils import PersistentCurrier
 
-from Models import ModelClasses
-from Models import SkyModel
-from Models.Formats import ModelHTML
+from Tigger.Models import ModelClasses
+from Tigger.Models import SkyModel
+from Tigger.Models.Formats import ModelHTML
 import Widgets
 import AboutDialog
 from SkyModelTreeWidget import *
 from Plot.SkyModelPlot import *
 from Images.Manager import ImageManager
-import Tigger.Tools.source_selector
+import TigGUI.Tools.source_selector
 
 _verbosity = Kittens.utils.verbosity(name="mainwin");
 dprint = _verbosity.dprint;
@@ -64,7 +64,7 @@ class MainWindow (QMainWindow):
     for icol,col in enumerate(self.ViewModelColumns):
         setattr(self,"Column%s"%col.capitalize(),icol);
     # init GUI
-    self.setWindowTitle("Tigger");
+    self.setWindowTitle("TigGUI");
     # self.setIcon(pixmaps.purr_logo.pm());
     cw = QWidget(self);
     self.setCentralWidget(cw);
@@ -363,14 +363,14 @@ class MainWindow (QMainWindow):
     self.model.emitUpdate(SkyModel.UpdateAll,origin=self);
 
   def _showSourceSelector (self):
-    Tigger.Tools.source_selector.show_source_selector(self,self.model);
+    TigGUI.Tools.source_selector.show_source_selector(self, self.model);
 
   def _updateModelSelection (self,num,origin=None):
     """Called when the model selection has been updated.""";
     self.emit(SIGNAL("hasSelection"),bool(num));
 
   import Tigger.Models.Formats
-  _formats = [ f[1] for f in Tigger.Models.Formats.listFormatsFull() ];
+  _formats = [f[1] for f in Tigger.Models.Formats.listFormatsFull()];
 
   _load_file_types = [ (doc,["*"+ext for ext in extensions],load) for load,save,doc,extensions in _formats if load ];
   _save_file_types = [ (doc,["*"+ext for ext in extensions],save) for load,save,doc,extensions in _formats if save ];
@@ -403,7 +403,7 @@ class MainWindow (QMainWindow):
       self.tw.addColumnViewActionsTo(self._column_view_menu);
     else:
       self.model = None;
-      self.setWindowTitle("Tigger");
+      self.setWindowTitle("TigGUI");
       self.emit(SIGNAL("hasSelection"),False);
       self.emit(SIGNAL("isUpdated"),False);
       self.emit(SIGNAL("hasSkyModel"),False);
@@ -433,7 +433,6 @@ class MainWindow (QMainWindow):
     return;
 
   def openFile (self,filename=None,format=None,merge=False,show=True):
-    from Models import ModelClasses
     # check that we can close existing model
     if not merge and not self._canCloseExistingModel():
       return False;
@@ -441,7 +440,7 @@ class MainWindow (QMainWindow):
       filename = filename[0];
     filename = str(filename);
     # try to determine the file type
-    filetype,import_func,export_func,doc = Tigger.Models.Formats.resolveFormat(filename,format);
+    filetype,import_func,export_func,doc = Tigger.Models.Formats.resolveFormat(filename, format);
     if import_func is None:
       self.showErrorMessage("""Error loading model file %s: unknown file format"""%filename);
       return;
@@ -529,13 +528,13 @@ class MainWindow (QMainWindow):
     else:
       warning = '';
       # try to determine the file type
-      filetype,import_func,export_func,doc = Tigger.Models.Formats.resolveFormat(filename,None);
+      filetype,import_func,export_func,doc = Tigger.Models.Formats.resolveFormat(filename, None);
       if export_func is None:
         self.showErrorMessage("""Error saving model file %s: unsupported output format"""%filename);
         return;
       if os.path.exists(filename) and not overwrite:
         warning += "<P>The file already exists and will be overwritten.</P>";
-      if filetype != 'Tigger' and not non_native:
+      if filetype != 'TigGUI' and not non_native:
         warning += """<P>Please note that you are exporting the model using the external format '%s'.
               Source types, tags and other model features not supported by this
               format will be omitted during the export.</P>"""%filetype;
@@ -601,7 +600,7 @@ class MainWindow (QMainWindow):
       self.showErrorMessage("""You have not selected any sources to save.""");
       return;
     # try to determine the file type
-    filetype,import_func,export_func,doc = Tigger.Models.Formats.resolveFormat(filename,None);
+    filetype,import_func,export_func,doc = Tigger.Models.Formats.resolveFormat(filename, None);
     if export_func is None:
       self.showErrorMessage("""Error saving model file %s: unsupported output format"""%filename);
       return;
@@ -680,5 +679,5 @@ class MainWindow (QMainWindow):
     self._model_updated = updated;
     self.emit(SIGNAL("isUpdated"),updated);
     if self.model:
-      self.setWindowTitle("Tigger - %s%s"%((self._display_filename or "(unnamed)"," (modified)" if updated else "")));
+      self.setWindowTitle("TigGUI - %s%s"%((self._display_filename or "(unnamed)"," (modified)" if updated else "")));
 

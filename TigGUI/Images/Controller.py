@@ -42,15 +42,10 @@ _verbosity = Kittens.utils.verbosity(name="imagectl");
 dprint = _verbosity.dprint;
 dprintf = _verbosity.dprintf;
 
-from Tigger.Images import SkyImage,Colormaps
-from Tigger.Models import ModelClasses,PlotStyles
-from Tigger.Coordinates import Projection,radec_string;
-from Tigger.Models.SkyModel import SkyModel
-from Tigger import pixmaps
-from Tigger.Widgets import FloatValidator
-
-from Tigger.Images.RenderControl import RenderControl
-from Tigger.Images.ControlDialog import ImageControlDialog
+from TigGUI import pixmaps
+from TigGUI.Widgets import FloatValidator
+from TigGUI.Images.RenderControl import RenderControl
+from TigGUI.Images.ControlDialog import ImageControlDialog
 
 class ImageController (QFrame):
   """An ImageController is a widget for controlling the display of one image.

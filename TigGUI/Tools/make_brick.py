@@ -33,7 +33,7 @@ import os.path
 import traceback
 
 from Kittens.widgets import BusyIndicator
-from Tigger.Widgets import FileSelector
+from TigGUI.Widgets import FileSelector
 from Tigger.Models import SkyModel,ModelClasses
 from Tigger.Tools import Imaging
 
@@ -309,5 +309,5 @@ def make_brick (mainwin,model):
   # show dialog
   return dialog.exec_();
 
-from Tigger.Tools import registerTool
+from TigGUI.Tools import registerTool
 registerTool("Make FITS brick from selected sources...",make_brick);

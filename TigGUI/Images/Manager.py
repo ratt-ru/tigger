@@ -38,10 +38,10 @@ pyfits = Kittens.utils.import_pyfits();
 from Kittens.utils import curry,PersistentCurrier
 from Kittens.widgets import BusyIndicator
 
-from Tigger.Images.Controller import ImageController,dprint,dprintf
+from TigGUI.Images.Controller import ImageController,dprint,dprintf
 
-from Tigger.Images import SkyImage
-from Tigger.Images import  FITS_ExtensionList
+from TigGUI.Images import SkyImage
+from TigGUI.Images import  FITS_ExtensionList
 
 class ImageManager (QWidget):
   """An ImageManager manages a stack of images (and associated ImageControllers)"""
@@ -131,7 +131,7 @@ class ImageManager (QWidget):
     except:
         busy = None;
         traceback.print_exc();
-        self.showErrorMessage("""<P>Error loading FITS image %s: %s. This may be due to a bug in Tigger; if the FITS file loads fine in another viewer,
+        self.showErrorMessage("""<P>Error loading FITS image %s: %s. This may be due to a bug in TigGUI; if the FITS file loads fine in another viewer,
           please send the FITS file, along with a copy of any error messages from the text console, to osmirnov@gmail.com.</P>"""%(filename,str(sys.exc_info()[1])));
         return None;
     # create control bar, add to widget stack

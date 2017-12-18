@@ -41,9 +41,9 @@ _verbosity = Kittens.utils.verbosity(name="rc");
 dprint = _verbosity.dprint;
 dprintf = _verbosity.dprintf;
 
-from Tigger.Images import SkyImage,Colormaps
-from Tigger import pixmaps,ConfigFile
-from Tigger.Widgets import FloatValidator
+from TigGUI.Images import SkyImage,Colormaps
+from TigGUI import pixmaps,ConfigFile
+from TigGUI.Widgets import FloatValidator
 
 import Kittens.config
 ImageConfigFile = Kittens.config.DualConfigParser("tigger.images.conf");

@@ -31,9 +31,8 @@ pyfits = Kittens.utils.import_pyfits();
 import os.path
 
 from Kittens.widgets import BusyIndicator
-from Tigger.Widgets import FileSelector
+from TigGUI.Widgets import FileSelector
 from Tigger.Models import SkyModel,ModelClasses
-from Tigger.Tools import Imaging
 
 DEG = math.pi/180;
 
@@ -176,5 +175,5 @@ def add_brick (mainwin,model):
   # show dialog
   return dialog.exec_();
 
-from Tigger.Tools import registerTool
+from TigGUI.Tools import registerTool
 registerTool("Add FITS brick to model...",add_brick);

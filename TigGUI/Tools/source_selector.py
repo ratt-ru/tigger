@@ -30,9 +30,9 @@ import traceback
 
 from Kittens.widgets import SIGNAL,BusyIndicator
 from Kittens.utils import curry
-from Tigger.Widgets import FileSelector
+from TigGUI.Widgets import FileSelector
 from Tigger.Models import SkyModel,ModelClasses
-from Tigger import SkyModelTreeWidget
+from TigGUI import SkyModelTreeWidget
 
 import Kittens.utils
 
@@ -293,5 +293,5 @@ def show_source_selector (mainwin,model):
   dialog.show();
   dialog.raise_();
 
-#from Tigger.Tools import registerTool
+#from TigGUI.Tools import registerTool
 #registerTool("Source selector...",show_source_selector);
