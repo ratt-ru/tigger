@@ -43,72 +43,72 @@ from Tigger import Coordinates
 from Tigger.Models.Formats import dprint,dprintf
 from math import cos,sin,acos,asin,atan2,sqrt,pi
 
-ARCSEC = (math.pi/180)/(60*60);
+ARCSEC = (math.pi/180)/(60*60)
 
 """
 Loads an AIPS-format clean component list
 """
 
 def lm_to_radec (l,m,ra0,dec0):
-  """Returns ra,dec corresponding to l,m w.r.t. direction ra0,dec0""";
+  """Returns ra,dec corresponding to l,m w.r.t. direction ra0,dec0"""
   # see formula at http://en.wikipedia.org/wiki/Orthographic_projection_(cartography)
-  rho = sqrt(l**2+m**2);
+  rho = sqrt(l**2+m**2)
   if rho == 0.0:
     ra = ra0
     dec = dec0
   else:
-    cc = asin(rho);
-    ra = ra0 + atan2( l*sin(cc),rho*cos(dec0)*cos(cc)-m*sin(dec0)*sin(cc) );
-    dec = asin( cos(cc)*sin(dec0) + m*sin(cc)*cos(dec0)/rho );
-  return ra,dec;
+    cc = asin(rho)
+    ra = ra0 + atan2( l*sin(cc),rho*cos(dec0)*cos(cc)-m*sin(dec0)*sin(cc) )
+    dec = asin( cos(cc)*sin(dec0) + m*sin(cc)*cos(dec0)/rho )
+  return ra,dec
 
 
 def load (filename,center=None,**kw):
   """Imports an AIPs clean component list file
   """
-  srclist = [];
-  dprint(1,"importing AIPS clean component table",filename);
+  srclist = []
+  dprint(1,"importing AIPS clean component table",filename)
   # read file
-  ff = file(filename);
+  ff = file(filename)
   
   if center is None:
-    raise ValueError("field centre must be specified");
+    raise ValueError("field centre must be specified")
 
   # now process file line-by-line
-  linenum = 0;
+  linenum = 0
   for line in ff:
-    linenum += 1;
+    linenum += 1
     # parse one line
-    dprint(4,"read line:",line);
-    ff = line.split();
+    dprint(4,"read line:",line)
+    ff = line.split()
     if len(ff) != 5:
-      continue;
+      continue
     try:
-      num = int(ff[0]);
-      dx,dy,i,i_tot = list(map(float,ff[1:]));
+      num = int(ff[0])
+      dx,dy,i,i_tot = list(map(float,ff[1:]))
     except:
-      continue;
+      continue
     try:
       # convert dx/dy to real positions
-      l,m = sin(dx*ARCSEC),sin(dy*ARCSEC);
-      ra,dec = lm_to_radec(l,m,*center);
-      pos = ModelClasses.Position(ra,dec);
+      l,m = sin(dx*ARCSEC),sin(dy*ARCSEC)
+      ra,dec = lm_to_radec(l,m,*center)
+      pos = ModelClasses.Position(ra,dec)
     except Exception as exc:
-      print("CC %d: error converting coordinates (%s), skipping"%(num,str(exc)));
-      continue;
-    flux = ModelClasses.Flux(i);
+      print("CC %d: error converting coordinates (%s), skipping"%(num,str(exc)))
+      continue
+    flux = ModelClasses.Flux(i)
     # now create a source object
-    src = SkyModel.Source('cc%d'%num,pos,flux);
-    src.setAttribute('r',math.sqrt(l*l+m*m));
-    srclist.append(src);
-  dprintf(2,"imported %d sources from file %s\n",len(srclist),filename);
+    src = SkyModel.Source('cc%d'%num,pos,flux)
+    src.setAttribute('r',math.sqrt(l*l+m*m))
+    srclist.append(src)
+  dprintf(2,"imported %d sources from file %s\n",len(srclist),filename)
   # create model
-  model = ModelClasses.SkyModel(*srclist);
+  model = ModelClasses.SkyModel(*srclist)
   # setup model center
-  model.setFieldCenter(*center);
+  model.setFieldCenter(*center)
   # setup radial distances
-  projection = Coordinates.Projection.SinWCS(*model.fieldCenter());
-  return model;
+  projection = Coordinates.Projection.SinWCS(*model.fieldCenter())
+  return model
 
 
-Tigger.Models.Formats.registerFormat("AIPSCC",load,"AIPS CC list",(".cc",".CC"));
+Tigger.Models.Formats.registerFormat("AIPSCC",load,"AIPS CC list",(".cc",".CC"))

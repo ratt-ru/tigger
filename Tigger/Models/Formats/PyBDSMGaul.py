@@ -52,7 +52,7 @@ format_mapping = dict(
   E_DC_Maj="emaj_err_d",E_DC_Min="emin_err_d",E_DC_PA="pa_err_d",
   SpI="spi",Spec_Indx="spi",E_Spec_Indx="spi_err",
   S_Code=":str:_pybdsm_S_Code"
-);
+)
 
 
 def load (filename, freq0=None,**kw):
@@ -61,37 +61,37 @@ def load (filename, freq0=None,**kw):
   If 'center_on_brightest' is True, the mpodel field center will be set to the brightest source.
   'min_extent' is minimal source extent (in radians), above which a source will be treated as a Gaussian rather than a point component.
   """
-  srclist = [];
+  srclist = []
   id = None
-  dprint(1,"importing PyBDSM gaul/srl file",filename);
-  format = {};
+  dprint(1,"importing PyBDSM gaul/srl file",filename)
+  format = {}
   extension = filename.split(".")[-1]
   if extension == "srl":
     format_mapping['Source_id'] = format_mapping.pop('Gaus_id')
     id = "Source_id"
   # look for format string and reference freq, and build up format dict
   for line in file(filename):
-    m = re.match("# Reference frequency .*?([0-9.eE+-]+)\s*Hz",line);
+    m = re.match("# Reference frequency .*?([0-9.eE+-]+)\s*Hz",line)
     if m:
-      freq0 = kw['freq0'] = freq0 or float(m.group(1));
-      dprint(2,"found reference frequency %g"%freq0);
+      freq0 = kw['freq0'] = freq0 or float(m.group(1))
+      dprint(2,"found reference frequency %g"%freq0)
     elif re.match("#(\s*[\w:]+\s+)+",line) and line.find(id if id else "Gaus_id") > 0:
-      dprint(2,"found format string",line);
+      dprint(2,"found format string",line)
       fields = dict([ (name,i) for i,name in enumerate(line[1:].split()) ]); 
       # map known fields to their ASCII equivalents, the rest copy as custom float attributes with
       # a "pybdsm_" prefix
       for i,name in enumerate(line[1:].split()):
         if name in format_mapping:
           dprint(2,"Field",format_mapping[name],name,"is column",i)
-          format[format_mapping[name]] = i;
+          format[format_mapping[name]] = i
         else:
-          format[":float:_pybdsm_%s"%name] = i;
+          format[":float:_pybdsm_%s"%name] = i
     if format and freq0:
-      break;
+      break
   if not format:
     raise ValueError("this .gaul file does not appear to contain a format string")
   # call ASCII.load() function now that we have the format dict
-  kw['format'] = format;
+  kw['format'] = format
   return ASCII.load(filename,**kw)
 
-Tigger.Models.Formats.registerFormat("Gaul",load,"PyBDSM .gaul/.srl file",(".gaul",".srl",));
+Tigger.Models.Formats.registerFormat("Gaul",load,"PyBDSM .gaul/.srl file",(".gaul",".srl",))

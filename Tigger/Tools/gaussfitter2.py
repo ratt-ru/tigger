@@ -44,7 +44,7 @@ def moments (data,circle,rotate,vheight):
     row = data[int(x), :]
     width_y = sqrt(abs((arange(row.size)-x)**2*row).sum()/row.sum())
     width = ( width_x + width_y ) / 2.
-    height = stats.mode(data.ravel())[0][0] if vheight else 0;
+    height = stats.mode(data.ravel())[0][0] if vheight else 0
     amplitude = data.max()-height
     mylist = [amplitude,x,y]
     if vheight==1:

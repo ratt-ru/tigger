@@ -23,11 +23,11 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-_registered_tools = [];
+_registered_tools = []
 
 def getRegisteredTools ():
-  return _registered_tools;
+  return _registered_tools
 
 def registerTool (name,callback):
-  _registered_tools.append((name,callback));
+  _registered_tools.append((name,callback))
 

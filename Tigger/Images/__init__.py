@@ -26,7 +26,7 @@
 
 import os.path
 
-FITS_ExtensionList = [ ".fts",".FTS",".fits",".FITS",".fit",".FIT" ];
+FITS_ExtensionList = [ ".fts",".FTS",".fits",".FITS",".fit",".FIT" ]
 
 def isFITS (filename):
-    return os.path.splitext(filename)[1] in FITS_ExtensionList;
+    return os.path.splitext(filename)[1] in FITS_ExtensionList
