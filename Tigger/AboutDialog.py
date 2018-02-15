@@ -90,7 +90,8 @@ class AboutDialog (QDialog):
         #self.resize(QSize(489,330).expandedTo(self.minimumSizeHint()))
         # self.clearWState(Qt.WState_Polished)
 
-        self.connect(self.btn_ok,SIGNAL("clicked()"),self.accept)
+        ## todo: convert new style signals
+        #self.connect(self.btn_ok,SIGNAL("clicked()"),self.accept)
 
     def languageChange(self):
         self.setWindowTitle(self.__tr("About Tigger"))

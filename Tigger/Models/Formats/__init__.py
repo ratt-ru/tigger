@@ -37,6 +37,7 @@ Formats = {}
 _FormatList = []
 _FormatsInitialized = False
 
+
 def _initFormats ():
   """Initializes all known formats by importing their modules"""
   global _FormatsInitialized
@@ -49,11 +50,13 @@ def _initFormats ():
         print("Error loading support for format '%s', see above. Format will not be available."%format)
     _FormatsInitialized = True
 
+
 def registerFormat (name,import_func,doc,extensions,export_func=None):
   """Registers an external format, with an import function"""
   global Formats
   Formats[name] = (import_func,export_func,doc,extensions)
   _FormatList.append(name)
+
 
 def getFormat (name):
   """Gets file format by name. Returns name,import_func,export_func,docstring if found, None,None,None,None otherwise."""
@@ -63,6 +66,7 @@ def getFormat (name):
   import_func,export_func,doc,extensions = Formats[name]
   return name,import_func,export_func,doc
 
+
 def getFormatExtensions (name):
   """Gets file format by name. Returns name,import_func,export_func,docstring if found, None,None,None,None otherwise."""
   _initFormats()
@@ -70,7 +74,8 @@ def getFormatExtensions (name):
     return None
   import_func,export_func,doc,extensions = Formats[name]
   return extensions
-  
+
+
 def determineFormat (filename):
   """Tries to determine file format by filename. Returns name,import_func,export_func,docstring if found, None,None,None,None otherwise."""
   _initFormats()
@@ -79,14 +84,17 @@ def determineFormat (filename):
       if filename.endswith(ext):
         return name,import_func,export_func,doc
   return None,None,None,None
-  
+
+
 def listFormats ():
   _initFormats()
   return _FormatList
 
+
 def listFormatsFull ():
   _initFormats()
   return [ (name,Formats[name]) for name in _FormatList ]
+
 
 def resolveFormat (filename,format):
   """Helper function, resolves format/filename arguments to a format tuple"""
@@ -103,6 +111,7 @@ def resolveFormat (filename,format):
   
 # provide some convenience methods
 
+
 def load (filename,format=None,verbose=True):
   """Loads a sky model."""
   name,import_func,export_func,doc = resolveFormat(filename,format)
@@ -111,6 +120,7 @@ def load (filename,format=None,verbose=True):
   if verbose:
     print("Loading %s: %s"%(filename,doc))
   return import_func(filename)
+
 
 def save (model,filename,format=None,verbose=True):
   """Saves a sky model."""

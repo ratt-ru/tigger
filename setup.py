@@ -11,6 +11,7 @@ install_requires = [
     'astlib',
     'astropy',
     'pyqt5',
+    'PythonQwt',
 ]
 
 scripts = [

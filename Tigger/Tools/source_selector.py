@@ -25,15 +25,9 @@
 
 from PyQt5.Qt import *
 import math
-import os.path
 import traceback
 
-from Kittens.widgets import SIGNAL,BusyIndicator
-from Kittens.utils import curry
-from Tigger.Widgets import FileSelector
-from Tigger.Models import SkyModel,ModelClasses
-from Tigger import SkyModelTreeWidget
-
+from Kittens.widgets import BusyIndicator
 import Kittens.utils
 
 _verbosity = Kittens.utils.verbosity(name="source_selector")

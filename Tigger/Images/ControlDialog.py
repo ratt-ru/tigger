@@ -25,23 +25,21 @@
 #
 
 from PyQt5.Qt import *
-from PyQt5.Qwt5 import *
+from qwt import *
 
 import math
 import numpy
-import sys
-import time
 from scipy.ndimage import measurements
 
-import Kittens.utils
-from Kittens.utils import curry,PersistentCurrier
+from Kittens.utils import PersistentCurrier
 from Kittens.widgets import BusyIndicator
 
-from Tigger.Images import SkyImage,Colormaps
+from Tigger.Images import Colormaps
 from Tigger import pixmaps
-from Tigger.Widgets import FloatValidator,TiggerPlotCurve,TiggerPlotMarker
+from Tigger.Widgets import FloatValidator, TiggerPlotCurve, TiggerPlotMarker
+from Tigger.todo import QwtPicker, QwtPlotPicker, QwtPlotZoomer
 
-from .RenderControl import RenderControl,dprint,dprintf
+from .RenderControl import RenderControl, dprint
 
 DataValueFormat = "%.4g"
 
@@ -758,7 +756,7 @@ class ImageControlDialog (QDialog):
     dprint(5,"computing std")
     std = measurements.standard_deviation(subset,labels=mask,index=None if mask is None else False)
     dprint(5,"done")
-    text = "  ".join([ ("%s: "+DataValueFormat)%(name,value) for name,value in ("min",dmin),("max",dmax),("mean",mean),("std",std) ]+["np: %d"%self._subset.size])
+    text = "  ".join([ ("%s: "+DataValueFormat)%(name,value) for name,value in (("min",dmin),("max",dmax),("mean",mean),("std",std)) ]+["np: %d"%self._subset.size])
     self._wlab_stats.setText(text)
     self._wmore_stats.hide()
     # update markers

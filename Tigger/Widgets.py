@@ -28,7 +28,7 @@ import traceback
 import re
 
 from PyQt5.Qt import *
-from PyQt5.Qwt5 import *
+from qwt import  QwtPlotCurve, QwtPlotMarker
 
 
 class TiggerPlotCurve(QwtPlotCurve):
@@ -36,6 +36,10 @@ class TiggerPlotCurve(QwtPlotCurve):
 
     def setData(self, x, y):
         return QwtPlotCurve.setData(self, list(map(float, x)), list(map(float, y)))
+
+    def setCurveType(self, curve):
+        # todo: implement
+        pass
 
 
 class TiggerPlotMarker(QwtPlotMarker):

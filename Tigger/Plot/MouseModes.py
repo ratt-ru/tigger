@@ -132,7 +132,8 @@ class MouseModeManager (QObject):
     if mode.submodes:
       self._ensureValidSubmodes()
     else:
-      self.emit(SIGNAL("setMouseMode"),mode)
+      #self.emit(SIGNAL("setMouseMode"),mode)
+      pass
 
   def _setSubmode (self,mid):
     """Called when the mouse submode changes"""

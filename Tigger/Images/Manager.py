@@ -73,12 +73,14 @@ class ImageManager (QWidget):
     self._qa_plot_top.setCheckable(True)
     self._qa_plot_all.setCheckable(True)
     self._qa_plot_top.setChecked(True)
-    QObject.connect(self._qa_plot_all,SIGNAL("toggled(bool)"),self._displayAllImages)
+    #QObject.connect(self._qa_plot_all,SIGNAL("toggled(bool)"),self._displayAllImages)
+    self._qa_plot_all.toggled.connect(self._displayAllImages)
     self._closing = False
     
     self._qa_load_clipboard = None
     self._clipboard_mode = QClipboard.Clipboard
-    QObject.connect(QApplication.clipboard(),SIGNAL("changed(QClipboard::Mode)"),self._checkClipboardPath)
+    #QObject.connect(QApplication.clipboard(),SIGNAL("changed(QClipboard::Mode)"),self._checkClipboardPath)
+    QApplication.clipboard().dataChanged.connect(self._checkClipboardPath)
     # populate the menu
     self._repopulateMenu()
 

@@ -24,17 +24,15 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-import sys
-import traceback
-import math
 import os.path
 import time
 
 from PyQt5.Qt import *
-from PyQt5.Qwt5 import *
+from qwt import *
 import  numpy
 import numpy.ma
 from scipy.ndimage import interpolation,measurements
+import math
 
 import Kittens.utils
 pyfits = Kittens.utils.import_pyfits()
@@ -48,6 +46,7 @@ DEG = math.pi/180
 _verbosity = Kittens.utils.verbosity(name="skyimage")
 dprint = _verbosity.dprint
 dprintf = _verbosity.dprintf
+
 
 class SkyImagePlotItem (QwtPlotItem,QObject):
   """SkyImagePlotItem is a 2D image in l,m coordimnates"""

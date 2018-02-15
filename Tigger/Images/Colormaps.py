@@ -25,7 +25,7 @@
 #
 
 from PyQt5.Qt import *
-from PyQt5.Qwt5 import *
+from qwt import *
 
 import math
 import  numpy

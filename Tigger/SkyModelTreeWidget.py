@@ -62,15 +62,15 @@ class SkyModelTreeWidget (Kittens.widgets.ClickableTreeWidget):
     # insert columns
     self.setHeaderLabels(ViewColumns)
     self.headerItem().setText(ColumnIapp,"I(app)")
-    self.header().setMovable(False)
-    self.header().setClickable(True)
+    self.header().setSectionsMovable(False)
+    self.header().setSectionsClickable(True)
     self.setSortingEnabled(True)
     self.setRootIsDecorated(False)
     self.setEditTriggers(QAbstractItemView.AllEditTriggers)
     self.setMouseTracking(True)
     # set column width modes
     for icol in range(NumColumns-1):
-      self.header().setResizeMode(icol,QHeaderView.ResizeToContents)
+      self.header().setSectionResizeMode(icol,QHeaderView.ResizeToContents)
     self.header().setStretchLastSection(True)
     ## self.setTextAlignment(ColumnR,Qt.AlignRight)
     ## self.setTextAlignment(ColumnType,Qt.AlignHCenter)
@@ -86,8 +86,9 @@ class SkyModelTreeWidget (Kittens.widgets.ClickableTreeWidget):
     self._updating_selection = False
     self.setRootIsDecorated(False)
     # connect signals to track selected sources
-    QObject.connect(self,SIGNAL("itemSelectionChanged()"),self._selectionChanged)
-    QObject.connect(self,SIGNAL("itemEntered(QTreeWidgetItem*,int)"),self._itemHighlighted)
+    ## todo: convert to new style signals
+    #QObject.connect(self,SIGNAL("itemSelectionChanged()"),self._selectionChanged)
+    #QObject.connect(self,SIGNAL("itemEntered(QTreeWidgetItem*,int)"),self._itemHighlighted)
     # add "View" controls for different column categories
     self._column_views = []
     self._column_widths = {}
@@ -150,7 +151,8 @@ class SkyModelTreeWidget (Kittens.widgets.ClickableTreeWidget):
     qa.setChecked(visible)
     if not visible:
       self._showColumnCategory(columns,False)
-    QObject.connect(qa,SIGNAL("toggled(bool)"),self._currier.curry(self._showColumnCategory,columns))
+    # todo: convert to new style signals
+    #QObject.connect(qa,SIGNAL("toggled(bool)"),self._currier.curry(self._showColumnCategory,columns))
     self._column_views.append((name,qa,columns))
 
   def clear (self):
@@ -430,7 +432,7 @@ class ModelGroupsTable (QWidget):
     lo1 = QHBoxLayout()
     lo.addLayout(lo1)
     lo1.setContentsMargins(0,0,0,0)
-    lbl = QLabel(QString("<nobr><b>Source groupings:</b></nobr>"),self)
+    lbl = QLabel("<nobr><b>Source groupings:</b></nobr>", self)
     lo1.addWidget(lbl,0)
     lo1.addStretch(1)
     # add show/hide button
@@ -438,11 +440,13 @@ class ModelGroupsTable (QWidget):
     self._showattrbtn.setMinimumWidth(256)
     lo1.addWidget(self._showattrbtn,0)
     lo1.addStretch()
-    QObject.connect(self._showattrbtn,SIGNAL("clicked()"),self._togglePlotControlsVisibility)
+    #QObject.connect(self._showattrbtn,SIGNAL("clicked()"),self._togglePlotControlsVisibility)
+    self._showattrbtn.clicked.connect(self._togglePlotControlsVisibility)
     # add table
     self.table  = QTableWidget(self)
     lo.addWidget(self.table)
-    QObject.connect(self.table,SIGNAL("cellChanged(int,int)"),self._valueChanged)
+    #QObject.connect(self.table,SIGNAL("cellChanged(int,int)"),self._valueChanged)
+    self.table.cellChanged.connect(self._valueChanged)
     self.table.setSelectionMode(QTableWidget.NoSelection)
     # setup basic columns
     self.table.setColumnCount(6+len(self.EditableAttrs))

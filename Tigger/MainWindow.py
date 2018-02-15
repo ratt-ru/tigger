@@ -53,6 +53,7 @@ _verbosity = Kittens.utils.verbosity(name="mainwin")
 dprint = _verbosity.dprint
 dprintf = _verbosity.dprintf
 
+
 class MainWindow (QMainWindow):
   ViewModelColumns = [ "name","RA","Dec","type","Iapp","I","Q","U","V","RM","spi","shape" ]
   def __init__ (self,parent,hide_on_close=False):
@@ -69,7 +70,7 @@ class MainWindow (QMainWindow):
     cw = QWidget(self)
     self.setCentralWidget(cw)
     cwlo = QVBoxLayout(cw)
-    cwlo.setMargin(5)
+    cwlo.setSpacing(5)  # todo: was setMargin, not sure if this is right (gijs)
     # make splitter
     spl1 = self._splitter1 = QSplitter(Qt.Vertical,cw)
     spl1.setOpaqueResize(False)
@@ -91,9 +92,9 @@ class MainWindow (QMainWindow):
     self.skyplot.setSizePolicy(QSizePolicy.Minimum,QSizePolicy.Preferred)
     self._skyplot_stack_lo.addWidget(self.skyplot,1000)
     self.skyplot.hide()
-    QObject.connect(self.skyplot,SIGNAL("imagesChanged"),self._imagesChanged)
-    QObject.connect(self.skyplot,SIGNAL("showMessage"),self.showMessage)
-    QObject.connect(self.skyplot,SIGNAL("showErrorMessage"),self.showErrorMessage)
+    #QObject.connect(self.skyplot,SIGNAL("imagesChanged"),self._imagesChanged)
+    #QObject.connect(self.skyplot,SIGNAL("showMessage"),self.showMessage)
+    #QObject.connect(self.skyplot,SIGNAL("showErrorMessage"),self.showErrorMessage)
 
     self._grouptab_stack = QWidget(spl2)
     self._grouptab_stack_lo = lo =QVBoxLayout(self._grouptab_stack)
@@ -101,7 +102,7 @@ class MainWindow (QMainWindow):
     # add groupings table
     self.grouptab = ModelGroupsTable(self._grouptab_stack)
     self.grouptab.setSizePolicy(QSizePolicy.Preferred,QSizePolicy.Preferred)
-    QObject.connect(self,SIGNAL("hasSkyModel"),self.grouptab.setEnabled)
+    #QObject.connect(self,SIGNAL("hasSkyModel"),self.grouptab.setEnabled)
     lo.addWidget(self.grouptab,1000)
     lo.addStretch(1)
     self.grouptab.hide()
@@ -109,9 +110,9 @@ class MainWindow (QMainWindow):
     # add image controls -- parentless for now (setLayout will reparent them anyway)
     self.imgman = ImageManager()
     self.skyplot.setImageManager(self.imgman)
-    QObject.connect(self.imgman,SIGNAL("imagesChanged"),self._imagesChanged)
-    QObject.connect(self.imgman,SIGNAL("showMessage"),self.showMessage)
-    QObject.connect(self.imgman,SIGNAL("showErrorMessage"),self.showErrorMessage)
+    #QObject.connect(self.imgman,SIGNAL("imagesChanged"),self._imagesChanged)
+    #QObject.connect(self.imgman,SIGNAL("showMessage"),self.showMessage)
+    #QObject.connect(self.imgman,SIGNAL("showErrorMessage"),self.showErrorMessage)
 
     # enable status line
     self.statusBar().show()
@@ -121,17 +122,17 @@ class MainWindow (QMainWindow):
     file_menu = menubar.addMenu("&File")
     qa_open = file_menu.addAction("&Open model...",self._openFileCallback,Qt.CTRL+Qt.Key_O)
     qa_merge = file_menu.addAction("&Merge in model...",self._mergeFileCallback,Qt.CTRL+Qt.SHIFT+Qt.Key_O)
-    QObject.connect(self,SIGNAL("hasSkyModel"),qa_merge.setEnabled)
+    #QObject.connect(self,SIGNAL("hasSkyModel"),qa_merge.setEnabled)
     file_menu.addSeparator()
     qa_save = file_menu.addAction("&Save model",self.saveFile,Qt.CTRL+Qt.Key_S)
-    QObject.connect(self,SIGNAL("isUpdated"),qa_save.setEnabled)
+    #QObject.connect(self,SIGNAL("isUpdated"),qa_save.setEnabled)
     qa_save_as = file_menu.addAction("Save model &as...",self.saveFileAs)
-    QObject.connect(self,SIGNAL("hasSkyModel"),qa_save_as.setEnabled)
+    #QObject.connect(self,SIGNAL("hasSkyModel"),qa_save_as.setEnabled)
     qa_save_selection_as = file_menu.addAction("Save selection as...",self.saveSelectionAs)
-    QObject.connect(self,SIGNAL("hasSelection"),qa_save_selection_as.setEnabled)
+    #QObject.connect(self,SIGNAL("hasSelection"),qa_save_selection_as.setEnabled)
     file_menu.addSeparator()
     qa_close = file_menu.addAction("&Close model",self.closeFile,Qt.CTRL+Qt.Key_W)
-    QObject.connect(self,SIGNAL("hasSkyModel"),qa_close.setEnabled)
+    #QObject.connect(self,SIGNAL("hasSkyModel"),qa_close.setEnabled)
     qa_quit = file_menu.addAction("Quit",self.close,Qt.CTRL+Qt.Key_Q)
 
     # Image menu
@@ -143,7 +144,7 @@ class MainWindow (QMainWindow):
     em = QMenu("&LSM",self)
     self._qa_em = menubar.addMenu(em)
     self._qa_em.setVisible(False)
-    QObject.connect(self,SIGNAL("hasSkyModel"),self._qa_em.setVisible)
+    #QObject.connect(self,SIGNAL("hasSkyModel"),self._qa_em.setVisible)
     self._column_view_menu = QMenu("&Show columns",self)
     self._qa_cv_menu = em.addMenu(self._column_view_menu)
     em.addSeparator()
@@ -152,17 +153,18 @@ class MainWindow (QMainWindow):
     em.addAction("Select b&y attribute...",self._showSourceSelector,Qt.CTRL+Qt.Key_Y)
     em.addSeparator()
     qa_add_tag = em.addAction("&Tag selection...",self.addTagToSelection,Qt.CTRL+Qt.Key_T)
-    QObject.connect(self,SIGNAL("hasSelection"),qa_add_tag.setEnabled)
+    #QObject.connect(self,SIGNAL("hasSelection"),qa_add_tag.setEnabled)
     qa_del_tag = em.addAction("&Untag selection...",self.removeTagsFromSelection,Qt.CTRL+Qt.Key_U)
-    QObject.connect(self,SIGNAL("hasSelection"),qa_del_tag.setEnabled)
+    #QObject.connect(self,SIGNAL("hasSelection"),qa_del_tag.setEnabled)
     qa_del_sel = em.addAction("&Delete selection",self._deleteSelection)
-    QObject.connect(self,SIGNAL("hasSelection"),qa_del_sel.setEnabled)
+    #QObject.connect(self,SIGNAL("hasSelection"),qa_del_sel.setEnabled)
 
    # Tools menu
     tm = self._tools_menu = QMenu("&Tools",self)
     self._qa_tm = menubar.addMenu(tm)
     self._qa_tm.setVisible(False)
-    QObject.connect(self,SIGNAL("hasSkyModel"),self._qa_tm.setVisible)
+    #QObject.connect(self,SIGNAL("hasSkyModel"),self._qa_tm.setVisible)
+    #self.hasSkyModel.connect(self._qa_tm.setVisible)
 
    # Help menu
     menubar.addSeparator()
@@ -179,9 +181,12 @@ class MainWindow (QMainWindow):
     self.filename = None
     self._display_filename = None
     self._open_file_dialog = self._merge_file_dialog = self._save_as_dialog = self._save_sel_as_dialog = self._open_image_dialog = None
-    self.emit(SIGNAL("isUpdated"),False)
-    self.emit(SIGNAL("hasSkyModel"),False)
-    self.emit(SIGNAL("hasSelection"),False)
+    #self.emit(SIGNAL("isUpdated"),False)
+    #self.emit(SIGNAL("hasSkyModel"),False)
+    #self.emit(SIGNAL("hasSelection"),False)
+    #self.isUpdated.emit(False)
+    #self.hasSkyModel.emit(False)
+    #self.hasSelection.emit(False)
     self._exiting = False
 
     # set initial layout
