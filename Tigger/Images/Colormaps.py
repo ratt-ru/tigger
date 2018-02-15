@@ -24,8 +24,8 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-from PyQt4.Qt import *
-from PyQt4.Qwt5 import *
+from PyQt5.Qt import *
+from PyQt5.Qwt5 import *
 
 import math
 import  numpy

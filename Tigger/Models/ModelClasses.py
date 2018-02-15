@@ -98,8 +98,8 @@ class ModelItem (object):
 
   def enableSignals (self):
     """Enables Qt signals for this object."""
-    import PyQt4.Qt
-    self._signaller = PyQt4.Qt.QObject()
+    import PyQt5.Qt
+    self._signaller = PyQt5.Qt.QObject()
 
   def signalsEnabled (self):
     return bool(self._signaller)
@@ -108,17 +108,17 @@ class ModelItem (object):
     """Connects SIGNAL from object to specified receiver slot. If reconnect is True, allows duplicate connections."""
     if not self._signaller:
       raise RuntimeError("ModelItem.connect() called before enableSignals()")
-    import PyQt4.Qt
+    import PyQt5.Qt
     if reconnect or (signal_name,receiver) not in self._connections:
       self._connections.add((signal_name,receiver))
-      PyQt4.Qt.QObject.connect(self._signaller,PyQt4.Qt.SIGNAL(signal_name),receiver)
+      PyQt5.Qt.QObject.connect(self._signaller,PyQt5.Qt.SIGNAL(signal_name),receiver)
 
   def emit (self,signal_name,*args):
     """Emits named SIGNAL from this object ."""
     if not self._signaller:
       raise RuntimeError("ModelItem.emit() called before enableSignals()")
-    import PyQt4.Qt
-    self._signaller.emit(PyQt4.Qt.SIGNAL(signal_name),*args)
+    import PyQt5.Qt
+    self._signaller.emit(PyQt5.Qt.SIGNAL(signal_name),*args)
 
   def registerClass (classobj):
     if not isinstance(classobj,type):
@@ -250,7 +250,7 @@ class ModelItem (object):
     return markup
     
   numpy_int_types = tuple([
-      getattr(numpy,"%s%d"%(t,d)) for t in ("int","uint") for d in 8,16,32,64 
+      getattr(numpy,"%s%d"%(t, d)) for t in ("int", "uint") for d in (8, 16, 32, 64)
       if hasattr(numpy,"%s%d"%(t,d))
     ])
   numpy_float_types = tuple([

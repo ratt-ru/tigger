@@ -25,7 +25,7 @@ if __name__ == "__main__":
     import traceback
     import Tigger
     import Kittens.utils
-    from PyQt4.Qt import *
+    from PyQt5.Qt import *
 
     Tigger.init_gui()
 
@@ -58,8 +58,8 @@ if __name__ == "__main__":
 
     Tigger.nuke_matplotlib();  # don't let the door hit you in the ass, sucka
 
-    print "Welcome to Tigger "+Tigger.release_string
-    print "Please wait a second while the GUI starts up."
+    print("Welcome to Tigger "+Tigger.release_string)
+    print("Please wait a second while the GUI starts up.")
 
     ## ugly hack to get around UGLY FSCKING ARROGNAT (misspelling fully intentional) pyfits-2.3 bug
     Kittens.utils.import_pyfits()
@@ -112,19 +112,19 @@ if __name__ == "__main__":
 
     # load images first
     for img in images:
-      print "Loading image",img
+      print("Loading image",img)
       #splash.showMessage("Loading image %s"%img,Qt.AlignHCenter|Qt.AlignBottom)
       mainwin.loadImage(img)
       dprint(1,"loaded image",img)
 
     # load model, if specified
     for mod in models:
-      print "Loading model",mod
+      print("Loading model",mod)
       try:
         mainwin.openFile(mod,show=False)
       except:
         traceback.print_exc()
-        print "Error loading model %s"%mod
+        print("Error loading model %s"%mod)
         os._exit(0)
 
       #splash.showMessage("Loading model %s"%mod,Qt.AlignHCenter|Qt.AlignBottom)
@@ -139,7 +139,7 @@ if __name__ == "__main__":
 
     # handle SIGINT
     def sigint_handler (sig,stackframe):
-      print "Caught Ctrl+C, exiting..."
+      print("Caught Ctrl+C, exiting...")
       mainwin.close()
 
 

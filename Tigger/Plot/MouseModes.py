@@ -1,5 +1,5 @@
 from Tigger import *
-from PyQt4.Qt import *
+from PyQt5.Qt import *
 import Kittens.utils
 from Kittens.utils import curry,PersistentCurrier
 

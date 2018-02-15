@@ -30,8 +30,8 @@ import math
 import os.path
 import time
 
-from PyQt4.Qt import *
-from PyQt4.Qwt5 import *
+from PyQt5.Qt import *
+from PyQt5.Qwt5 import *
 import  numpy
 import numpy.ma
 from scipy.ndimage import interpolation,measurements

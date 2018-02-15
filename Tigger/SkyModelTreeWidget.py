@@ -25,7 +25,7 @@
 #
 
 import math
-from PyQt4.Qt import *
+from PyQt5.Qt import *
 
 import Kittens.widgets
 import Kittens.utils
@@ -50,7 +50,7 @@ NumColumns = len(ViewColumns)
 DEG = math.pi/180
 
 # Qt-4.6 and up (PyQt 4.7 and up) has very slow QTreeWidgetItem updates, determine version here
-from PyQt4 import QtCore
+from PyQt5 import QtCore
 _SLOW_QTREEWIDGETITEM = QtCore.PYQT_VERSION_STR >= '4.7'
 
 class SkyModelTreeWidget (Kittens.widgets.ClickableTreeWidget):

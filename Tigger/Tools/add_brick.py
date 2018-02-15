@@ -24,7 +24,7 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-from PyQt4.Qt import *
+from PyQt5.Qt import *
 import math
 import Kittens.utils
 pyfits = Kittens.utils.import_pyfits()
