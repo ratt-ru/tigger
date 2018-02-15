@@ -1,4 +1,21 @@
+"""
+biggest chnange is signals stuff:
 
+http://pyqt.sourceforge.net/Docs/PyQt5/pyqt4_differences.html
+
+rewriting is quite easy:
+
+QObject.connect(qa,SIGNAL("triggered(bool)"),self._write_config)
+
+becomes
+
+qa.triggered.connect(self._write_config)
+
+It is a bit more work in case of custom signals, those need to be registered with a pyqtSignal. There is also
+a decorated available for functions, but then the function name need to be specially formatted.
+
+
+"""
 class QwtPlotZoomer:
     """
     TODO: implement this

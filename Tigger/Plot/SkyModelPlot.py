@@ -244,13 +244,19 @@ class ToolDialog (QDialog):
     qa.setVisible(False)
     qa.setToolTip("""<P>The quick zoom & cross-sections window shows a zoom of the current image area
       under the mose pointer, and X/Y cross-sections through that area.</P>""")
-    # todo: convert to new style signals
+
     #QObject.connect(qa,SIGNAL("triggered(bool)"),self.setVisible)
+    qa.triggered.connect(self.setVisible)
+
     self._closing = False
     self._write_config = curry(Config.set,"%s-show"%configname)
-    # todo: convert to new style signals
+
     #QObject.connect(qa,SIGNAL("triggered(bool)"),self._write_config)
+    qa.triggered.connect(self._write_config)
+
+    # todo: port this to new style signal
     #QObject.connect(self,SIGNAL("isVisible"),qa.setChecked)
+    #self.isVisible.connect(self.setChecked)
 
   def getShowQAction (self):
     return self._qa_show
@@ -321,20 +327,24 @@ class LiveImageZoom (ToolDialog):
     self._showcs = QCheckBox("show cross-sections",self)
     self._showzoom.setChecked(True)
     self._showcs.setChecked(True)
-    ## todo: convert to new style signals
+
     #QObject.connect(self._showzoom,SIGNAL("toggled(bool)"),self._showZoom)
     #QObject.connect(self._showcs,SIGNAL("toggled(bool)"),self._showCrossSections)
+    self._showzoom.toggled.connect(self._showZoom)
+    self._showcs.toggled.connect(self._showCrossSections)
     lo1.addWidget(self._showzoom,0)
     lo1.addSpacing(5)
     lo1.addWidget(self._showcs,0)
     lo1.addStretch(1)
     self._smaller = QToolButton(self)
     self._smaller.setIcon(pixmaps.window_smaller.icon())
-    ## todo: convert to new style signals
+
     #QObject.connect(self._smaller,SIGNAL("clicked()"),self._shrink)
+    self._smaller.clicked.connect(self._shrink)
     self._larger = QToolButton(self)
     self._larger.setIcon(pixmaps.window_larger.icon())
-    ## todo: convert to new style signals
+
+    self._larger.clicked.connect(self._enlarge)
     #QObject.connect(self._larger,SIGNAL("clicked()"),self._enlarge)
     lo1.addWidget(self._smaller)
     lo1.addWidget(self._larger)
@@ -522,8 +532,7 @@ class LiveProfile (ToolDialog):
     lo0.addLayout(lo1)
     lab = QLabel("Axis: ",self)
     self._wprofile_axis = QComboBox(self)
-    ## todo: new style signal
-    #QObject.connect(self._wprofile_axis,SIGNAL("activated(int)"),self.selectAxis)
+    self._wprofile_axis.activated.connect(self.selectAxis)
     lo1.addWidget(lab,0)
     lo1.addWidget(self._wprofile_axis,0)
     lo1.addStretch(1)
@@ -719,6 +728,7 @@ class SkyModelPlotter (QWidget):
         QwtPlot.updateLayout(self)
         # todo: convert to new style signals
         #self.emit(SIGNAL("updateLayout"))
+
 
     def setDrawingKey (self,key=None):
       """Sets the current drawing key. If key is set to not None, then drawCanvas() will look in the draw cache
