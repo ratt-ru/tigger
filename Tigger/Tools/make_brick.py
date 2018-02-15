@@ -173,7 +173,7 @@ class MakeBrickDialog (QDialog):
         if hdr['CTYPE%d'%axis].upper() == 'FREQ':
           self.wfreq.setText(str(hdr['CRVAL%d'%axis]/1e+6));
           break;
-    except Exception,err:
+    except Exception as err:
       busy = None;
       self.wfile.setFilename('');
       if not quiet:
@@ -205,7 +205,7 @@ class MakeBrickDialog (QDialog):
       pbexp = str(self.wpb_exp.text());
       try:
         pbfunc = eval("lambda r,fq:"+pbexp);
-      except Exception,err:
+      except Exception as err:
         QMessageBox.warning(self,"Error parsing PB experssion",
               "Error parsing primary beam expression %s: %s"%(pbexp,str(err)));
         return;
@@ -219,7 +219,7 @@ class MakeBrickDialog (QDialog):
     busy = BusyIndicator();
     try:
       input_hdu = pyfits.open(filename)[0];
-    except Exception,err:
+    except Exception as err:
       busy = None;
       QMessageBox.warning(self,"Error reading FITS","Error reading FITS file %s: %s"%(filename,str(err)));
       return;
@@ -236,7 +236,7 @@ class MakeBrickDialog (QDialog):
       if os.path.exists(filename):
         os.remove(filename);
       input_hdu.writeto(filename);
-    except Exception,err:
+    except Exception as err:
       traceback.print_exc();
       busy = None;
       QMessageBox.warning(self,"Error writing FITS","Error writing FITS file %s: %s"%(filename,str(err)));

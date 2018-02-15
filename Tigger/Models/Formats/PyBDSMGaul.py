@@ -89,7 +89,7 @@ def load (filename, freq0=None,**kw):
     if format and freq0:
       break;
   if not format:
-    raise ValueError,"this .gaul file does not appear to contain a format string"
+    raise ValueError("this .gaul file does not appear to contain a format string")
   # call ASCII.load() function now that we have the format dict
   kw['format'] = format;
   return ASCII.load(filename,**kw)

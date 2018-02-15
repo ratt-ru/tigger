@@ -302,7 +302,7 @@ class SkyImagePlotItem (QwtPlotItem,QObject):
   def getPsfSize (self):
     return self._psfsize;
 
-ScalePrefixes = [ "p","n",u"\u03bc","m","","K","M","G","T" ];
+ScalePrefixes = [ "p","n","\u03bc","m","","K","M","G","T" ];
 
 def getScalePrefix (*values):
   """Helper method to get the optimal scale and SI prefix for a given range of values""";
@@ -419,7 +419,7 @@ class SkyCubePlotItem (SkyImagePlotItem):
   def setSkyAxis (self,n,iaxis,nx,x0,dx,xpix0):
     """Sets the sky axis, n=0 for RA and n=1 for Dec"""
     if not self.imgslice:
-      raise RuntimeError,"setNumAxes() must be called first";
+      raise RuntimeError("setNumAxes() must be called first");
     # reverse axis if step is negative
 #    if dx<0:
 #      dx = -dx;
@@ -476,7 +476,7 @@ class SkyCubePlotItem (SkyImagePlotItem):
     projection is used.
     """;
     if not (self._skyaxes[0] and self._skyaxes[1]):
-      raise RuntimeError,"setSkyAxis() must be called for both sky axes";
+      raise RuntimeError("setSkyAxis() must be called for both sky axes");
     (iaxis_ra,nx,ra0,dra,i0),(iaxis_dec,ny,dec0,ddec,j0) = self._skyaxes;
     proj = proj or self.projection;
     # setup projection properties and get center of field
@@ -503,7 +503,7 @@ class SkyCubePlotItem (SkyImagePlotItem):
 
   def selectSlice (self,*indices):
     if len(indices) != len(self._extra_axes):
-      raise ValueError,"number of indices does not match number of extra axes""";
+      raise ValueError("number of indices does not match number of extra axes""");
     for i,(iaxis,name,labels,values,units,scale) in enumerate(self._extra_axes):
       self.imgslice[iaxis] = indices[i];
     self._setupSlice();
@@ -542,7 +542,7 @@ class FITSImagePlotItem (SkyCubePlotItem):
       header['NAXIS'] = axis-1;
       for name in 'NAXIS','CTYPE','CRPIX','CRVAL','CDELT':
         key = "%s%d"%(name,axis);
-        if header.has_key(key):
+        if key in header:
           del header[key];
     return header;
 
@@ -575,10 +575,10 @@ class FITSImagePlotItem (SkyCubePlotItem):
     dprint(3,"reading header");
     ndim = hdr['NAXIS'];
     if ndim < 2:
-      raise ValueError,"Cannot load a one-dimensional FITS file";
+      raise ValueError("Cannot load a one-dimensional FITS file");
     # setup projection
     # (strip out history from header, as big histories really slow down FITSWCS)
-    hdr1 = pyfits.Header(filter(lambda x:not str(x).startswith('HISTORY'),hdr.cards));
+    hdr1 = pyfits.Header([x for x in hdr.cards if not str(x).startswith('HISTORY')]);
     proj = Projection.FITSWCS(hdr1);
     nx = ny = None;
     # find X and Y axes
@@ -626,7 +626,7 @@ class FITSImagePlotItem (SkyCubePlotItem):
             labels = None;
         self.setExtraAxis(iaxis,name or ("axis "+axs),labels,values,unit);
     # check for beam parameters
-    psf = [ hdr.get(x,None) for x in 'BMAJ','BMIN','BPA' ];
+    psf = [ hdr.get(x,None) for x in ('BMAJ','BMIN','BPA') ];
     if all([x is not None for x in psf]):
       self.setPsfSize(*[ p/180*math.pi for p in psf ]);
     self.setSkyAxis(0,iaxis_ra,nx,proj.ra0,-proj.xscale,proj.xpix0);

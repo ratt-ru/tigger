@@ -46,7 +46,7 @@ class IntensityMap (object):
     self.range = None;
     if dmin is not None:
       if dmax is None:
-        raise TypeError,"both dmin and dmax must be specified, or neither.""";
+        raise TypeError("both dmin and dmax must be specified, or neither.""");
       self.setDataRange(dmin,dmax);
 
   def copy (self):
@@ -71,7 +71,7 @@ class IntensityMap (object):
 
   def remap (self,data):
     """Remaps data into 0...1 range""";
-    raise RuntimeError,"remap() not implemented in "+str(type(self));
+    raise RuntimeError("remap() not implemented in "+str(type(self)));
 
 class LinearIntensityMap (IntensityMap):
   """This scales data linearly between preset min and max values."""
@@ -155,7 +155,7 @@ class Colormap (QObject):
     if isinstance(color0,(list,tuple)):
       self._rgb = numpy.array(color0);
       if self._rgb.shape[1] != 3 or self._rgb.shape[0] < 2:
-        raise TypeError,"expected [N,3] (N>=2) array as first argument";
+        raise TypeError("expected [N,3] (N>=2) array as first argument");
     else:
       if isinstance(color0,str):
         color0 = QColor(color0);
@@ -340,7 +340,7 @@ class CubeHelixColormap (ColormapWithControls):
     r = dg - 0.14861*cosphi + 1.78277*sinphi;
     g = dg - 0.29227*cosphi - 0.90649*sinphi;
     b = dg + 1.97249*cosphi;
-    rgbs = [ (x*255).round().astype(numpy.int32).clip(0,255) for x in r,g,b ];
+    rgbs = [ (x*255).round().astype(numpy.int32).clip(0,255) for x in (r,g,b) ];
     # add data mask
     mask = getattr(data,'mask',None);
     if mask is not None and mask is not False:
@@ -380,7 +380,7 @@ class CubeHelixColormap (ColormapWithControls):
 GreyscaleColormap = Colormap("Greyscale");
 TransparentFuchsiaColormap = Colormap("Transparent Fuchsia",color0="fuchsia",color1="fuchsia",alpha=(0,1));
 
-from ColormapTables import Karma
+from .ColormapTables import Karma
 _karma_colormaps = [
     Colormap(cmap,getattr(Karma,cmap))
       for cmap in [

@@ -51,7 +51,7 @@ def transfer_tags(fromlsm,lsm,output,tags,tolerance,tigger):
   """
   # now, set dE tags on sources
   tagset = frozenset(tags.split());
-  print("Transferring tags %s from %s to %s (%.2f\" tolerance)"%(",".join(tagset),fromlsm,lsm,tolerance));
+  print(("Transferring tags %s from %s to %s (%.2f\" tolerance)"%(",".join(tagset),fromlsm,lsm,tolerance)));
 
   refmodel = tigger.load(fromlsm);
   model = tigger.load(lsm);
@@ -64,7 +64,7 @@ def transfer_tags(fromlsm,lsm,output,tags,tolerance,tigger):
         if tagval is not None:
           if src.getTag(tag,None) != tagval:
             src.setTag(tag,tagval);
-            print("setting tag %s=%s on source %s (from reference source %s)"%(tag,tagval,src.name,src0.name))
+            print(("setting tag %s=%s on source %s (from reference source %s)"%(tag,tagval,src.name,src0.name)))
   model.save(output);
 
 
@@ -86,13 +86,13 @@ if __name__ == '__main__':
         break;
       dirname = os.path.dirname(dirname);
     else:
-      print "Unable to locate the Tigger directory, it is not a parent of %s. Please check your installation and/or PYTHONPATH."%os.path.realpath(__file__);
+      print("Unable to locate the Tigger directory, it is not a parent of %s. Please check your installation and/or PYTHONPATH."%os.path.realpath(__file__));
       sys.exit(1);
     sys.path.append(os.path.dirname(dirname));
     try:
       import Tigger
     except:
-      print "Unable to import the Tigger package from %s. Please check your installation and PYTHONPATH."%dirname;
+      print("Unable to import the Tigger package from %s. Please check your installation and PYTHONPATH."%dirname);
       sys.exit(1);
 
   Tigger.nuke_matplotlib();  # don't let the door hit you in the ass, sucka
@@ -142,9 +142,9 @@ Saves the result to an LSM file given by -o/--output.
   # load the model
   model = Tigger.load(skymodel);
   if not model.sources:
-    print "Input model %s contains no sources"%skymodel;
+    print("Input model %s contains no sources"%skymodel);
     sys.exit(0);
-  print "Input model contains %d sources"%len(model.sources);
+  print("Input model contains %d sources"%len(model.sources));
 
   if options.transfer_tags:
     fromlsm, tolerance = options.transfer_tags.split(":")
@@ -191,20 +191,20 @@ Saves the result to an LSM file given by -o/--output.
     # if selection is not None, then we've already selected and tagged something, so we need
     # to reset the selection to empty and start again. If selected_ids is None, this is the first selection
     if selection is not None or selected_ids is None:
-      print "Selecting sources:";
+      print("Selecting sources:");
       selected_ids = set();
       selection = None;
     # add to current selection
-    selected_ids.update(map(id,sel));
+    selected_ids.update(list(map(id,sel)));
     # print result
     if not len(sel):
-      print '  %-16s: no sources selected'%selstr;
+      print('  %-16s: no sources selected'%selstr);
     elif len(sel) == 1:
-      print '  %-16s: one source selected (%s)'%(selstr,sel[0].name);
+      print('  %-16s: one source selected (%s)'%(selstr,sel[0].name));
     elif len(sel) <= 5:
-      print '  %-16s: %d sources selected (%s)'%(selstr,len(sel)," ".join([src.name for src in sel]));
+      print('  %-16s: %d sources selected (%s)'%(selstr,len(sel)," ".join([src.name for src in sel])));
     else:
-      print '  %-16s: %d sources selected'%(selstr,len(sel));
+      print('  %-16s: %d sources selected'%(selstr,len(sel)));
       
   def retrieve_selection ():
     global selection;
@@ -215,13 +215,13 @@ Saves the result to an LSM file given by -o/--output.
       # no explicit selection: use entire model
       if selected_ids is None:
         selection = model.sources;
-        print "No explicit selection, using all sources.";
+        print("No explicit selection, using all sources.");
       # else use selected set
       else:
         selection = [ src for src in model.sources if id(src) in selected_ids ];
-        print "Using %d selected sources:"%len(selection);
+        print("Using %d selected sources:"%len(selection));
     if options.list:
-      print "Sources: %s"%(" ".join([x.name for x in selection]));
+      print("Sources: %s"%(" ".join([x.name for x in selection])));
       global listed;
       listed = True;
     return selection;
@@ -242,7 +242,7 @@ Saves the result to an LSM file given by -o/--output.
     for subobj in tags[:-1]:
       src = getattr(src,subobj,None);
       if src is None:
-        print "Can't resolve attribute %s for source %s"%(tagname,src.name);
+        print("Can't resolve attribute %s for source %s"%(tagname,src.name));
         sys.exit(1);
     return src,tags[-1];
     
@@ -250,7 +250,7 @@ Saves the result to an LSM file given by -o/--output.
   for arg in rem_args[1:]:
   # Match either the SELTAG<>SELVAL, or the TAG=[TYPE:]VALUE, or the [+!/]TAG forms
   # If none match, assume the NAME form
-    mselcomp = re.match("^(?i)([^=<>!.]+)(%s)([^dms]+)([dms])?"%"|".join([ key.replace('.','\.') for key in select_predicates.keys()]),arg);
+    mselcomp = re.match("^(?i)([^=<>!.]+)(%s)([^dms]+)([dms])?"%"|".join([ key.replace('.','\.') for key in list(select_predicates.keys())]),arg);
     mseltag = re.match("=(.+)$",arg); 
     mset = re.match("^(.+)=((bool|int|str|float|complex):)?(.+)$",arg);
     msetbool = re.match("^([+!/])(.+)$",arg);
@@ -274,7 +274,7 @@ Saves the result to an LSM file given by -o/--output.
     elif mset:
       sources = retrieve_selection();
       if options.list:
-        print "--list in effect, ignoring tagging commands";
+        print("--list in effect, ignoring tagging commands");
         continue;
       tagname,typespec,typename,value = mset.groups();
       # if type is specified, use it to explicitly convert the value
@@ -289,14 +289,14 @@ Saves the result to an LSM file given by -o/--output.
           try:
             newval = bool(int(value));
           except:
-            print "Can't parse \"%s\" as a value of type bool"%value;
+            print("Can't parse \"%s\" as a value of type bool"%value);
             sys.exit(2);
       # else some other type is specified -- use it to convert the value
       elif typename:
         try:
           newval = getattr(__builtin__,typename)(value);
         except:
-          print "Can't parse \"%s\" as a value of type %s"%(value,typename);
+          print("Can't parse \"%s\" as a value of type %s"%(value,typename));
           sys.exit(2);
       # else auto-convert
       else:
@@ -311,30 +311,30 @@ Saves the result to an LSM file given by -o/--output.
       if type(newval) is str:
         value = '"%s"'%value;
       if sources:
-        print "  setting tag %s=%s (type '%s')"%(tagname,value,type(newval).__name__);
+        print("  setting tag %s=%s (type '%s')"%(tagname,value,type(newval).__name__));
         for src in sources:
           obj,tag = lookupObject(src,tagname);
           obj.setAttribute(tag,newval);
         modified = True;
       else:
-        print "No sources selected, ignoring tagging commands";
+        print("No sources selected, ignoring tagging commands");
     elif msetbool:
       sources = retrieve_selection();
       if options.list:
-        print "--list in effect, ignoring tagging commands";
+        print("--list in effect, ignoring tagging commands");
         continue;
       if sources:
         op,tagname = msetbool.groups();
         if op == "+":
-          print "  setting tag %s=True"%tagname;
+          print("  setting tag %s=True"%tagname);
           method = 'setAttribute';
           args = (tagname,True);
         elif op == "!":
-          print "  setting tag %s=False"%tagname;
+          print("  setting tag %s=False"%tagname);
           method = 'setAttribute';
           args = (tagname,False);
         elif op == "/":
-          print "  removing tag %s"%tagname;
+          print("  removing tag %s"%tagname);
           method = 'removeAttribute';
           args = (tagname,);
         for src in sources:
@@ -342,29 +342,29 @@ Saves the result to an LSM file given by -o/--output.
           getattr(obj,method)(*args);
         modified = True;
       else:
-        print "No sources selected, ignoring tagging commands";
+        print("No sources selected, ignoring tagging commands");
 
   if options.list:
     if not listed:
       retrieve_selection();
     
   if not modified:
-    print "Model was not modified";
+    print("Model was not modified");
     sys.exit(0);
           
   # prompt
   if not options.force:
     try:
-      raw_input("Press ENTER to save model or Ctrl+C to cancel: ");
+      input("Press ENTER to save model or Ctrl+C to cancel: ");
     except:
-      print "Cancelling";
+      print("Cancelling");
       sys.exit(1);
 
   # save output
   if options.output:
     model.save(options.output);
-    print "Saved updated model to %s"%options,output;
+    print("Saved updated model to %s"%options,output);
   else:
     model.save(skymodel);
-    print "Saved updated model";
+    print("Saved updated model");
 

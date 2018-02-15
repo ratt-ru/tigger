@@ -149,7 +149,7 @@ def load (filename,import_src=True,import_cc=True,min_extent=0,**kw):
     ## temp dict to hold unique nodenames
     unamedict={}
     ### Models -- 56 bytes
-    for ii in xrange(0,nsources):
+    for ii in range(0,nsources):
       mdl = numpy.fromfile(ff,dtype=numpy.uint8,count=56)
       
       ### source parameters
@@ -185,7 +185,7 @@ def load (filename,import_src=True,import_cc=True,min_extent=0,**kw):
       # NEWSTAR MDL lists might have same source twice if they are
       # clean components, so make a unique name for them
       bname='N'+str(id);
-      if unamedict.has_key(bname):
+      if bname in unamedict:
         uniqname = bname+'_'+str(unamedict[bname])
         unamedict[bname] += 1
       else:

@@ -55,7 +55,7 @@ if __name__ == '__main__':
     try:
       import Tigger
     except:
-      print "Unable to import the Tigger package. Please check your installation and PYTHONPATH.";
+      print("Unable to import the Tigger package. Please check your installation and PYTHONPATH.");
       sys.exit(1);
 
   Tigger.nuke_matplotlib();  # don't let the door hit you in the ass, sucka
@@ -115,20 +115,20 @@ while the brick itself will be added (as a FITS image component), and a new sky 
 
   # check if we need to overwrite
   if output_model and os.path.exists(output_model) and not options.force:
-    print "Output file %s already exists. Use the -f switch to overwrite."%output_model;
+    print("Output file %s already exists. Use the -f switch to overwrite."%output_model);
     sys.exit(1);
 
   # load model, apply selection
   model = Tigger.load(skymodel);
-  print "Loaded model",skymodel;
+  print("Loaded model",skymodel);
   # apply selection
   sources0 = model.getSourceSubset(options.subset);
   #  make sure only point sources are left
   sources = [ src for src in sources0 if src.typecode == "pnt" ];
-  print "Selection leaves %d source(s), of which %d are point source(s)"%(len(sources0),len(sources));
+  print("Selection leaves %d source(s), of which %d are point source(s)"%(len(sources0),len(sources)));
 
   if not sources:
-    print "There's nothing to convert into a brick.";
+    print("There's nothing to convert into a brick.");
     sys.exit(1);
 
   # get PB expression
@@ -136,37 +136,37 @@ while the brick itself will be added (as a FITS image component), and a new sky 
   if options.primary_beam:
     if options.primary_beam.upper() == "WSRT":
       pbfunc = lambda r,fq:cos(min(65*fq*1e-9*r,1.0881))**6;
-      print "Primary beam expression is standard WSRT cos^6: 'cos(min(65*fq*1e-9*r,1.0881))**6'";
+      print("Primary beam expression is standard WSRT cos^6: 'cos(min(65*fq*1e-9*r,1.0881))**6'");
     elif options.primary_beam.upper() == "NEWSTAR":
       pbfunc = lambda r,fq:max(cos(65*1e-9*fq*r)**6,.01);
-      print "Primary beam expression is standard NEWSTAR cos^6: 'max(cos(65*1e-9*fq*r)**6,.01)'";
+      print("Primary beam expression is standard NEWSTAR cos^6: 'max(cos(65*1e-9*fq*r)**6,.01)'");
     else:
       try:
         pbfunc = eval("lambda r,fq:"+options.primary_beam);
-      except Exception,err:
-        print "Error parsing primary beam expression %s: %s"%(options.primary_beam,str(err));
+      except Exception as err:
+        print("Error parsing primary beam expression %s: %s"%(options.primary_beam,str(err)));
         sys.exit(1);
-      print "Primary beam expression is ",options.primary_beam;
+      print("Primary beam expression is ",options.primary_beam);
 
   # get frequency
   freq = (options.freq or model.refFreq() or 1400)*1e+6;
-  print "Brick frequency is %f MHz"%(freq*1e-6);
+  print("Brick frequency is %f MHz"%(freq*1e-6));
 
   # read fits file
   try:
     input_hdu = pyfits.open(fitsfile)[0];
     hdr = input_hdu.header;
-  except Exception,err:
-    print "Error reading FITS file %s: %s"%(fitsfile,str(err));
+  except Exception as err:
+    print("Error reading FITS file %s: %s"%(fitsfile,str(err)));
     sys.exit(1);
-  print "Using FITS file",fitsfile;
+  print("Using FITS file",fitsfile);
 
   # reset data if asked to
   if not options.add_to_image:
     input_hdu.data[...] = 0;
-    print "Contents of FITS image will be reset";
+    print("Contents of FITS image will be reset");
   else:
-    print "Adding source(s) to FITS image";
+    print("Adding source(s) to FITS image");
   # Parse header to figure out RA and DEC axes
   ra_axis = dec_axis = None;
   for iaxis in range(1,hdr['NAXIS']+1):
@@ -178,18 +178,18 @@ while the brick itself will be added (as a FITS image component), and a new sky 
       dec_axis = iaxis;
       dec0pix = hdr["CRPIX%d"%iaxis]-1;
   if ra_axis is None or dec_axis is None:
-    print "Can't find RA and/or DEC axis in this FITS image";
+    print("Can't find RA and/or DEC axis in this FITS image");
     sys.exit(1);
 
   # make WCS from header
   wcs = WCS(hdr,mode='pyfits');
   ra0,dec0 = wcs.pix2wcs(ra0pix,dec0pix);
-  print "Image reference pixel (%d,%d) is at %f,%f deg"%(ra0pix,dec0pix,ra0,dec0);
+  print("Image reference pixel (%d,%d) is at %f,%f deg"%(ra0pix,dec0pix,ra0,dec0));
 
   # apply x/y pixel offset
   if options.x_offset or options.y_offset:
     ra0,dec0 = wcs.pix2wcs(ra0pix+options.x_offset,dec0pix+options.y_offset);
-    print "Applying x/y offset moves this to %f,%f deg"%(ra0,dec0);
+    print("Applying x/y offset moves this to %f,%f deg"%(ra0,dec0));
     hdr["CRVAL%d"%ra_axis] = ra0;
     hdr["CRVAL%d"%dec_axis] = dec0;
     wcs = WCS(hdr,mode='pyfits');
@@ -199,11 +199,11 @@ while the brick itself will be added (as a FITS image component), and a new sky 
   # save fits file
   try:
     input_hdu.writeto(fitsfile,clobber=True);
-  except Exception,err:
-    print "Error writing FITS file %s: %s"%(fitsfile,str(err));
+  except Exception as err:
+    print("Error writing FITS file %s: %s"%(fitsfile,str(err)));
     sys.exit(1);
-  print "Added %d source(s) into FITS file %s"%(len(sources),fitsfile);
-  print "Using pad factor",options.padding;
+  print("Added %d source(s) into FITS file %s"%(len(sources),fitsfile));
+  print("Using pad factor",options.padding);
 
   # remove sources from model if asked to
   if not options.keep_sources:
@@ -225,7 +225,7 @@ while the brick itself will be added (as a FITS image component), and a new sky 
     # check if this image is already contained in the model
     for src in model.sources:
       if isinstance(getattr(src,'shape',None),ModelClasses.FITSImage) and os.path.samefile(src.shape.filename,fitsfile):
-        print "Model already contains a component (%s) for this image. Updating the component"%src.name;
+        print("Model already contains a component (%s) for this image. Updating the component"%src.name);
         # update source parameters
         src.position.ra,src.position.dec = ra0,dec0;
         src.flux.I = max_flux;
@@ -240,10 +240,10 @@ while the brick itself will be added (as a FITS image component), and a new sky 
       shape = ModelClasses.FITSImage(sx,sy,0,fitsfile,nx,ny,pad=options.padding);
       sname = options.source_name or os.path.splitext(os.path.basename(fitsfile))[0];
       img_src = SkyModel.Source(sname,pos,flux,shape=shape);
-      print "Inserting new model component named %s"%sname;
+      print("Inserting new model component named %s"%sname);
       sources.append(img_src);
     # save model
     model.setSources(sources);
     model.save(output_model);
-    print "Saved %d source(s) to output model %s."%(len(model.sources),output_model);
+    print("Saved %d source(s) to output model %s."%(len(model.sources),output_model));
 

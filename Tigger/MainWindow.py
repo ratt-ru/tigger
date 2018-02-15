@@ -39,14 +39,14 @@ from PyQt4.Qt import *
 import Kittens.utils
 from Kittens.utils import PersistentCurrier
 
-from Models import ModelClasses
-from Models import SkyModel
-from Models.Formats import ModelHTML
-import Widgets
-import AboutDialog
-from SkyModelTreeWidget import *
-from Plot.SkyModelPlot import *
-from Images.Manager import ImageManager
+from .Models import ModelClasses
+from .Models import SkyModel
+from .Models.Formats import ModelHTML
+from . import Widgets
+from . import AboutDialog
+from .SkyModelTreeWidget import *
+from .Plot.SkyModelPlot import *
+from .Images.Manager import ImageManager
 import Tigger.Tools.source_selector
 
 _verbosity = Kittens.utils.verbosity(name="mainwin");
@@ -249,7 +249,7 @@ class MainWindow (QMainWindow):
         return None;
       self.resize(QSize(w,h));
       for spl,name in (self._splitter1,"splitter1"),(self._splitter2,"splitter2"):
-        ssz = [ Config.getint('%s-%s-size%d'%(self._current_layout,name,i),-1) for i in 0,1 ];
+        ssz = [ Config.getint('%s-%s-size%d'%(self._current_layout,name,i),-1) for i in (0,1) ];
         dprint(2,"splitter",name,"sizes",ssz);
         if all([ sz >=0 for sz in ssz ]):
           spl.setSizes(ssz);
@@ -433,7 +433,7 @@ class MainWindow (QMainWindow):
     return;
 
   def openFile (self,filename=None,format=None,merge=False,show=True):
-    from Models import ModelClasses
+    from .Models import ModelClasses
     # check that we can close existing model
     if not merge and not self._canCloseExistingModel():
       return False;

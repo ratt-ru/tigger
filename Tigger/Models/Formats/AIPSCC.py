@@ -72,7 +72,7 @@ def load (filename,center=None,**kw):
   ff = file(filename);
   
   if center is None:
-    raise ValueError,"field centre must be specified";
+    raise ValueError("field centre must be specified");
 
   # now process file line-by-line
   linenum = 0;
@@ -85,7 +85,7 @@ def load (filename,center=None,**kw):
       continue;
     try:
       num = int(ff[0]);
-      dx,dy,i,i_tot = map(float,ff[1:]);
+      dx,dy,i,i_tot = list(map(float,ff[1:]));
     except:
       continue;
     try:
@@ -93,8 +93,8 @@ def load (filename,center=None,**kw):
       l,m = sin(dx*ARCSEC),sin(dy*ARCSEC);
       ra,dec = lm_to_radec(l,m,*center);
       pos = ModelClasses.Position(ra,dec);
-    except Exception,exc:
-      print "CC %d: error converting coordinates (%s), skipping"%(num,str(exc));
+    except Exception as exc:
+      print("CC %d: error converting coordinates (%s), skipping"%(num,str(exc)));
       continue;
     flux = ModelClasses.Flux(i);
     # now create a source object

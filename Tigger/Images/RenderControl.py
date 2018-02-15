@@ -127,7 +127,7 @@ class RenderControl (QObject):
     if self.hasSlicing():
       if self._config and self._config.has_option("slice"):
         try:
-          curslice = map(int,self._config.get("slice").split());
+          curslice = list(map(int,self._config.get("slice").split()));
         except:
           curslice = [];
         if len(curslice) == len(self._current_slice):
@@ -279,7 +279,7 @@ class RenderControl (QObject):
       self.setDisplayRange(write_config=write_config,*range);
 
   def setFullSubset (self,display_range=None,write_config=True):
-    shapedesc = u"\u00D7".join(["%d"%x for x in list(self.image.imageDims()) + [len(labels) for iaxis,name,labels in self._sliced_axes]]);
+    shapedesc = "\u00D7".join(["%d"%x for x in list(self.image.imageDims()) + [len(labels) for iaxis,name,labels in self._sliced_axes]]);
     desc = "full cube" if self._sliced_axes else "full image";
     self._resetDisplaySubset(self.image.data(),desc,range=self._fullrange,subset_type=self.SUBSET_FULL,
         write_config=write_config,set_display_range=False);

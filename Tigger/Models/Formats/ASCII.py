@@ -122,7 +122,7 @@ def load (filename,format=None,freq0=None,center_on_brightest=False,min_extent=0
   def get_ang_field (name,units=ANGULAR_UNITS):
     column = err_column = colunit = errunit = None
     units = units or ANGULAR_UNITS;
-    for unit,scale in units.iteritems():
+    for unit,scale in units.items():
       if column is None:
         column = format.get("%s_%s"%(name,unit));
         if column is not None:
@@ -155,14 +155,14 @@ def load (filename,format=None,freq0=None,center_on_brightest=False,min_extent=0
         # make list of fieldname,fieldnumber tuples
         fields = [ (field,i) for i,field in enumerate(format.split()) ];
         if not fields:
-          raise ValueError,"illegal format string in file: '%s'"%format;
+          raise ValueError("illegal format string in file: '%s'"%format);
         # last fieldname can end with ... to indicate that it absorbs the rest of the line
         if fields[-1][0].endswith('...'):
           fields[-1] = (fields[-1][0][:-3],slice(fields[-1][1],None));
         # make format dict
         format = dict(fields);
       elif not isinstance(format,dict):
-        raise TypeError,"invalid 'format' argument of type %s"%(type(format))
+        raise TypeError("invalid 'format' argument of type %s"%(type(format)))
         # nf = max(format.itervalues())+1;
         # fields = ['---']*nf;
         # for field,number in format.iteritems():
@@ -170,26 +170,26 @@ def load (filename,format=None,freq0=None,center_on_brightest=False,min_extent=0
         # format_str = " ".join(fields);
       # get list of custom attributes from format
       custom_attrs = [];
-      for name,col in format.iteritems():
+      for name,col in format.items():
         if name.startswith(":"):
           m = re.match("^:(bool|int|float|complex|str):([\w]+)$",name);
           if not m:
-            raise TypeError,"invalid field specification '%s' in format string"%name;
+            raise TypeError("invalid field specification '%s' in format string"%name);
           custom_attrs.append((eval(m.group(1)),m.group(2),col));
       # get minimum necessary fields from format
       name_field = format.get('name',None);
       # flux
       i_field,i_err_field = get_field("i");
       if i_field is None:
-        raise ValueError,"ASCII format specification lacks mandatory flux field ('i')";
+        raise ValueError("ASCII format specification lacks mandatory flux field ('i')");
       # main RA field
       ra_field,ra_scale,ra_err_field,ra_err_scale = get_ang_field('ra',ANGULAR_UNITS_RA);
       if ra_field is None:
-        raise ValueError,"ASCII format specification lacks mandatory Right Ascension field ('ra_h', 'ra_d' or 'ra_rad')";
+        raise ValueError("ASCII format specification lacks mandatory Right Ascension field ('ra_h', 'ra_d' or 'ra_rad')");
       # main Dec field
       dec_field,dec_scale,dec_err_field,dec_err_scale = get_ang_field('dec',ANGULAR_UNITS_DEC);
       if dec_field is None:
-        raise ValueError,"ASCII format specification lacks mandatory Declination field ('dec_d' or 'dec_rad')";
+        raise ValueError("ASCII format specification lacks mandatory Declination field ('dec_d' or 'dec_rad')");
       # polarization as QUV
       quv_fields = [ get_field(x) for x in ['q','u','v'] ];
       # linear polarization as fraction and angle
@@ -199,7 +199,7 @@ def load (filename,format=None,freq0=None,center_on_brightest=False,min_extent=0
         if not polpa_field is not None:
           polpa_field,polpa_scale = format.get('pol_pa_rad',None),1;
       # fields for extent parameters
-      extent_fields = [ get_ang_field(x,ANGULAR_UNITS) for x in 'emaj','emin','pa' ];
+      extent_fields = [ get_ang_field(x,ANGULAR_UNITS) for x in ('emaj','emin','pa') ];
       # all three must be present, else ignore
       if any( [ x[0] is None for x in extent_fields ] ):
         extent_fields = None;
@@ -393,7 +393,7 @@ def save (model,filename,sources=None,format=None,**kw):
   # convert this into format dict
   fields = [ [field,i] for i,field in enumerate(format_str.split()) ];
   if not fields:
-    raise ValueError,"illegal format string '%s'"%format;
+    raise ValueError("illegal format string '%s'"%format);
   # last fieldname can end with ... ("tags..."), so strip it
   if fields[-1][0].endswith('...'):
     fields[-1][0] = fields[-1][0][:-3];
@@ -404,9 +404,9 @@ def save (model,filename,sources=None,format=None,**kw):
   name_field = format.get('name',None);
   # main RA field
   ra_rad_field,ra_d_field,ra_h_field,ra_m_field,ra_s_field = \
-    [ format.get(x,None) for x in 'ra_rad','ra_d','ra_h','ra_m','ra_s' ];
+    [ format.get(x,None) for x in ('ra_rad','ra_d','ra_h','ra_m','ra_s') ];
   dec_rad_field,dec_d_field,dec_m_field,dec_s_field = \
-    [ format.get(x,None) for x in 'dec_rad','dec_d','dec_m','dec_s' ];
+    [ format.get(x,None) for x in ('dec_rad','dec_d','dec_m','dec_s') ];
   if ra_h_field is not None:
     ra_scale = 15;
     ra_d_field = ra_h_field;

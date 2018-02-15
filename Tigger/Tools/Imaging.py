@@ -66,7 +66,7 @@ def fitPsf (filename,cropsize=None):
   elif len(psf.shape) == 3:
     psf = psf[0,:,:];
   else:
-    raise RuntimeError,"illegal PSF shape %s"+psf.shape;
+    raise RuntimeError("illegal PSF shape %s"+psf.shape);
   nx,ny = psf.shape;
   # crop the central region
   if cropsize:
@@ -81,14 +81,14 @@ def fitPsf (filename,cropsize=None):
     iy = numpy.where(psf[nx//2,:]<0)[0];
     iy0 = max(iy[iy<ny//2]);
     iy1 = min(iy[iy>ny//2]);
-    print ix0,ix1,iy0,iy1;
+    print(ix0,ix1,iy0,iy1);
     psf = psf[ix0:ix1,iy0:iy1];
   psf[psf<0] = 0;
 
   # estimate gaussian parameters, then fit
-  import gaussfitter2
+  from . import gaussfitter2
   parms0 = gaussfitter2.moments(psf,circle=0,rotate=1,vheight=0);
-  print parms0;
+  print(parms0);
   dprint(2,"Estimated parameters are",parms0);
   parms = gaussfitter2.gaussfit(psf,None,parms0,autoderiv=1,return_all=0,circle=0,rotate=1,vheight=0);
   dprint(0,"Fitted parameters are",parms);
@@ -117,7 +117,7 @@ def convolveGaussian (x1,y1,p1,x2,y2,p2):
     with another Gaussian given by x2,y2,p2, and returns the extents 
     and angle of the resulting Gaussian."""
     # convert to Fourier plane extents, FT transforms a -> pi^2/a
-    u1,v1,u2,v2 = [ (math.pi**2)*2*a**2 for a in x1,y1,x2,y2 ];
+    u1,v1,u2,v2 = [ (math.pi**2)*2*a**2 for a in (x1,y1,x2,y2) ];
 #    print "uv coeffs",u1,v1,u2,v2;
     c1,s1 = math.cos(p1),math.sin(p1);
     c2,s2 = math.cos(p2),math.sin(p2);
@@ -190,12 +190,12 @@ def getImageCube (fitshdu,filename="",extra_axes=None):
       iy = iax;
     elif ctype == 'STOKES':
       if istokes is not None:
-        raise ValueError,"duplicate STOKES axis in FITS file %s"%filename;
+        raise ValueError("duplicate STOKES axis in FITS file %s"%filename);
       istokes = iax;
       crval = hdr.get('CRVAL'+axs,0);
       cdelt = hdr.get('CDELT'+axs,1);
       crpix = hdr.get('CRPIX'+axs,1)-1;
-      values = map(int,list(crval + (numpy.arange(data.shape[iax]) - crpix)*cdelt));
+      values = list(map(int,list(crval + (numpy.arange(data.shape[iax]) - crpix)*cdelt)));
       stokes_names = [ (FITSHeaders.StokesNames[i]
                         if i>0 and i<len(FITSHeaders.StokesNames) else "%d"%i) for i in values ];
     else:
@@ -203,7 +203,7 @@ def getImageCube (fitshdu,filename="",extra_axes=None):
       other_axes_ctype.append(ctype);
   # not found?
   if ix is None or iy is None:
-    raise ValueError,"FITS file %s does not appear to contain an X and/or Y axis"%filename;
+    raise ValueError("FITS file %s does not appear to contain an X and/or Y axis"%filename);
   # form up shape of resulting image, and order of axes for transpose
   shape = [data.shape[ix],data.shape[iy]];
   axes = [ix,iy];
@@ -474,7 +474,7 @@ def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_bea
       # model_stp will be [0,-1,-1,1]
       model_stp = [ (model_stokes.index(st) if st in model_stokes else -1) for st in stokes ];
       if model_stp[0] < 0:
-        print "Warning: model image %s lacks Stokes %s, skipping."%(src.shape.filename,model_stokes[0]);
+        print("Warning: model image %s lacks Stokes %s, skipping."%(src.shape.filename,model_stokes[0]));
         continue;
       # figure out whether the images overlap at all
       # in the trivial case, both images have the same WCS, so no resampling is needed
@@ -494,8 +494,8 @@ def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_bea
           continue;
       # warn about ignored model axes (e.g. when model has frequency and our output doesn't)
       if removed_model_axes:
-        print "Warning: model image %s has one or more axes that are not present in the output image:"%src.shape.filename;
-        print "  taking the first plane along (%s)."%(",".join(removed_model_axes));
+        print("Warning: model image %s has one or more axes that are not present in the output image:"%src.shape.filename);
+        print("  taking the first plane along (%s)."%(",".join(removed_model_axes)));
       # evaluate convolution kernel for this model scale, if not already cached
       conv_kernel = conv_kernels.get((modelproj.xscale,modelproj.yscale),None);
       if conv_kernel is None:
@@ -538,8 +538,8 @@ def restoreSources (fits_hdu,sources,gmaj,gmin=None,grot=0,freq=None,primary_bea
           model_indices = indices;
         # else error
         else:
-          raise RuntimeError,"axis %s of model image %s doesn't match that of output image"%\
-                              (extra_data_axes[axis-3],src.shape.filename);
+          raise RuntimeError("axis %s of model image %s doesn't match that of output image"%\
+                              (extra_data_axes[axis-3],src.shape.filename));
         # update list of slices
         slices =[ (sd0+sd,si0+si) for sd0,si0 in slices for sd,si in zip(indices,model_indices) ];
       # now loop over slices and assign

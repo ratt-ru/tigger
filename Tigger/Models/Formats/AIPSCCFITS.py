@@ -84,7 +84,7 @@ def load (filename,center=None,**kw):
     ra  = hdr['CRVAL1'] * _units[hdr.get('CUNIT1','DEG').strip()]
     dec = hdr['CRVAL2'] * _units[hdr.get('CUNIT2','DEG').strip()]
 
-    print "Using FITS image centre (%.4f, %.4f deg) as field centre" % (ra/DEG, dec/DEG)
+    print("Using FITS image centre (%.4f, %.4f deg) as field centre" % (ra/DEG, dec/DEG))
     center = ra, dec
 
   # now process file line-by-line
@@ -93,7 +93,7 @@ def load (filename,center=None,**kw):
   ux = _units[hdr.get('TUNIT2','DEG').strip()]
   uy = _units[hdr.get('TUNIT3','DEG').strip()]
   for num,ccrec in enumerate(cclist):
-    stokes_i,dx,dy = map(float,ccrec);
+    stokes_i,dx,dy = list(map(float,ccrec));
     # convert dx/dy to real positions
     l,m = sin(dx*ux), sin(dy*uy);
     ra,dec = lm_to_radec(l,m,*center);

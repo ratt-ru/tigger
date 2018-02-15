@@ -69,29 +69,29 @@ class ModelItem (object):
     mandatory attributes, and its keyword arguments as optional attributes""";
     # check for argument errors
     if len(args) < len(self.mandatory_attrs):
-      raise TypeError,"too few arguments in constructor of "+self.__class__.__name__;
+      raise TypeError("too few arguments in constructor of "+self.__class__.__name__);
     if len(args) > len(self.mandatory_attrs):
-      raise TypeError,"too many arguments in constructor of "+self.__class__.__name__;
+      raise TypeError("too many arguments in constructor of "+self.__class__.__name__);
     # set mandatory attributes from argument list
     for attr,value in zip(self.mandatory_attrs,args):
       if not isinstance(value,AllowedTypesTuple):
-        raise TypeError,"invalid type %s for attribute %s (class %s)"%(type(value).__name__,attr,self.__class__.__name__);
+        raise TypeError("invalid type %s for attribute %s (class %s)"%(type(value).__name__,attr,self.__class__.__name__));
       setattr(self,attr,value);
     # set optional attributes from keywords
-    for kw,default in self.optional_attrs.iteritems():
+    for kw,default in self.optional_attrs.items():
       value = kws.pop(kw,default);
       if not isinstance(value,AllowedTypesTuple):
-        raise TypeError,"invalid type %s for attribute %s (class %s)"%(type(value).__name__,kw,self.__class__.__name__);
+        raise TypeError("invalid type %s for attribute %s (class %s)"%(type(value).__name__,kw,self.__class__.__name__));
       setattr(self,kw,value);
     # set extra attributes, if any are left
     self._extra_attrs = set();
     if self.allow_extra_attrs:
-      for kw,value in kws.iteritems():
+      for kw,value in kws.items():
         if not isinstance(value,AllowedTypesTuple):
-          raise TypeError,"invalid type %s for attribute %s (class %s)"%(type(value).__name__,kw,self.__class__.__name__);
+          raise TypeError("invalid type %s for attribute %s (class %s)"%(type(value).__name__,kw,self.__class__.__name__));
         self.setAttribute(kw,value);
     elif kws:
-        raise TypeError,"unknown parameters %s in constructor of %s"%(','.join(kws.keys()),self.__class__.__name__);
+        raise TypeError("unknown parameters %s in constructor of %s"%(','.join(list(kws.keys())),self.__class__.__name__));
     # other init
     self._signaller = None;
     self._connections = set();
@@ -107,7 +107,7 @@ class ModelItem (object):
   def connect (self,signal_name,receiver,reconnect=False):
     """Connects SIGNAL from object to specified receiver slot. If reconnect is True, allows duplicate connections.""";
     if not self._signaller:
-      raise RuntimeError,"ModelItem.connect() called before enableSignals()";
+      raise RuntimeError("ModelItem.connect() called before enableSignals()");
     import PyQt4.Qt;
     if reconnect or (signal_name,receiver) not in self._connections:
       self._connections.add((signal_name,receiver));
@@ -116,16 +116,16 @@ class ModelItem (object):
   def emit (self,signal_name,*args):
     """Emits named SIGNAL from this object .""";
     if not self._signaller:
-      raise RuntimeError,"ModelItem.emit() called before enableSignals()";
+      raise RuntimeError("ModelItem.emit() called before enableSignals()");
     import PyQt4.Qt;
     self._signaller.emit(PyQt4.Qt.SIGNAL(signal_name),*args);
 
   def registerClass (classobj):
     if not isinstance(classobj,type):
-      raise TypeError,"registering invalid class object: %s"%classobj;
+      raise TypeError("registering invalid class object: %s"%classobj);
     globals()[classobj.__name__] = classobj;
     AllowedTypes[classobj.__name__] = classobj;
-    AllowedTypesTuple = tuple(AllowedTypes.itervalues());
+    AllowedTypesTuple = tuple(AllowedTypes.values());
   registerClass = classmethod(registerClass);
 
   def setAttribute (self,attr,value):
@@ -145,7 +145,7 @@ class ModelItem (object):
   def getAttributes (self):
     """Returns list of all attributes (mandatory+optional+extra), as (attr,value) tuples""";
     attrs = [ (attr,getattr(self,attr)) for attr in self.mandatory_attrs ];
-    for attr,default in self.optional_attrs.iteritems():
+    for attr,default in self.optional_attrs.items():
       val = getattr(self,attr,default);
       if val != default:
         attrs.append((attr,val));
@@ -206,7 +206,7 @@ class ModelItem (object):
     elif isinstance(tags,(list,tuple)):
       tag,tags = tags[0],tags[1:];   # stack of tags supplied: use first here, pass rest to sub-items
     else:
-      raise ValueError,"invalid 'tags' parameter of type "+str(type(tags));
+      raise ValueError("invalid 'tags' parameter of type "+str(type(tags)));
     # if tag is None, use default
     tag = tag or self.attr_rendertag.get(attr,None) or "A";
     if tag.endswith('\n'):
@@ -238,7 +238,7 @@ class ModelItem (object):
     for attr in self.mandatory_attrs:
       markup += self.renderAttrMarkup(attr,getattr(self,attr),tags=tags,mandatory=True);
     # write optional attributes only wheh non-default
-    for attr,default in sorted(self.optional_attrs.iteritems()):
+    for attr,default in sorted(self.optional_attrs.items()):
       val = getattr(self,attr,default);
       if val != default:
         markup += self.renderAttrMarkup(attr,val,tags=tags);
@@ -250,11 +250,11 @@ class ModelItem (object):
     return markup;
     
   numpy_int_types = tuple([
-      getattr(numpy,"%s%d"%(t,d)) for t in "int","uint" for d in 8,16,32,64 
+      getattr(numpy,"%s%d"%(t,d)) for t in ("int","uint") for d in 8,16,32,64 
       if hasattr(numpy,"%s%d"%(t,d))
     ]);
   numpy_float_types = tuple([
-      getattr(numpy,"float%d"%d) for d in 32,64,96,128 
+      getattr(numpy,"float%d"%d) for d in (32,64,96,128) 
       if hasattr(numpy,"float%d"%d)
     ]);
 
@@ -294,7 +294,7 @@ class ModelItem (object):
       markup += ">";
       if verbose:
         markup += comment%(verbose+":");
-      for key,item in sorted(value.iteritems()):
+      for key,item in sorted(value.items()):
         markup += self.renderAttrMarkup(key,item,tags=tags);
     # render everything else inline
     else:
@@ -424,13 +424,13 @@ class FITSImage (Shape):
 startup_dprint(1,"end of class defs");
 
 # populate dict of AllowedTypes with all classes defined so far
-globs = list(globals().iteritems());
+globs = list(globals().items());
 
-AllowedTypes = dict(AtomicTypes.iteritems());
+AllowedTypes = dict(iter(AtomicTypes.items()));
 AllowedTypes['NoneType'] = type(None);  # this must be a type, otherwise isinstance() doesn't work
 for name,val in globs:
   if isinstance(val,type):
     AllowedTypes[name] = val;
-AllowedTypesTuple = tuple(AllowedTypes.itervalues());
+AllowedTypesTuple = tuple(AllowedTypes.values());
 
 startup_dprint(1,"end of ModelClasses");

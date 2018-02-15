@@ -24,7 +24,7 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-import ModelClasses
+from . import ModelClasses
 import math
 
 # string used to indicate default value of an attribute
@@ -76,10 +76,10 @@ class PlotStyle (ModelClasses.ModelItem):
   optional_attrs = DefaultPlotAttrs;
 
   def copy (self):
-    return PlotStyle(**dict([(attr,getattr(self,attr,default)) for attr,default in DefaultPlotAttrs.iteritems()]))
+    return PlotStyle(**dict([(attr,getattr(self,attr,default)) for attr,default in DefaultPlotAttrs.items()]))
 
   def update (self,other):
-    for attr in DefaultPlotAttrs.iterkeys():
+    for attr in DefaultPlotAttrs.keys():
       val = getattr(other,attr,None);
       if val is not None and val != DefaultValue:
         setattr(self,attr,val);
@@ -122,7 +122,7 @@ def makeSourceLabel (label,src):
     return "";
   global _label_keys;
   lbl = label;
-  for key,func in _label_keys.iteritems():
+  for key,func in _label_keys.items():
     if lbl.find(key) >= 0:
       lbl = lbl.replace(key,func(src));
   return lbl;

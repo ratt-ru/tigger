@@ -28,7 +28,7 @@ import time
 import os.path
 import sys
 import traceback
-from HTMLParser import HTMLParser
+from html.parser import HTMLParser
 
 import Kittens.utils
 _verbosity = Kittens.utils.verbosity(name="lsmhtml");
@@ -89,7 +89,7 @@ def load (filename,**kw):
       parser.feed(line);
   parser.close();
   if not parser.toplevel_objects:
-    raise RuntimeError,"failed to load sky model from file %s"%filename;
+    raise RuntimeError("failed to load sky model from file %s"%filename);
   return parser.toplevel_objects[0];
 
 class ModelIndexParser (HTMLParser):

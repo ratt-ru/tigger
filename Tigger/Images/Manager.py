@@ -411,7 +411,7 @@ Examples:  "(a+b)/2", "cos(a)+sin(b)", "a-a.mean()", "fft.fft2(a)", etc.""");
     try:
       exprfunc = eval("lambda "+(",".join([ x[0] for x in arglist ]))+":"+expression,
                       numpy.__dict__,{});
-    except Exception,exc:
+    except Exception as exc:
       self.showErrorMessage("""Error parsing expression "%s": %s."""%(expression,str(exc)));
       return None;
     # try to evaluate expression
@@ -429,7 +429,7 @@ Examples:  "(a+b)/2", "cos(a)+sin(b)", "a-a.mean()", "fft.fft2(a)", etc.""");
       return array.reshape(trimshape(array.shape));
     try:
       result = exprfunc(*[trimarray(x[1].data()) for x in arglist]);
-    except Exception,exc:
+    except Exception as exc:
       busy = None;
       traceback.print_exc();
       self.showErrorMessage("""Error evaluating "%s": %s."""%(expression,str(exc)));

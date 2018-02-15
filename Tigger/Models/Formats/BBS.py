@@ -61,7 +61,7 @@ class CatalogLine (object):
     self._fields = fields;
     if fields:
       # parse fields
-      for field,number in parser.field_number.iteritems():
+      for field,number in parser.field_number.items():
         fval = fields[number].strip() if number < len(fields) else '';
         if not fval:
           fval = parser.field_default.get(field,'');
@@ -71,7 +71,7 @@ class CatalogLine (object):
       self.dec_rad = parser.getAngle(self,'Dec','dech','decd','decm','decs');
     else:
       # else make empty line
-      for field in parser.field_number.iterkeys():
+      for field in parser.field_number.keys():
         setattr(self,field,'');
         
   def setPosition (self,ra,dec):
@@ -84,13 +84,13 @@ class CatalogLine (object):
     """Converts into a string using the designated parser""";
     # build up dict of valid fields
     fields = {};
-    for field,num in self._parser.field_number.iteritems():
+    for field,num in self._parser.field_number.items():
       value = getattr(self,field,None);
       if value:
         fields[num] = value;
     # output
     output = "";
-    nfields = max(fields.iterkeys())+1;
+    nfields = max(fields.keys())+1;
     for i in range(nfields):
       sep = self._parser.separators[i] if i<nfields-1 else '';
       output += "%s%s"%(fields.get(i,''),sep);
@@ -166,7 +166,7 @@ class CatalogParser (object):
       else:
         match = re.match('([+-]?\s*\d+).(\d+).(.*)$',fstr);
         if not match:
-          raise ValueError,"invalid direction '%s'"%fstr;
+          raise ValueError("invalid direction '%s'"%fstr);
       d,m,s = match.groups();
     else:
       if self.defines(fh):
@@ -221,7 +221,7 @@ def load (filename,freq0=None,center_on_brightest=False,**kw):
   line0 = ff.readline().strip();
   match = re.match("#\s*\((.+)\)\s*=\s*format",line0);
   if not match:
-    raise ValueError,"line 1 is not a valid format specification";
+    raise ValueError("line 1 is not a valid format specification");
   format_str = match.group(1);
   # create format parser from this string
   parser = CatalogParser(format_str);
@@ -229,7 +229,7 @@ def load (filename,freq0=None,center_on_brightest=False,**kw):
   # check for mandatory fields
   for field in "Name","Type":
     if not parser.defines(field):
-      raise ValueError,"Table lacks mandatory field '%s'"%field;
+      raise ValueError("Table lacks mandatory field '%s'"%field);
 
   maxbright = 0;
   patches = [];
@@ -257,7 +257,7 @@ def load (filename,freq0=None,center_on_brightest=False,**kw):
       # check source type
       stype = catline.Type.upper();
       if stype not in ("POINT","GAUSSIAN"):
-        raise ValueError,"unsupported source type %s"%stype;
+        raise ValueError("unsupported source type %s"%stype);
       # see if we have freq0
       if freq0:
         f0 = freq0;
@@ -343,7 +343,7 @@ def save (model,filename,sources=None,format=None,**kw):
   # check for mandatory fields
   for field in "Name","Type":
     if not parser.defines(field):
-      raise ValueError,"Output format lacks mandatory field '%s'"%field;
+      raise ValueError("Output format lacks mandatory field '%s'"%field);
   # open file
   ff = open(filename,mode="wt");
   ff.write("# (%s) = format\n# The above line defines the field order and is required.\n\n"%format);

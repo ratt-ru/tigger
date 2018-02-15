@@ -62,7 +62,7 @@ try:
   from astLib.astWCS import WCS
   import PyWCSTools.wcs
 except ImportError:
-  print "Failed to import the astLib.astWCS and/or PyWCSTools module. Please install the astLib package (http://astlib.sourceforge.net/)."
+  print("Failed to import the astLib.astWCS and/or PyWCSTools module. Please install the astLib package (http://astlib.sourceforge.net/).")
   raise;
 
 startup_dprint(1,"imported WCS");
@@ -89,7 +89,7 @@ def angular_dist_pos_angle2 (ra1,dec1,ra2,dec2):
   x = cosa*sind0 - sind*cosd0;
   y = sina;
   z = cosa*cosd0 + sind*sind0;
-  print x,y,z;
+  print(x,y,z);
   PA = numpy.arctan2(y,-x);
   R = numpy.arccos(z);
 
@@ -105,7 +105,7 @@ def angular_dist_pos_angle2 (ra1,dec1,ra2,dec2):
   x = cosa*sind0 - sind*cosd0;
   y = sina;
   z = cosa*cosd0 + sind*sind0;
-  print x,y,z;
+  print(x,y,z);
   PA = numpy.arctan2(y,-x);
   R = numpy.arccos(z);
   return R,PA;
@@ -192,13 +192,13 @@ class _Projector (object):
       return cls(ra0,dec0).offset(dra,ddec);
 
     def lm (self,ra,dec):
-      raise TypeError,"lm() not yet implemented in projection %s"%type(self).__name__;
+      raise TypeError("lm() not yet implemented in projection %s"%type(self).__name__);
 
     def offset (self,dra,ddec):
-      raise TypeError,"offset() not yet implemented in projection %s"%type(self).__name__;
+      raise TypeError("offset() not yet implemented in projection %s"%type(self).__name__);
 
     def radec (self,l,m):
-      raise TypeError,"radec() not yet implemented in projection %s"%type(self).__name__;
+      raise TypeError("radec() not yet implemented in projection %s"%type(self).__name__);
 
 class Projection (object):
   """Projection is a container for the different projection classes.
@@ -221,7 +221,7 @@ class Projection (object):
         self.yscale = self.wcs.getYPixelSizeDeg()*DEG;
         has_projection = True;
       except:
-        print "No WCS in FITS file, falling back to pixel coordinates.";
+        print("No WCS in FITS file, falling back to pixel coordinates.");
         ra0 = dec0 = self.xpix0 = self.ypix0 = 0;
         self.xscale = self.yscale = DEG/3600;
         has_projection = False;

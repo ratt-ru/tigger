@@ -95,13 +95,13 @@ if __name__ == '__main__':
         break;
       dirname = os.path.dirname(dirname);
     else:
-      print "Unable to locate the Tigger directory, it is not a parent of %s. Please check your installation and/or PYTHONPATH."%os.path.realpath(__file__);
+      print("Unable to locate the Tigger directory, it is not a parent of %s. Please check your installation and/or PYTHONPATH."%os.path.realpath(__file__));
       sys.exit(1);
     sys.path.append(os.path.dirname(dirname));
     try:
       import Tigger
     except:
-      print "Unable to import the Tigger package from %s. Please check your installation and PYTHONPATH."%dirname;
+      print("Unable to import the Tigger package from %s. Please check your installation and PYTHONPATH."%dirname);
       sys.exit(1);
 
   # some things can implicitly invoke matplotlib, which can cry when no X11 is around
@@ -274,7 +274,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
   min_extent = (options.min_extent/3600)*DEG;
   
   if options.help_format:
-    print ASCII.FormatHelp;
+    print(ASCII.FormatHelp);
     sys.exit(0);
 
   # get filenames
@@ -303,8 +303,8 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
         import pyrap.quanta
       except:
         traceback.print_exc();
-        print "Failed to import pyrap.measures, which is required by one of the options you specified."
-        print "You probably need to install the 'pyrap' package for this to work."
+        print("Failed to import pyrap.measures, which is required by one of the options you specified.")
+        print("You probably need to install the 'pyrap' package for this to work.")
         sys.exit(1);
       measures_dmdq = pyrap.measures.measures(),pyrap.quanta
     return measures_dmdq;
@@ -323,7 +323,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
       qq = dm.get_value(coord_dir);
       return [ q.get_value('rad') for q in qq ];
     except:
-      print "Error parsing or converting coordinate string '%s', see traceback:"%coords;
+      print("Error parsing or converting coordinate string '%s', see traceback:"%coords);
       traceback.print_exc();
       sys.exit(1);
 
@@ -357,7 +357,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
 
   selections = [];
   for selstr in (options.select or []):
-    match = re.match("^(?i)([^=<>!.]+)(%s)([^dms]+)([dms])?"%"|".join([ key.replace('.','\.') for key in select_predicates.keys()]),selstr);
+    match = re.match("^(?i)([^=<>!.]+)(%s)([^dms]+)([dms])?"%"|".join([ key.replace('.','\.') for key in list(select_predicates.keys())]),selstr);
     if not match:
       parser.error("Malformed --select string '%s'."%selstr);
     try:
@@ -371,7 +371,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
   try:
     input_type,import_func,dum,input_doc = Tigger.Models.Formats.resolveFormat(skymodel,options.type if options.type != AUTO else None);
   except:
-    print "Unable to determine model type for %s, please specify one explicitly with the -t/--type option."%skymodel;
+    print("Unable to determine model type for %s, please specify one explicitly with the -t/--type option."%skymodel);
     sys.exit(1);
 
   # figure out output type, if explicitly specified
@@ -383,13 +383,13 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
     output_type,dum,export_func,output_doc = Tigger.Models.Formats.getFormat(options.output_type);
     output_extensions = Tigger.Models.Formats.getFormatExtensions(options.output_type);
     if not export_func or not extensions:
-      print "Output model type '%s' is not supported."%options.output_type;
+      print("Output model type '%s' is not supported."%options.output_type);
       sys.exit(1);
 
   # figure out output name, if not specified
   if output is None:
     if not output_type:
-      print "An output filename and/or an explicit output model type (-o/--output-type) must be specfified.";
+      print("An output filename and/or an explicit output model type (-o/--output-type) must be specfified.");
       sys.exit(1);
     # get base input name
     # if input extension is "lsm.html", then split off two extensions, not just one
@@ -404,29 +404,29 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
     except:
       export_func = None;
     if not export_func:
-      print "Unable to determine model type for %s, please specify one explicitly with the -o/--output-type option."%output;
+      print("Unable to determine model type for %s, please specify one explicitly with the -o/--output-type option."%output);
       sys.exit(1);
 
   # check if we need to overwrite
   if os.path.exists(output) and not options.force:
-    print "Output file %s already exists. Use the -f switch to overwrite."%output;
+    print("Output file %s already exists. Use the -f switch to overwrite."%output);
     sys.exit(1);
 
-  print "Reading %s (%s)"%(skymodel,input_doc);
+  print("Reading %s (%s)"%(skymodel,input_doc));
 
   # load the model
   try:
     model = import_func(skymodel,min_extent=min_extent,format=options.format,center=center_radec,verbose=options.verbose);
-  except Exception,exc:
+  except Exception as exc:
     if options.verbose:
       traceback.print_exc();
-    print "Error loading model:",str(exc);
+    print("Error loading model:",str(exc));
     sys.exit(1);
   sources = model.sources;
   if not sources:
-    print "Input model %s contains no sources"%skymodel;
+    print("Input model %s contains no sources"%skymodel);
   else:
-    print "Model contains %d sources"%len(sources);
+    print("Model contains %d sources"%len(sources));
 
   # append, if specified
   if options.append:
@@ -436,9 +436,9 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
         append_type,append_func,dum,append_doc = Tigger.Models.Formats.resolveFormat(filename,
             options.append_type if options.append_type != AUTO else None);
       except:
-        print "Unable to determine model type for %s, please specify one explicitly with the --append-type option."%filename;
+        print("Unable to determine model type for %s, please specify one explicitly with the --append-type option."%filename);
         sys.exit(1);
-      print "Reading %s (%s)"%(filename,append_doc);
+      print("Reading %s (%s)"%(filename,append_doc));
       # read model to be appended
       model2 = append_func(filename,min_extent=min_extent,format=options.append_format or options.format);
       if model2.sources:
@@ -449,11 +449,11 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
         if options.refresh_r:
           for src in model2.sources:
             src.setAttribute('r',Coordinates.angular_dist_pos_angle(ra0,dec0,*model.fieldCenter())[0]);
-      print "Appended %d sources from %s (%s)"%(len(model2.sources),filename,append_doc);
+      print("Appended %d sources from %s (%s)"%(len(model2.sources),filename,append_doc));
 
   # apply center, if specified
   if options.center:
-    print "Center of field set to %s"%options.center;
+    print("Center of field set to %s"%options.center);
     model.setFieldCenter(*center_radec);
 
   # apply selection by tag
@@ -464,18 +464,18 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
     for tag in tags:
       sources = [ src for src in sources if getattr(src,tag,False) ]
     if not sources:
-      print "No sources left after selection by tag (-T/--tag) has been applied.";
+      print("No sources left after selection by tag (-T/--tag) has been applied.");
       sys.exit(0);
-    print "Selection by tag (%s) reduces this to %d sources"%(", ".join(options.tags),len(sources));
+    print("Selection by tag (%s) reduces this to %d sources"%(", ".join(options.tags),len(sources)));
 
   # apply selection by NaN
   if options.remove_nans:
     sources = [ src for src in sources if not any([ math.isnan(x) 
-      for x in src.pos.ra,src.pos.dec,src.flux.I ]) ];
+      for x in (src.pos.ra,src.pos.dec,src.flux.I) ]) ];
     if not sources:
-      print "No sources left after applying --remove-nans.";
+      print("No sources left after applying --remove-nans.");
       sys.exit(0);
-    print "Removing NaN positions and fluxes reduces this to %d sources"%len(sources);
+    print("Removing NaN positions and fluxes reduces this to %d sources"%len(sources));
 
   # remove sources
   if options.remove_source:
@@ -486,7 +486,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
         patt = patt[1:-1]
       match = fnmatch.filter([src.name for src in sources],patt.replace("\\",""))
       remove_names.update(match);
-      print "Removing sources: %s matches %s"%(patt,",".join(sorted(match)));
+      print("Removing sources: %s matches %s"%(patt,",".join(sorted(match))));
     sources = [ src for src in sources if src.name not in remove_names ];
 
   # add brick
@@ -502,7 +502,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
       except:
         parser.error("Invalid --add-brick setting %s"%brickspec);
       if [ src.name for src in sources if src.name == name ]:
-        print "Error: model already contains a source named '%s'"%name;
+        print("Error: model already contains a source named '%s'"%name);
       # add brick
       import pyfits
       from astLib.astWCS import WCS
@@ -539,7 +539,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
       if not options.refresh_r:
         source.setAttribute('r',Coordinates.angular_dist_pos_angle(ra0,dec0,*model.fieldCenter())[0]);
       sources.append(source);
-      print "Adding FITS source %s (%s,pad=%f) with tags %s"%(srcname,fitsfile,pad,tags);
+      print("Adding FITS source %s (%s,pad=%f) with tags %s"%(srcname,fitsfile,pad,tags));
 
   # convert apparent flux to intrinsic using the NEWSTAR beam gain
   if options.newstar_app_to_int:
@@ -554,9 +554,9 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
         src.removeAttribute('flux_apparent');
         src.setAttribute('flux_intrinsic',True);
         nsrc += 1;
-    print "Converted NEWSTAR apparent to intrinsic flux for %d model sources"%nsrc;
+    print("Converted NEWSTAR apparent to intrinsic flux for %d model sources"%nsrc);
     if len(sources) != nsrc:
-      print "  (%d sources were skipped for whatever reason.)"%(len(model.sources)-nsrc);
+      print("  (%d sources were skipped for whatever reason.)"%(len(model.sources)-nsrc));
   elif options.newstar_int_to_app:
     nsrc = 0;
     for src in sources:
@@ -569,18 +569,18 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
         src.removeAttribute('flux_intrinsic');
         src.setAttribute('flux_apparent',True);
         nsrc += 1;
-    print "Converted NEWSTAR apparent to intrinsic flux for %d model sources"%nsrc;
+    print("Converted NEWSTAR apparent to intrinsic flux for %d model sources"%nsrc);
     if len(sources) != nsrc:
-      print "  (%d sources were skipped for whatever reason.)"%(len(model.sources)-nsrc);
+      print("  (%d sources were skipped for whatever reason.)"%(len(model.sources)-nsrc));
   
   # set refrence frequency
   if options.ref_freq >= 0:
     model.setRefFreq(options.ref_freq*1e+6);
-    print "Setting reference frequency to %f MHz"%options.ref_freq;
+    print("Setting reference frequency to %f MHz"%options.ref_freq);
 
   # recenter
   if options.recenter:
-    print "Shifting model to new center %s"%options.recenter;
+    print("Shifting model to new center %s"%options.recenter);
     ra0,dec0 = model.fieldCenter();
     field_center = ra1,dec1 = recenter_radec;
     ddec = dec1 - dec0;
@@ -598,7 +598,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
 
   # recompute radial distance
   if options.refresh_r:
-    print "Recomputing the 'r' attribute based on the field center";
+    print("Recomputing the 'r' attribute based on the field center");
     model.recomputeRadialDistance();
 
   # select
@@ -613,7 +613,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
     # get tag value
     srctag = [ (src,getTagValue(src,tag)) for src in model.sources ];
     sources = [ src for src,tag in srctag if tag is not None and predicate(tag,value) ];
-    print "Selection '%s' leaves %d out of %d sources"%(selstr,len(sources),len(model.sources));
+    print("Selection '%s' leaves %d out of %d sources"%(selstr,len(sources),len(model.sources)));
     if len(sources) != len(model.sources):
       model.setSources(sources);
 
@@ -622,15 +622,15 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
   if pb == "refresh":
     pb = model.primaryBeam();
     if pb:
-      print "Recalculating apparent fluxes";
+      print("Recalculating apparent fluxes");
     else:
-      print "No primary beam expression in model, ignoring '--primary-beam refresh' option";
+      print("No primary beam expression in model, ignoring '--primary-beam refresh' option");
   if options.app_to_int or options.int_to_app:
     pb = pb or model.primaryBeam();
     if pb:
-      print "Converting apparent fluxes to intrinsic" if options.app_to_int else "Converting intrinsic fluxes to apparent";
+      print("Converting apparent fluxes to intrinsic" if options.app_to_int else "Converting intrinsic fluxes to apparent");
     else:
-      print "No primary beam expression in model and no --primary-beam option given, cannot convert between apparent and intrinsic.";
+      print("No primary beam expression in model and no --primary-beam option given, cannot convert between apparent and intrinsic.");
       sys.exit(1);
   if pb:
     fitsBeam=False
@@ -667,12 +667,12 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
       vbs=[]
       for icorr,corr in enumerate( CORRS_XY if options.linear_pol else CORRS_RL ):
         if icorr in (1,2):
-          print '  omitting %s beam due to --beam-diag'%corr
+          print('  omitting %s beam due to --beam-diag'%corr)
           vbs.append(0)
         else:
           # make FITS images or nulls for real and imaginary part
           filenames = [ make_beam_filename(pb,corr,'re'), make_beam_filename(pb,corr,'im') ]
-          print 'Loading FITS Beams',filenames[0],filenames[1]
+          print('Loading FITS Beams',filenames[0],filenames[1])
           vb = InterpolatedBeams.LMVoltageBeam(verbose=(options.verbose or 0)-2,l_axis=options.fits_l_axis,m_axis=options.fits_m_axis)
           vb.read(*filenames)
           vbs.append(vb)
@@ -681,7 +681,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
       # get frequency
      # fq = model.refFreq() or 1.4e+9;
       beamRefFreq = (options.beam_freq or 0)*1e+6 or model.refFreq() or 1424500000.12
-      print "Using FITS beams with reference frequency %f MHz"%(beamRefFreq*1e-6);
+      print("Using FITS beams with reference frequency %f MHz"%(beamRefFreq*1e-6));
 
     else: #else, assume pb is an expession
       try:
@@ -689,15 +689,15 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
         pbexp = eval('lambda r,fq:'+pb);
         dum = pbexp(0,1e+9); # evaluate at r=0 and 1 GHz as a test
         if not isinstance(dum,float):
-          raise TypeError,"does not evaluate to a float";
-      except Exception,exc:
-        print "Bad primary beam expression '%s': %s"%(pb,str(exc));
+          raise TypeError("does not evaluate to a float");
+      except Exception as exc:
+        print("Bad primary beam expression '%s': %s"%(pb,str(exc)));
         sys.exit(1);
       model.setPrimaryBeam(pb);
       # get frequency
       # fq = model.refFreq() or 1.4e+9;
       fq = (options.beam_freq or 0)*1e+6 or model.refFreq() or 1424500000.12
-      print "Using beam expression '%s' with reference frequency %f MHz"%(pb,fq*1e-6);
+      print("Using beam expression '%s' with reference frequency %f MHz"%(pb,fq*1e-6));
 
     nsrc = 0;
     # ensure that every source has an 'r' attribute
@@ -714,7 +714,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
           src.setAttribute('beamgain',bg);
           src.setAttribute('Iapp',src.flux.I*bg);
           nsrc += 1;
-      print "Applied primary beam expression to %d model sources"%nsrc;
+      print("Applied primary beam expression to %d model sources"%nsrc);
     else:
       # precompute PAs if fitsBeams are used
       if fitsBeam:
@@ -743,7 +743,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
           pas = [];
           zenith = dm.direction('AZEL','0deg','90deg')
           for ms,field in ms_field:
-            print "Getting PA range from MS %s, field %d"%(ms, field);
+            print("Getting PA range from MS %s, field %d"%(ms, field));
             tab = table(ms)
             antpos = table(tab.getkeyword("ANTENNA")).getcol("POSITION");
             ra,dec = table(tab.getkeyword("FIELD")).getcol("PHASE_DIR",field,1)[0][0]
@@ -764,13 +764,13 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
               pylab.xlabel("Time since beginning of observation, hours")
               pylab.ylabel("PA, degrees"); 
               pylab.savefig(os.path.basename(ms)+".parangle.png")
-              print "Saved plot "+os.path.basename(ms)+".parangle.png"
-            print "MS %s, PA range is %fdeg to %fdeg"%(ms,pa1[0],pa1[-1]);
+              print("Saved plot "+os.path.basename(ms)+".parangle.png")
+            print("MS %s, PA range is %fdeg to %fdeg"%(ms,pa1[0],pa1[-1]));
           # get lm's rotated through those ranges
           pa_range = numpy.array(pas);
         elif options.pa_range is not None:
           try:
-            ang0,ang1 = map(float,options.pa_range.split(",",1));
+            ang0,ang1 = list(map(float,options.pa_range.split(",",1)));
           except:
             parser.error("Incorrect --pa-range option. FROM,TO values expected.");
           pa_range = numpy.arange(ang0,ang1+1,1)*DEG
@@ -779,7 +779,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
         else:
           pa_range = None;
         if options.verbose:
-          print "PA (deg):"," ".join([ "%f"%(x/DEG) for x in pa_range ]) if numpy.iterable(pa_range) else pa_range
+          print("PA (deg):"," ".join([ "%f"%(x/DEG) for x in pa_range ]) if numpy.iterable(pa_range) else pa_range)
       if options.enable_plots:
         import pylab
         pylab.figure()
@@ -807,8 +807,8 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
               a,b,c,d = [ j.mean() for j in jones ]
               mueller = Jones2Mueller(numpy.matrix([[a,b],[c,d]]))
               if options.verbose > 1:
-                print "%s: jones11 mean %f std %f"%(src.name,abs(a),abs(jones[0]).std())
-                print "%s: jones22 mean %f std %f"%(src.name,abs(d),abs(jones[3]).std())
+                print("%s: jones11 mean %f std %f"%(src.name,abs(a),abs(jones[0]).std()))
+                print("%s: jones22 mean %f std %f"%(src.name,abs(d),abs(jones[3]).std()))
               if options.enable_plots:
                 pylab.plot(abs(jones[0]),label="|J11| "+src.name)
             # new-style averaging of Mueller matrix
@@ -818,9 +818,9 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
               if options.enable_plots:
                 pylab.plot([ m[0,0] for m in muellers ],label='M11 '+src.name)
               if options.verbose > 1:
-                print "%s: jones11 mean %f std %f"%(src.name,abs(jones[0].mean()),abs(jones[0]).std())
-                print "%s: jones22 mean %f std %f"%(src.name,abs(jones[3].mean()),abs(jones[3]).std())
-                print "%s: mueller11 mean %f std %f"%(src.name,mueller[0,0],numpy.std([ m[0,0] for m in muellers ]))
+                print("%s: jones11 mean %f std %f"%(src.name,abs(jones[0].mean()),abs(jones[0]).std()))
+                print("%s: jones22 mean %f std %f"%(src.name,abs(jones[3].mean()),abs(jones[3]).std()))
+                print("%s: mueller11 mean %f std %f"%(src.name,mueller[0,0],numpy.std([ m[0,0] for m in muellers ])))
             bg = mueller[0,0]
             ##          OMS 6/7/2015: let's do full inversion now to correct all four polarizations
             if options.app_to_int:
@@ -845,7 +845,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
               iquv0 = numpy.matrix([[getattr(src.flux,stokes,0.)] for stokes in "IQUV" ])
               iquv = mueller*iquv0
               if options.verbose > 1:
-                print "%s: from %s to %s" % (src.name, iquv0.T, iquv.T)
+                print("%s: from %s to %s" % (src.name, iquv0.T, iquv.T))
               if options.app_to_int and hasattr(src.flux,"I"):
                 src.setAttribute("Iapp",src.flux.I)
               for i,stokes in enumerate("IQUV"):
@@ -890,7 +890,7 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
                   setattr(src,'spectrum',Tigger.Models.ModelClasses.SpectralIndex(ispiVal-spi,beamRefFreq) if options.app_to_int else Tigger.Models.ModelClasses.SpectralIndex(ispiVal+spi,beamRefFreq));
                   
             if options.verbose:
-                print ("%s: beamgain"%src.name),bg,"spi",spi,"clipped" if nobeam else "";
+                print(("%s: beamgain"%src.name),bg,"spi",spi,"clipped" if nobeam else "");
             #            if spiBg is not None:
             #              print src.name,repr(freqgrid),repr(spiBg.mean(0));
             
@@ -907,15 +907,15 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
       if options.enable_plots:
         pylab.legend()
         pylab.savefig("beamgains.png")
-        print "Saved plot beamgains.png"
-      print "Converted between apparent/intrinsic flux for %d model sources"%nsrc;
+        print("Saved plot beamgains.png")
+      print("Converted between apparent/intrinsic flux for %d model sources"%nsrc);
     if len(model.sources) != nsrc:
-      print "  (%d sources were skipped for whatever reason, probably they didn't have an 'r' attribute)"%(len(model.sources)-nsrc);
+      print("  (%d sources were skipped for whatever reason, probably they didn't have an 'r' attribute)"%(len(model.sources)-nsrc));
 
 
   # rename using COPART
   if options.rename:
-    print "Renaming sources using the COPART convention"
+    print("Renaming sources using the COPART convention")
     typecodes = dict(Gau="G",FITS="F");
     # sort sources by decreasing flux
     sources = sorted(sources,lambda a,b:cmp(b.brightness(),a.brightness()));
@@ -998,13 +998,13 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
     sources = [];
     for i,src in enumerate(sources0):
       if src.name in names:
-        print "Duplicate source '%s' at #%d (first found at #%d), removing"%(src.name,i,names[src.name]);
+        print("Duplicate source '%s' at #%d (first found at #%d), removing"%(src.name,i,names[src.name]));
       else:
         names[src.name] = i;
         sources.append(src);
   # assign prefix to source names
   if options.prefix:
-    print "Prefixing source names with '%s'"%options.prefix;
+    print("Prefixing source names with '%s'"%options.prefix);
     for src in sources:
       src.name = options.prefix + src.name;
   # merge clusters
@@ -1016,26 +1016,26 @@ is a Tigger model (-f switch must be specified to allow overwriting), or else a 
       clusname = getattr(src,'cluster','');
       clusters.setdefault(clusname,{})[src.name] = src;
     # unclustered sources copied over as-is
-    new_sources = clusters.pop('',{}).values();
+    new_sources = list(clusters.pop('',{}).values());
     # next, deal with each cluster
-    for clusname,srcdict in clusters.iteritems():
+    for clusname,srcdict in clusters.items():
       # leading source has the same name as the cluster
       src0 = srcdict.get(clusname);
       # if no leading source, or leading source not tagged, or length 1, then copy cluster as-is
       if not src0 or len(srcdict)<2 or (tags is not None and 
         not any([getattr(src0,tag,None) for tag in tags]) ):
-        new_sources += srcdict.values();
+        new_sources += list(srcdict.values());
       else:
         # sum fluxes
         for x in 'IQUV':
           if hasattr(src0.flux,x):
-            setattr(src0.flux,x,sum([getattr(s.flux,x,0) for s in srcdict.itervalues()]));
+            setattr(src0.flux,x,sum([getattr(s.flux,x,0) for s in srcdict.values()]));
         if hasattr(src0,'Iapp'):
-          src0.Iapp = sum([getattr(s,'Iapp',0) for s in srcdict.itervalues()]);
+          src0.Iapp = sum([getattr(s,'Iapp',0) for s in srcdict.values()]);
         new_sources.append(src0);
-        print "Merged cluster %s (%d sources)"%(src0.name,len(srcdict));
+        print("Merged cluster %s (%d sources)"%(src0.name,len(srcdict)));
     sources = new_sources;
     model.setSources(sources);
   # save output
-  print "Saving model containing %d sources to %s (%s)"%(len(sources),output,output_doc);
+  print("Saving model containing %d sources to %s (%s)"%(len(sources),output,output_doc));
   export_func(model,output,sources=sources,format=options.output_format or None);

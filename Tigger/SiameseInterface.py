@@ -201,7 +201,7 @@ class TiggerSkyModel (object):
       # If source is solvable and this particular attribute is solvable, replace
       # value in attrs dict with a Meq.Parm.
       if solvable:
-        for parmname,value in attrs.items():
+        for parmname,value in list(attrs.items()):
           sgname = _Subgroups.get(parmname,None);
           if sgname in subgroups:
             solvable = True;
