@@ -35,16 +35,20 @@ import sys
 
 import Kittens.utils
 pyfits = Kittens.utils.import_pyfits()
-from Kittens.utils import curry,PersistentCurrier
+from Kittens.utils import PersistentCurrier
 from Kittens.widgets import BusyIndicator
 
-from Tigger.Images.Controller import ImageController,dprint,dprintf
+from Tigger.Images.Controller import ImageController,dprint
 
 from Tigger.Images import SkyImage
-from Tigger.Images import  FITS_ExtensionList
+from Tigger.Images import FITS_ExtensionList
+
 
 class ImageManager (QWidget):
   """An ImageManager manages a stack of images (and associated ImageControllers)"""
+  imagesChanged = pyqtSignal()
+  imageRaised = pyqtSignal()
+
   def __init__ (self,*args):
     QWidget.__init__(self,*args)
     # init layout

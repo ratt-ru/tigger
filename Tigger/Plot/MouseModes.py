@@ -44,6 +44,8 @@ _DefaultModes = "Mouse3,Mouse2,Mouse1"
 _DefaultInitialMode = "Mouse3"
 
 class MouseModeManager (QObject):
+  setMouseMode = pyqtSignal()
+
   class MouseMode (object):
     def __init__ (self,mid):
       self.id = mid
