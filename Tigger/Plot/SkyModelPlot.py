@@ -699,10 +699,19 @@ class SkyModelPlotter(QWidget):
                 self._coord_cache[mid] = pos = self.lmPosToScreen(marker.lmQPointF())
             return pos
 
+
+
+
+
         def drawCanvas(self, painter):
             dprint(5, "drawCanvas", time.time() % 60)
             if self._drawing_key is None:
                 dprint(5, "drawCanvas: key not set, redrawing")
+
+                # TODO: dix the AttributeError: 'NoneType' object has no attribute 'lowerBound' error here somewhere
+                #scaleDiv = QwtScaleDiv(0.0, 0.0)
+                #[self.setAxisScaleDiv(axisId, scaleDiv) for axisId in self.validAxes]
+
                 return QwtPlot.drawCanvas(self, painter)
             else:
                 dprint(5, "drawCanvas: current key is", self._drawing_key)

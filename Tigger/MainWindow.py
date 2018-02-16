@@ -49,6 +49,7 @@ class MainWindow(QMainWindow):
     isUpdated = pyqtSignal(bool)
     hasSkyModel = pyqtSignal(bool)
     hasSelection = pyqtSignal(bool)
+    modelChanged = pyqtSignal(SkyModel)
 
     def __init__(self, parent, hide_on_close=False):
         QMainWindow.__init__(self, parent)
@@ -190,6 +191,7 @@ class MainWindow(QMainWindow):
     LayoutImage = "image"
     LayoutImageModel = "model"
     LayoutSplit = "split"
+
 
     def _getFilenamesFromDropEvent(self, event):
         """

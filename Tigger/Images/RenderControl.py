@@ -89,7 +89,7 @@ class RenderControl(QObject):
             if isinstance(cmap, Colormaps.ColormapWithControls):
                 if self._config:
                     cmap.loadConfig(self._config)
-                QObject.connect(cmap, SIGNAL("colormapChanged"), self.updateColorMapParameters)
+                cmap.colormapChanged.connect(self.updateColorMapParameters)
             if isinstance(cmap, Colormaps.CubeHelixColormap):
                 default_cmap = i
         # set the initial intensity map

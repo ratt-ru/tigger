@@ -246,6 +246,8 @@ class Colormap(QObject):
 
 class ColormapWithControls(Colormap):
     """This is a base class for a colormap with controls knobs"""
+    colormapChanged = pyqtSignal()
+    colormapPreviewed = pyqtSignal()
 
     class SliderControl(QObject):
         """This class implements a slider control for a colormap"""
@@ -300,18 +302,18 @@ class ColormapWithControls(Colormap):
                 # stop timer if being called to finalize the change in value
                 if notify:
                     self._wslider_timer.stop()
-                    self.emit(SIGNAL("valueChanged"), self.value)
+                    self.valueChanged.emit()
 
         def _previewValue(self, value):
             self.setValue(notify=False)
             self._wslider_timer.start(500)
-            self.emit(SIGNAL("valueMoved"), self.value)
+            self.valueMoved.emit()
 
     def emitChange(self, *dum):
-        self.emit(SIGNAL("colormapChanged"))
+        self.colormapChanged.emit()
 
     def emitPreview(self, *dum):
-        self.emit(SIGNAL("colormapPreviewed"))
+        self.colormapPreviewed.emit()
 
     def loadConfig(self, config):
         pass

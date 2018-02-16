@@ -24,11 +24,11 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-import math
+
 import os.path
 import time
+import logging
 
-DEG = math.pi / 180
 
 import numpy
 import numpy.ma
@@ -42,9 +42,14 @@ from Tigger.Coordinates import Projection
 from Tigger.Images import Colormaps
 from Tigger.Images import FITSHeaders
 
+import math
+DEG = math.pi / 180
+
 _verbosity = Kittens.utils.verbosity(name="skyimage")
 dprint = _verbosity.dprint
 dprintf = _verbosity.dprintf
+
+logger = logging.getLogger(__name__)
 
 
 class SkyImagePlotItem(QwtPlotItem, QObject):
@@ -92,11 +97,11 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
         if cmap:
             self.colormap = cmap
         if emit:
-            self.emit(SIGNAL("repaint"))
+            self.repaint.emit()
 
     def updateCurrentColorMap(self):
         self._cache_qimage = {}
-        self.emit(SIGNAL("repaint"))
+        self.repaint.emit()
 
     def setIntensityMap(self, imap=None, emit=True):
         """Changes the intensity map. If called with no arguments, clears intensity map-dependent caches"""
@@ -105,7 +110,7 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
         if imap:
             self.imap = imap
         if emit:
-            self.emit(SIGNAL("repaint"))
+            self.repaint.emit()
 
     def colorMap(self):
         return self.colormap
@@ -558,7 +563,8 @@ class FITSImagePlotItem(SkyCubePlotItem):
         return header
 
     def __init__(self, filename=None, name=None, hdu=None):
-        SkyCubePlotItem.__init__(self)
+        logger.info("calling FITSImagePlotItem super __init__()")
+        super(FITSImagePlotItem, self).__init__()
         self.name = name
         if filename or hdu:
             self.read(filename, hdu)

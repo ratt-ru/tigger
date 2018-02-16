@@ -74,7 +74,7 @@ class ImageController(QFrame):
         self._wraise.setIcon(pixmaps.raise_up.icon())
         self._wraise.setAutoRaise(True)
         self._can_raise = False
-        QObject.connect(self._wraise, SIGNAL("clicked()"), self._raiseButtonPressed)
+        self._wraise.clicked.connect(self._raiseButtonPressed)
         self._wraise.setToolTip("""<P>Click here to raise this image above other images. Hold the button down briefly to
       show a menu of image operations.</P>""")
         # center label
