@@ -32,6 +32,7 @@ class QwtPicker(QwtEventPattern):
 
     https://skozlovf.github.io/doxygen-qmi-style/qwt/class_qwt_picker.html
     """
+
     def __init__(self, parent=None):
         super().__init__(parent=parent)
 
@@ -66,7 +67,9 @@ class QwtPlotPicker(QwtPicker):
     """
     TODO: implement this
     """
-    def __init__(self, xBottom=None, yLeft=None, mode=None, rubber_band=None, ActiveOnly=None, canvas=None, parent=None):
+
+    def __init__(self, xBottom=None, yLeft=None, mode=None, rubber_band=None, ActiveOnly=None, canvas=None,
+                 parent=None):
         super().__init__(parent=parent)
 
     def setRubberBandPen(self, pen):
@@ -86,6 +89,7 @@ class QwtPlotPicker(QwtPicker):
 
     def plot(self):
         return QwtPlot()
+
 
 class QwtPlotZoomer(QwtPlotPicker):
     """
@@ -134,4 +138,10 @@ class QwtPlotZoomer(QwtPlotPicker):
         pass
 
     def maxStackDepth(self):
+        pass
+
+    def zoom(self, rect):
+        pass
+
+    def setZoomBase(self):
         pass

@@ -37,44 +37,44 @@ if __name__ == "__main__":
 
     usage = "usage: %prog [options] <sky models or FITS files>"
     parser = OptionParser(usage=usage)
-    parser.add_option("-d", "--debug",dest="verbose",type="string",action="append",metavar="Context=Level",
+    parser.add_option("-d", "--debug", dest="verbose", type="string", action="append", metavar="Context=Level",
                       help="(for debugging Python code) sets verbosity level of the named Python context. May be used multiple times.")
-    parser.add_option("-T", "--timestamps",action="store_true",
+    parser.add_option("-T", "--timestamps", action="store_true",
                       help="(for debugging Python code) enable timestamps in debug output")
     (options, rem_args) = parser.parse_args()
 
     if options.timestamps:
-      try:
-        Kittens.utils.verbosity.enable_timestamps()
-      except:
-        pass
-    dprint(1,"starting up")
+        try:
+            Kittens.utils.verbosity.enable_timestamps()
+        except:
+            pass
+    dprint(1, "starting up")
 
     # setup include path
     import sys
     import os.path
+
     # Tigger lives here for now. Add it to include path so that "import Tigger" works
     sys.modules['TiggerMain'] = __name__
 
     Tigger.nuke_matplotlib();  # don't let the door hit you in the ass, sucka
 
-    print("Welcome to Tigger "+Tigger.release_string)
+    print("Welcome to Tigger " + Tigger.release_string)
     print("Please wait a second while the GUI starts up.")
 
     ## ugly hack to get around UGLY FSCKING ARROGNAT (misspelling fully intentional) pyfits-2.3 bug
-    Kittens.utils.import_pyfits()
+    # Kittens.utils.import_pyfits()
     ## (we don't really need pyfits yet, but better import it quickly to activate the workaround)
 
-
-    dprint(1,"imported Tigger")
+    dprint(1, "imported Tigger")
     Tigger.startup_dprint = dprint
     Tigger.startup_dprintf = dprintf
 
-
-    dprint(1,"imported Qt4")
+    dprint(1, "imported Qt4")
     app = QApplication(sys.argv)
     app.setDesktopSettingsAware(True)
     from Tigger import pixmaps
+
     app.setWindowIcon(pixmaps.tigger_starface.icon())
     # Need for PlotStyles colors -- ignore error on non-X11 platforms like the Mac
     try:
@@ -82,71 +82,73 @@ if __name__ == "__main__":
     except AttributeError:
         pass
 
-    dprint(1,"created QApplication")
-    #splash = QSplashScreen(Tigger.pixmaps.tigger_splash.pm())
-    #splash.showMessage("Welcome to Tigger!",Qt.AlignHCenter|Qt.AlignBottom)
-    #splash.show()
+    dprint(1, "created QApplication")
+    # splash = QSplashScreen(Tigger.pixmaps.tigger_splash.pm())
+    # splash.showMessage("Welcome to Tigger!",Qt.AlignHCenter|Qt.AlignBottom)
+    # splash.show()
 
     import Tigger.Images
     import Tigger.MainWindow
-    dprint(1,"imported Tigger.MainWindow")
-    import Tigger.Tools
-    from Tigger.Tools import export_karma,add_brick,make_brick,restore_image
-    dprint(1,"imported Tigger.Tools")
 
+    dprint(1, "imported Tigger.MainWindow")
+    import Tigger.Tools
+
+    dprint(1, "imported Tigger.Tools")
 
     mainwin = Tigger.MainWindow.MainWindow(None)
-    dprint(1,"created main window")
-    
-  # add optional tools
-    for name,callback in Tigger.Tools.getRegisteredTools():
-      mainwin.addTool(name,callback)
-    dprint(1,"added optional tools")
+    dprint(1, "created main window")
+
+    # add optional tools
+    for name, callback in Tigger.Tools.getRegisteredTools():
+        mainwin.addTool(name, callback)
+    dprint(1, "added optional tools")
 
     # parse remaining args
-    images = [ arg for arg in rem_args if Tigger.Images.isFITS(arg) ]
-    models = [ arg for arg in rem_args if arg not in images ]
+    images = [arg for arg in rem_args if Tigger.Images.isFITS(arg)]
+    models = [arg for arg in rem_args if arg not in images]
 
     if len(models) > 1:
-      parser.error("Only one model should be specified at the command line.")
+        parser.error("Only one model should be specified at the command line.")
 
     # load images first
     for img in images:
-      print("Loading image",img)
-      #splash.showMessage("Loading image %s"%img,Qt.AlignHCenter|Qt.AlignBottom)
-      mainwin.loadImage(img)
-      dprint(1,"loaded image",img)
+        print("Loading image", img)
+        # splash.showMessage("Loading image %s"%img,Qt.AlignHCenter|Qt.AlignBottom)
+        mainwin.loadImage(img)
+        dprint(1, "loaded image", img)
 
     # load model, if specified
     for mod in models:
-      print("Loading model",mod)
-      try:
-        mainwin.openFile(mod,show=False)
-      except:
-        traceback.print_exc()
-        print("Error loading model %s"%mod)
-        os._exit(0)
+        print("Loading model", mod)
+        try:
+            mainwin.openFile(mod, show=False)
+        except:
+            traceback.print_exc()
+            print("Error loading model %s" % mod)
+            os._exit(0)
 
-      #splash.showMessage("Loading model %s"%mod,Qt.AlignHCenter|Qt.AlignBottom)
-      dprint(1,"loaded model",mod)
+        # splash.showMessage("Loading model %s"%mod,Qt.AlignHCenter|Qt.AlignBottom)
+        dprint(1, "loaded model", mod)
 
     # start updating the plot
     mainwin.enableUpdates()
-    dprint(1,"started plot updates")
+    dprint(1, "started plot updates")
 
     # flush app event queue, so windows get resized , etc.
     app.processEvents()
 
+
     # handle SIGINT
-    def sigint_handler (sig,stackframe):
-      print("Caught Ctrl+C, exiting...")
-      mainwin.close()
+    def sigint_handler(sig, stackframe):
+        print("Caught Ctrl+C, exiting...")
+        mainwin.close()
 
 
     import signal
-    signal.signal(signal.SIGINT,sigint_handler)
-    dprint(1,"added signal handler")
 
-    #splash.finish(mainwin)
+    signal.signal(signal.SIGINT, sigint_handler)
+    dprint(1, "added signal handler")
+
+    # splash.finish(mainwin)
 
     app.exec_()
