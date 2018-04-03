@@ -38,10 +38,10 @@ pyfits = Kittens.utils.import_pyfits();
 from Kittens.utils import curry,PersistentCurrier
 from Kittens.widgets import BusyIndicator
 
-from Tigger.Images.Controller import ImageController,dprint,dprintf
+from TigGUI.Images.Controller import ImageController,dprint,dprintf
 
-from Tigger.Images import SkyImage
-from Tigger.Images import  FITS_ExtensionList
+from TigGUI.Images import SkyImage
+from TigGUI.Images import  FITS_ExtensionList
 
 class ImageManager (QWidget):
   """An ImageManager manages a stack of images (and associated ImageControllers)"""

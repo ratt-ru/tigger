@@ -41,13 +41,13 @@ _verbosity = Kittens.utils.verbosity(name="plot");
 dprint = _verbosity.dprint;
 dprintf = _verbosity.dprintf;
 
-from Tigger import pixmaps,Config,ConfigFile
+from TigGUI import pixmaps,Config,ConfigFile
 from Tigger.Models import ModelClasses,PlotStyles
 from Tigger import Coordinates
 from Tigger.Coordinates import Projection
 from Tigger.Models.SkyModel import SkyModel
-from Tigger.Widgets import TiggerPlotCurve,TiggerPlotMarker
-from Tigger.Plot import MouseModes
+from TigGUI.Widgets import TiggerPlotCurve,TiggerPlotMarker
+from TigGUI.Plot import MouseModes
 
 # plot Z depths for various classes of objects
 Z_Image = 1000;

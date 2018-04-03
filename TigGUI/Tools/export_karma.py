@@ -27,7 +27,7 @@ from PyQt4.Qt import *
 import math
 import os.path
 from Kittens.widgets import BusyIndicator
-from Tigger.Widgets import FileSelector
+from TigGUI.Widgets import FileSelector
 
 DEG = math.pi/180;
 
@@ -146,5 +146,5 @@ def export_karma_annotations (mainwin,model):
   # show dialog
   return dialog.exec_();
 
-from Tigger.Tools import registerTool
+from TigGUI.Tools import registerTool
 registerTool("Export Karma annotations...",export_karma_annotations);

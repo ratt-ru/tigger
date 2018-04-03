@@ -20,19 +20,15 @@ except ImportError:
     warnings.warn(msg)
 
 
-__version__ = "1.3.10"
+__version__ = "1.4.0"
 
-requirements = ['astro_kittens', 'numpy', 'scipy', 'astlib', 'pyfits']
+requirements = ['astro_kittens', 'numpy', 'scipy', 'astlib', 'pyfits', 'astro_tigger_lsm' ]
 
 scripts = [
-    'Tigger/bin/tigger-convert',
-    'Tigger/bin/tigger-make-brick',
-    'Tigger/bin/tigger-restore',
-    'Tigger/bin/tigger-tag',
-    'Tigger/tigger',
+    'TigGUI/tigger',
 ]
 
-package_data = {'Tigger': [
+package_data = {'TigGUI': [
     'icons/*.png',
     'tigger.conf',
 ] }
