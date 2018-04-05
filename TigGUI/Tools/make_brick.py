@@ -33,7 +33,8 @@ from PyQt4.Qt import QObject, QHBoxLayout, QFileDialog, SIGNAL, QLabel, \
 
 import TigGUI.kitties.utils
 
-pyfits = TigGUI.kitties.utils.import_pyfits()
+from astropy.io import fits as pyfits
+
 import os.path
 import traceback
 

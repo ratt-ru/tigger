@@ -36,7 +36,7 @@ from scipy.ndimage import interpolation, measurements
 
 import TigGUI.kitties.utils
 
-pyfits = TigGUI.kitties.utils.import_pyfits()
+from astropy.io import fits as pyfits
 
 from Tigger.Coordinates import Projection
 from TigGUI.Images import Colormaps

@@ -36,7 +36,8 @@ from PyQt4.Qt import QObject, QWidget, QFileDialog, SIGNAL, QStringList, QVBoxLa
 
 import TigGUI.kitties.utils
 
-pyfits = TigGUI.kitties.utils.import_pyfits()
+from astropy.io import fits as pyfits
+
 from TigGUI.kitties.utils import PersistentCurrier
 from TigGUI.kitties.widgets import BusyIndicator
 
