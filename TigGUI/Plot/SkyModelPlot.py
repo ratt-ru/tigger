@@ -30,9 +30,8 @@ import numpy
 import re
 import time
 from PyQt4.Qt import QObject, QWidget, QHBoxLayout, QFileDialog, QComboBox, SIGNAL, QLabel, \
-    QDialog, QToolButton, QStringList, QVBoxLayout, \
-    Qt, QAction, QEvent, QSize, \
-    QSizePolicy, QApplication, QColor, QImage, QPixmap, QPainter, \
+    QDialog, QToolButton, QStringList, QVBoxLayout, Qt, QAction, QEvent, QSize, QMouseEvent, \
+    QSizePolicy, QApplication, QColor, QImage, QPixmap, QPainter, QToolTip, \
     QBrush, QTimer, QCheckBox, QMenu, QPen, QRect, QClipboard, \
     QInputDialog, QActionGroup, QRectF, QPointF, QPoint, QMessageBox, QTransform, QToolBar, QCoreApplication
 from PyQt4.Qwt5 import QwtPlot, QwtPlotPicker, QwtText, QwtPlotItem, QwtPlotCurve, QwtPicker, QwtEventPattern, \

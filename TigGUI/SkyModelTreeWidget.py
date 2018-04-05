@@ -47,8 +47,32 @@ ViewColumns = ["name", "RA", "RA err", "Dec", "Dec err", "r", "type",
                "Iapp", "I", "I err", "Q", "Q err", "U", "U err", "V", "V err", "RM", "RM err", "spi", "spi err",
                "shape", "shape err", "tags"]
 
-for icol, col in enumerate(ViewColumns):
-    globals()["Column%s" % col.capitalize().replace(" ", "_")] = icol
+# ugly, but better than the global() hack this was before.
+ColumnName = 0
+ColumnRa = 1
+ColumnRa_err = 2
+ColumnDec = 3
+ColumnDec_err = 4
+ColumnR = 5
+ColumnType = 6
+ColumnIapp = 7
+ColumnI = 8
+ColumnI_err = 9
+ColumnQ = 10
+ColumnQ_err = 11
+ColumnU = 12
+ColumnU_err = 13
+ColumnV = 14
+ColumnV_err = 15
+ColumnRm = 16
+ColumnRm_err = 17
+ColumnSpi = 18
+ColumnSpi_err = 19
+ColumnShape = 20
+ColumnShape_err = 21
+ColumnTags = 22
+
+
 NumColumns = len(ViewColumns)
 
 DEG = math.pi / 180
