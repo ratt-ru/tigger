@@ -7,5 +7,5 @@ import Kittens.pixmaps
 
 pixmaps = Kittens.pixmaps.PixmapCache("TigGUI")
 ConfigFileName = ".tigger.conf"
-ConfigFile = Kittens.config.DualConfigParser("tigger.conf",["/usr/lib/TigGUI", os.path.dirname(__file__)])
-Config = Kittens.config.SectionParser(ConfigFile,"Tigger")
+ConfigFile = Kittens.config.DualConfigParser("tigger.conf", ["/usr/lib/TigGUI", os.path.dirname(__file__)])
+Config = Kittens.config.SectionParser(ConfigFile, "Tigger")

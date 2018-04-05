@@ -1,6 +1,5 @@
-
 #
-#% $Id$
+# % $Id$
 #
 #
 # Copyright (C) 2002-2011
@@ -26,7 +25,8 @@
 
 import os.path
 
-FITS_ExtensionList = [ ".fts",".FTS",".fits",".FITS",".fit",".FIT" ];
+FITS_ExtensionList = [".fts", ".FTS", ".fits", ".FITS", ".fit", ".FIT"]
 
-def isFITS (filename):
-    return os.path.splitext(filename)[1] in FITS_ExtensionList;
+
+def isFITS(filename):
+    return os.path.splitext(filename)[1] in FITS_ExtensionList

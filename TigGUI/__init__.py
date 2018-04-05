@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-#% $Id$
+# % $Id$
 #
 #
 # Copyright (C) 2002-2011
@@ -32,9 +32,7 @@ release_string = __version__
 svn_revision_string = __version__
 svn_revision_html = __version__
 
-startup_dprint = startup_dprintf = lambda *dum:None
+startup_dprint = startup_dprintf = lambda *dum: None
 _verbosity = Kittens.utils.verbosity(name="tiggui")
 dprint = _verbosity.dprint
 dprintf = _verbosity.dprintf
-
-
