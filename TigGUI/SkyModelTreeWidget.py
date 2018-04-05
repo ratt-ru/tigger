@@ -34,12 +34,12 @@ from PyQt4.Qt import QObject, QWidget, QHBoxLayout, QComboBox, SIGNAL, QLabel, Q
 from Tigger.Models import ModelClasses, PlotStyles
 from Tigger.Models.SkyModel import SkyModel
 
-import Kittens.utils
-import Kittens.widgets
-from Kittens.utils import PersistentCurrier
-from Kittens.widgets import BusyIndicator
+import TigGUI.kitties.utils
+import TigGUI.kitties.widgets
+from TigGUI.kitties.utils import PersistentCurrier
+from TigGUI.kitties.widgets import BusyIndicator
 
-_verbosity = Kittens.utils.verbosity(name="tw")
+_verbosity = TigGUI.kitties.utils.verbosity(name="tw")
 dprint = _verbosity.dprint
 dprintf = _verbosity.dprintf
 
@@ -83,11 +83,11 @@ from PyQt4 import QtCore
 _SLOW_QTREEWIDGETITEM = QtCore.PYQT_VERSION_STR >= '4.7'
 
 
-class SkyModelTreeWidget(Kittens.widgets.ClickableTreeWidget):
+class SkyModelTreeWidget(TigGUI.kitties.widgets.ClickableTreeWidget):
     """This implements a QTreeWidget for sky models"""
 
     def __init__(self, *args):
-        Kittens.widgets.ClickableTreeWidget.__init__(self, *args)
+        TigGUI.kitties.widgets.ClickableTreeWidget.__init__(self, *args)
         self._currier = PersistentCurrier()
         self.model = None
         # insert columns
@@ -185,7 +185,7 @@ class SkyModelTreeWidget(Kittens.widgets.ClickableTreeWidget):
         self._column_views.append((name, qa, columns))
 
     def clear(self):
-        Kittens.widgets.ClickableTreeWidget.clear(self)
+        TigGUI.kitties.widgets.ClickableTreeWidget.clear(self)
         self.model = None
         self._itemdict = {}
 
@@ -207,7 +207,7 @@ class SkyModelTreeWidget(Kittens.widgets.ClickableTreeWidget):
         busy = BusyIndicator()
         # else repopulate widget completely
         dprint(2, "model update -- complete")
-        Kittens.widgets.ClickableTreeWidget.clear(self)
+        TigGUI.kitties.widgets.ClickableTreeWidget.clear(self)
         dprint(2, "creating model items")
         items = [SkyModelTreeWidgetItem(src) for src in self.model.sources]
         self._itemdict = dict(zip([src.name for src in self.model.sources], items))

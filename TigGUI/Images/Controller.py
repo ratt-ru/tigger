@@ -33,11 +33,11 @@ from PyQt4.Qt import QObject, QHBoxLayout, QFileDialog, QComboBox, SIGNAL, QLabe
     QFrame, QMenu, QPen, QKeySequence
 from PyQt4.Qwt5 import QwtText, QwtPlotCurve, QwtPlotMarker, QwtScaleMap
 
-import Kittens.utils
-from Kittens.utils import PersistentCurrier
-from Kittens.widgets import BusyIndicator
+import TigGUI.kitties.utils
+from TigGUI.kitties.utils import PersistentCurrier
+from TigGUI.kitties.widgets import BusyIndicator
 
-_verbosity = Kittens.utils.verbosity(name="imagectl")
+_verbosity = TigGUI.kitties.utils.verbosity(name="imagectl")
 dprint = _verbosity.dprint
 dprintf = _verbosity.dprintf
 

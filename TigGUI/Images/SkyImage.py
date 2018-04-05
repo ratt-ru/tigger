@@ -34,9 +34,9 @@ from PyQt4.Qt import QObject, SIGNAL, QRect, QRectF, QPointF, QPoint, QSizeF
 from PyQt4.Qwt5 import QwtPlotItem
 from scipy.ndimage import interpolation, measurements
 
-import Kittens.utils
+import TigGUI.kitties.utils
 
-pyfits = Kittens.utils.import_pyfits()
+pyfits = TigGUI.kitties.utils.import_pyfits()
 
 from Tigger.Coordinates import Projection
 from TigGUI.Images import Colormaps
@@ -44,7 +44,7 @@ from Tigger.Tools import FITSHeaders
 
 DEG = math.pi / 180
 
-_verbosity = Kittens.utils.verbosity(name="skyimage")
+_verbosity = TigGUI.kitties.utils.verbosity(name="skyimage")
 dprint = _verbosity.dprint
 dprintf = _verbosity.dprintf
 

@@ -31,18 +31,18 @@ import time
 from PyQt4.Qt import QObject, SIGNAL
 from scipy.ndimage import measurements
 
-import Kittens.utils
-from Kittens.widgets import BusyIndicator
+import TigGUI.kitties.utils
+from TigGUI.kitties.widgets import BusyIndicator
 
-_verbosity = Kittens.utils.verbosity(name="rc")
+_verbosity = TigGUI.kitties.utils.verbosity(name="rc")
 dprint = _verbosity.dprint
 dprintf = _verbosity.dprintf
 
 from TigGUI.Images import Colormaps
 
-import Kittens.config
+import TigGUI.kitties.config
 
-ImageConfigFile = Kittens.config.DualConfigParser("tigger.images.conf")
+ImageConfigFile = TigGUI.kitties.config.DualConfigParser("tigger.images.conf")
 
 
 class RenderControl(QObject):
@@ -57,7 +57,7 @@ class RenderControl(QObject):
     def __init__(self, image, parent):
         QObject.__init__(self, parent)
         self.image = image
-        self._config = Kittens.config.SectionParser(ImageConfigFile, os.path.normpath(
+        self._config = TigGUI.kitties.config.SectionParser(ImageConfigFile, os.path.normpath(
             os.path.abspath(image.filename))) if image.filename else None
         # figure out the slicing -- find extra axes with size > 1
         # self._current_slice contains all extra axis, including the size-1 ones
@@ -141,7 +141,7 @@ class RenderControl(QObject):
 
     def startSavingConfig(self, image_filename):
         """Saves the current configuration under the specified image filename"""
-        self._config = Kittens.config.SectionParser(ImageConfigFile, os.path.normpath(os.path.abspath(image_filename)))
+        self._config = TigGUI.kitties.config.SectionParser(ImageConfigFile, os.path.normpath(os.path.abspath(image_filename)))
         if self._displayrange:
             self._config.set("range-min", self._displayrange[0], save=False)
             self._config.set("range-max", self._displayrange[1], save=False)

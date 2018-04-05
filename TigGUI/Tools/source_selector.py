@@ -29,11 +29,11 @@ import traceback
 from PyQt4.Qt import QObject, QHBoxLayout, QComboBox, SIGNAL, QLabel, \
     QLineEdit, QDialog, QVBoxLayout, Qt, QErrorMessage, QSlider
 
-import Kittens.utils
-from Kittens.utils import curry
-from Kittens.widgets import BusyIndicator
+import TigGUI.kitties.utils
+from TigGUI.kitties.utils import curry
+from TigGUI.kitties.widgets import BusyIndicator
 
-_verbosity = Kittens.utils.verbosity(name="source_selector")
+_verbosity = TigGUI.kitties.utils.verbosity(name="source_selector")
 dprint = _verbosity.dprint
 dprintf = _verbosity.dprintf
 

@@ -36,8 +36,8 @@ from PyQt4.Qwt5 import QwtPlot, QwtPlotPicker, QwtText, QwtPlotItem, QwtPlotCurv
     QwtWheel, QwtSlider, QwtSymbol, QwtLinearScaleEngine, QwtLog10ScaleEngine
 from scipy.ndimage import measurements
 
-from Kittens.utils import PersistentCurrier
-from Kittens.widgets import BusyIndicator
+from TigGUI.kitties.utils import PersistentCurrier
+from TigGUI.kitties.widgets import BusyIndicator
 from RenderControl import RenderControl, dprint
 from TigGUI.Images import Colormaps
 from TigGUI.Widgets import FloatValidator, TiggerPlotCurve, TiggerPlotMarker

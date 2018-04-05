@@ -37,7 +37,7 @@ from Tigger.Models import SkyModel
 from Tigger.Models.Formats import ModelHTML
 
 import AboutDialog
-import Kittens.utils
+import TigGUI.kitties.utils
 import TigGUI.Tools.source_selector
 import Widgets
 from Images.Manager import ImageManager
@@ -46,7 +46,7 @@ from SkyModelTreeWidget import SkyModelTreeWidget, ModelGroupsTable
 from TigGUI import Images
 from TigGUI.init import pixmaps, Config
 
-_verbosity = Kittens.utils.verbosity(name="mainwin")
+_verbosity = TigGUI.kitties.utils.verbosity(name="mainwin")
 dprint = _verbosity.dprint
 dprintf = _verbosity.dprintf
 

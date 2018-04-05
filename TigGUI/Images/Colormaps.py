@@ -34,9 +34,9 @@ from PyQt4.Qt import QObject, QWidget, QHBoxLayout, SIGNAL, QLabel, \
 from PyQt4.Qwt5 import QwtSlider
 from scipy.ndimage import measurements
 
-import Kittens.utils
+import TigGUI.kitties.utils
 
-_verbosity = Kittens.utils.verbosity(name="colormap")
+_verbosity = TigGUI.kitties.utils.verbosity(name="colormap")
 dprint = _verbosity.dprint
 dprintf = _verbosity.dprintf
 

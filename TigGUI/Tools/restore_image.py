@@ -30,11 +30,11 @@ from PyQt4.Qt import QObject, QHBoxLayout, QFileDialog, SIGNAL, QLabel, \
     QLineEdit, QDialog, QDoubleValidator, QVBoxLayout, \
     QPushButton, Qt, QCheckBox, QMessageBox, QErrorMessage
 
-import Kittens.utils
+import TigGUI.kitties.utils
 
-pyfits = Kittens.utils.import_pyfits()
+pyfits = TigGUI.kitties.utils.import_pyfits()
 
-from Kittens.widgets import BusyIndicator
+from TigGUI.kitties.widgets import BusyIndicator
 from TigGUI.Widgets import FileSelector
 from Tigger.Tools import Imaging
 

@@ -31,13 +31,13 @@ from PyQt4.Qt import QObject, QHBoxLayout, QFileDialog, SIGNAL, QLabel, \
     QPushButton, Qt, QCheckBox, QMessageBox, QErrorMessage, \
     QRadioButton
 
-import Kittens.utils
+import TigGUI.kitties.utils
 
-pyfits = Kittens.utils.import_pyfits()
+pyfits = TigGUI.kitties.utils.import_pyfits()
 import os.path
 import traceback
 
-from Kittens.widgets import BusyIndicator
+from TigGUI.kitties.widgets import BusyIndicator
 from TigGUI.Widgets import FileSelector
 from Tigger.Models import SkyModel, ModelClasses
 from Tigger.Tools import Imaging

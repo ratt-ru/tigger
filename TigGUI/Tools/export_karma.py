@@ -29,7 +29,7 @@ import os.path
 from PyQt4.Qt import QObject, QHBoxLayout, SIGNAL, QDialog, QVBoxLayout, \
     QPushButton, Qt, QCheckBox, QMessageBox, QErrorMessage
 
-from Kittens.widgets import BusyIndicator
+from TigGUI.kitties.widgets import BusyIndicator
 from TigGUI.Widgets import FileSelector
 
 DEG = math.pi / 180

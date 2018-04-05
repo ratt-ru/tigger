@@ -38,11 +38,11 @@ from PyQt4.Qwt5 import QwtPlot, QwtPlotPicker, QwtText, QwtPlotItem, QwtPlotCurv
     QwtSymbol, QwtPlotZoomer, \
     QwtScaleEngine
 
-import Kittens.utils
-from Kittens.utils import curry, PersistentCurrier
-from Kittens.widgets import BusyIndicator
+import TigGUI.kitties.utils
+from TigGUI.kitties.utils import curry, PersistentCurrier
+from TigGUI.kitties.widgets import BusyIndicator
 
-_verbosity = Kittens.utils.verbosity(name="plot")
+_verbosity = TigGUI.kitties.utils.verbosity(name="plot")
 dprint = _verbosity.dprint
 dprintf = _verbosity.dprintf
 

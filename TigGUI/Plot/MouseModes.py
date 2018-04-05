@@ -1,10 +1,10 @@
 from PyQt4.Qt import QObject, SIGNAL, Qt, QActionGroup
 
-import Kittens.utils
-from Kittens.utils import PersistentCurrier
+import TigGUI.kitties.utils
+from TigGUI.kitties.utils import PersistentCurrier
 from TigGUI.init import Config, ConfigFile, ConfigFileName, pixmaps
 
-_verbosity = Kittens.utils.verbosity(name="mmod")
+_verbosity = TigGUI.kitties.utils.verbosity(name="mmod")
 dprint = _verbosity.dprint
 dprintf = _verbosity.dprintf
 
@@ -156,7 +156,7 @@ class MouseModeManager(QObject):
         and returns a dict of mouse_patterns,key_patterns per each function."""
         # read basic stuff
         mode = self.MouseMode(section)
-        config = Kittens.config.SectionParser(ConfigFile, section)
+        config = TigGUI.kitties.config.SectionParser(ConfigFile, section)
         mode.name = config.get("name", section)
         mode.icon = config.get("icon", "") or None
         mode.contexts = sum([_Contexts.get(x, 0) for x in config.get("contexts", "").split(",")])

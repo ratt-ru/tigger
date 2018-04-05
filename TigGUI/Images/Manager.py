@@ -34,11 +34,11 @@ from PyQt4.Qt import QObject, QWidget, QFileDialog, SIGNAL, QStringList, QVBoxLa
     Qt, QApplication, QMenu, QClipboard, \
     QInputDialog, QActionGroup
 
-import Kittens.utils
+import TigGUI.kitties.utils
 
-pyfits = Kittens.utils.import_pyfits()
-from Kittens.utils import PersistentCurrier
-from Kittens.widgets import BusyIndicator
+pyfits = TigGUI.kitties.utils.import_pyfits()
+from TigGUI.kitties.utils import PersistentCurrier
+from TigGUI.kitties.widgets import BusyIndicator
 
 from TigGUI.Images.Controller import ImageController, dprint
 

@@ -24,7 +24,7 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-import Kittens.utils
+import TigGUI.kitties.utils
 
 __version__ = "1.4.0"
 
@@ -33,6 +33,6 @@ svn_revision_string = __version__
 svn_revision_html = __version__
 
 startup_dprint = startup_dprintf = lambda *dum: None
-_verbosity = Kittens.utils.verbosity(name="tiggui")
+_verbosity = TigGUI.kitties.utils.verbosity(name="tiggui")
 dprint = _verbosity.dprint
 dprintf = _verbosity.dprintf
