@@ -36,13 +36,13 @@ from PyQt4.Qt import QObject, QWidget, QFileDialog, SIGNAL, QDialog, QStringList
 from Tigger.Models import SkyModel
 from Tigger.Models.Formats import ModelHTML
 
-import AboutDialog
+from . import AboutDialog
 import TigGUI.kitties.utils
 import TigGUI.Tools.source_selector
-import Widgets
-from Images.Manager import ImageManager
-from Plot.SkyModelPlot import SkyModelPlotter, PersistentCurrier
-from SkyModelTreeWidget import SkyModelTreeWidget, ModelGroupsTable
+from . import Widgets
+from .Images.Manager import ImageManager
+from .Plot.SkyModelPlot import SkyModelPlotter, PersistentCurrier
+from .SkyModelTreeWidget import SkyModelTreeWidget, ModelGroupsTable
 from TigGUI import Images
 from TigGUI.init import pixmaps, Config
 
@@ -248,7 +248,7 @@ class MainWindow(QMainWindow):
                 return None
             self.resize(QSize(w, h))
             for spl, name in (self._splitter1, "splitter1"), (self._splitter2, "splitter2"):
-                ssz = [Config.getint('%s-%s-size%d' % (self._current_layout, name, i), -1) for i in 0, 1]
+                ssz = [Config.getint('%s-%s-size%d' % (self._current_layout, name, i), -1) for i in (0, 1)]
                 dprint(2, "splitter", name, "sizes", ssz)
                 if all([sz >= 0 for sz in ssz]):
                     spl.setSizes(ssz)

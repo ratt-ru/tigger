@@ -148,20 +148,20 @@ def section(name):
 
 if __name__ == '__main__':
     conf = Config('test')
-    print 'test1:', conf.get('test1', 1)
-    print 'test2:', conf.getint('test2', 2)
-    print 'test3:', conf.getfloat('test3', 3.0)
+    print('test1:', conf.get('test1', 1))
+    print('test2:', conf.getint('test2', 2))
+    print('test3:', conf.getfloat('test3', 3.0))
     try:
-        print 'test4:', conf.get('test4')
+        print('test4:', conf.get('test4'))
     except:
-        print 'test4:', sys.exc_info()
+        print('test4:', sys.exc_info())
     try:
-        print 'test5:', conf.get('test5')
+        print('test5:', conf.get('test5'))
     except:
-        print 'test5:', sys.exc_info()
+        print('test5:', sys.exc_info())
     conf.set('test6', 'abc')
     conf.set('test7', 1)
     conf.set('test8', 1.0)
     conf.set('test9', True)
-    print 'has test1:', conf.has_option('test1')
-    print 'has test4:', conf.has_option('test4')
+    print('has test1:', conf.has_option('test1'))
+    print('has test4:', conf.has_option('test4'))

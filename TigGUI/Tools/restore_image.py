@@ -71,7 +71,7 @@ class RestoreImageDialog(QDialog):
         lo1.addWidget(QLabel("\"     P.A.:", self))
         self.wbpa = QLineEdit(self)
         lo1.addWidget(self.wbpa)
-        lo1.addWidget(QLabel(u"\u00B0", self))
+        lo1.addWidget(QLabel("\u00B0", self))
         for w in self.wbmaj, self.wbmin, self.wbpa:
             w.setValidator(QDoubleValidator(self))
         lo1 = QHBoxLayout()
@@ -128,11 +128,11 @@ class RestoreImageDialog(QDialog):
                 self.wfile_in.setFilename("")
                 return
             # try to get beam extents
-            gx, gy, grot = [header.get(x, None) for x in 'BMAJ', 'BMIN', 'BPA']
-            if all([x is not None for x in gx, gy, grot]):
+            gx, gy, grot = [header.get(x, None) for x in ('BMAJ', 'BMIN', 'BPA')]
+            if all([x is not None for x in (gx, gy, grot)]):
                 # if beam size is already set, ask before overwriting
-                print [str(x.text()) for x in self.wbmaj, self.wbmin, self.wbpa]
-                if any([bool(str(x.text())) for x in self.wbmaj, self.wbmin, self.wbpa]) and \
+                print([str(x.text()) for x in (self.wbmaj, self.wbmin, self.wbpa)])
+                if any([bool(str(x.text())) for x in (self.wbmaj, self.wbmin, self.wbpa)]) and \
                         QMessageBox.question(self, "Set restoring beam",
                                              "Also reset restoring beam size from this FITS file?",
                                              QMessageBox.Yes | QMessageBox.No) != QMessageBox.Yes:
@@ -147,7 +147,7 @@ class RestoreImageDialog(QDialog):
         self.parent().showMessage("Fitting gaussian to PSF file %s" % filename)
         try:
             bmaj, bmin, pa = [x / DEG for x in Imaging.fitPsf(filename)]
-        except Exception, err:
+        except Exception as err:
             busy = None
             self.qerrmsg.showMessage("Error fitting PSF file %s: %s" % (filename, str(err)))
             return
@@ -161,7 +161,7 @@ class RestoreImageDialog(QDialog):
         """Tries to restore the image, and closes the dialog if successful."""
         # get list of sources to restore
         sources = self.model.sources
-        sel_sources = filter(lambda src: src.selected, sources)
+        sel_sources = [src for src in sources if src.selected]
         if len(sel_sources) > 0 and len(sel_sources) < len(sources) and self.wselonly.isChecked():
             sources = sel_sources
         if not sources:
@@ -176,7 +176,7 @@ class RestoreImageDialog(QDialog):
         # read fits file
         try:
             input_hdu = pyfits.open(infile)[0]
-        except Exception, err:
+        except Exception as err:
             busy = None
             self.qerrmsg.showMessage("Error reading FITS file %s: %s" % (infile, str(err)))
             return
@@ -185,7 +185,7 @@ class RestoreImageDialog(QDialog):
             bmaj = float(str(self.wbmaj.text()))
             bmin = float(str(self.wbmin.text()))
             pa = float(str(self.wbpa.text()) or "0")
-        except Exception, err:
+        except Exception as err:
             busy = None
             self.qerrmsg.showMessage("Invalid beam size specified")
             return
@@ -195,14 +195,14 @@ class RestoreImageDialog(QDialog):
         # restore
         try:
             Imaging.restoreSources(input_hdu, sources, bmaj, bmin, pa)
-        except Exception, err:
+        except Exception as err:
             busy = None
             self.qerrmsg.showMessage("Error restoring model into image: %s" % str(err))
             return
         # save fits file
         try:
             input_hdu.writeto(outfile, clobber=True)
-        except Exception, err:
+        except Exception as err:
             busy = None
             self.qerrmsg.showMessage("Error writing FITS file %s: %s" % (outfile, str(err)))
             return

@@ -12,11 +12,11 @@ ComplexNames = ["", "real", "imag", "weight"]
 
 def isAxisTypeX(ctype):
     """Checks if given CTYPE corresponds to the X axis"""
-    return any([ctype.startswith(prefix) for prefix in "RA", "GLON", "ELON", "HLON", "SLON"]) or \
+    return any([ctype.startswith(prefix) for prefix in ("RA", "GLON", "ELON", "HLON", "SLON")]) or \
            ctype in ("L", "X", "LL", "U", "UU")
 
 
 def isAxisTypeY(ctype):
     """Checks if given CTYPE corresponds to the Y axis"""
-    return any([ctype.startswith(prefix) for prefix in "DEC", "GLAT", "ELAT", "HLAT", "SLAT"]) or \
+    return any([ctype.startswith(prefix) for prefix in ("DEC", "GLAT", "ELAT", "HLAT", "SLAT")]) or \
            ctype in ("M", "Y", "MM", "V", "VV")

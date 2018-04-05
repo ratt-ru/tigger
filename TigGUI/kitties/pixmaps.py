@@ -29,7 +29,7 @@ from PyQt4.Qt import SIGNAL, QPixmap, QIcon
 
 PYSIGNAL = SIGNAL
 
-from utils import verbosity
+from .utils import verbosity
 
 import sys
 

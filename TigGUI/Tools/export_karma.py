@@ -136,7 +136,7 @@ class ExportKarmaDialog(QDialog):
                         f.write('COLOR %s\n' % style.label_color)
                         f.write('TEXT %.12f %.12f %s\n' % (ra, dec, label))
             f.close()
-        except IOError, err:
+        except IOError as err:
             busy = None
             self.qerrmsg.showMessage("Error writing Karma annotations file %s: %s" % (filename, str(err)))
             return

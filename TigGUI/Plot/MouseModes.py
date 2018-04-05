@@ -69,7 +69,7 @@ class MouseModeManager(QObject):
         modelist = []
         for mid in Config.get("mouse-modes", _DefaultModes).split(","):
             if not ConfigFile.has_section(mid):
-                print "ERROR: unknown mouse-mode '%s', skipping. Check your %s." % (mid, ConfigFileName)
+                print("ERROR: unknown mouse-mode '%s', skipping. Check your %s." % (mid, ConfigFileName))
             else:
                 modelist.append(self._readModeConfig(mid))
         self._modes = dict([(mode.id, mode) for mode in modelist])
@@ -168,8 +168,8 @@ class MouseModeManager(QObject):
                 if ConfigFile.has_section(mid):
                     mode.submodes.append(self._readModeConfig(mid, main_tooltip=mode.tooltip))
                 else:
-                    print "ERROR: unknown submode '%s' in mode config section '%s', skipping/ Check your %s." % (
-                    mid, section, ConfigFileName)
+                    print("ERROR: unknown submode '%s' in mode config section '%s', skipping/ Check your %s." % (
+                    mid, section, ConfigFileName))
         else:
             if main_tooltip:
                 mode.tooltip = main_tooltip + """<P>In this scheme, available mouse functions depend on the selected mode.
@@ -193,20 +193,20 @@ class MouseModeManager(QObject):
                         try:
                             comps = [x if x in (WHEELUP, WHEELDOWN) else getattr(Qt, x) for x in scomps]
                         except AttributeError:
-                            print "WARNING: can't parse '%s' for function '%s' in mode config section '%s', disabling. Check your %s." % (
-                            pat, func, section, ConfigFileName)
+                            print("WARNING: can't parse '%s' for function '%s' in mode config section '%s', disabling. Check your %s." % (
+                            pat, func, section, ConfigFileName))
                             continue
                         # append key/button code and sum of modifiers to the key or keyboard pattern list
                         if scomps[-1].startswith("Key_"):
                             if key_pattern:
-                                print "WARNING: more than one key pattern for function '%s' in mode config section '%s', ignoring. Check your %s." % (
-                                func, section, ConfigFileName)
+                                print("WARNING: more than one key pattern for function '%s' in mode config section '%s', ignoring. Check your %s." % (
+                                func, section, ConfigFileName))
                             else:
                                 key_pattern = comps[-1], sum(comps[:-1])
                         else:
                             if mouse_pattern:
-                                print "WARNING: more than one mouse pattern for function '%s' in mode config section '%s', ignoring. Check your %s." % (
-                                func, section, ConfigFileName)
+                                print("WARNING: more than one mouse pattern for function '%s' in mode config section '%s', ignoring. Check your %s." % (
+                                func, section, ConfigFileName))
                             else:
                                 mouse_pattern = comps[-1], sum(comps[:-1])
                 mode.tooltip += "<TR><TD>%s:&nbsp;&nbsp;</TD><TD>%s</TD></TR>\n" % (pattern, FuncDoc[func])

@@ -38,7 +38,7 @@ from scipy.ndimage import measurements
 
 from TigGUI.kitties.utils import PersistentCurrier
 from TigGUI.kitties.widgets import BusyIndicator
-from RenderControl import RenderControl, dprint
+from .RenderControl import RenderControl, dprint
 from TigGUI.Images import Colormaps
 from TigGUI.Widgets import FloatValidator, TiggerPlotCurve, TiggerPlotMarker
 from TigGUI.init import pixmaps
@@ -236,12 +236,12 @@ class ImageControlDialog(QDialog):
       current subset and recompute the histogram and stats.</P>""")
         lo1.addWidget(self._wlab_subset, 1)
 
-        self._wreset_full = self.makeButton(u"\u2192 full", self._rc.setFullSubset)
+        self._wreset_full = self.makeButton("\u2192 full", self._rc.setFullSubset)
         lo1.addWidget(self._wreset_full)
         if sliced_axes:
             #      if self._stokes_axis is not None and len(sliced_axes)>1:
             #        self._wreset_stokes = self.makeButton(u"\u21920Stokes",self._rc.setFullSubset)
-            self._wreset_slice = self.makeButton(u"\u2192 slice", self._rc.setSliceSubset)
+            self._wreset_slice = self.makeButton("\u2192 slice", self._rc.setSliceSubset)
             lo1.addWidget(self._wreset_slice)
         else:
             self._wreset_slice = None
@@ -272,7 +272,7 @@ class ImageControlDialog(QDialog):
             QObject.connect(w, SIGNAL("editingFinished()"), self._changeDisplayRange)
         lo1.addWidget(QLabel("low:", self), 0)
         lo1.addWidget(self._wrange[0], 1)
-        self._wrangeleft0 = self.makeButton(u"\u21920", self._setZeroLeftLimit, width=32)
+        self._wrangeleft0 = self.makeButton("\u21920", self._setZeroLeftLimit, width=32)
         self._wrangeleft0.setToolTip("""<P>Click this to set the low end of the intensity range to 0.</P>""")
         lo1.addWidget(self._wrangeleft0, 0)
         lo1.addSpacing(8)
@@ -788,11 +788,11 @@ class ImageControlDialog(QDialog):
         ypos = 0.3
         self._line_mean.line.setData([mean, mean], [0, 1])
         self._line_mean.marker.setValue(mean, ypos)
-        self._line_mean.setText((u"\u03BC=" + DataValueFormat) % mean)
+        self._line_mean.setText(("\u03BC=" + DataValueFormat) % mean)
         self._line_mean.show()
         self._line_std.line.setData([mean - std, mean + std], [ypos, ypos])
         self._line_std.marker.setValue(mean, ypos)
-        self._line_std.setText((u"\u03C3=" + DataValueFormat) % std)
+        self._line_std.setText(("\u03C3=" + DataValueFormat) % std)
         self._line_std.show()
         self._histplot.replot()
 

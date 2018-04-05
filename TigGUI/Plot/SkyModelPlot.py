@@ -351,7 +351,7 @@ class LiveImageZoom(ToolDialog):
                 QwtPlot.yLeft: "Y pixel coordinate",
                 QwtPlot.xTop: "X cross-section value",
                 QwtPlot.yRight: "Y cross-section value"}
-        for axis, title in axes.iteritems():
+        for axis, title in axes.items():
             self._zoomplot.enableAxis(True)
             self._zoomplot.setAxisScale(axis, 0, 1)
             self._zoomplot.setAxisFont(axis, font)
@@ -570,7 +570,7 @@ class LiveProfile(ToolDialog):
         self._axes = []
         for n, label in enumerate(("X", "Y")):
             iaxis, np = image.getSkyAxis(n)
-            self._axes.append((label, iaxis, range(np), "pixels"))
+            self._axes.append((label, iaxis, list(range(np)), "pixels"))
         self._xaxis = self._axes[0][1]
         self._yaxis = self._axes[1][1]
         # then, extra axes
@@ -779,7 +779,7 @@ class SkyModelPlotter(QWidget):
             self._resetZoomStack(index)
 
         def _resetZoomStack(self, index):
-            stack = map(self.adjustRect, self._zoomrects)
+            stack = list(map(self.adjustRect, self._zoomrects))
             if stack:
                 zs = stack[index]
                 dprint(2, "resetting plot limits to", zs)
@@ -1069,7 +1069,7 @@ class SkyModelPlotter(QWidget):
             elif step < 60:
                 text = "%d'" % step
             else:
-                text = u"%d\u00B0" % (step / 60)
+                text = "%d\u00B0" % (step / 60)
             qa = gridmenu.addAction(text, self._currier.curry(self._setGridCircleStepping, step and step * 60))
             qa.setCheckable(True)
             qa.setChecked(step == self._grid_step_arcsec)
@@ -1249,7 +1249,7 @@ class SkyModelPlotter(QWidget):
         if world:
             pos = self.plot.lmPosToScreen(pos)
         dists = [((pos - self.plot.getMarkerPosition(marker)).manhattanLength(), marker) for marker in
-                 self._markers.itervalues() if marker.isVisible()]
+                 self._markers.values() if marker.isVisible()]
         if dists:
             mindist = min(dists, key=lambda x: x[0])
             if mindist[0] < 10:
@@ -1272,7 +1272,7 @@ class SkyModelPlotter(QWidget):
         x = y = val = flag = None
         image = self._imgman and self._imgman.getTopImage()
         if image:
-            x, y = map(int, map(round, image.lmToPix(l, m)))
+            x, y = list(map(int, list(map(round, image.lmToPix(l, m)))))
             nx, ny = image.imageDims()
             if x >= 0 and x < nx and y >= 0 and y < ny:
                 #        text += "<BR>x=%d y=%d"%(round(x),round(y))
@@ -1298,7 +1298,7 @@ class SkyModelPlotter(QWidget):
             Rd, Rm, Rs = ModelClasses.Position.dec_dms_static(dist)
             pa *= 180 / math.pi
             pa += 360 * (pa < 0)
-            msgtext = u"%d\u00B0%02d'%05.2f\"  PA=%.2f\u00B0" % (Rd, Rm, Rs, pa)
+            msgtext = "%d\u00B0%02d'%05.2f\"  PA=%.2f\u00B0" % (Rd, Rm, Rs, pa)
             # self._ruler1.setLabel("")
             return QwtText(msgtext)
 
@@ -1318,7 +1318,7 @@ class SkyModelPlotter(QWidget):
             if self.projection.has_projection():
                 tiptext += "X: %02dh%02dm%05.2fs %s%02d&deg;%02d'%05.2f\"  &nbsp;  r<sub>0</sub>=%d&deg;%02d'%05.2f\"   &nbsp;  PA<sub>0</sub>=%06.2f&deg;" % (
                 rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd)
-                msgtext += u"X: %2dh%02dm%05.2fs %s%02d\u00B0%02d'%05.2f\" (%.6f\u00B0 %.6f\u00B0)  r=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0" % (
+                msgtext += "X: %2dh%02dm%05.2fs %s%02d\u00B0%02d'%05.2f\" (%.6f\u00B0 %.6f\u00B0)  r=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0" % (
                     rh, rm, rs, dsign, dd, dm, ds, ra * 180 / math.pi, dec * 180 / math.pi, Rd, Rm, Rs,
                     dist * 180 / math.pi, PAd)
             if x is not None:
@@ -1340,24 +1340,24 @@ class SkyModelPlotter(QWidget):
             if self.projection.has_projection():
                 tiptext += "A: %02dh%02dm%05.2fs %s%02d&deg;%02d'%05.2f\"  &nbsp; r<sub>0</sub>=%d&deg;%02d'%05.2f\"   &nbsp;  PA<sub>0</sub>=%06.2f&deg;" % (
                 rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd)
-                msgtext += u"A: %2dh%02dm%05.2fs %s%02d\u00B0%02d'%05.2f\" (%.6f\u00B0 %.6f\u00B0)  r=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%06.2f\u00B0" % (
+                msgtext += "A: %2dh%02dm%05.2fs %s%02d\u00B0%02d'%05.2f\" (%.6f\u00B0 %.6f\u00B0)  r=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%06.2f\u00B0" % (
                     rh, rm, rs, dsign, dd, dm, ds, ra * 180 / math.pi, dec * 180 / math.pi, Rd, Rm, Rs,
                     dist * 180 / math.pi, PAd)
             if x is not None:
                 tiptext += " &nbsp; x=%d y=%d value=blank" % (x, y) if flag else " &nbsp; x=%d y=%d value=%g" % (
                 x, y, val)
-                msgtext += u"   x=%d y=%d value=blank" % (x, y) if flag else "   x=%d y=%d value=%g" % (x, y, val)
+                msgtext += "   x=%d y=%d value=blank" % (x, y) if flag else "   x=%d y=%d value=%g" % (x, y, val)
             tiptext += "</NOBR><BR><NOBR>"
             if self.projection.has_projection():
                 tiptext += "B: %02dh%02dm%05.2fs %s%02d&deg;%02d'%05.2f\" &nbsp;  r<sub>0</sub>=%d&deg;%02d'%05.2f\"  &nbsp;  PA<sub>0</sub>=%06.2f&deg;" % (
                 rh1, rm1, rs1, dsign1, dd1, dm1, ds1, Rd1, Rm1, Rs1, PAd1)
-                msgtext += u"\nB: %2dh%02dm%05.2fs %s%02d\u00B0%02d'%05.2f\" (%.6f\u00B0 %.6f\u00B0)  r=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0" % (
+                msgtext += "\nB: %2dh%02dm%05.2fs %s%02d\u00B0%02d'%05.2f\" (%.6f\u00B0 %.6f\u00B0)  r=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0" % (
                     rh1, rm1, rs1, dsign1, dd1, dm1, ds1, ra1 * 180 / math.pi, dec1 * 180 / math.pi, Rd1, Rm1, Rs1,
                     dist1 * 180 / math.pi, PAd1)
             if x1 is not None:
                 tiptext += " &nbsp; x=%d y=%d value=blank" % (x1, y1) if flag1 else " &nbsp; x=%d y=%d value=%g" % (
                 x1, y1, val1)
-                msgtext += u"   x=%d y=%d value=blank" % (x1, y1) if flag1 else "   x=%d y=%d value=%g" % (
+                msgtext += "   x=%d y=%d value=blank" % (x1, y1) if flag1 else "   x=%d y=%d value=%g" % (
                 x1, y1, val1)
             tiptext += "</NOBR><BR>"
             # distance measurement
@@ -1367,7 +1367,7 @@ class SkyModelPlotter(QWidget):
             pa2 += 360 * (pa2 < 0)
             tiptext += "<NOBR>|AB|=%d&deg;%02d'%05.2f\" &nbsp; PA<sub>AB</sub>=%06.2f&deg;</NOBR>" % (
             Rd2, Rm2, Rs2, pa2)
-            msgtext += u"\n|AB|=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0" % (
+            msgtext += "\n|AB|=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0" % (
             Rd2, Rm2, Rs2, dist2 * 180 / math.pi, pa2)
             # make markers
             marka, markb = TiggerPlotMarker(), TiggerPlotMarker()
@@ -1399,7 +1399,7 @@ class SkyModelPlotter(QWidget):
         for item in markup_items:
             item.setZ(Z_Markup)
         QTimer.singleShot(10, self._currier.curry(self._addPlotMarkup, markup_items))
-        print msgtext
+        print(msgtext)
         QApplication.clipboard().setText(msgtext + "\n")
         QApplication.clipboard().setText(msgtext + "\n", QClipboard.Selection)
 
@@ -1481,7 +1481,7 @@ class SkyModelPlotter(QWidget):
         # emit message as well
         msgtext = ""
         if self.projection.has_projection():
-            msgtext = u"%02dh%02dm%05.2fs %s%02d\u00B0%02d'%05.2f\"  r=%d\u00B0%02d'%05.2f\"  PA=%.2f\u00B0" % (
+            msgtext = "%02dh%02dm%05.2fs %s%02d\u00B0%02d'%05.2f\"  r=%d\u00B0%02d'%05.2f\"  PA=%.2f\u00B0" % (
             rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd)
         # if we have an image, add pixel coordinates
         image = self._imgman and self._imgman.getTopImage()
@@ -1571,7 +1571,7 @@ class SkyModelPlotter(QWidget):
             for item in markup_items:
                 item.setZ(Z_Markup)
             QTimer.singleShot(10, self._currier.curry(self._addPlotMarkup, markup_items))
-            print msgtext
+            print(msgtext)
             QApplication.clipboard().setText(msgtext + "\n")
             QApplication.clipboard().setText(msgtext + "\n", QClipboard.Selection)
 
@@ -1600,7 +1600,7 @@ class SkyModelPlotter(QWidget):
         dprint(1, "selectRect", rect)
         if not world:
             rect = self.plot.screenRectToLm(rect)
-        sources = [marker.source() for marker in self._markers.itervalues() if
+        sources = [marker.source() for marker in self._markers.values() if
                    marker.isVisible() and rect.contains(marker.lmQPointF())]
         if sources:
             self._selectSources(sources, mode)
@@ -1744,8 +1744,8 @@ class SkyModelPlotter(QWidget):
         extent = [[0, 0], [0, 0]]
         for iext in 0, 1:
             if self._source_lm:
-                xmin = extent[iext][0] = min([lm[iext] for lm in self._source_lm.itervalues()])
-                xmax = extent[iext][1] = max([lm[iext] for lm in self._source_lm.itervalues()])
+                xmin = extent[iext][0] = min([lm[iext] for lm in self._source_lm.values()])
+                xmax = extent[iext][1] = max([lm[iext] for lm in self._source_lm.values()])
                 # add 5% on either side
                 margin = .05 * (xmax - xmin)
                 extent[iext][0] -= margin
@@ -1799,7 +1799,7 @@ class SkyModelPlotter(QWidget):
             # see how many units (of arcminute) fit in max diagonal direction
             maxr = int(round(math.sqrt(lmax ** 2 + mmax ** 2) / (DEG / 3600)))
             # cache sines and cosines of curve argument
-            angles = numpy.array(range(0, 361, 5)) * DEG
+            angles = numpy.array(list(range(0, 361, 5))) * DEG
             sines = numpy.sin(angles)
             cosines = numpy.cos(angles)
             # make circles
@@ -1850,7 +1850,7 @@ class SkyModelPlotter(QWidget):
                 self._markers[src.name] = marker = makeSourceMarker(src, l, m, self.getSymbolSize(src), self.model,
                                                                     self._imgman)
         # now (re)attach the source markers, since the plot has been cleared
-        for marker in self._markers.itervalues():
+        for marker in self._markers.values():
             marker.attach(self.plot)
         # attach images to plot
         if self._imgman:
@@ -1900,7 +1900,7 @@ class SkyModelPlotter(QWidget):
         # save to file
         try:
             pixmap.save(filename, "PNG")
-        except Exception, exc:
+        except Exception as exc:
             self.emit(SIGNAL("showErrorMessage"), "Error writing %s: %s" % (filename, str(exc)))
             return
         self.emit(SIGNAL("showMessage"), "Exported plot to file %s" % filename)
@@ -1917,13 +1917,13 @@ class SkyModelPlotter(QWidget):
     def updateModelSelection(self, nsel=0, origin=None):
         """This is callled when something changes the set of selected model sources"""
         # call checkSelected() on all plot markers, replot if any return True
-        if filter(lambda marker: marker.checkSelected(), self._markers.itervalues()):
+        if [marker for marker in iter(self._markers.values()) if marker.checkSelected()]:
             self.plot.clearDrawCache()
             self.plot.replot()
 
     def changeGroupingStyle(self, group, origin=None):
         # call changeStyle() on all plot markers, replot if any return True
-        if filter(lambda marker: marker.changeStyle(group), self._markers.itervalues()):
+        if [marker for marker in iter(self._markers.values()) if marker.changeStyle(group)]:
             self.plot.clearDrawCache()
             self.plot.replot()
 

@@ -210,7 +210,7 @@ class SkyModelTreeWidget(TigGUI.kitties.widgets.ClickableTreeWidget):
         TigGUI.kitties.widgets.ClickableTreeWidget.clear(self)
         dprint(2, "creating model items")
         items = [SkyModelTreeWidgetItem(src) for src in self.model.sources]
-        self._itemdict = dict(zip([src.name for src in self.model.sources], items))
+        self._itemdict = dict(list(zip([src.name for src in self.model.sources], items)))
         dprint(2, "adding to tree widget")
         self.addTopLevelItems(items)
         self.header().updateGeometry()
@@ -338,11 +338,11 @@ class SkyModelTreeWidgetItem(QTreeWidgetItem):
         """helper method: converts angular error to string representation in deg or arcmin or arcsec"""
         arcsec = (value / DEG) * 3600
         if arcsec < 60:
-            return unichr(0xB1) + "%.2g\"" % arcsec
+            return chr(0xB1) + "%.2g\"" % arcsec
         elif arcsec < 3600:
-            return unichr(0xB1) + "%.2f'" % (arcsec * 60)
+            return chr(0xB1) + "%.2f'" % (arcsec * 60)
         else:
-            return unichr(0xB1) + "%.2f%s" % (arcsec * 3600, unichr(0xB0))
+            return chr(0xB1) + "%.2f%s" % (arcsec * 3600, chr(0xB0))
 
     def setSource(self, src):
         # name
@@ -351,7 +351,7 @@ class SkyModelTreeWidgetItem(QTreeWidgetItem):
         self.setSizeHint(0, QSize(self._fontmetrics.width("x" + src.name), 0))
         # coordinates
         self.setColumn(ColumnRa, src.pos.ra, "%2dh%02dm%05.2fs" % src.pos.ra_hms())
-        self.setColumn(ColumnDec, src.pos.dec, ("%s%2d" + unichr(0xB0) + "%02d'%05.2f\"") %
+        self.setColumn(ColumnDec, src.pos.dec, ("%s%2d" + chr(0xB0) + "%02d'%05.2f\"") %
                        src.pos.dec_sdms())
         if src.pos.ra_err is not None:
             self.setColumn(ColumnRa_err, src.pos.ra_err, self._angErrToStr(src.pos.ra_err))
@@ -370,11 +370,11 @@ class SkyModelTreeWidgetItem(QTreeWidgetItem):
             if stk is not None:
                 self.setColumn(globals()['Column' + stokes], stk, "%.3g" % stk)
             if stk_err is not None:
-                self.setColumn(globals()['Column' + stokes + "_err"], stk_err, unichr(0xB1) + "%.2g" % stk_err)
+                self.setColumn(globals()['Column' + stokes + "_err"], stk_err, chr(0xB1) + "%.2g" % stk_err)
         if hasattr(src.flux, 'rm'):
             self.setColumn(ColumnRm, src.flux.rm, "%.2f" % src.flux.rm)
             if hasattr(src.flux, 'rm_err'):
-                self.setColumn(ColumnRm_err, src.flux.rm_err, unichr(0xB1) + "%.2f" % src.flux.rm)
+                self.setColumn(ColumnRm_err, src.flux.rm_err, chr(0xB1) + "%.2f" % src.flux.rm)
         # spi
         if isinstance(src.spectrum, ModelClasses.SpectralIndex):
             spi = getattr(src.spectrum, 'spi', 0)
@@ -387,17 +387,17 @@ class SkyModelTreeWidgetItem(QTreeWidgetItem):
                 if not isinstance(spierr, (list, tuple)):
                     spierr = [spierr]
                 spierr = ",".join(["%.2f" % x for x in spierr])
-                self.setColumn(ColumnSpi_err, src.spectrum.spi_err, unichr(0xB1) + spierr)
+                self.setColumn(ColumnSpi_err, src.spectrum.spi_err, chr(0xB1) + spierr)
         # shape
         shape = getattr(src, 'shape', None)
         if isinstance(shape, ModelClasses.ModelItem):
             shapeval = shape.getShape()
-            shapestr = shape.strDesc(delimiters=('"', unichr(0xD7), unichr(0x21BA), unichr(0xB0)))
+            shapestr = shape.strDesc(delimiters=('"', chr(0xD7), chr(0x21BA), chr(0xB0)))
             self.setColumn(ColumnShape, shapeval, shapestr)
             errval = shape.getShapeErr()
             if errval:
-                errstr = shape.strDescErr(delimiters=('"', unichr(0xD7), unichr(0x21BA), unichr(0xB0)))
-                self.setColumn(ColumnShape_err, errval, unichr(0xB1) + errstr)
+                errstr = shape.strDescErr(delimiters=('"', chr(0xD7), chr(0x21BA), chr(0xB0)))
+                self.setColumn(ColumnShape_err, errval, chr(0xB1) + errstr)
         dprint(3, "setSource 3", src.name)
         # Tags. Tags are all extra attributes that do not have a dedicated column (i.e. not Iapp or r), and do not start
         # with "_" (which is reserved for internal attributes)
@@ -483,7 +483,7 @@ class ModelGroupsTable(QWidget):
             self.table.setHorizontalHeaderItem(i, QTableWidgetItem(label))
         self.table.horizontalHeader().setSectionHidden(self.ColApply, True)
         # setup columns for editable grouping attributes
-        for i, attr in self.AttrByCol.iteritems():
+        for i, attr in self.AttrByCol.items():
             self.table.setHorizontalHeaderItem(i, QTableWidgetItem(PlotStyles.StyleAttributeLabels[attr]))
             self.table.horizontalHeader().setSectionHidden(i, True)
         self.table.verticalHeader().hide()
@@ -504,7 +504,7 @@ class ModelGroupsTable(QWidget):
     ShowAttrToCheckState = {PlotStyles.ShowNot: Qt.Unchecked,
                             PlotStyles.ShowDefault: Qt.PartiallyChecked,
                             PlotStyles.ShowAlways: Qt.Checked}
-    CheckStateToShowAttr = dict([(val, key) for key, val in ShowAttrToCheckState.iteritems()])
+    CheckStateToShowAttr = dict([(val, key) for key, val in ShowAttrToCheckState.items()])
 
     def _makeCheckItem(self, name, group, attr):
         item = QTableWidgetItem(name)
@@ -615,7 +615,7 @@ class ModelGroupsTable(QWidget):
             plot style. Customized styles have numeric priority; if a source belongs to multiple groups, then
             the style with the lowest priority takes precedence.<P>""")
             # attribute comboboxes
-            for icol, attr in self.AttrByCol.iteritems():
+            for icol, attr in self.AttrByCol.items():
                 # get list of options for this style attribute. If dealing with first grouping (i==0), which is
                 # the "all sources" grouping, then remove the "default" option (which is always first in the list)
                 options = PlotStyles.StyleAttributeOptions[attr]
@@ -623,7 +623,7 @@ class ModelGroupsTable(QWidget):
                     options = options[1:]
                 # make combobox
                 cb = QComboBox()
-                cb.addItems(map(str, options))
+                cb.addItems(list(map(str, options)))
                 # the "label" option is also editable
                 if attr == "label":
                     cb.setEditable(True)
@@ -677,7 +677,7 @@ class ModelGroupsTable(QWidget):
         elif col == self.ColApply:
             group.style.apply = self.table.cellWidget(row, col).currentIndex()
             # enable/disable editable cells
-            for j in self.AttrByCol.keys():
+            for j in list(self.AttrByCol.keys()):
                 item1 = self.table.item(row, j)
                 if item1:
                     fl = item1.flags() & ~Qt.ItemIsEnabled
@@ -718,12 +718,12 @@ class ModelGroupsTable(QWidget):
         if self._attrs_shown:
             self._attrs_shown = False
             self.table.hideColumn(self.ColApply)
-            for col in self.AttrByCol.iterkeys():
+            for col in self.AttrByCol.keys():
                 self.table.hideColumn(col)
             self._showattrbtn.setText("Show plot styles >>")
         else:
             self._attrs_shown = True
             self.table.showColumn(self.ColApply)
-            for col in self.AttrByCol.iterkeys():
+            for col in self.AttrByCol.keys():
                 self.table.showColumn(col)
             self._showattrbtn.setText("<< Hide plot styles")

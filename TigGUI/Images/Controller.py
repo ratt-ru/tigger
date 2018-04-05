@@ -89,7 +89,7 @@ class ImageController(QFrame):
         self._wlabel = QLabel(self.name, self)
         self._number = 0
         self.setName(self.name)
-        self._wlabel.setToolTip("%s %s" % (image.filename, u"\u00D7".join(map(str, image.data().shape))))
+        self._wlabel.setToolTip("%s %s" % (image.filename, "\u00D7".join(map(str, image.data().shape))))
         lo.addWidget(self._wlabel, 1)
         # if 'save' is specified, create a "save" button
         if save:
@@ -409,7 +409,7 @@ class ImageController(QFrame):
         QApplication.flush()
         try:
             self.image.save(filename)
-        except Exception, exc:
+        except Exception as exc:
             busy = None
             traceback.print_exc()
             self._imgman.showErrorMessage("""Error writing FITS image %s: %s""" % (filename, str(sys.exc_info()[1])))
@@ -451,7 +451,7 @@ class ImageController(QFrame):
         # save to file
         try:
             pixmap.save(filename, "PNG")
-        except Exception, exc:
+        except Exception as exc:
             self.emit(SIGNAL("showErrorMessage"), "Error writing %s: %s" % (filename, str(exc)))
             return
         self.emit(SIGNAL("showMessage"), "Exported image to file %s" % filename)

@@ -111,7 +111,7 @@ def extract_stack(f=None, limit=None):
     """equivalent to traceback.extract_stack(), but also works with psyco
     """
     if f is not None:
-        raise RuntimeError, "Timba.utils.extract_stack: f has to be None, don't ask why"
+        raise RuntimeError("Timba.utils.extract_stack: f has to be None, don't ask why")
     # normally we can just use the traceback.extract_stack() function and
     # cut out the last frame (which is just ourselves). However, under psyco
     # this seems to return an empty list, so we use sys._getframe() instead
@@ -127,7 +127,7 @@ def extract_stack(f=None, limit=None):
 
 def nonportable_extract_stack(f=None, limit=None):
     if f is not None:
-        raise RuntimeError, "Timba.utils.nonportable_extract_stack: f has to be None, don't ask why"
+        raise RuntimeError("Timba.utils.nonportable_extract_stack: f has to be None, don't ask why")
     tb = []
     fr = sys._getframe(1);  # caller's frame
     while fr and (limit is None or len(tb) < limit):
@@ -234,13 +234,13 @@ class verbosity:
             self.verbosity_name = name
         else:
             if self.__class__ is verbosity:
-                raise RuntimeError, """When creating a verbosity object directly,
-          a name must be specified."""
+                raise RuntimeError("""When creating a verbosity object directly,
+          a name must be specified.""")
             self.verbosity_name = name = self.__class__.__name__
         # look for argv to override debug levels (unless they were already set via set_verbosity_level above)
         if verbosity._levels:
             self.verbose = verbosity._levels.get(name, 0)
-            print "Registered verbosity context:", name, "=", self.verbose
+            print("Registered verbosity context:", name, "=", self.verbose)
         elif verbosity._parse_argv:
             # NB: sys.argv doesn't always exist -- e.g., when embedding Python
             # it doesn't seem to be present.  Hence the check.
@@ -256,7 +256,7 @@ class verbosity:
                     except:
                         pass
             if have_debug:
-                print "Registered verbosity context:", name, "=", self.verbose
+                print("Registered verbosity context:", name, "=", self.verbose)
         # add name to map
         self._verbosities[name] = self
 
@@ -283,7 +283,7 @@ class verbosity:
         if level <= self.verbose:
             stream = self.stream or sys.stderr
             stream.write(self.dheader(-3))
-            stream.write(string.join(map(str, args), ' ') + '\n')
+            stream.write(string.join(list(map(str, args)), ' ') + '\n')
 
     def dprintf(self, level, format, *args):
         if level <= self.verbose:
@@ -314,10 +314,10 @@ class verbosity:
 
 def _print_curry_exception():
     (et, ev, etb) = sys.exc_info()
-    print "%s: %s" % (getattr(ev, '_classname', ev.__class__.__name__), getattr(ev, '__doc__', ''))
+    print("%s: %s" % (getattr(ev, '_classname', ev.__class__.__name__), getattr(ev, '__doc__', '')))
     if hasattr(ev, 'args'):
-        print "  ", ' '.join(map(str, ev.args))
-    print '======== exception traceback follows:'
+        print("  ", ' '.join(map(str, ev.args)))
+    print('======== exception traceback follows:')
     traceback.print_tb(etb)
 
 
@@ -331,10 +331,10 @@ def curry(func, *args, **kwds):
         try:
             return func(*a, **kw)
         except:
-            print "======== curry: exception while calling a curried function"
-            print "  function:", func
-            print "  args:", a
-            print "  kwargs:", kw
+            print("======== curry: exception while calling a curried function")
+            print("  function:", func)
+            print("  args:", a)
+            print("  kwargs:", kw)
             _print_curry_exception()
             raise
 
@@ -358,10 +358,10 @@ def xcurry(func, _args=(), _argslice=slice(0), _kwds={}, **kwds):
         try:
             return func(*a, **kw)
         except:
-            print "======== xcurry: exception while calling a curried function"
-            print "  function:", func
-            print "  args:", a
-            print "  kwargs:", kw
+            print("======== xcurry: exception while calling a curried function")
+            print("  function:", func)
+            print("  args:", a)
+            print("  kwargs:", kw)
             _print_curry_exception()
             raise
 
@@ -400,17 +400,17 @@ class WeakInstanceMethod(object):
 
     def __init__(self, method):
         if type(method) != types.MethodType:
-            raise TypeError, "weakinstancemethod must be constructed from an instancemethod"
-        (self.im_func, self.im_self) = (method.im_func, weakref.ref(method.im_self))
+            raise TypeError("weakinstancemethod must be constructed from an instancemethod")
+        (self.__func__, self.__self__) = (method.__func__, weakref.ref(method.__self__))
 
-    def __nonzero__(self):
-        return self.im_self() is not None
+    def __bool__(self):
+        return self.__self__() is not None
 
     def __call__(self, *args, **kwargs):
-        obj = self.im_self()
+        obj = self.__self__()
         if obj is None:
             return self.DeadRef
-        return self.im_func(obj, *args, **kwargs)
+        return self.__func__(obj, *args, **kwargs)
 
 
 def weakref_proxy(obj):

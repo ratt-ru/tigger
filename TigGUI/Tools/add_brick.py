@@ -131,7 +131,7 @@ class AddBrickDialog(QDialog):
         busy = BusyIndicator()
         try:
             input_hdu = pyfits.open(filename)[0]
-        except Exception, err:
+        except Exception as err:
             busy = None
             QMessageBox.warning(self, "Error reading FITS", "Error reading FITS file %s: %s" % (filename, str(err)))
             return
