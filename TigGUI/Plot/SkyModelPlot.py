@@ -24,25 +24,31 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-from PyQt4.Qt import *
-from PyQt4.Qwt5 import *
 import math
-import os.path
+
+import numpy
 import re
 import time
-import numpy
+from PyQt4.Qt import QObject, QWidget, QHBoxLayout, QFileDialog, QComboBox, SIGNAL, QLabel, \
+  QDialog, QToolButton, QStringList, QVBoxLayout, \
+  Qt, QAction, QEvent, QSize, \
+  QSizePolicy, QApplication, QColor, QImage, QPixmap, QPainter, \
+  QBrush, QTimer, QCheckBox, QMenu, QPen, QRect, QClipboard, \
+  QInputDialog, QActionGroup, QRectF, QPointF, QPoint, QMessageBox, QTransform, QToolBar, QCoreApplication
+from PyQt4.Qwt5 import QwtPlot, QwtPlotPicker, QwtText, QwtPlotItem, QwtPlotCurve, QwtPicker, QwtEventPattern, \
+  QwtSymbol, QwtPlotZoomer, \
+  QwtScaleEngine
 
 import Kittens.utils
-
-from Kittens.utils import curry,PersistentCurrier
+from Kittens.utils import curry, PersistentCurrier
 from Kittens.widgets import BusyIndicator
 
 _verbosity = Kittens.utils.verbosity(name="plot");
 dprint = _verbosity.dprint;
 dprintf = _verbosity.dprintf;
 
-from TigGUI import pixmaps,Config,ConfigFile
-from Tigger.Models import ModelClasses,PlotStyles
+from TigGUI.init import pixmaps, Config
+from Tigger.Models import ModelClasses
 from Tigger import Coordinates
 from Tigger.Coordinates import Projection
 from Tigger.Models.SkyModel import SkyModel

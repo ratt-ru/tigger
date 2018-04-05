@@ -25,33 +25,31 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-from TigGUI import *
-
 import os
-import os.path
-import time
 import sys
-import fnmatch
-import traceback
 
-from PyQt4.Qt import *
-
-import Kittens.utils
-from Kittens.utils import PersistentCurrier
-
-from Tigger.Models import ModelClasses
+import os.path
+from PyQt4.Qt import QObject, QWidget, QFileDialog, SIGNAL, QDialog, QStringList, QVBoxLayout, \
+  Qt, QSize, \
+  QSizePolicy, QApplication, QMenu, QMessageBox, QErrorMessage, \
+  QMainWindow, QSplitter
 from Tigger.Models import SkyModel
 from Tigger.Models.Formats import ModelHTML
-import Widgets
+
 import AboutDialog
-from SkyModelTreeWidget import *
-from Plot.SkyModelPlot import *
-from Images.Manager import ImageManager
+import Kittens.utils
 import TigGUI.Tools.source_selector
+import Widgets
+from Images.Manager import ImageManager
+from Plot.SkyModelPlot import SkyModelPlotter, PersistentCurrier
+from SkyModelTreeWidget import SkyModelTreeWidget, ModelGroupsTable
+from TigGUI import Images
+from TigGUI.init import pixmaps, Config
 
 _verbosity = Kittens.utils.verbosity(name="mainwin");
 dprint = _verbosity.dprint;
 dprintf = _verbosity.dprintf;
+
 
 class MainWindow (QMainWindow):
   ViewModelColumns = [ "name","RA","Dec","type","Iapp","I","Q","U","V","RM","spi","shape" ];

@@ -23,18 +23,16 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-from PyQt4.Qt import *
 import math
-import os.path
 import traceback
 
-from Kittens.widgets import SIGNAL,BusyIndicator
-from Kittens.utils import curry
-from TigGUI.Widgets import FileSelector
-from Tigger.Models import SkyModel,ModelClasses
-from TigGUI import SkyModelTreeWidget
+from PyQt4.Qt import QObject, QHBoxLayout, QComboBox, SIGNAL, QLabel, \
+  QLineEdit, QDialog, QVBoxLayout, \
+  Qt, QErrorMessage
 
 import Kittens.utils
+from Kittens.utils import curry
+from Kittens.widgets import BusyIndicator
 
 _verbosity = Kittens.utils.verbosity(name="source_selector");
 dprint = _verbosity.dprint;

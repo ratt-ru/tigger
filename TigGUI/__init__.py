@@ -24,31 +24,13 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-import sys
-
-import Kittens.config
-import os.path
-import Tigger
-from Tigger import import_pyfits, nuke_matplotlib
-
+import Kittens.utils
 
 __version__ = "1.4.0"
 
 release_string = __version__
 svn_revision_string = __version__
 svn_revision_html = __version__
-
-# initializes GUI-related globals. Only called from the viewer
-def init_gui():
-    from Kittens.widgets import BusyIndicator
-    import Kittens.pixmaps
-    import Kittens.utils
-    global pixmaps, Config, ConfigFile, ConfigFileName
-    pixmaps = Kittens.pixmaps.PixmapCache("TigGUI")
-    ConfigFileName = ".tigger.conf"
-    ConfigFile = Kittens.config.DualConfigParser("tigger.conf",["/usr/lib/TigGUI", os.path.dirname(__file__)])
-    Config = Kittens.config.SectionParser(ConfigFile,"Tigger")
-
 
 startup_dprint = startup_dprintf = lambda *dum:None
 _verbosity = Kittens.utils.verbosity(name="tiggui")

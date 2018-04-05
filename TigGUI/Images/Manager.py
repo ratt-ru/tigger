@@ -24,21 +24,23 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-from PyQt4.Qt import *
-import math
+import sys
+import traceback
+
 import numpy
-import re
 import os.path
 import time
-import traceback
-import sys
+from PyQt4.Qt import QObject, QWidget, QFileDialog, SIGNAL, QStringList, QVBoxLayout, \
+  Qt, QApplication, QMenu, QClipboard, \
+  QInputDialog, QActionGroup
 
 import Kittens.utils
+
 pyfits = Kittens.utils.import_pyfits();
-from Kittens.utils import curry,PersistentCurrier
+from Kittens.utils import PersistentCurrier
 from Kittens.widgets import BusyIndicator
 
-from TigGUI.Images.Controller import ImageController,dprint,dprintf
+from TigGUI.Images.Controller import ImageController,dprint
 
 from TigGUI.Images import SkyImage
 from TigGUI.Images import  FITS_ExtensionList

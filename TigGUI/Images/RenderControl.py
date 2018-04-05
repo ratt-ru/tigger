@@ -24,8 +24,12 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-from PyQt4.Qt import *
-from PyQt4.Qwt5 import *
+from PyQt4.Qt import QObject, QValidator, QWidget, QHBoxLayout, QFileDialog, QComboBox, SIGNAL, QLabel, \
+  QLineEdit, QDialog, QDoubleValidator, QToolButton, QStringList, QVBoxLayout, \
+  QPushButton, Qt, QTreeWidgetItem, QAbstractItemView, QHeaderView, QTreeWidget, QAction, QEvent, QSize, \
+  QSizePolicy, QTableWidget, QTableWidgetItem, QApplication, QColor, QImage, QPixmap, QPainter,\
+  QBrush, QTimer, QFrame, QCheckBox, QStackedWidget, QIcon, QMenu, QGridLayout, QPen, QRect, QClipboard,\
+  QInputDialog, QActionGroup, QKeySequence
 import math
 import numpy
 import sys
@@ -42,7 +46,7 @@ dprint = _verbosity.dprint;
 dprintf = _verbosity.dprintf;
 
 from TigGUI.Images import SkyImage,Colormaps
-from TigGUI import pixmaps,ConfigFile
+from TigGUI.init import pixmaps,ConfigFile
 from TigGUI.Widgets import FloatValidator
 
 import Kittens.config

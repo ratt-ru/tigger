@@ -1,7 +1,8 @@
-from TigGUI import *
-from PyQt4.Qt import *
+from PyQt4.Qt import QObject, SIGNAL, Qt, QActionGroup
+
 import Kittens.utils
-from Kittens.utils import curry,PersistentCurrier
+from Kittens.utils import PersistentCurrier
+from TigGUI.init import Config, ConfigFile, ConfigFileName, pixmaps
 
 _verbosity = Kittens.utils.verbosity(name="mmod");
 dprint = _verbosity.dprint;

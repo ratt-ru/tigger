@@ -24,13 +24,14 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-import sys
-import math
 import traceback
-import re
 
-from PyQt4.Qt import *
-from PyQt4.Qwt5 import *
+import re
+from PyQt4.Qt import QObject, QValidator, QWidget, QHBoxLayout, QFileDialog, QComboBox, SIGNAL, QLabel, \
+  QLineEdit, QDialog, QIntValidator, QDoubleValidator, QToolButton, QStringList, QListWidget, QVBoxLayout, \
+  QPushButton, Qt
+from PyQt4.Qwt5 import QwtPlotCurve, QwtPlotMarker
+
 
 class TiggerPlotCurve (QwtPlotCurve):
   """Wrapper around QwtPlotCurve to make it compatible with numpy float types"""

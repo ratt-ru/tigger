@@ -25,15 +25,18 @@
 #
 
 import math
-from PyQt4.Qt import *
 
-import Kittens.widgets
+from PyQt4.Qt import QObject, QWidget, QHBoxLayout, QComboBox, SIGNAL, QLabel, \
+  QToolButton, QVBoxLayout, \
+  QPushButton, Qt, QTreeWidgetItem, QAbstractItemView, QHeaderView, QTreeWidget, QAction, QEvent, QSize, \
+  QSizePolicy, QString, QTableWidget, QTableWidgetItem
+from Tigger.Models import ModelClasses, PlotStyles
+from Tigger.Models.SkyModel import SkyModel
+
 import Kittens.utils
+import Kittens.widgets
 from Kittens.utils import PersistentCurrier
 from Kittens.widgets import BusyIndicator
-
-from Tigger.Models import ModelClasses,PlotStyles
-from Tigger.Models.SkyModel import SkyModel
 
 _verbosity = Kittens.utils.verbosity(name="tw");
 dprint = _verbosity.dprint;

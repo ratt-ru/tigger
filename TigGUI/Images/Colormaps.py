@@ -24,16 +24,18 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-from PyQt4.Qt import *
-from PyQt4.Qwt5 import *
-
+import copy
 import math
-import  numpy
+
+import numpy
 import numpy.ma
+from PyQt4.Qt import QObject, QWidget, QHBoxLayout, SIGNAL, QLabel, \
+  QToolButton, Qt, QColor, QImage, QPixmap, QPainter, \
+  QBrush, QTimer
+from PyQt4.Qwt5 import QwtSlider
 from scipy.ndimage import measurements
 
 import Kittens.utils
-import copy
 
 _verbosity = Kittens.utils.verbosity(name="colormap");
 dprint = _verbosity.dprint;

@@ -21,16 +21,13 @@
 # or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-from TigGUI import release_string,svn_revision_html,pixmaps
+from PyQt4.Qt import QWidget, QHBoxLayout, SIGNAL, QLabel, \
+    QDialog, QVBoxLayout, \
+    QPushButton, Qt, QSize, \
+    QSizePolicy
 
-import os.path
-import time
-import sys
-import fnmatch
-import traceback
-
-from PyQt4.Qt import *
-
+from TigGUI import release_string
+from TigGUI.init import pixmaps
 
 
 class AboutDialog (QDialog):

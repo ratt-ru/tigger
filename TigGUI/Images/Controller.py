@@ -24,25 +24,24 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-from PyQt4.Qt import *
-from PyQt4.Qwt5 import *
-import math
-import numpy
-import os.path
-import time
-import traceback
 import sys
-from scipy.ndimage import measurements
+import traceback
+
+import numpy
+from PyQt4.Qt import QObject, QHBoxLayout, QFileDialog, QComboBox, SIGNAL, QLabel, \
+    QLineEdit, QDialog, QToolButton, QStringList, Qt, QApplication, QColor, QPixmap, QPainter, \
+    QFrame, QMenu, QPen, QKeySequence
+from PyQt4.Qwt5 import QwtText, QwtPlotCurve, QwtPlotMarker, QwtScaleMap
 
 import Kittens.utils
-from Kittens.utils import curry,PersistentCurrier
+from Kittens.utils import PersistentCurrier
 from Kittens.widgets import BusyIndicator
 
 _verbosity = Kittens.utils.verbosity(name="imagectl");
 dprint = _verbosity.dprint;
 dprintf = _verbosity.dprintf;
 
-from TigGUI import pixmaps
+from TigGUI.init import pixmaps
 from TigGUI.Widgets import FloatValidator
 from TigGUI.Images.RenderControl import RenderControl
 from TigGUI.Images.ControlDialog import ImageControlDialog

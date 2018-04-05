@@ -24,24 +24,24 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-from PyQt4.Qt import *
-from PyQt4.Qwt5 import *
-
 import math
+
 import numpy
-import sys
-import time
+from PyQt4.Qt import QObject, QWidget, QHBoxLayout, QComboBox, SIGNAL, QLabel, \
+    QLineEdit, QDialog, QToolButton, QVBoxLayout, \
+    Qt, QSize, \
+    QSizePolicy, QApplication, QColor, QBrush, QTimer, QFrame, QCheckBox, QStackedWidget, QIcon, QMenu, QGridLayout, \
+    QPen, QRect
+from PyQt4.Qwt5 import QwtPlot, QwtPlotPicker, QwtText, QwtPlotItem, QwtPlotCurve, QwtPicker, QwtEventPattern, \
+    QwtWheel, QwtSlider, QwtSymbol, QwtLinearScaleEngine, QwtLog10ScaleEngine
 from scipy.ndimage import measurements
 
-import Kittens.utils
-from Kittens.utils import curry,PersistentCurrier
+from Kittens.utils import PersistentCurrier
 from Kittens.widgets import BusyIndicator
-
-from TigGUI.Images import SkyImage,Colormaps
-from TigGUI import pixmaps
-from TigGUI.Widgets import FloatValidator,TiggerPlotCurve,TiggerPlotMarker
-
-from RenderControl import RenderControl,dprint,dprintf
+from RenderControl import RenderControl, dprint
+from TigGUI.Images import Colormaps
+from TigGUI.Widgets import FloatValidator, TiggerPlotCurve, TiggerPlotMarker
+from TigGUI.init import pixmaps
 
 DataValueFormat = "%.4g";
 

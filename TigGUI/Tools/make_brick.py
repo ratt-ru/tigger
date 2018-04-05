@@ -24,10 +24,15 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-from PyQt4.Qt import *
 import math
-from math import *
+
+from PyQt4.Qt import QObject, QHBoxLayout, QFileDialog, SIGNAL, QLabel, \
+  QLineEdit, QDialog, QDoubleValidator, QVBoxLayout, \
+  QPushButton, Qt, QCheckBox, QMessageBox, QErrorMessage, \
+  QRadioButton
+
 import Kittens.utils
+
 pyfits = Kittens.utils.import_pyfits();
 import os.path
 import traceback

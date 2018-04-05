@@ -24,19 +24,18 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-import sys
-import traceback
 import math
+
+import numpy
+import numpy.ma
 import os.path
 import time
-
-from PyQt4.Qt import *
-from PyQt4.Qwt5 import *
-import  numpy
-import numpy.ma
-from scipy.ndimage import interpolation,measurements
+from PyQt4.Qt import QObject, SIGNAL, QRect, QRectF, QPointF, QPoint, QSizeF
+from PyQt4.Qwt5 import QwtPlotItem
+from scipy.ndimage import interpolation, measurements
 
 import Kittens.utils
+
 pyfits = Kittens.utils.import_pyfits();
 
 from Tigger.Coordinates import Projection

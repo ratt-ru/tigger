@@ -23,9 +23,12 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-from PyQt4.Qt import *
 import math
+
 import os.path
+from PyQt4.Qt import QObject, QHBoxLayout, SIGNAL, QDialog, QVBoxLayout, \
+    QPushButton, Qt, QCheckBox, QMessageBox, QErrorMessage
+
 from Kittens.widgets import BusyIndicator
 from TigGUI.Widgets import FileSelector
 
