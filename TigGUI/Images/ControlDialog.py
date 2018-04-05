@@ -37,9 +37,9 @@ import Kittens.utils
 from Kittens.utils import curry,PersistentCurrier
 from Kittens.widgets import BusyIndicator
 
-from Tigger.Images import SkyImage,Colormaps
-from Tigger import pixmaps
-from Tigger.Widgets import FloatValidator,TiggerPlotCurve,TiggerPlotMarker
+from TigGUI.Images import SkyImage,Colormaps
+from TigGUI import pixmaps
+from TigGUI.Widgets import FloatValidator,TiggerPlotCurve,TiggerPlotMarker
 
 from RenderControl import RenderControl,dprint,dprintf
 

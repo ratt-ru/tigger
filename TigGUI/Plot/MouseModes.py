@@ -1,4 +1,4 @@
-from Tigger import *
+from TigGUI import *
 from PyQt4.Qt import *
 import Kittens.utils
 from Kittens.utils import curry,PersistentCurrier

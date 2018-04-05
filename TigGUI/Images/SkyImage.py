@@ -40,8 +40,8 @@ import Kittens.utils
 pyfits = Kittens.utils.import_pyfits();
 
 from Tigger.Coordinates import Projection
-from Tigger.Images import Colormaps
-from Tigger.Images import FITSHeaders
+from TigGUI.Images import Colormaps
+from Tigger.Tools import FITSHeaders
 
 DEG = math.pi/180;
 
