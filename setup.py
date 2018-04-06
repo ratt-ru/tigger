@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 __version__ = "1.4.0"
 
-requirements = ['numpy', 'scipy', 'astlib', 'pyfits', 'astropy', 'astro_tigger_lsm', 'configparser']
+requirements = ['numpy', 'scipy', 'astlib', 'astropy', 'astro_tigger_lsm', 'configparser']
 
 scripts = [
     'TigGUI/tigger',
