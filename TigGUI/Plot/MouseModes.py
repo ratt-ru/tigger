@@ -1,4 +1,4 @@
-from PyQt4.Qt import QObject, SIGNAL, Qt, QActionGroup
+from PyQt5.Qt import QObject, Qt, QActionGroup
 
 import TigGUI.kitties.utils
 from TigGUI.kitties.utils import PersistentCurrier

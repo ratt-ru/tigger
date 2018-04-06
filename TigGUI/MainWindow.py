@@ -29,10 +29,8 @@ import os
 import sys
 
 import os.path
-from PyQt4.Qt import QObject, QWidget, QFileDialog, SIGNAL, QDialog, QStringList, QVBoxLayout, \
-    Qt, QSize, \
-    QSizePolicy, QApplication, QMenu, QMessageBox, QErrorMessage, \
-    QMainWindow, QSplitter
+from PyQt5.Qt import QObject, QWidget, QFileDialog, QDialog, QVBoxLayout, \
+    Qt, QSize, QSizePolicy, QApplication, QMenu, QMessageBox, QErrorMessage, QMainWindow, QSplitter
 from Tigger.Models import SkyModel
 from Tigger.Models.Formats import ModelHTML
 
@@ -68,7 +66,7 @@ class MainWindow(QMainWindow):
         cw = QWidget(self)
         self.setCentralWidget(cw)
         cwlo = QVBoxLayout(cw)
-        cwlo.setMargin(5)
+        cwlo.setContentsMargins(5, 5, 5, 5)
         # make splitter
         spl1 = self._splitter1 = QSplitter(Qt.Vertical, cw)
         spl1.setOpaqueResize(False)

@@ -30,11 +30,8 @@ import traceback
 import numpy
 import os.path
 import time
-from PyQt4.Qt import QObject, QWidget, QFileDialog, SIGNAL, QStringList, QVBoxLayout, \
-    Qt, QApplication, QMenu, QClipboard, \
+from PyQt5.Qt import QObject, QWidget, QFileDialog, QVBoxLayout, Qt, QApplication, QMenu, QClipboard, \
     QInputDialog, QActionGroup
-
-import TigGUI.kitties.utils
 
 from astropy.io import fits as pyfits
 

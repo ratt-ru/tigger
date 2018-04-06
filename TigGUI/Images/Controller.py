@@ -28,10 +28,9 @@ import sys
 import traceback
 
 import numpy
-from PyQt4.Qt import QObject, QHBoxLayout, QFileDialog, QComboBox, SIGNAL, QLabel, \
-    QLineEdit, QDialog, QToolButton, QStringList, Qt, QApplication, QColor, QPixmap, QPainter, \
-    QFrame, QMenu, QPen, QKeySequence
-from PyQt4.Qwt5 import QwtText, QwtPlotCurve, QwtPlotMarker, QwtScaleMap
+from PyQt5.Qt import QObject, QHBoxLayout, QFileDialog, QComboBox, QLabel, QLineEdit, QDialog, QToolButton, \
+    Qt, QApplication, QColor, QPixmap, QPainter, QFrame, QMenu, QPen, QKeySequence
+from qwt import QwtText, QwtPlotCurve, QwtPlotMarker, QwtScaleMap
 
 import TigGUI.kitties.utils
 from TigGUI.kitties.utils import PersistentCurrier

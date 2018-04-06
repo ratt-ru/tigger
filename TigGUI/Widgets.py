@@ -27,10 +27,10 @@
 import traceback
 
 import re
-from PyQt4.Qt import QObject, QValidator, QWidget, QHBoxLayout, QFileDialog, QComboBox, SIGNAL, QLabel, \
-    QLineEdit, QDialog, QIntValidator, QDoubleValidator, QToolButton, QStringList, QListWidget, QVBoxLayout, \
+from PyQt5.Qt import QObject, QValidator, QWidget, QHBoxLayout, QFileDialog, QComboBox, QLabel, \
+    QLineEdit, QDialog, QIntValidator, QDoubleValidator, QToolButton, QListWidget, QVBoxLayout, \
     QPushButton, Qt, QMessageBox
-from PyQt4.Qwt5 import QwtPlotCurve, QwtPlotMarker
+from qwt import QwtPlotCurve, QwtPlotMarker
 
 
 class TiggerPlotCurve(QwtPlotCurve):
@@ -198,7 +198,7 @@ class AddTagDialog(QDialog):
         self.setModal(modal)
         self.setWindowTitle("Add Tag")
         lo = QVBoxLayout(self)
-        lo.setMargin(10)
+        lo.setContentsMargins(10, 10, 10, 10)
         lo.setSpacing(5)
         # tag selector
         lo1 = QHBoxLayout()
@@ -220,7 +220,7 @@ class AddTagDialog(QDialog):
         lo2 = QHBoxLayout()
         lo.addLayout(lo2)
         lo2.setContentsMargins(0, 0, 0, 0)
-        lo2.setMargin(5)
+        lo2.setContentsMargins(5, 5, 5, 5)
         self.wokbtn = QPushButton("OK", self)
         self.wokbtn.setMinimumWidth(128)
         QObject.connect(self.wokbtn, SIGNAL("clicked()"), self.accept)
@@ -275,7 +275,7 @@ class SelectTagsDialog(QDialog):
         self.setModal(modal)
         self.setWindowTitle(caption)
         lo = QVBoxLayout(self)
-        lo.setMargin(10)
+        lo.setContentsMargins(10, 10, 10, 10)
         lo.setSpacing(5)
         # tag selector
         self.wtagsel = QListWidget(self)
@@ -288,7 +288,7 @@ class SelectTagsDialog(QDialog):
         lo2 = QHBoxLayout()
         lo.addLayout(lo2)
         lo2.setContentsMargins(0, 0, 0, 0)
-        lo2.setMargin(5)
+        lo2.setContentsMargins(5, 5, 5, 5)
         self.wokbtn = QPushButton(ok_button, self)
         self.wokbtn.setMinimumWidth(128)
         QObject.connect(self.wokbtn, SIGNAL("clicked()"), self.accept)

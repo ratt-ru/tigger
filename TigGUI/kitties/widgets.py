@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from PyQt4.Qt import SIGNAL, QCursor, Qt, QWidgetAction, QLabel, QFrame, QTreeWidget, QObject, QApplication, \
+from PyQt5.Qt import QCursor, Qt, QWidgetAction, QLabel, QFrame, QTreeWidget, QObject, QApplication, \
     QTreeWidgetItemIterator, QListWidget
 
 

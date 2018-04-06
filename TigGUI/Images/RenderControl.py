@@ -28,7 +28,7 @@ import math
 
 import os.path
 import time
-from PyQt4.Qt import QObject, SIGNAL
+from PyQt5.Qt import QObject
 from scipy.ndimage import measurements
 
 import TigGUI.kitties.utils

@@ -29,14 +29,13 @@ import math
 import numpy
 import re
 import time
-from PyQt4.Qt import QObject, QWidget, QHBoxLayout, QFileDialog, QComboBox, SIGNAL, QLabel, \
-    QDialog, QToolButton, QStringList, QVBoxLayout, Qt, QAction, QEvent, QSize, QMouseEvent, \
+from PyQt5.Qt import QObject, QWidget, QHBoxLayout, QFileDialog, QComboBox, QLabel, \
+    QDialog, QToolButton, QVBoxLayout, Qt, QAction, QEvent, QSize, QMouseEvent, \
     QSizePolicy, QApplication, QColor, QImage, QPixmap, QPainter, QToolTip, \
     QBrush, QTimer, QCheckBox, QMenu, QPen, QRect, QClipboard, \
     QInputDialog, QActionGroup, QRectF, QPointF, QPoint, QMessageBox, QTransform, QToolBar, QCoreApplication
-from PyQt4.Qwt5 import QwtPlot, QwtPlotPicker, QwtText, QwtPlotItem, QwtPlotCurve, QwtPicker, QwtEventPattern, \
-    QwtSymbol, QwtPlotZoomer, \
-    QwtScaleEngine
+from qwt import QwtPlot, QwtText, QwtPlotItem, QwtPlotCurve, QwtSymbol
+from TigGUI.todo import QwtPicker, QwtEventPattern,QwtPlotZoomer, QwtPlotPicker, QwtScaleEngine
 
 import TigGUI.kitties.utils
 from TigGUI.kitties.utils import curry, PersistentCurrier
@@ -345,7 +344,7 @@ class LiveImageZoom(ToolDialog):
         font = QApplication.font()
         self._zoomplot = QwtPlot(self)
         #    self._zoomplot.setSizePolicy(QSizePolicy.Fixed,QSizePolicy.Fixed)
-        self._zoomplot.setMargin(0)
+        self._zoomplot.setContentsMargins(0, 0, 0, 0)
         self._zoomplot.setTitle("")
         axes = {QwtPlot.xBottom: "X pixel coordinate",
                 QwtPlot.yLeft: "Y pixel coordinate",
@@ -533,7 +532,7 @@ class LiveProfile(ToolDialog):
         # add profile plot
         self._font = font = QApplication.font()
         self._profplot = QwtPlot(self)
-        self._profplot.setMargin(0)
+        self._profplot.setContentsMargins(0, 0, 0, 0)
         self._profplot.enableAxis(QwtPlot.xBottom)
         self._profplot.enableAxis(QwtPlot.yLeft)
         self._profplot.setAxisFont(QwtPlot.xBottom, font)

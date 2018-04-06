@@ -19,18 +19,18 @@
 # along with this program; if not, see <http://www.gnu.org/licenses/>,
 # or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+from optparse import OptionParser
+import traceback
+import Tigger
+from TigGUI.kitties import utils
+from PyQt5.Qt import QApplication, QColor
+import sys
 
-if __name__ == "__main__":
-    from optparse import OptionParser
-    import traceback
-    import TigGUI
-    import Tigger
-    import TigGUI.kitties.utils
-    from PyQt4.Qt import QApplication, QColor
 
+def main():
     import TigGUI.init
 
-    _verbosity = TigGUI.kitties.utils.verbosity(name="startup")
+    _verbosity = utils.verbosity(name="startup")
     dprint = _verbosity.dprint
     dprintf = _verbosity.dprintf
 
@@ -46,18 +46,12 @@ if __name__ == "__main__":
 
     if options.timestamps:
       try:
-        TigGUI.kitties.utils.verbosity.enable_timestamps()
+        utils.verbosity.enable_timestamps()
       except:
         pass
     dprint(1,"starting up")
 
-    # setup include path
-    import sys
-    import os.path
-    # TigGUI lives here for now. Add it to include path so that "import TigGUI" works
-    sys.modules['TiggerMain'] = __name__
-
-    Tigger.nuke_matplotlib();  # don't let the door hit you in the ass, sucka
+    import TigGUI
 
     print("Welcome to Tigger " + TigGUI.release_string)
     print("Please wait a second while the GUI starts up.")
@@ -146,3 +140,7 @@ if __name__ == "__main__":
     #splash.finish(mainwin)
 
     app.exec_()
+
+
+if __name__ == "__main__":
+    main()

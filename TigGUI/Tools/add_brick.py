@@ -26,7 +26,7 @@
 
 import math
 
-from PyQt4.Qt import QObject, QHBoxLayout, QFileDialog, SIGNAL, QLabel, \
+from PyQt5.Qt import QObject, QHBoxLayout, QFileDialog, SIGNAL, QLabel, \
     QLineEdit, QDialog, QDoubleValidator, QVBoxLayout, \
     QPushButton, Qt, QGridLayout, QMessageBox, QErrorMessage
 
@@ -51,7 +51,7 @@ class AddBrickDialog(QDialog):
         self.setModal(modal)
         self.setWindowTitle("Add FITS brick")
         lo = QVBoxLayout(self)
-        lo.setMargin(10)
+        lo.setContentsMargins(10, 10, 10, 10)
         lo.setSpacing(5)
         # file selector
         self.wfile = FileSelector(self, label="FITS filename:", dialog_label="FITS file", default_suffix="fits",
@@ -73,7 +73,7 @@ class AddBrickDialog(QDialog):
         lo2 = QHBoxLayout()
         lo.addLayout(lo2)
         lo2.setContentsMargins(0, 0, 0, 0)
-        lo2.setMargin(5)
+        lo2.setContentsMargins(5, 5, 5, 5)
         self.wokbtn = QPushButton("OK", self)
         self.wokbtn.setMinimumWidth(128)
         QObject.connect(self.wokbtn, SIGNAL("clicked()"), self.accept)

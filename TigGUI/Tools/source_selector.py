@@ -26,8 +26,8 @@
 import math
 import traceback
 
-from PyQt4.Qt import QObject, QHBoxLayout, QComboBox, SIGNAL, QLabel, \
-    QLineEdit, QDialog, QVBoxLayout, Qt, QErrorMessage, QSlider
+from PyQt5.Qt import QObject, QHBoxLayout, QComboBox, QLabel, QLineEdit, QDialog, QVBoxLayout, Qt, QErrorMessage,\
+    QSlider
 
 import TigGUI.kitties.utils
 from TigGUI.kitties.utils import curry

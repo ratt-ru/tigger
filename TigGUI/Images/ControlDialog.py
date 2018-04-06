@@ -27,13 +27,11 @@
 import math
 
 import numpy
-from PyQt4.Qt import QObject, QWidget, QHBoxLayout, QComboBox, SIGNAL, QLabel, \
-    QLineEdit, QDialog, QToolButton, QVBoxLayout, \
-    Qt, QSize, \
-    QSizePolicy, QApplication, QColor, QBrush, QTimer, QFrame, QCheckBox, QStackedWidget, QIcon, QMenu, QGridLayout, \
-    QPen, QRect
-from PyQt4.Qwt5 import QwtPlot, QwtPlotPicker, QwtText, QwtPlotItem, QwtPlotCurve, QwtPicker, QwtEventPattern, \
-    QwtWheel, QwtSlider, QwtSymbol, QwtLinearScaleEngine, QwtLog10ScaleEngine
+from PyQt5.Qt import QObject, QWidget, QHBoxLayout, QComboBox, QLabel, QLineEdit, QDialog, QToolButton, QVBoxLayout, \
+    Qt, QSize, QSizePolicy, QApplication, QColor, QBrush, QTimer, QFrame, QCheckBox, QStackedWidget, QIcon, QMenu, \
+    QGridLayout, QPen, QRect
+from qwt import QwtPlot, QwtText, QwtPlotItem, QwtPlotCurve, QwtSymbol, QwtLinearScaleEngine, QwtLog10ScaleEngine
+from TigGUI.todo import QwtPlotPicker, QwtPicker, QwtEventPattern, QwtWheel, QwtSlider
 from scipy.ndimage import measurements
 
 from TigGUI.kitties.utils import PersistentCurrier
@@ -781,7 +779,7 @@ class ImageControlDialog(QDialog):
         std = measurements.standard_deviation(subset, labels=mask, index=None if mask is None else False)
         dprint(5, "done")
         text = "  ".join([("%s: " + DataValueFormat) % (name, value) for name, value in
-                          ("min", dmin), ("max", dmax), ("mean", mean), ("std", std)] + ["np: %d" % self._subset.size])
+                          (("min", dmin), ("max", dmax), ("mean", mean), ("std", std))] + ["np: %d" % self._subset.size])
         self._wlab_stats.setText(text)
         self._wmore_stats.hide()
         # update markers

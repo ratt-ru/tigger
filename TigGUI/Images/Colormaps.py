@@ -29,9 +29,9 @@ import math
 
 import numpy
 import numpy.ma
-from PyQt4.Qt import QObject, QWidget, QHBoxLayout, SIGNAL, QLabel, \
+from PyQt5.Qt import QObject, QWidget, QHBoxLayout, QLabel, \
     QToolButton, Qt, QColor, QImage, QPixmap, QPainter, QGridLayout, QBrush, QTimer
-from PyQt4.Qwt5 import QwtSlider
+from TigGUI.todo import QwtSlider
 from scipy.ndimage import measurements
 
 import TigGUI.kitties.utils
