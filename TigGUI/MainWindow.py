@@ -30,11 +30,10 @@ import sys
 
 import os.path
 from PyQt4.Qt import QObject, QWidget, QFileDialog, SIGNAL, QDialog, QStringList, QVBoxLayout, \
-    Qt, QSize, \
-    QSizePolicy, QApplication, QMenu, QMessageBox, QErrorMessage, \
-    QMainWindow, QSplitter
+    Qt, QSize, QSizePolicy, QApplication, QMenu, QMessageBox, QErrorMessage, QMainWindow, QSplitter
 from Tigger.Models import SkyModel
 from Tigger.Models.Formats import ModelHTML
+import Tigger.Models.Formats
 
 from . import AboutDialog
 import TigGUI.kitties.utils
@@ -44,6 +43,7 @@ from .Images.Manager import ImageManager
 from .Plot.SkyModelPlot import SkyModelPlotter, PersistentCurrier
 from .SkyModelTreeWidget import SkyModelTreeWidget, ModelGroupsTable
 from TigGUI import Images
+from TigGUI.kitties.widgets import BusyIndicator
 from TigGUI.init import pixmaps, Config
 
 _verbosity = TigGUI.kitties.utils.verbosity(name="mainwin")
@@ -368,7 +368,6 @@ class MainWindow(QMainWindow):
         """Called when the model selection has been updated."""
         self.emit(SIGNAL("hasSelection"), bool(num))
 
-    import Tigger.Models.Formats
     _formats = [f[1] for f in Tigger.Models.Formats.listFormatsFull()]
 
     _load_file_types = [(doc, ["*" + ext for ext in extensions], load) for load, save, doc, extensions in _formats if
