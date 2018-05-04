@@ -88,6 +88,9 @@ if __name__ == "__main__":
     dprint(1,"imported TigGUI.MainWindow")
     import TigGUI.Tools
 
+    # although this seems unused, it is actually registering these plugins
+    from TigGUI.Tools import export_karma,add_brick,make_brick,restore_image
+
     dprint(1,"imported TigGUI.Tools")
 
 
