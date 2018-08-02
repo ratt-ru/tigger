@@ -339,11 +339,11 @@ class SkyModelTreeWidgetItem(QTreeWidgetItem):
         """helper method: converts angular error to string representation in deg or arcmin or arcsec"""
         arcsec = (value / DEG) * 3600
         if arcsec < 60:
-            return chr(0xB1) + "%.2g\"" % arcsec
+            return unichr(0xB1) + "%.2g\"" % arcsec
         elif arcsec < 3600:
-            return chr(0xB1) + "%.2f'" % (arcsec * 60)
+            return unichr(0xB1) + "%.2f'" % (arcsec * 60)
         else:
-            return chr(0xB1) + "%.2f%s" % (arcsec * 3600, chr(0xB0))
+            return unichr(0xB1) + "%.2f%s" % (arcsec * 3600, unichr(0xB0))
 
     def setSource(self, src):
         # name
@@ -352,7 +352,7 @@ class SkyModelTreeWidgetItem(QTreeWidgetItem):
         self.setSizeHint(0, QSize(self._fontmetrics.width("x" + src.name), 0))
         # coordinates
         self.setColumn(ColumnRa, src.pos.ra, "%2dh%02dm%05.2fs" % src.pos.ra_hms())
-        self.setColumn(ColumnDec, src.pos.dec, ("%s%2d" + chr(0xB0) + "%02d'%05.2f\"") %
+        self.setColumn(ColumnDec, src.pos.dec, ("%s%2d" + unichr(0xB0) + "%02d'%05.2f\"") %
                        src.pos.dec_sdms())
         if src.pos.ra_err is not None:
             self.setColumn(ColumnRa_err, src.pos.ra_err, self._angErrToStr(src.pos.ra_err))
@@ -371,11 +371,11 @@ class SkyModelTreeWidgetItem(QTreeWidgetItem):
             if stk is not None:
                 self.setColumn(globals()['Column' + stokes], stk, "%.3g" % stk)
             if stk_err is not None:
-                self.setColumn(globals()['Column' + stokes + "_err"], stk_err, chr(0xB1) + "%.2g" % stk_err)
+                self.setColumn(globals()['Column' + stokes + "_err"], stk_err, unichr(0xB1) + "%.2g" % stk_err)
         if hasattr(src.flux, 'rm'):
             self.setColumn(ColumnRm, src.flux.rm, "%.2f" % src.flux.rm)
             if hasattr(src.flux, 'rm_err'):
-                self.setColumn(ColumnRm_err, src.flux.rm_err, chr(0xB1) + "%.2f" % src.flux.rm)
+                self.setColumn(ColumnRm_err, src.flux.rm_err, unichr(0xB1) + "%.2f" % src.flux.rm)
         # spi
         if isinstance(src.spectrum, ModelClasses.SpectralIndex):
             spi = getattr(src.spectrum, 'spi', 0)
@@ -388,17 +388,17 @@ class SkyModelTreeWidgetItem(QTreeWidgetItem):
                 if not isinstance(spierr, (list, tuple)):
                     spierr = [spierr]
                 spierr = ",".join(["%.2f" % x for x in spierr])
-                self.setColumn(ColumnSpi_err, src.spectrum.spi_err, chr(0xB1) + spierr)
+                self.setColumn(ColumnSpi_err, src.spectrum.spi_err, unichr(0xB1) + spierr)
         # shape
         shape = getattr(src, 'shape', None)
         if isinstance(shape, ModelClasses.ModelItem):
             shapeval = shape.getShape()
-            shapestr = shape.strDesc(delimiters=('"', chr(0xD7), chr(0x21BA), chr(0xB0)))
+            shapestr = shape.strDesc(delimiters=('"', unichr(0xD7), unichr(0x21BA), unichr(0xB0)))
             self.setColumn(ColumnShape, shapeval, shapestr)
             errval = shape.getShapeErr()
             if errval:
-                errstr = shape.strDescErr(delimiters=('"', chr(0xD7), chr(0x21BA), chr(0xB0)))
-                self.setColumn(ColumnShape_err, errval, chr(0xB1) + errstr)
+                errstr = shape.strDescErr(delimiters=('"', unichr(0xD7), unichr(0x21BA), unichr(0xB0)))
+                self.setColumn(ColumnShape_err, errval, unichr(0xB1) + errstr)
         dprint(3, "setSource 3", src.name)
         # Tags. Tags are all extra attributes that do not have a dedicated column (i.e. not Iapp or r), and do not start
         # with "_" (which is reserved for internal attributes)
