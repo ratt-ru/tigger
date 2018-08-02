@@ -218,7 +218,7 @@ class verbosity:
         # look for argv to override debug levels (unless they were already set via set_verbosity_level above)
         if verbosity._levels:
             self.verbose = verbosity._levels.get(name, 0)
-            print("Registered verbosity context:", name, "=", self.verbose)
+            print("Registered verbosity context: " + name + " = " + self.verbose)
         elif verbosity._parse_argv:
             # NB: sys.argv doesn't always exist -- e.g., when embedding Python
             # it doesn't seem to be present.  Hence the check.
@@ -234,7 +234,7 @@ class verbosity:
                     except:
                         pass
             if have_debug:
-                print("Registered verbosity context:", name, "=", self.verbose)
+                print("Registered verbosity context:" + name + "=" + self.verbose)
         # add name to map
         self._verbosities[name] = self
 
@@ -294,7 +294,7 @@ def _print_curry_exception():
     (et, ev, etb) = sys.exc_info()
     print("%s: %s" % (getattr(ev, '_classname', ev.__class__.__name__), getattr(ev, '__doc__', '')))
     if hasattr(ev, 'args'):
-        print("  ", ' '.join(map(str, ev.args)))
+        print("  " + ' '.join(map(str, ev.args)))
     print('======== exception traceback follows:')
     traceback.print_tb(etb)
 
@@ -310,9 +310,9 @@ def curry(func, *args, **kwds):
             return func(*a, **kw)
         except:
             print("======== curry: exception while calling a curried function")
-            print("  function:", func)
-            print("  args:", a)
-            print("  kwargs:", kw)
+            print("  function:" + func)
+            print("  args:" + a)
+            print("  kwargs:" + kw)
             _print_curry_exception()
             raise
 
@@ -337,9 +337,9 @@ def xcurry(func, _args=(), _argslice=slice(0), _kwds={}, **kwds):
             return func(*a, **kw)
         except:
             print("======== xcurry: exception while calling a curried function")
-            print("  function:", func)
-            print("  args:", a)
-            print("  kwargs:", kw)
+            print("  function:" + func)
+            print("  args:" + a)
+            print("  kwargs:" + kw)
             _print_curry_exception()
             raise
 
