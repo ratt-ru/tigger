@@ -1,0 +1,7 @@
+.git/
+.gitignore
+.idea/
+.vagrant/
+.venv2/
+*.egg-info/
+
