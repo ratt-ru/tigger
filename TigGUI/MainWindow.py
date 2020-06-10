@@ -26,23 +26,25 @@
 #
 
 import os
+import os.path
 import sys
 
-import os.path
+import Tigger.Models.Formats
 from PyQt5.Qt import QObject, QWidget, QFileDialog, QDialog, QVBoxLayout, \
     Qt, QSize, QSizePolicy, QApplication, QMenu, QMessageBox, QErrorMessage, QMainWindow, QSplitter
 from Tigger.Models import SkyModel
 from Tigger.Models.Formats import ModelHTML
 
-from . import AboutDialog
-import TigGUI.kitties.utils
 import TigGUI.Tools.source_selector
+import TigGUI.kitties.utils
+from TigGUI import Images
+from TigGUI.init import pixmaps, Config
+from TigGUI.kitties.widgets import BusyIndicator
+from . import AboutDialog
 from . import Widgets
 from .Images.Manager import ImageManager
 from .Plot.SkyModelPlot import SkyModelPlotter, PersistentCurrier
 from .SkyModelTreeWidget import SkyModelTreeWidget, ModelGroupsTable
-from TigGUI import Images
-from TigGUI.init import pixmaps, Config
 
 _verbosity = TigGUI.kitties.utils.verbosity(name="mainwin")
 dprint = _verbosity.dprint
@@ -366,7 +368,6 @@ class MainWindow(QMainWindow):
         """Called when the model selection has been updated."""
         self.hasSelection.emit(bool(num))
 
-    import Tigger.Models.Formats
     _formats = [f[1] for f in Tigger.Models.Formats.listFormatsFull()]
 
     _load_file_types = [(doc, ["*" + ext for ext in extensions], load) for load, save, doc, extensions in _formats if
@@ -619,7 +620,7 @@ class MainWindow(QMainWindow):
                 """Error saving selection to model file %s: %s""" % (filename, str(sys.exc_info()[1])))
             return False
         self.showMessage("""Wrote %d selected source%s to file %s""" % (
-        len(selmodel.sources), "" if len(selmodel.sources) == 1 else "s", filename), 3000)
+            len(selmodel.sources), "" if len(selmodel.sources) == 1 else "s", filename), 3000)
         pass
 
     def addTagToSelection(self):
@@ -669,7 +670,7 @@ class MainWindow(QMainWindow):
         # ask for confirmation
         plural = (len(tags) > 1 and "s") or ""
         if QMessageBox.question(self, "Removing tags", "<P>Really remove the tag%s '%s' from selected sources?</P>" % (
-        plural, "', '".join(tags)),
+                plural, "', '".join(tags)),
                                 QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes) != QMessageBox.Yes:
             return
         # remove the tags

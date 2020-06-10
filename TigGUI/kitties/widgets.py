@@ -106,6 +106,9 @@ class ClickableTreeWidget(QTreeWidget):
                 if self._include_children or value.parent() is None or value.parent() is self._parent:
                     return value
 
+        def next(self):
+            return self.__next__()
+
     def iterator(self, *args):
         """Returns a child item iterator.
         iterator([flags]) returns an iterator for the tree widget itself

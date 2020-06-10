@@ -1,7 +1,6 @@
 *.pyc
 *~
 .idea/
-debian/
 build/
 MANIFEST
 astro_tigger.egg-info/

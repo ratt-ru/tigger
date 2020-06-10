@@ -24,6 +24,7 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
+from builtins import chr
 import math
 
 from PyQt5.Qt import QObject, QWidget, QHBoxLayout, QComboBox, QLabel, QToolButton, QVBoxLayout, \

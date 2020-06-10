@@ -19,17 +19,16 @@
 # along with this program; if not, see <http://www.gnu.org/licenses/>,
 # or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-from optparse import OptionParser
-import traceback
-import Tigger
-from TigGUI.kitties import utils
-from PyQt5.Qt import QApplication, QColor
 import sys
+import traceback
+from optparse import OptionParser
+
+from PyQt5.Qt import QApplication, QColor
+
+from TigGUI.kitties import utils
 
 
 def main():
-    import TigGUI.init
-
     _verbosity = utils.verbosity(name="startup")
     dprint = _verbosity.dprint
     dprintf = _verbosity.dprintf
@@ -38,30 +37,29 @@ def main():
 
     usage = "usage: %prog [options] <sky models or FITS files>"
     parser = OptionParser(usage=usage)
-    parser.add_option("-d", "--debug",dest="verbose",type="string",action="append",metavar="Context=Level",
+    parser.add_option("-d", "--debug", dest="verbose", type="string", action="append", metavar="Context=Level",
                       help="(for debugging Python code) sets verbosity level of the named Python context. May be used multiple times.")
-    parser.add_option("-T", "--timestamps",action="store_true",
+    parser.add_option("-T", "--timestamps", action="store_true",
                       help="(for debugging Python code) enable timestamps in debug output")
     (options, rem_args) = parser.parse_args()
 
     if options.timestamps:
-      try:
-        utils.verbosity.enable_timestamps()
-      except:
-        pass
-    dprint(1,"starting up")
+        try:
+            utils.verbosity.enable_timestamps()
+        except:
+            pass
+    dprint(1, "starting up")
 
     import TigGUI
 
     print("Welcome to Tigger " + TigGUI.release_string)
     print("Please wait a second while the GUI starts up.")
 
-    dprint(1,"imported TigGUI")
+    dprint(1, "imported TigGUI")
     TigGUI.startup_dprint = dprint
     TigGUI.startup_dprintf = dprintf
 
-
-    dprint(1,"imported Qt4")
+    dprint(1, "imported Qt4")
     app = QApplication(sys.argv)
     app.setDesktopSettingsAware(True)
     from TigGUI.init import pixmaps
@@ -72,72 +70,72 @@ def main():
     except AttributeError:
         pass
 
-    dprint(1,"created QApplication")
-    #splash = QSplashScreen(TigGUI.pixmaps.tigger_splash.pm())
-    #splash.showMessage("Welcome to TigGUI!",Qt.AlignHCenter|Qt.AlignBottom)
-    #splash.show()
+    dprint(1, "created QApplication")
+    # splash = QSplashScreen(TigGUI.pixmaps.tigger_splash.pm())
+    # splash.showMessage("Welcome to TigGUI!",Qt.AlignHCenter|Qt.AlignBottom)
+    # splash.show()
 
     import TigGUI.Images
     import TigGUI.MainWindow
-    dprint(1,"imported TigGUI.MainWindow")
+    dprint(1, "imported TigGUI.MainWindow")
     import TigGUI.Tools
 
-    dprint(1,"imported TigGUI.Tools")
+    # although this seems unused, it is actually registering these plugins
 
+    dprint(1, "imported TigGUI.Tools")
 
     mainwin = TigGUI.MainWindow.MainWindow(None)
-    dprint(1,"created main window")
-    
-  # add optional tools
-    for name,callback in TigGUI.Tools.getRegisteredTools():
-      mainwin.addTool(name,callback)
-    dprint(1,"added optional tools")
+    dprint(1, "created main window")
+
+    # add optional tools
+    for name, callback in TigGUI.Tools.getRegisteredTools():
+        mainwin.addTool(name, callback)
+    dprint(1, "added optional tools")
 
     # parse remaining args
     images = [arg for arg in rem_args if TigGUI.Images.isFITS(arg)]
-    models = [ arg for arg in rem_args if arg not in images ]
+    models = [arg for arg in rem_args if arg not in images]
 
     if len(models) > 1:
-      parser.error("Only one model should be specified at the command line.")
+        parser.error("Only one model should be specified at the command line.")
 
     # load images first
     for img in images:
-      print("Loading image",img)
-      #splash.showMessage("Loading image %s"%img,Qt.AlignHCenter|Qt.AlignBottom)
-      mainwin.loadImage(img)
-      dprint(1,"loaded image",img)
+        print("Loading image" + img)
+        # splash.showMessage("Loading image %s"%img,Qt.AlignHCenter|Qt.AlignBottom)
+        mainwin.loadImage(img)
+        dprint(1, "loaded image", img)
 
     # load model, if specified
     for mod in models:
-      print("Loading model",mod)
-      try:
-        mainwin.openFile(mod,show=False)
-      except:
-        traceback.print_exc()
-        print("Error loading model %s"%mod)
-        os._exit(0)
+        print("Loading model" + mod)
+        try:
+            mainwin.openFile(mod, show=False)
+        except:
+            traceback.print_exc()
+            print("Error loading model %s" % mod)
+            exit(1)
 
-      #splash.showMessage("Loading model %s"%mod,Qt.AlignHCenter|Qt.AlignBottom)
-      dprint(1,"loaded model",mod)
+        # splash.showMessage("Loading model %s"%mod,Qt.AlignHCenter|Qt.AlignBottom)
+        dprint(1, "loaded model", mod)
 
     # start updating the plot
     mainwin.enableUpdates()
-    dprint(1,"started plot updates")
+    dprint(1, "started plot updates")
 
     # flush app event queue, so windows get resized , etc.
     app.processEvents()
 
     # handle SIGINT
-    def sigint_handler (sig,stackframe):
-      print("Caught Ctrl+C, exiting...")
-      mainwin.close()
-
+    def sigint_handler(sig, stackframe):
+        print("Caught Ctrl+C, exiting...")
+        mainwin.close()
 
     import signal
-    signal.signal(signal.SIGINT,sigint_handler)
-    dprint(1,"added signal handler")
+    signal.signal(signal.SIGINT, sigint_handler)
+    dprint(1, "added signal handler")
 
-    #splash.finish(mainwin)
+    # splash.finish(mainwin)
 
     app.exec_()
 
