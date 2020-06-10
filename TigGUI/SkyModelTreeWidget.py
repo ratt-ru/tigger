@@ -93,15 +93,15 @@ class SkyModelTreeWidget(TigGUI.kitties.widgets.ClickableTreeWidget):
         # insert columns
         self.setHeaderLabels(ViewColumns)
         self.headerItem().setText(ColumnIapp, "I(app)")
-        self.header().setMovable(False)
-        self.header().setClickable(True)
+        self.header().setSectionsMovable(False)
+        self.header().setSectionsClickable(True)
         self.setSortingEnabled(True)
         self.setRootIsDecorated(False)
         self.setEditTriggers(QAbstractItemView.AllEditTriggers)
         self.setMouseTracking(True)
         # set column width modes
         for icol in range(NumColumns - 1):
-            self.header().setResizeMode(icol, QHeaderView.ResizeToContents)
+            self.header().setSectionResizeMode(icol, QHeaderView.ResizeToContents)
         self.header().setStretchLastSection(True)
         ## self.setTextAlignment(ColumnR,Qt.AlignRight)
         ## self.setTextAlignment(ColumnType,Qt.AlignHCenter)
@@ -116,9 +116,11 @@ class SkyModelTreeWidget(TigGUI.kitties.widgets.ClickableTreeWidget):
         ## self.setShowToolTips(True)
         self._updating_selection = False
         self.setRootIsDecorated(False)
+
         # connect signals to track selected sources
-        QObject.connect(self, SIGNAL("itemSelectionChanged()"), self._selectionChanged)
-        QObject.connect(self, SIGNAL("itemEntered(QTreeWidgetItem*,int)"), self._itemHighlighted)
+        self.itemSelectionChanged.connect(self._selectionChanged)
+        self.itemEntered.connect(self._itemHighlighted)
+
         # add "View" controls for different column categories
         self._column_views = []
         self._column_widths = {}
@@ -181,7 +183,9 @@ class SkyModelTreeWidget(TigGUI.kitties.widgets.ClickableTreeWidget):
         qa.setChecked(visible)
         if not visible:
             self._showColumnCategory(columns, False)
-        QObject.connect(qa, SIGNAL("toggled(bool)"), self._currier.curry(self._showColumnCategory, columns))
+
+        qa.toggled.connect(self._currier.curry(self._showColumnCategory, columns))
+        #(qa.toggled.connect(self._currier.curry(self._showColumnCategory, columns))
         self._column_views.append((name, qa, columns))
 
     def clear(self):
@@ -471,11 +475,11 @@ class ModelGroupsTable(QWidget):
         self._showattrbtn.setMinimumWidth(256)
         lo1.addWidget(self._showattrbtn, 0)
         lo1.addStretch()
-        QObject.connect(self._showattrbtn, SIGNAL("clicked()"), self._togglePlotControlsVisibility)
+        self._showattrbtn.clicked.connect(self._togglePlotControlsVisibility)
         # add table
         self.table = QTableWidget(self)
         lo.addWidget(self.table)
-        QObject.connect(self.table, SIGNAL("cellChanged(int,int)"), self._valueChanged)
+        self.table.cellChanged.connect(self._valueChanged)
         self.table.setSelectionMode(QTableWidget.NoSelection)
         # setup basic columns
         self.table.setColumnCount(6 + len(self.EditableAttrs))
@@ -566,7 +570,7 @@ class ModelGroupsTable(QWidget):
                     btn.setToolTip(tooltip)
                     lo.addWidget(btn)
                     # add callback
-                    QObject.connect(btn, SIGNAL("clicked()"), self._currier.curry(self.selectSources, predicate))
+                    btn.clicked.connect(self._currier.curry(self.selectSources, predicate))
                 lo.addStretch(1)
                 self.table.setCellWidget(irow, 2, btns)
             # "list" checkbox (not for current and selected groupings: these are always listed)
@@ -633,8 +637,8 @@ class ModelGroupsTable(QWidget):
                 except ValueError:
                     cb.setEditText(str(getattr(group.style, attr)))
                 slot = self._currier.xcurry(self._valueChanged, (irow, icol))
-                QObject.connect(cb, SIGNAL("activated(int)"), slot)
-                QObject.connect(cb, SIGNAL("editTextChanged(const QString &)"), slot)
+                cb.activated.connect(slot)
+                cb.editTextChanged.connect(slot)
                 cb.setEnabled(group is model.defgroup or group.style.apply)
                 self.table.setCellWidget(irow, icol, cb)
                 label = attr

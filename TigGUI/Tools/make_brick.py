@@ -111,8 +111,8 @@ class MakeBrickDialog(QDialog):
       This increases memory use, so if you have no flux at the edges of the image anyway, then a pad factor of 1 is
       perfectly fine.</P>""")
         self.wpad.setToolTip(lab.toolTip())
-        QObject.connect(self.wadd, SIGNAL("toggled(bool)"), self.wpad.setEnabled)
-        QObject.connect(self.wadd, SIGNAL("toggled(bool)"), lab.setEnabled)
+        self.wadd.toggled.connect(self.wpad.setEnabled)
+        self.wadd.toggled.connect(lab.setEnabled)
         self.wpad.setEnabled(False)
         lab.setEnabled(False)
         lo1.addStretch(1)
@@ -127,17 +127,17 @@ class MakeBrickDialog(QDialog):
         lo2.setContentsMargins(5, 5, 5, 5)
         self.wokbtn = QPushButton("OK", self)
         self.wokbtn.setMinimumWidth(128)
-        QObject.connect(self.wokbtn, SIGNAL("clicked()"), self.accept)
+        self.wokbtn.clicked.connect(self.accept)
         self.wokbtn.setEnabled(False)
         cancelbtn = QPushButton("Cancel", self)
         cancelbtn.setMinimumWidth(128)
-        QObject.connect(cancelbtn, SIGNAL("clicked()"), self.reject)
+        cancelbtn.clicked.connect(self.reject)
         lo2.addWidget(self.wokbtn)
         lo2.addStretch(1)
         lo2.addWidget(cancelbtn)
         self.setMinimumWidth(384)
         # signals
-        QObject.connect(self.wfile, SIGNAL("filenameSelected"), self._fileSelected)
+        self.wfile.filenameSelected.connect(self._fileSelected)
         # internal state
         self.qerrmsg = QErrorMessage(self)
 

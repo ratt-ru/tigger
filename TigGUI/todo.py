@@ -6,14 +6,59 @@ https://web.archive.org/web/20180106033531/http://pyqt.sourceforge.net/Docs/PyQt
 
 rewriting is quite easy:
 
-QObject.connect(qa,SIGNAL("triggered(bool)"),self._write_config)
+  QObject.connect(qa,SIGNAL("triggered(bool)"),self._write_config)
 
 becomes
 
-qa.triggered.connect(self._write_config)
+  qa.triggered.connect(self._write_config)
+
+For emitting:
+
+    self.emit(SIGNAL("updateLayout"))
+
+becomes:
+
+    self.updateLayout.emit()
 
 It is a bit more work in case of custom signals, those need to be registered with a pyqtSignal. There is also
 a decorated available for functions, but then the function name need to be specially formatted.
+
+
+To replace the signals and emits with regex:
+
+signal match:
+
+   QObject.connect(\(.*), *SIGNAL\("(.*)\(.*\)"\), *(.*)\)
+
+
+signal without type:
+
+
+    QObject.connect\((.*), *SIGNAL\("(.*)"\), *(.*)\)
+
+for both the replace:
+
+    $1.$2.connect($3)
+
+
+emit match:
+
+    self\.emit\(SIGNAL\("(.*)"\)\)
+
+replace:
+
+    .$1.emit()
+
+
+emit with arguments match:
+
+
+    \.emit\(SIGNAL\("(.*)"\), *(.*)\)
+
+replace:
+
+    .$1.emit($2)
+
 
 
 """

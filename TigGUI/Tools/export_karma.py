@@ -57,17 +57,17 @@ class ExportKarmaDialog(QDialog):
         lo2.setContentsMargins(5, 5, 5, 5)
         self.wokbtn = QPushButton("OK", self)
         self.wokbtn.setMinimumWidth(128)
-        QObject.connect(self.wokbtn, SIGNAL("clicked()"), self.accept)
+        self.wokbtn.clicked.connect(self.accept)
         self.wokbtn.setEnabled(False)
         cancelbtn = QPushButton("Cancel", self)
         cancelbtn.setMinimumWidth(128)
-        QObject.connect(cancelbtn, SIGNAL("clicked()"), self.reject)
+        cancelbtn.clicked.connect(self.reject)
         lo2.addWidget(self.wokbtn)
         lo2.addStretch(1)
         lo2.addWidget(cancelbtn)
         self.setMinimumWidth(384)
         # signals
-        QObject.connect(self.wfile, SIGNAL("valid"), self.wokbtn.setEnabled)
+        self.wfile.valid.connect(self.wokbtn.setEnabled)
         # internal state
         self.qerrmsg = QErrorMessage(self)
         self._model_filename = None

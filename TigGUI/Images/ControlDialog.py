@@ -109,7 +109,7 @@ class ImageControlDialog(QDialog):
         self._ylogscale = True
         self._wlogy.setToolTip(
             """<P>If checked, a log-scale Y axis is used for the histogram plot instead of a linear one.""")
-        QObject.connect(self._wlogy, SIGNAL("toggled(bool)"), self._setHistLogScale)
+        self._wlogy.toggled.connect(self._setHistLogScale)
         self._whistunzoom = self.makeButton("", self._unzoomHistogram, icon=pixmaps.full_range.icon())
         self._whistzoomout = self.makeButton("-", self._currier.curry(self._zoomHistogramByFactor, math.sqrt(.1)))
         self._whistzoomin = self.makeButton("+", self._currier.curry(self._zoomHistogramByFactor, math.sqrt(10)))
@@ -126,8 +126,8 @@ class ImageControlDialog(QDialog):
         self._whistzoom.setStep(0.1)
         self._whistzoom.setTickCnt(30)
         self._whistzoom.setTracking(False)
-        QObject.connect(self._whistzoom, SIGNAL("valueChanged(double)"), self._zoomHistogramFinalize)
-        QObject.connect(self._whistzoom, SIGNAL("sliderMoved(double)"), self._zoomHistogramPreview)
+        self._whistzoom.valueChanged.connect(self._zoomHistogramFinalize)
+        self._whistzoom.sliderMoved.connect(self._zoomHistogramPreview)
         self._whistzoom.setToolTip("""<P>Use this wheel control to zoom in/out of the histogram plot.
       This does not change the current intensity range.
       Note that the zoom wheel should also respond to your mouse wheel, if you have one.</P>""")
@@ -139,7 +139,7 @@ class ImageControlDialog(QDialog):
         self._whistzoom_timer = QTimer(self)
         self._whistzoom_timer.setSingleShot(True)
         self._whistzoom_timer.setInterval(500)
-        QObject.connect(self._whistzoom_timer, SIGNAL("timeout()"), self._zoomHistogramFinalize)
+        self._whistzoom_timer.timeout.connect(self._zoomHistogramFinalize)
         # set same size for all buttons and controls
         width = 24
         for w in self._whistunzoom, self._whistzoomin, self._whistzoomout:
@@ -192,21 +192,21 @@ class ImageControlDialog(QDialog):
                 wslicer.addItems(labels)
                 wslicer.setToolTip("""<P>Selects current slice along the %s axis.</P>""" % name)
                 wslicer.setCurrentIndex(self._rc.currentSlice()[iextra])
-                QObject.connect(wslicer, SIGNAL("activated(int)"), self._currier.curry(self._rc.changeSlice, iextra))
+                wslicer.activated.connect(self._currier.curry(self._rc.changeSlice, iextra))
                 lo2 = QVBoxLayout()
                 lo1.addLayout(lo2)
                 lo2.setContentsMargins(0, 0, 0, 0)
                 lo2.setSpacing(0)
                 wminus = QToolButton(self)
                 wminus.setArrowType(Qt.UpArrow)
-                QObject.connect(wminus, SIGNAL("clicked()"), self._currier.curry(self._rc.incrementSlice, iextra, 1))
+                wminus.clicked.connect(self._currier.curry(self._rc.incrementSlice, iextra, 1))
                 if i == 0:
                     wminus.setShortcut(Qt.SHIFT + Qt.Key_F7)
                 elif i == 1:
                     wminus.setShortcut(Qt.SHIFT + Qt.Key_F8)
                 wplus = QToolButton(self)
                 wplus.setArrowType(Qt.DownArrow)
-                QObject.connect(wplus, SIGNAL("clicked()"), self._currier.curry(self._rc.incrementSlice, iextra, -1))
+                wplus.clicked.connect(self._currier.curry(self._rc.incrementSlice, iextra, -1))
                 if i == 0:
                     wplus.setShortcut(Qt.Key_F7)
                 elif i == 1:
@@ -267,7 +267,7 @@ class ImageControlDialog(QDialog):
         self._wrange[1].setToolTip("""<P>This is the high end of the intensity range.</P>""")
         for w in self._wrange:
             w.setValidator(self._range_validator)
-            QObject.connect(w, SIGNAL("editingFinished()"), self._changeDisplayRange)
+            w.editingFinished.connect(self._changeDisplayRange)
         lo1.addWidget(QLabel("low:", self), 0)
         lo1.addWidget(self._wrange[0], 1)
         self._wrangeleft0 = self.makeButton("\u21920", self._setZeroLeftLimit, width=32)
@@ -303,7 +303,7 @@ class ImageControlDialog(QDialog):
         lo1.addWidget(QLabel("Intensity policy:", self), 0, 0)
         lo1.addWidget(self._wimap, 1, 0)
         self._wimap.addItems(rc.getIntensityMapNames())
-        QObject.connect(self._wimap, SIGNAL("currentIndexChanged(int)"), self._rc.setIntensityMapNumber)
+        self._wimap.currentIndexChanged.connect(self._rc.setIntensityMapNumber)
         self._wimap.setToolTip("""<P>Use this to change the type of the intensity transfer function (ITF).</P>""")
 
         # log cycles control
@@ -319,13 +319,13 @@ class ImageControlDialog(QDialog):
         self._wlogcycles_timer = QTimer(self)
         self._wlogcycles_timer.setSingleShot(True)
         self._wlogcycles_timer.setInterval(500)
-        QObject.connect(self._wlogcycles_timer, SIGNAL("timeout()"), self._setIntensityLogCycles)
+        self._wlogcycles_timer.timeout.connect(self._setIntensityLogCycles)
         lo1.addWidget(self._wlogcycles, 1, 1)
         self._wlogcycles.setRange(1., 10)
         self._wlogcycles.setStep(0.1)
         self._wlogcycles.setTracking(False)
-        QObject.connect(self._wlogcycles, SIGNAL("valueChanged(double)"), self._setIntensityLogCycles)
-        QObject.connect(self._wlogcycles, SIGNAL("sliderMoved(double)"), self._previewIntensityLogCycles)
+        self._wlogcycles.valueChanged.connect(self._setIntensityLogCycles)
+        self._wlogcycles.sliderMoved.connect(self._previewIntensityLogCycles)
         self._updating_imap = False
 
         # lock intensity map
@@ -352,11 +352,11 @@ class ImageControlDialog(QDialog):
         wunlockall.setToolTip("""<P>Click this to unlock the intensity ranges of all images.</P>""")
         lo1.addWidget(wunlockall)
         wlock.setChecked(self._rc.isDisplayRangeLocked())
-        QObject.connect(wlock, SIGNAL("clicked(bool)"), self._rc.lockDisplayRange)
+        wlock.clicked.connect(self._rc.lockDisplayRange)
         QObject.connect(wlockall, SIGNAL("clicked()"),
                         self._currier.curry(self._imgman.lockAllDisplayRanges, self._rc))
-        QObject.connect(wunlockall, SIGNAL("clicked()"), self._imgman.unlockAllDisplayRanges)
-        QObject.connect(self._rc, SIGNAL("displayRangeLocked"), wlock.setChecked)
+        wunlockall.clicked.connect(self._imgman.unlockAllDisplayRanges)
+        self._rc.displayRangeLocked.connect(wlock.setChecked)
 
         #    self._wlock_imap_axis = [ QCheckBox(name,self) for iaxis,name,labels in sliced_axes ]
         #    for iw,w in enumerate(self._wlock_imap_axis):
@@ -395,7 +395,7 @@ class ImageControlDialog(QDialog):
         for cmap in self._rc.getColormapList():
             self._wcolmaps.addItem(QIcon(cmap.makeQPixmap(128, 16)), cmap.name)
         lo1.addWidget(self._wcolmaps)
-        QObject.connect(self._wcolmaps, SIGNAL("activated(int)"), self._rc.setColorMapNumber)
+        self._wcolmaps.activated.connect(self._rc.setColorMapNumber)
         # add widgetstack for colormap controls
         self._wcolmap_control_stack = QStackedWidget(self)
         self._wcolmap_control_blank = QWidget(self._wcolmap_control_stack)
@@ -417,10 +417,10 @@ class ImageControlDialog(QDialog):
 
         # connect updates from renderControl and image
         self.image.connect(SIGNAL("slice"), self._updateImageSlice)
-        QObject.connect(self._rc, SIGNAL("intensityMapChanged"), self._updateIntensityMap)
-        QObject.connect(self._rc, SIGNAL("colorMapChanged"), self._updateColorMap)
-        QObject.connect(self._rc, SIGNAL("dataSubsetChanged"), self._updateDataSubset)
-        QObject.connect(self._rc, SIGNAL("displayRangeChanged"), self._updateDisplayRange)
+        self._rc.intensityMapChanged.connect(self._updateIntensityMap)
+        self._rc.colorMapChanged.connect(self._updateColorMap)
+        self._rc.dataSubsetChanged.connect(self._updateDataSubset)
+        self._rc.displayRangeChanged.connect(self._updateDisplayRange)
 
         # update widgets
         self._setupHistogramPlot()
@@ -442,7 +442,7 @@ class ImageControlDialog(QDialog):
         if icon:
             btn.setIcon(icon)
         if callback:
-            QObject.connect(btn, SIGNAL("clicked()"), callback)
+            btn.clicked.connect(callback)
         return btn
 
     #  def closeEvent (self,ev):
@@ -646,20 +646,20 @@ class ImageControlDialog(QDialog):
         # add pickers
         self._hist_minpicker = self.HistLimitPicker(self._histplot, "low: %(x).4g")
         self._hist_minpicker.setMousePattern(QwtEventPattern.MouseSelect1, Qt.LeftButton)
-        QObject.connect(self._hist_minpicker, SIGNAL("selected(const QwtDoublePoint &)"), self._selectLowLimit)
+        self._hist_minpicker.selected.connect(self._selectLowLimit)
         self._hist_maxpicker = self.HistLimitPicker(self._histplot, "high: %(x).4g")
         self._hist_maxpicker.setMousePattern(QwtEventPattern.MouseSelect1, Qt.RightButton)
-        QObject.connect(self._hist_maxpicker, SIGNAL("selected(const QwtDoublePoint &)"), self._selectHighLimit)
+        self._hist_maxpicker.selected.connect(self._selectHighLimit)
         self._hist_maxpicker1 = self.HistLimitPicker(self._histplot, "high: %(x).4g")
         self._hist_maxpicker1.setMousePattern(QwtEventPattern.MouseSelect1, Qt.LeftButton, Qt.CTRL)
-        QObject.connect(self._hist_maxpicker1, SIGNAL("selected(const QwtDoublePoint &)"), self._selectHighLimit)
+        self._hist_maxpicker1.selected.connect(self._selectHighLimit)
         self._hist_zoompicker = self.HistLimitPicker(self._histplot, label="zoom",
                                                      tracker_mode=QwtPicker.AlwaysOn, track=self._trackHistCoordinates,
                                                      color="black",
                                                      mode=QwtPicker.RectSelection,
                                                      rubber_band=QwtPicker.RectRubberBand)
         self._hist_zoompicker.setMousePattern(QwtEventPattern.MouseSelect1, Qt.LeftButton, Qt.SHIFT)
-        QObject.connect(self._hist_zoompicker, SIGNAL("selected(const QwtDoubleRect &)"), self._zoomHistogramIntoRect)
+        self._hist_zoompicker.selected.connect(self._zoomHistogramIntoRect)
 
     def _trackHistCoordinates(self, x, y):
         self._wlab_histpos.setText((DataValueFormat + " %d") % (x, y) if x is not None else self._wlab_histpos_text)

@@ -271,21 +271,21 @@ class ColormapWithControls(Colormap):
             self._wreset.setToolButtonStyle(Qt.ToolButtonTextOnly)
             self._wreset.setAutoRaise(True)
             self._wreset.setEnabled(self.value != self._default)
-            QObject.connect(self._wreset, SIGNAL("clicked()"), self._resetValue)
+            self._wreset.clicked.connect(self._resetValue)
             top_lo.addWidget(self._wreset)
             self._wslider = QwtSlider(parent)
             # This works around a stupid bug in QwtSliders -- see comments on histogram zoom wheel above
             self._wslider_timer = QTimer(parent)
             self._wslider_timer.setSingleShot(True)
             self._wslider_timer.setInterval(500)
-            QObject.connect(self._wslider_timer, SIGNAL("timeout()"), self.setValue)
+            self._wslider_timer.timeout.connect(self.setValue)
             gridlayout.addWidget(self._wslider, row * 2 + 1, column)
             self._wslider.setRange(self.minval, self.maxval)
             self._wslider.setStep(self.step)
             self._wslider.setValue(self.value)
             self._wslider.setTracking(False)
-            QObject.connect(self._wslider, SIGNAL("valueChanged(double)"), self.setValue)
-            QObject.connect(self._wslider, SIGNAL("sliderMoved(double)"), self._previewValue)
+            self._wslider.valueChanged.connect(self.setValue)
+            self._wslider.sliderMoved.connect(self._previewValue)
 
         def _resetValue(self):
             self._wslider.setValue(self._default)
@@ -302,18 +302,18 @@ class ColormapWithControls(Colormap):
                 # stop timer if being called to finalize the change in value
                 if notify:
                     self._wslider_timer.stop()
-                    self.emit(SIGNAL("valueChanged"), self.value)
+                    self.valueChanged.emit(self.value)
 
         def _previewValue(self, value):
             self.setValue(notify=False)
             self._wslider_timer.start(500)
-            self.emit(SIGNAL("valueMoved"), self.value)
+            self.valueMoved.emit(self.value)
 
     def emitChange(self, *dum):
-        self.emit(SIGNAL("colormapChanged"))
+        self.colormapChanged.emit()
 
     def emitPreview(self, *dum):
-        self.emit(SIGNAL("colormapPreviewed"))
+        self.colormapPreviewed.emit()
 
     def loadConfig(self, config):
         pass
@@ -374,8 +374,8 @@ class CubeHelixColormap(ColormapWithControls):
         layout.setContentsMargins(0, 0, 0, 0)
         for irow, icol, control in ((0, 0, self.gamma), (0, 1, self.color), (1, 0, self.cycles), (1, 1, self.hue)):
             control.makeControlWidgets(top, layout, irow, icol)
-            QObject.connect(control, SIGNAL("valueChanged"), self.emitChange)
-            QObject.connect(control, SIGNAL("valueMoved"), self.emitPreview)
+            control.valueChanged.connect(self.emitChange)
+            control.valueMoved.connect(self.emitPreview)
         return top
 
     def loadConfig(self, config):

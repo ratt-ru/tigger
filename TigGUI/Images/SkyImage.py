@@ -94,11 +94,11 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
         if cmap:
             self.colormap = cmap
         if emit:
-            self.emit(SIGNAL("repaint"))
+            self.repaint.emit()
 
     def updateCurrentColorMap(self):
         self._cache_qimage = {}
-        self.emit(SIGNAL("repaint"))
+        self.repaint.emit()
 
     def setIntensityMap(self, imap=None, emit=True):
         """Changes the intensity map. If called with no arguments, clears intensity map-dependent caches"""
@@ -107,7 +107,7 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
         if imap:
             self.imap = imap
         if emit:
-            self.emit(SIGNAL("repaint"))
+            self.repaint.emit()
 
     def colorMap(self):
         return self.colormap
@@ -519,7 +519,7 @@ class SkyCubePlotItem(SkyImagePlotItem):
         for i, (iaxis, name, labels, values, units, scale) in enumerate(self._extra_axes):
             self.imgslice[iaxis] = indices[i]
         self._setupSlice()
-        self.emit(SIGNAL("slice"), indices)
+        self.slice.emit(indices)
 
     def currentSlice(self):
         return list(self.imgslice)

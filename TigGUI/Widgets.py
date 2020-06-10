@@ -75,7 +75,7 @@ class ValueTypeEditor(QWidget):
         self.wtypesel = QComboBox(self)
         for i, tp in enumerate(self.ValueTypes):
             self.wtypesel.addItem(tp.__name__)
-        QObject.connect(self.wtypesel, SIGNAL("activated(int)"), self._selectTypeNum)
+        self.wtypesel.activated.connect(self._selectTypeNum)
         typesel_lab = QLabel("&Type:", self)
         typesel_lab.setBuddy(self.wtypesel)
         lo.addWidget(typesel_lab, 0)
@@ -150,7 +150,7 @@ class FileSelector(QWidget):
         # selector
         wsel = QToolButton(self)
         wsel.setText("Choose...")
-        QObject.connect(wsel, SIGNAL("clicked()"), self._chooseFile)
+        wsel.clicked.connect(self._chooseFile)
         lo.addWidget(wsel, 0)
         # other init
         self._file_dialog = None
@@ -169,7 +169,7 @@ class FileSelector(QWidget):
             dialog.setModal(True)
             if self._dir is not None:
                 dialog.setDirectory(self._dir)
-            QObject.connect(dialog, SIGNAL("filesSelected(const QStringList &)"), self.setFilename)
+            dialog.filesSelected.connect(self.setFilename)
         return self._file_dialog.exec_()
 
     def setFilename(self, filename):
@@ -177,8 +177,8 @@ class FileSelector(QWidget):
             filename = filename[0]
         filename = (filename and str(filename)) or ''
         self.wfname.setText(filename)
-        self.emit(SIGNAL("valid"), bool(filename))
-        self.emit(SIGNAL("filenameSelected"), filename)
+        self.valid.emit(bool(filename))
+        self.filenameSelected.emit(filename)
 
     def setDirectory(self, directory):
         self._dir = directory
@@ -210,8 +210,8 @@ class AddTagDialog(QDialog):
         wtagsel_lbl.setBuddy(self.wtagsel)
         lo1.addWidget(wtagsel_lbl, 0)
         lo1.addWidget(self.wtagsel, 1)
-        QObject.connect(self.wtagsel, SIGNAL("activated(int)"), self._check_tag)
-        QObject.connect(self.wtagsel, SIGNAL("editTextChanged(const QString &)"), self._check_tag_text)
+        self.wtagsel.activated.connect(self._check_tag)
+        self.wtagsel.editTextChanged.connect(self._check_tag_text)
         # value editor
         self.valedit = ValueTypeEditor(self)
         lo.addWidget(self.valedit)
@@ -223,11 +223,11 @@ class AddTagDialog(QDialog):
         lo2.setContentsMargins(5, 5, 5, 5)
         self.wokbtn = QPushButton("OK", self)
         self.wokbtn.setMinimumWidth(128)
-        QObject.connect(self.wokbtn, SIGNAL("clicked()"), self.accept)
+        self.wokbtn.clicked.connect(self.accept)
         self.wokbtn.setEnabled(False)
         cancelbtn = QPushButton("Cancel", self)
         cancelbtn.setMinimumWidth(128)
-        QObject.connect(cancelbtn, SIGNAL("clicked()"), self.reject)
+        cancelbtn.clicked.connect(self.reject)
         lo2.addWidget(self.wokbtn)
         lo2.addStretch(1)
         lo2.addWidget(cancelbtn)
@@ -282,7 +282,7 @@ class SelectTagsDialog(QDialog):
         lo.addWidget(self.wtagsel)
         #    self.wtagsel.setColumnMode(QListBox.FitToWidth)
         self.wtagsel.setSelectionMode(QListWidget.MultiSelection)
-        QObject.connect(self.wtagsel, SIGNAL("itemSelectionChanged()"), self._check_tag)
+        self.wtagsel.itemSelectionChanged.connect(self._check_tag)
         # buttons
         lo.addSpacing(10)
         lo2 = QHBoxLayout()
@@ -291,11 +291,11 @@ class SelectTagsDialog(QDialog):
         lo2.setContentsMargins(5, 5, 5, 5)
         self.wokbtn = QPushButton(ok_button, self)
         self.wokbtn.setMinimumWidth(128)
-        QObject.connect(self.wokbtn, SIGNAL("clicked()"), self.accept)
+        self.wokbtn.clicked.connect(self.accept)
         self.wokbtn.setEnabled(False)
         cancelbtn = QPushButton("Cancel", self)
         cancelbtn.setMinimumWidth(128)
-        QObject.connect(cancelbtn, SIGNAL("clicked()"), self.reject)
+        cancelbtn.clicked.connect(self.reject)
         lo2.addWidget(self.wokbtn)
         lo2.addStretch(1)
         lo2.addWidget(cancelbtn)

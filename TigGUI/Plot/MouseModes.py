@@ -134,7 +134,7 @@ class MouseModeManager(QObject):
         if mode.submodes:
             self._ensureValidSubmodes()
         else:
-            self.emit(SIGNAL("setMouseMode"), mode)
+            self.setMouseMode.emit(mode)
 
     def _setSubmode(self, mid):
         """Called when the mouse submode changes"""
@@ -149,7 +149,7 @@ class MouseModeManager(QObject):
                 if mm is mode:
                     self._valid_submodes[(i + 1) % len(self._valid_submodes)].qa.setShortcut(Qt.Key_F4)
                     break
-        self.emit(SIGNAL("setMouseMode"), mode)
+        self.setMouseMode.emit(mode)
 
     def _readModeConfig(self, section, main_tooltip=None):
         """Reads the given config section (and uses the supplied defaults dict)
