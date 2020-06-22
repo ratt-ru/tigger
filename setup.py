@@ -5,7 +5,16 @@ from setuptools import setup, find_packages
 
 __version__ = "1.5.0"
 
-requirements = ['numpy', 'scipy', 'astlib', 'astropy', 'astro_tigger_lsm', 'configparser']
+requirements = [
+    'numpy',
+    'scipy',
+    'astlib',
+    'astropy',
+    'astro_tigger_lsm',
+    'configparser',
+    'pyqt5',
+    'PythonQwt',
+]
 
 scripts = [
     'TigGUI/tigger',
@@ -17,9 +26,7 @@ package_data = {'TigGUI': [
     ]
 }
 
-extras_require = {
-    'venv': ['vext.pyqt4'],
-}
+
 
 
 setup(
