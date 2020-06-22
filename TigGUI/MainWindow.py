@@ -26,25 +26,25 @@
 #
 
 import os
+import os.path
 import sys
 
-import os.path
-from PyQt4.Qt import QObject, QWidget, QFileDialog, SIGNAL, QDialog, QStringList, QVBoxLayout, \
+import Tigger.Models.Formats
+from PyQt5.Qt import QObject, QWidget, QFileDialog, QDialog, QVBoxLayout, \
     Qt, QSize, QSizePolicy, QApplication, QMenu, QMessageBox, QErrorMessage, QMainWindow, QSplitter
 from Tigger.Models import SkyModel
 from Tigger.Models.Formats import ModelHTML
-import Tigger.Models.Formats
 
-from . import AboutDialog
-import TigGUI.kitties.utils
 import TigGUI.Tools.source_selector
+import TigGUI.kitties.utils
+from TigGUI import Images
+from TigGUI.init import pixmaps, Config
+from TigGUI.kitties.widgets import BusyIndicator
+from . import AboutDialog
 from . import Widgets
 from .Images.Manager import ImageManager
 from .Plot.SkyModelPlot import SkyModelPlotter, PersistentCurrier
 from .SkyModelTreeWidget import SkyModelTreeWidget, ModelGroupsTable
-from TigGUI import Images
-from TigGUI.kitties.widgets import BusyIndicator
-from TigGUI.init import pixmaps, Config
 
 _verbosity = TigGUI.kitties.utils.verbosity(name="mainwin")
 dprint = _verbosity.dprint
@@ -68,7 +68,7 @@ class MainWindow(QMainWindow):
         cw = QWidget(self)
         self.setCentralWidget(cw)
         cwlo = QVBoxLayout(cw)
-        cwlo.setMargin(5)
+        cwlo.setContentsMargins(5, 5, 5, 5)
         # make splitter
         spl1 = self._splitter1 = QSplitter(Qt.Vertical, cw)
         spl1.setOpaqueResize(False)
@@ -90,9 +90,9 @@ class MainWindow(QMainWindow):
         self.skyplot.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
         self._skyplot_stack_lo.addWidget(self.skyplot, 1000)
         self.skyplot.hide()
-        QObject.connect(self.skyplot, SIGNAL("imagesChanged"), self._imagesChanged)
-        QObject.connect(self.skyplot, SIGNAL("showMessage"), self.showMessage)
-        QObject.connect(self.skyplot, SIGNAL("showErrorMessage"), self.showErrorMessage)
+        self.skyplot.imagesChanged.connect(self._imagesChanged)
+        self.skyplot.showMessage.connect(self.showMessage)
+        self.skyplot.showErrorMessage.connect(self.showErrorMessage)
 
         self._grouptab_stack = QWidget(spl2)
         self._grouptab_stack_lo = lo = QVBoxLayout(self._grouptab_stack)
@@ -100,7 +100,7 @@ class MainWindow(QMainWindow):
         # add groupings table
         self.grouptab = ModelGroupsTable(self._grouptab_stack)
         self.grouptab.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        QObject.connect(self, SIGNAL("hasSkyModel"), self.grouptab.setEnabled)
+        self.hasSkyModel.connect(self.grouptab.setEnabled)
         lo.addWidget(self.grouptab, 1000)
         lo.addStretch(1)
         self.grouptab.hide()
@@ -108,9 +108,9 @@ class MainWindow(QMainWindow):
         # add image controls -- parentless for now (setLayout will reparent them anyway)
         self.imgman = ImageManager()
         self.skyplot.setImageManager(self.imgman)
-        QObject.connect(self.imgman, SIGNAL("imagesChanged"), self._imagesChanged)
-        QObject.connect(self.imgman, SIGNAL("showMessage"), self.showMessage)
-        QObject.connect(self.imgman, SIGNAL("showErrorMessage"), self.showErrorMessage)
+        self.imgman.imagesChanged.connect(self._imagesChanged)
+        self.imgman.showMessage.connect(self.showMessage)
+        self.imgman.showErrorMessage.connect(self.showErrorMessage)
 
         # enable status line
         self.statusBar().show()
@@ -120,17 +120,17 @@ class MainWindow(QMainWindow):
         file_menu = menubar.addMenu("&File")
         qa_open = file_menu.addAction("&Open model...", self._openFileCallback, Qt.CTRL + Qt.Key_O)
         qa_merge = file_menu.addAction("&Merge in model...", self._mergeFileCallback, Qt.CTRL + Qt.SHIFT + Qt.Key_O)
-        QObject.connect(self, SIGNAL("hasSkyModel"), qa_merge.setEnabled)
+        self.hasSkyModel.connect(qa_merge.setEnabled)
         file_menu.addSeparator()
         qa_save = file_menu.addAction("&Save model", self.saveFile, Qt.CTRL + Qt.Key_S)
-        QObject.connect(self, SIGNAL("isUpdated"), qa_save.setEnabled)
+        self.isUpdated.connect(qa_save.setEnabled)
         qa_save_as = file_menu.addAction("Save model &as...", self.saveFileAs)
-        QObject.connect(self, SIGNAL("hasSkyModel"), qa_save_as.setEnabled)
+        self.hasSkyModel.connect(qa_save_as.setEnabled)
         qa_save_selection_as = file_menu.addAction("Save selection as...", self.saveSelectionAs)
-        QObject.connect(self, SIGNAL("hasSelection"), qa_save_selection_as.setEnabled)
+        self.hasSelection.connect(qa_save_selection_as.setEnabled)
         file_menu.addSeparator()
         qa_close = file_menu.addAction("&Close model", self.closeFile, Qt.CTRL + Qt.Key_W)
-        QObject.connect(self, SIGNAL("hasSkyModel"), qa_close.setEnabled)
+        self.hasSkyModel.connect(qa_close.setEnabled)
         qa_quit = file_menu.addAction("Quit", self.close, Qt.CTRL + Qt.Key_Q)
 
         # Image menu
@@ -142,7 +142,7 @@ class MainWindow(QMainWindow):
         em = QMenu("&LSM", self)
         self._qa_em = menubar.addMenu(em)
         self._qa_em.setVisible(False)
-        QObject.connect(self, SIGNAL("hasSkyModel"), self._qa_em.setVisible)
+        self.hasSkyModel.connect(self._qa_em.setVisible)
         self._column_view_menu = QMenu("&Show columns", self)
         self._qa_cv_menu = em.addMenu(self._column_view_menu)
         em.addSeparator()
@@ -151,17 +151,17 @@ class MainWindow(QMainWindow):
         em.addAction("Select b&y attribute...", self._showSourceSelector, Qt.CTRL + Qt.Key_Y)
         em.addSeparator()
         qa_add_tag = em.addAction("&Tag selection...", self.addTagToSelection, Qt.CTRL + Qt.Key_T)
-        QObject.connect(self, SIGNAL("hasSelection"), qa_add_tag.setEnabled)
+        self.hasSelection.connect(qa_add_tag.setEnabled)
         qa_del_tag = em.addAction("&Untag selection...", self.removeTagsFromSelection, Qt.CTRL + Qt.Key_U)
-        QObject.connect(self, SIGNAL("hasSelection"), qa_del_tag.setEnabled)
+        self.hasSelection.connect(qa_del_tag.setEnabled)
         qa_del_sel = em.addAction("&Delete selection", self._deleteSelection)
-        QObject.connect(self, SIGNAL("hasSelection"), qa_del_sel.setEnabled)
+        self.hasSelection.connect(qa_del_sel.setEnabled)
 
         # Tools menu
         tm = self._tools_menu = QMenu("&Tools", self)
         self._qa_tm = menubar.addMenu(tm)
         self._qa_tm.setVisible(False)
-        QObject.connect(self, SIGNAL("hasSkyModel"), self._qa_tm.setVisible)
+        self.hasSkyModel.connect(self._qa_tm.setVisible)
 
         # Help menu
         menubar.addSeparator()
@@ -178,9 +178,9 @@ class MainWindow(QMainWindow):
         self.filename = None
         self._display_filename = None
         self._open_file_dialog = self._merge_file_dialog = self._save_as_dialog = self._save_sel_as_dialog = self._open_image_dialog = None
-        self.emit(SIGNAL("isUpdated"), False)
-        self.emit(SIGNAL("hasSkyModel"), False)
-        self.emit(SIGNAL("hasSelection"), False)
+        self.isUpdated.emit(False)
+        self.hasSkyModel.emit(False)
+        self.hasSelection.emit(False)
         self._exiting = False
 
         # set initial layout
@@ -366,7 +366,7 @@ class MainWindow(QMainWindow):
 
     def _updateModelSelection(self, num, origin=None):
         """Called when the model selection has been updated."""
-        self.emit(SIGNAL("hasSelection"), bool(num))
+        self.hasSelection.emit(bool(num))
 
     _formats = [f[1] for f in Tigger.Models.Formats.listFormatsFull()]
 
@@ -385,12 +385,12 @@ class MainWindow(QMainWindow):
         return self.imgman.loadImage(filename)
 
     def setModel(self, model):
-        self.emit(SIGNAL("modelChanged"), model)
+        self.modelChanged.emit(model)
         if model:
             self.model = model
-            self.emit(SIGNAL("hasSkyModel"), True)
-            self.emit(SIGNAL("hasSelection"), False)
-            self.emit(SIGNAL("isUpdated"), False)
+            self.hasSkyModel.emit(True)
+            self.hasSelection.emit(False)
+            self.isUpdated.emit(False)
             self.model.enableSignals()
             self.model.connect("updated", self._indicateModelUpdated)
             self.model.connect("selected", self._updateModelSelection)
@@ -404,9 +404,9 @@ class MainWindow(QMainWindow):
         else:
             self.model = None
             self.setWindowTitle("Tigger")
-            self.emit(SIGNAL("hasSelection"), False)
-            self.emit(SIGNAL("isUpdated"), False)
-            self.emit(SIGNAL("hasSkyModel"), False)
+            self.hasSelection.emit(False)
+            self.isUpdated.emit(False)
+            self.hasSkyModel.emit(False)
             self.tw.clear()
             self.grouptab.clear()
             self.skyplot.setModel(None)
@@ -418,7 +418,7 @@ class MainWindow(QMainWindow):
             dialog = self._open_file_dialog = QFileDialog(self, "Open sky model", ".", filters)
             dialog.setFileMode(QFileDialog.ExistingFile)
             dialog.setModal(True)
-            QObject.connect(dialog, SIGNAL("filesSelected(const QStringList &)"), self.openFile)
+            dialog.filesSelected.connect(self.openFile)
         self._open_file_dialog.exec_()
         return
 
@@ -486,7 +486,7 @@ class MainWindow(QMainWindow):
             return
         self.skyplot.close()
         self.imgman.close()
-        self.emit(SIGNAL("closing"))
+        self.closing.emit()
         dprint(1, "invoking os._exit(0)")
         os._exit(0)
         QMainWindow.closeEvent(self, event)
@@ -577,7 +577,7 @@ class MainWindow(QMainWindow):
                 dialog.setAcceptMode(QFileDialog.AcceptSave)
                 dialog.setConfirmOverwrite(False)
                 dialog.setModal(True)
-                QObject.connect(dialog, SIGNAL("filesSelected(const QStringList &)"), self.saveFileAs)
+                dialog.filesSelected.connect(self.saveFileAs)
             return self._save_as_dialog.exec_() == QDialog.Accepted
         # filename supplied, so save
         return self.saveFile(filename, confirm=False)
@@ -595,7 +595,7 @@ class MainWindow(QMainWindow):
                 dialog.setAcceptMode(QFileDialog.AcceptSave)
                 dialog.setConfirmOverwrite(True)
                 dialog.setModal(True)
-                QObject.connect(dialog, SIGNAL("filesSelected(const QStringList &)"), self.saveSelectionAs)
+                dialog.filesSelected.connect(self.saveSelectionAs)
             return self._save_sel_as_dialog.exec_() == QDialog.Accepted
         # save selection
         if isinstance(filename, QStringList):
@@ -620,7 +620,7 @@ class MainWindow(QMainWindow):
                 """Error saving selection to model file %s: %s""" % (filename, str(sys.exc_info()[1])))
             return False
         self.showMessage("""Wrote %d selected source%s to file %s""" % (
-        len(selmodel.sources), "" if len(selmodel.sources) == 1 else "s", filename), 3000)
+            len(selmodel.sources), "" if len(selmodel.sources) == 1 else "s", filename), 3000)
         pass
 
     def addTagToSelection(self):
@@ -670,7 +670,7 @@ class MainWindow(QMainWindow):
         # ask for confirmation
         plural = (len(tags) > 1 and "s") or ""
         if QMessageBox.question(self, "Removing tags", "<P>Really remove the tag%s '%s' from selected sources?</P>" % (
-        plural, "', '".join(tags)),
+                plural, "', '".join(tags)),
                                 QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes) != QMessageBox.Yes:
             return
         # remove the tags
@@ -688,7 +688,7 @@ class MainWindow(QMainWindow):
     def _indicateModelUpdated(self, what=None, origin=None, updated=True):
         """Marks model as updated."""
         self._model_updated = updated
-        self.emit(SIGNAL("isUpdated"), updated)
+        self.isUpdated.emit(updated)
         if self.model:
             self.setWindowTitle(
                 "Tigger - %s%s" % ((self._display_filename or "(unnamed)", " (modified)" if updated else "")))

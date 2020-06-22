@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-from PyQt4.Qt import SIGNAL, QCursor, Qt, QWidgetAction, QLabel, QFrame, QTreeWidget, QObject, QApplication, \
+from PyQt5.Qt import QCursor, Qt, QWidgetAction, QLabel, QFrame, QTreeWidget, QObject, QApplication, \
     QTreeWidgetItemIterator, QListWidget
+
 
 
 def PYSIGNAL(sig):
@@ -48,9 +49,12 @@ class ClickableTreeWidget(QTreeWidget):
     def __init__(self, *args):
         QTreeWidget.__init__(self, *args)
         self.setContextMenuPolicy(Qt.CustomContextMenu)
-        QObject.connect(self, SIGNAL('customContextMenuRequested(const QPoint &)'), self._request_context_menu)
-        QObject.connect(self, SIGNAL('itemExpanded(QTreeWidgetItem *)'), self._item_expanded_collapsed)
-        QObject.connect(self, SIGNAL('itemCollapsed(QTreeWidgetItem *)'), self._item_expanded_collapsed)
+        self.customContextMenuRequested.connect(self._request_context_menu)
+        self.itemExpanded.connect(self._item_expanded_collapsed)
+        self.itemCollapsed.connect(self._item_expanded_collapsed)
+        #QObject.connect(self, SIGNAL('customContextMenuRequested(const QPoint &)'), self._request_context_menu)
+        #QObject.connect(self, SIGNAL('itemExpanded(QTreeWidgetItem *)'), self._item_expanded_collapsed)
+        #QObject.connect(self, SIGNAL('itemCollapsed(QTreeWidgetItem *)'), self._item_expanded_collapsed)
 
     def mousePressEvent(self, ev):
         self._expanded_item = None
@@ -66,7 +70,7 @@ class ClickableTreeWidget(QTreeWidget):
         # now see if the item was expanded or collapsed because of the event. Only emit signal if this was
         # not the case (i.e. swallow the clicks that have to do with expansion/collapse of items)
         if item and item is not self._expanded_item:
-            self.emit(SIGNAL("mouseButtonClicked"), ev.button(), item, self._mouse_press_pos, col)
+            self.mouseButtonClicked.emit(ev.button(), item, self._mouse_press_pos, col)
 
     def _item_expanded_collapsed(self, item):
         self._expanded_item = item
@@ -75,7 +79,7 @@ class ClickableTreeWidget(QTreeWidget):
         item = self.itemAt(pos)
         if item:
             col = self.header().logicalIndexAt(pos)
-            self.emit(SIGNAL("itemContextMenuRequested"), item, pos, col)
+            self.itemContextMenuRequested.emit(item, pos, col)
 
     class Iterator(QTreeWidgetItemIterator):
         def __init__(self, *args, **kw):
@@ -128,4 +132,4 @@ class ClickableListWidget(QListWidget):
     def _request_context_menu(self, pos):
         item = self.itemAt(pos)
         if item:
-            self.emit(SIGNAL("itemContextMenuRequested"), item, pos)
+            self.itemContextMenuRequested.emit(item, pos)

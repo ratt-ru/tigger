@@ -26,7 +26,7 @@
 
 import math
 
-from PyQt4.Qt import QObject, QHBoxLayout, QFileDialog, SIGNAL, QLabel, \
+from PyQt5.Qt import QObject, QHBoxLayout, QFileDialog, SIGNAL, QLabel, \
     QLineEdit, QDialog, QDoubleValidator, QVBoxLayout, \
     QPushButton, Qt, QGridLayout, QMessageBox, QErrorMessage
 
@@ -51,7 +51,7 @@ class AddBrickDialog(QDialog):
         self.setModal(modal)
         self.setWindowTitle("Add FITS brick")
         lo = QVBoxLayout(self)
-        lo.setMargin(10)
+        lo.setContentsMargins(10, 10, 10, 10)
         lo.setSpacing(5)
         # file selector
         self.wfile = FileSelector(self, label="FITS filename:", dialog_label="FITS file", default_suffix="fits",
@@ -73,20 +73,20 @@ class AddBrickDialog(QDialog):
         lo2 = QHBoxLayout()
         lo.addLayout(lo2)
         lo2.setContentsMargins(0, 0, 0, 0)
-        lo2.setMargin(5)
+        lo2.setContentsMargins(5, 5, 5, 5)
         self.wokbtn = QPushButton("OK", self)
         self.wokbtn.setMinimumWidth(128)
-        QObject.connect(self.wokbtn, SIGNAL("clicked()"), self.accept)
+        self.wokbtn.clicked.connect(self.accept)
         self.wokbtn.setEnabled(False)
         cancelbtn = QPushButton("Cancel", self)
         cancelbtn.setMinimumWidth(128)
-        QObject.connect(cancelbtn, SIGNAL("clicked()"), self.reject)
+        cancelbtn.clicked.connect(self.reject)
         lo2.addWidget(self.wokbtn)
         lo2.addStretch(1)
         lo2.addWidget(cancelbtn)
         self.setMinimumWidth(384)
         # signals
-        QObject.connect(self.wfile, SIGNAL("filenameSelected"), self._fileSelected)
+        self.wfile.filenameSelected.connect(self._fileSelected)
         # internal state
         self.qerrmsg = QErrorMessage(self)
 

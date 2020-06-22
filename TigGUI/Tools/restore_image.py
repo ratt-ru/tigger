@@ -26,7 +26,7 @@
 
 import math
 
-from PyQt4.Qt import QObject, QHBoxLayout, QFileDialog, SIGNAL, QLabel, \
+from PyQt5.Qt import QObject, QHBoxLayout, QFileDialog, SIGNAL, QLabel, \
     QLineEdit, QDialog, QDoubleValidator, QVBoxLayout, \
     QPushButton, Qt, QCheckBox, QMessageBox, QErrorMessage
 
@@ -93,20 +93,20 @@ class RestoreImageDialog(QDialog):
         lo2.setMargin(5)
         self.wokbtn = QPushButton("OK", self)
         self.wokbtn.setMinimumWidth(128)
-        QObject.connect(self.wokbtn, SIGNAL("clicked()"), self.accept)
+        self.wokbtn.clicked.connect(self.accept)
         self.wokbtn.setEnabled(False)
         cancelbtn = QPushButton("Cancel", self)
         cancelbtn.setMinimumWidth(128)
-        QObject.connect(cancelbtn, SIGNAL("clicked()"), self.reject)
+        cancelbtn.clicked.connect(self.reject)
         lo2.addWidget(self.wokbtn)
         lo2.addStretch(1)
         lo2.addWidget(cancelbtn)
         self.setMinimumWidth(384)
         # signals
-        QObject.connect(self.wfile_in, SIGNAL("filenameSelected"), self._fileSelected)
-        QObject.connect(self.wfile_in, SIGNAL("filenameSelected"), self._inputFileSelected)
-        QObject.connect(self.wfile_out, SIGNAL("filenameSelected"), self._fileSelected)
-        QObject.connect(self.wfile_psf, SIGNAL("filenameSelected"), self._psfFileSelected)
+        self.wfile_in.filenameSelected.connect(self._fileSelected)
+        self.wfile_in.filenameSelected.connect(self._inputFileSelected)
+        self.wfile_out.filenameSelected.connect(self._fileSelected)
+        self.wfile_psf.filenameSelected.connect(self._psfFileSelected)
         # internal state
         self.qerrmsg = QErrorMessage(self)
 

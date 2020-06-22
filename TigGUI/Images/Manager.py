@@ -30,11 +30,8 @@ import traceback
 import numpy
 import os.path
 import time
-from PyQt4.Qt import QObject, QWidget, QFileDialog, SIGNAL, QStringList, QVBoxLayout, \
-    Qt, QApplication, QMenu, QClipboard, \
+from PyQt5.Qt import QObject, QWidget, QFileDialog, QVBoxLayout, Qt, QApplication, QMenu, QClipboard, \
     QInputDialog, QActionGroup
-
-import TigGUI.kitties.utils
 
 from astropy.io import fits as pyfits
 
@@ -78,12 +75,12 @@ class ImageManager(QWidget):
         self._qa_plot_top.setCheckable(True)
         self._qa_plot_all.setCheckable(True)
         self._qa_plot_top.setChecked(True)
-        QObject.connect(self._qa_plot_all, SIGNAL("toggled(bool)"), self._displayAllImages)
+        self._qa_plot_all.toggled.connect(self._displayAllImages)
         self._closing = False
 
         self._qa_load_clipboard = None
         self._clipboard_mode = QClipboard.Clipboard
-        QObject.connect(QApplication.clipboard(), SIGNAL("changed(QClipboard::Mode)"), self._checkClipboardPath)
+        QApplication.clipboard().changed.connect(self._checkClipboardPath)
         # populate the menu
         self._repopulateMenu()
 
@@ -107,7 +104,7 @@ class ImageManager(QWidget):
                                                                    ["*" + ext for ext in FITS_ExtensionList])))
                 dialog.setFileMode(QFileDialog.ExistingFile)
                 dialog.setModal(True)
-                QObject.connect(dialog, SIGNAL("filesSelected(const QStringList &)"), self.loadImage)
+                dialog.filesSelected.connect(self.loadImage)
             self._load_image_dialog.exec_()
             return None
         if isinstance(filename, QStringList):
@@ -150,10 +147,10 @@ class ImageManager(QWidget):
         return ic
 
     def showMessage(self, message, time=None):
-        self.emit(SIGNAL("showMessage"), message, time)
+        self.showMessage.emit(message, time)
 
     def showErrorMessage(self, message, time=None):
-        self.emit(SIGNAL("showErrorMessage"), message, time)
+        self.showErrorMessage.emit(message, time)
 
     def setZ0(self, z0):
         self._z0 = z0
@@ -263,7 +260,7 @@ class ImageManager(QWidget):
             self.centerImage(self._imagecons[0] if self._imagecons else None, emit=False)
         # emit signal
         self._repopulateMenu()
-        self.emit(SIGNAL("imagesChanged"))
+        self.imagesChanged.emit()
         if self._imagecons:
             self.raiseImage(self._imagecons[0])
 
@@ -275,7 +272,7 @@ class ImageManager(QWidget):
         for ic in self._imagecons:
             ic.setPlotProjection(self._center_image.projection)
         if emit:
-            self.emit(SIGNAL("imagesChanged"))
+            self.imagesChanged.emit()
 
     def raiseImage(self, imagecon):
         # reshuffle image stack, if more than one image image
@@ -292,7 +289,7 @@ class ImageManager(QWidget):
             for j, ic in enumerate(self._imagecons):
                 ic.setImageVisible(not j or bool(self._qa_plot_all.isChecked()))
             # issue replot signal
-            self.emit(SIGNAL("imageRaised"))
+            self.imageRaised.emit()
             self.fastReplot()
         # else simply update labels
         else:
@@ -311,7 +308,7 @@ class ImageManager(QWidget):
                 next.setText("Show next slice along %s axis" % name)
                 prev.setText("Show previous slice along %s axis" % name)
         # emit signasl
-        self.emit(SIGNAL("imageRaised"), img)
+        self.imageRaised.emit(img)
 
     def resetDrawKey(self):
         """Makes and sets the current plot's drawing key"""
@@ -539,5 +536,5 @@ class ImageManager(QWidget):
         else:
             ic.setPlotProjection(self._center_image.projection)
         # signal
-        self.emit(SIGNAL("imagesChanged"))
+        self.imagesChanged.emit()
         return ic

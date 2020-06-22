@@ -28,7 +28,7 @@
 
 import os
 import sys
-from ConfigParser import ConfigParser, NoSectionError, NoOptionError, DuplicateSectionError
+from configparser import ConfigParser, NoSectionError, NoOptionError, DuplicateSectionError
 
 import os.path
 

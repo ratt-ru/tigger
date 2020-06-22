@@ -25,9 +25,8 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-from PyQt4.Qt import SIGNAL, QPixmap, QIcon
+from PyQt5.Qt import QPixmap, QIcon
 
-PYSIGNAL = SIGNAL
 
 from .utils import verbosity
 
