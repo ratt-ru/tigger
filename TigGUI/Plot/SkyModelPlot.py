@@ -657,6 +657,8 @@ class SkyModelPlotter(QWidget):
     MouseSubset = 2
     MouseSelect = 3
     MouseDeselect = 4
+    showMessage = QtCore.pyqtSignal()
+    showErrorMessage = QtCore.pyqtSignal()
 
     class Plot(QwtPlot):
         """
@@ -1129,8 +1131,6 @@ class SkyModelPlotter(QWidget):
         im.imageRaised.connect(self._imageRaised)
 
     class UpdateEvent(QEvent):
-        showMessage = QtCore.pyqtSignal()
-        showErrorMessage = QtCore.pyqtSignal()
 
         def __init__(self, serial):
             QEvent.__init__(self, QEvent.User)
