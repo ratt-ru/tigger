@@ -26,7 +26,7 @@
 #
 
 import os
-import os.path
+from PyQt5.QtWidgets import *
 import sys
 
 import Tigger.Models.Formats
@@ -45,6 +45,10 @@ from . import Widgets
 from .Images.Manager import ImageManager
 from .Plot.SkyModelPlot import SkyModelPlotter, PersistentCurrier
 from .SkyModelTreeWidget import SkyModelTreeWidget, ModelGroupsTable
+from PyQt5 import *
+from PyQt5.QtCore import *
+
+QStringList = list
 
 _verbosity = TigGUI.kitties.utils.verbosity(name="mainwin")
 dprint = _verbosity.dprint
@@ -52,6 +56,11 @@ dprintf = _verbosity.dprintf
 
 
 class MainWindow(QMainWindow):
+    isUpdated = QtCore.pyqtSignal()
+    hasSkyModel = QtCore.pyqtSignal()
+    hasSelection = QtCore.pyqtSignal()
+    modelChanged = QtCore.pyqtSignal()
+    closing = QtCore.pyqtSignal()
     ViewModelColumns = ["name", "RA", "Dec", "type", "Iapp", "I", "Q", "U", "V", "RM", "spi", "shape"]
 
     def __init__(self, parent, hide_on_close=False):
@@ -70,7 +79,7 @@ class MainWindow(QMainWindow):
         cwlo = QVBoxLayout(cw)
         cwlo.setContentsMargins(5, 5, 5, 5)
         # make splitter
-        spl1 = self._splitter1 = QSplitter(Qt.Vertical, cw)
+        spl1 = self._splitter1 = QSplitter(QtCore.Qt.Vertical, cw)
         spl1.setOpaqueResize(False)
         cwlo.addWidget(spl1)
         # Create listview of LSM entries
@@ -78,7 +87,7 @@ class MainWindow(QMainWindow):
         self.tw.hide()
 
         # split bottom pane
-        spl2 = self._splitter2 = QSplitter(Qt.Horizontal, spl1)
+        spl2 = self._splitter2 = QSplitter(QtCore.Qt.Horizontal, spl1)
         spl2.setOpaqueResize(False)
         self._skyplot_stack = QWidget(spl2)
         self._skyplot_stack_lo = QVBoxLayout(self._skyplot_stack)
@@ -368,6 +377,7 @@ class MainWindow(QMainWindow):
         """Called when the model selection has been updated."""
         self.hasSelection.emit(bool(num))
 
+    import Tigger.Models.Formats
     _formats = [f[1] for f in Tigger.Models.Formats.listFormatsFull()]
 
     _load_file_types = [(doc, ["*" + ext for ext in extensions], load) for load, save, doc, extensions in _formats if
@@ -418,7 +428,7 @@ class MainWindow(QMainWindow):
             dialog = self._open_file_dialog = QFileDialog(self, "Open sky model", ".", filters)
             dialog.setFileMode(QFileDialog.ExistingFile)
             dialog.setModal(True)
-            dialog.filesSelected.connect(self.openFile)
+            dialog.filesSelected['QStringList'].connect(self.openFile)
         self._open_file_dialog.exec_()
         return
 
@@ -429,8 +439,7 @@ class MainWindow(QMainWindow):
             dialog = self._merge_file_dialog = QFileDialog(self, "Merge in sky model", ".", filters)
             dialog.setFileMode(QFileDialog.ExistingFile)
             dialog.setModal(True)
-            QObject.connect(dialog, SIGNAL("filesSelected(const QStringList &)"),
-                            self._currier.curry(self.openFile, merge=True))
+            dialog.filesSelected['QStringList'].connect(self._currier.curry(self.openFile, merge=True))
         self._merge_file_dialog.exec_()
         return
 
@@ -577,7 +586,7 @@ class MainWindow(QMainWindow):
                 dialog.setAcceptMode(QFileDialog.AcceptSave)
                 dialog.setConfirmOverwrite(False)
                 dialog.setModal(True)
-                dialog.filesSelected.connect(self.saveFileAs)
+                dialog.filesSelected['QStringList'].connect(self.saveFileAs)
             return self._save_as_dialog.exec_() == QDialog.Accepted
         # filename supplied, so save
         return self.saveFile(filename, confirm=False)
@@ -595,7 +604,7 @@ class MainWindow(QMainWindow):
                 dialog.setAcceptMode(QFileDialog.AcceptSave)
                 dialog.setConfirmOverwrite(True)
                 dialog.setModal(True)
-                dialog.filesSelected.connect(self.saveSelectionAs)
+                dialog.filesSelected['QStringList'].connect(self.saveSelectionAs)
             return self._save_sel_as_dialog.exec_() == QDialog.Accepted
         # save selection
         if isinstance(filename, QStringList):

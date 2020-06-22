@@ -1,8 +1,10 @@
 from PyQt5.Qt import QObject, Qt, QActionGroup
+from PyQt5.QtWidgets import *
 
 import TigGUI.kitties.utils
 from TigGUI.kitties.utils import PersistentCurrier
 from TigGUI.init import Config, ConfigFile, ConfigFileName, pixmaps
+from PyQt5 import *
 
 _verbosity = TigGUI.kitties.utils.verbosity(name="mmod")
 dprint = _verbosity.dprint
@@ -46,6 +48,8 @@ _DefaultInitialMode = "Mouse3"
 
 class MouseModeManager(QObject):
     class MouseMode(object):
+        setMouseMode = QtCore.pyqtSignal()
+
         def __init__(self, mid):
             self.id = mid
             self.name = self.icon = self.tooltip = None

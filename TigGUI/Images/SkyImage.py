@@ -41,6 +41,7 @@ from astropy.io import fits as pyfits
 from Tigger.Coordinates import Projection
 from TigGUI.Images import Colormaps
 from Tigger.Tools import FITSHeaders
+from PyQt5 import *
 
 DEG = math.pi / 180
 
@@ -51,6 +52,7 @@ dprintf = _verbosity.dprintf
 
 class SkyImagePlotItem(QwtPlotItem, QObject):
     """SkyImagePlotItem is a 2D image in l,m coordimnates"""
+    repaint = QtCore.pyqtSignal()
 
     def __init__(self, nx=0, ny=0, l0=0, m0=0, dl=1, dm=1, image=None):
         QwtPlotItem.__init__(self)
@@ -330,6 +332,7 @@ def getScalePrefix(*values):
 
 class SkyCubePlotItem(SkyImagePlotItem):
     """Extends SkyImagePlotItem with a hypercube containing extra slices."""
+    slice = QtCore.pyqtSignal()
 
     def __init__(self, data=None, ndim=None):
         SkyImagePlotItem.__init__(self)

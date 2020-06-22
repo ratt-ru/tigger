@@ -25,6 +25,7 @@
 #
 
 import math
+from PyQt5.QtWidgets import *
 
 from PyQt5.Qt import QObject, QHBoxLayout, QFileDialog, SIGNAL, QLabel, \
     QLineEdit, QDialog, QDoubleValidator, QVBoxLayout, \
@@ -111,8 +112,8 @@ class MakeBrickDialog(QDialog):
       This increases memory use, so if you have no flux at the edges of the image anyway, then a pad factor of 1 is
       perfectly fine.</P>""")
         self.wpad.setToolTip(lab.toolTip())
-        self.wadd.toggled.connect(self.wpad.setEnabled)
-        self.wadd.toggled.connect(lab.setEnabled)
+        self.wadd.toggled[bool].connect(self.wpad.setEnabled)
+        self.wadd.toggled[bool].connect(lab.setEnabled)
         self.wpad.setEnabled(False)
         lab.setEnabled(False)
         lo1.addStretch(1)

@@ -24,6 +24,7 @@
 #
 
 import math
+from PyQt5.QtWidgets import *
 
 import os.path
 from PyQt5.Qt import QObject, QHBoxLayout, SIGNAL, QDialog, QVBoxLayout, \

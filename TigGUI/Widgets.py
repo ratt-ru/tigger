@@ -25,13 +25,16 @@
 #
 
 import traceback
-
+from PyQt5.QtWidgets import *
 import re
 from PyQt5.Qt import QObject, QValidator, QWidget, QHBoxLayout, QFileDialog, QComboBox, QLabel, \
     QLineEdit, QDialog, QIntValidator, QDoubleValidator, QToolButton, QListWidget, QVBoxLayout, \
     QPushButton, Qt, QMessageBox
 from qwt import QwtPlotCurve, QwtPlotMarker
+from PyQt5 import *
 
+
+QStringList = list
 
 class TiggerPlotCurve(QwtPlotCurve):
     """Wrapper around QwtPlotCurve to make it compatible with numpy float types"""
@@ -75,7 +78,7 @@ class ValueTypeEditor(QWidget):
         self.wtypesel = QComboBox(self)
         for i, tp in enumerate(self.ValueTypes):
             self.wtypesel.addItem(tp.__name__)
-        self.wtypesel.activated.connect(self._selectTypeNum)
+        self.wtypesel.activated[int].connect(self._selectTypeNum)
         typesel_lab = QLabel("&Type:", self)
         typesel_lab.setBuddy(self.wtypesel)
         lo.addWidget(typesel_lab, 0)
@@ -132,6 +135,8 @@ class ValueTypeEditor(QWidget):
 
 class FileSelector(QWidget):
     """A FileSelector is a one-line widget for selecting a file."""
+    valid = QtCore.pyqtSignal()
+    filenameSelected = QtCore.pyqtSignal()
 
     def __init__(self, parent, label, filename=None, dialog_label=None, file_types=None, default_suffix=None,
                  file_mode=QFileDialog.AnyFile):
@@ -169,7 +174,7 @@ class FileSelector(QWidget):
             dialog.setModal(True)
             if self._dir is not None:
                 dialog.setDirectory(self._dir)
-            dialog.filesSelected.connect(self.setFilename)
+            dialog.filesSelected['QStringList'].connect(self.setFilename)
         return self._file_dialog.exec_()
 
     def setFilename(self, filename):
@@ -193,7 +198,7 @@ class FileSelector(QWidget):
 
 
 class AddTagDialog(QDialog):
-    def __init__(self, parent, modal=True, flags=Qt.WindowFlags()):
+    def __init__(self, parent, modal=True, flags=QtCore.Qt.WindowFlags()):
         QDialog.__init__(self, parent, flags)
         self.setModal(modal)
         self.setWindowTitle("Add Tag")
@@ -210,8 +215,8 @@ class AddTagDialog(QDialog):
         wtagsel_lbl.setBuddy(self.wtagsel)
         lo1.addWidget(wtagsel_lbl, 0)
         lo1.addWidget(self.wtagsel, 1)
-        self.wtagsel.activated.connect(self._check_tag)
-        self.wtagsel.editTextChanged.connect(self._check_tag_text)
+        self.wtagsel.activated[int].connect(self._check_tag)
+        self.wtagsel.editTextChanged['QString'].connect(self._check_tag_text)
         # value editor
         self.valedit = ValueTypeEditor(self)
         lo.addWidget(self.valedit)
@@ -257,7 +262,7 @@ class AddTagDialog(QDialog):
             if len(tagval) > 1:
                 #        print tagval
                 if QMessageBox.warning(self,
-                                       "Set a string tag instead?", """<P>You have included an "=" sign in the tag name. 
+                                       "Set a string tag instead?", """<P>You have included an "=" sign in the tag name.
             Perhaps you actually mean to set tag "%s" to the string value "%s"?</P>""" % tuple(tagval),
                                        QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes) == QMessageBox.No:
                     return
@@ -270,7 +275,7 @@ class AddTagDialog(QDialog):
 
 
 class SelectTagsDialog(QDialog):
-    def __init__(self, parent, modal=True, flags=Qt.WindowFlags(), caption="Select Tags", ok_button="Select"):
+    def __init__(self, parent, modal=True, flags=QtCore.Qt.WindowFlags(), caption="Select Tags", ok_button="Select"):
         QDialog.__init__(self, parent, flags)
         self.setModal(modal)
         self.setWindowTitle(caption)

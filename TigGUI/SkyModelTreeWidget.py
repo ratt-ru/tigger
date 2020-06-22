@@ -26,6 +26,7 @@
 
 from builtins import chr
 import math
+from PyQt5.QtWidgets import *
 
 from PyQt5.Qt import QObject, QWidget, QHBoxLayout, QComboBox, QLabel, QToolButton, QVBoxLayout, \
     QPushButton, Qt, QTreeWidgetItem, QAbstractItemView, QHeaderView, QTreeWidget, QAction, QEvent, QSize, \
@@ -39,6 +40,13 @@ import TigGUI.kitties.utils
 import TigGUI.kitties.widgets
 from TigGUI.kitties.utils import PersistentCurrier
 from TigGUI.kitties.widgets import BusyIndicator
+from PyQt5.QtCore import *
+
+try:
+    QString = unicode
+except NameError:
+    # Python 3
+    QString = str
 
 _verbosity = TigGUI.kitties.utils.verbosity(name="tw")
 dprint = _verbosity.dprint
@@ -120,8 +128,7 @@ class SkyModelTreeWidget(TigGUI.kitties.widgets.ClickableTreeWidget):
 
         # connect signals to track selected sources
         self.itemSelectionChanged.connect(self._selectionChanged)
-        self.itemEntered.connect(self._itemHighlighted)
-
+        self.itemEntered[QTreeWidgetItem, int].connect(self._itemHighlighted)
         # add "View" controls for different column categories
         self._column_views = []
         self._column_widths = {}
@@ -184,9 +191,7 @@ class SkyModelTreeWidget(TigGUI.kitties.widgets.ClickableTreeWidget):
         qa.setChecked(visible)
         if not visible:
             self._showColumnCategory(columns, False)
-
-        qa.toggled.connect(self._currier.curry(self._showColumnCategory, columns))
-        #(qa.toggled.connect(self._currier.curry(self._showColumnCategory, columns))
+        qa.toggled[bool].connect(self._currier.curry(self._showColumnCategory, columns))
         self._column_views.append((name, qa, columns))
 
     def clear(self):
@@ -480,7 +485,7 @@ class ModelGroupsTable(QWidget):
         # add table
         self.table = QTableWidget(self)
         lo.addWidget(self.table)
-        self.table.cellChanged.connect(self._valueChanged)
+        self.table.cellChanged[int, int].connect(self._valueChanged)
         self.table.setSelectionMode(QTableWidget.NoSelection)
         # setup basic columns
         self.table.setColumnCount(6 + len(self.EditableAttrs))
@@ -613,8 +618,7 @@ class ModelGroupsTable(QWidget):
                 index = max(0, min(group.style.apply, 9))
                 #        dprint(0,group.name,"apply",index)
                 cb.setCurrentIndex(index)
-                QObject.connect(cb, SIGNAL("activated(int)"),
-                                self._currier.xcurry(self._valueChanged, (irow, self.ColApply)))
+                cb.activated[int].connect(self._currier.xcurry(self._valueChanged, (irow, self.ColApply)))
                 self.table.setCellWidget(irow, self.ColApply, cb)
                 cb.setToolTip("""<P>This controls whether sources within this group are plotted with a customized
             plot style. Customized styles have numeric priority; if a source belongs to multiple groups, then
@@ -638,8 +642,8 @@ class ModelGroupsTable(QWidget):
                 except ValueError:
                     cb.setEditText(str(getattr(group.style, attr)))
                 slot = self._currier.xcurry(self._valueChanged, (irow, icol))
-                cb.activated.connect(slot)
-                cb.editTextChanged.connect(slot)
+                cb.activated[int].connect(slot)
+                cb.editTextChanged['QString'].connect(slot)
                 cb.setEnabled(group is model.defgroup or group.style.apply)
                 self.table.setCellWidget(irow, icol, cb)
                 label = attr

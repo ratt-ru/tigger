@@ -25,6 +25,7 @@
 #
 
 import sys
+from PyQt5.QtWidgets import *
 import traceback
 
 import numpy
@@ -42,10 +43,16 @@ from TigGUI.Images.Controller import ImageController, dprint
 
 from TigGUI.Images import SkyImage
 from TigGUI.Images import FITS_ExtensionList
+from PyQt5 import *
 
+QStringList = list
 
 class ImageManager(QWidget):
     """An ImageManager manages a stack of images (and associated ImageControllers)"""
+    showMessage = QtCore.pyqtSignal()
+    showErrorMessage = QtCore.pyqtSignal()
+    imagesChanged = QtCore.pyqtSignal()
+    imageRaised = QtCore.pyqtSignal()
 
     def __init__(self, *args):
         QWidget.__init__(self, *args)
@@ -75,12 +82,12 @@ class ImageManager(QWidget):
         self._qa_plot_top.setCheckable(True)
         self._qa_plot_all.setCheckable(True)
         self._qa_plot_top.setChecked(True)
-        self._qa_plot_all.toggled.connect(self._displayAllImages)
+        self._qa_plot_all.toggled[bool].connect(self._displayAllImages)
         self._closing = False
 
         self._qa_load_clipboard = None
         self._clipboard_mode = QClipboard.Clipboard
-        QApplication.clipboard().changed.connect(self._checkClipboardPath)
+        QApplication.clipboard().changed[QClipboard.Mode].connect(self._checkClipboardPath)
         # populate the menu
         self._repopulateMenu()
 
@@ -104,7 +111,7 @@ class ImageManager(QWidget):
                                                                    ["*" + ext for ext in FITS_ExtensionList])))
                 dialog.setFileMode(QFileDialog.ExistingFile)
                 dialog.setModal(True)
-                dialog.filesSelected.connect(self.loadImage)
+                dialog.filesSelected['QStringList'].connect(self.loadImage)
             self._load_image_dialog.exec_()
             return None
         if isinstance(filename, QStringList):
@@ -521,10 +528,8 @@ class ImageManager(QWidget):
         image.connect(SIGNAL("raise"), self._currier.curry(self.raiseImage, ic))
         image.connect(SIGNAL("unload"), self._currier.curry(self.unloadImage, ic))
         image.connect(SIGNAL("center"), self._currier.curry(self.centerImage, ic))
-        QObject.connect(ic.renderControl(), SIGNAL("displayRangeChanged"),
-                        self._currier.curry(self._updateDisplayRange, ic.renderControl()))
-        QObject.connect(ic.renderControl(), SIGNAL("displayRangeLocked"),
-                        self._currier.curry(self._lockDisplayRange, ic.renderControl()))
+        ic.renderControl().displayRangeChanged.connect(self._currier.curry(self._updateDisplayRange, ic.renderControl()))
+        ic.renderControl().displayRangeLocked.connect(self._currier.curry(self._lockDisplayRange, ic.renderControl()))
         self._plot = None
         # add to menus
         dprint(2, "repopulating menus")

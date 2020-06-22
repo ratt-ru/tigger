@@ -25,6 +25,7 @@
 #
 
 import sys
+from PyQt5.QtWidgets import *
 import traceback
 
 import numpy
@@ -35,6 +36,9 @@ from qwt import QwtText, QwtPlotCurve, QwtPlotMarker, QwtScaleMap
 import TigGUI.kitties.utils
 from TigGUI.kitties.utils import PersistentCurrier
 from TigGUI.kitties.widgets import BusyIndicator
+from PyQt5 import *
+
+QStringList = list
 
 _verbosity = TigGUI.kitties.utils.verbosity(name="imagectl")
 dprint = _verbosity.dprint
@@ -55,6 +59,9 @@ class ImageController(QFrame):
     slice                     image slice has changed, need to redraw (emitted by SkyImage automatically)
     repaint                 image display range or colormap has changed, need to redraw (emitted by SkyImage automatically)
     """
+    braise = QtCore.pyqtSignal()
+    showErrorMessage = QtCore.pyqtSignal()
+    showMessage = QtCore.pyqtSignal()
 
     def __init__(self, image, parent, imgman, name=None, save=False):
         QFrame.__init__(self, parent)
@@ -118,7 +125,7 @@ class ImageController(QFrame):
             slicer.addItems(labels)
             slicer.setToolTip("""<P>Selects current slice along the %s axis.</P>""" % axisname)
             slicer.setCurrentIndex(curslice[iextra])
-            slicer.activated.connect(self._currier.curry(self._rc.changeSlice, iextra))
+            slicer.activated[int].connect(self._currier.curry(self._rc.changeSlice, iextra))
         # min/max display ranges
         lo.addSpacing(5)
         self._wrangelbl = QLabel(self)
@@ -393,7 +400,7 @@ class ImageController(QFrame):
 
     def _raiseButtonPressed(self):
         if self._can_raise:
-            self.image.Raised.emit()
+            self.image.braise.emit()
         else:
             self._wraise.showMenu()
 
@@ -427,7 +434,7 @@ class ImageController(QFrame):
                 dialog.setFileMode(QFileDialog.AnyFile)
                 dialog.setAcceptMode(QFileDialog.AcceptSave)
                 dialog.setModal(True)
-                dialog.filesSelected.connect(self._exportImageToPNG)
+                dialog.filesSelected['QStringList'].connect(self._exportImageToPNG)
             return self._export_png_dialog.exec_() == QDialog.Accepted
         busy = BusyIndicator()
         if isinstance(filename, QStringList):

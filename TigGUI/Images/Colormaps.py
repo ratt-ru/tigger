@@ -25,6 +25,7 @@
 #
 
 import copy
+from PyQt5.QtWidgets import *
 import math
 
 import numpy
@@ -35,6 +36,7 @@ from TigGUI.todo import QwtSlider
 from scipy.ndimage import measurements
 
 import TigGUI.kitties.utils
+from PyQt5 import *
 
 _verbosity = TigGUI.kitties.utils.verbosity(name="colormap")
 dprint = _verbosity.dprint
@@ -251,6 +253,10 @@ class ColormapWithControls(Colormap):
 
     class SliderControl(QObject):
         """This class implements a slider control for a colormap"""
+        valueChanged = QtCore.pyqtSignal()
+        valueMoved = QtCore.pyqtSignal()
+        colormapChanged = QtCore.pyqtSignal()
+        colormapPreviewed = QtCore.pyqtSignal()
 
         def __init__(self, name, value, minval, maxval, step, format="%s: %.1f"):
             QObject.__init__(self)
@@ -284,8 +290,8 @@ class ColormapWithControls(Colormap):
             self._wslider.setStep(self.step)
             self._wslider.setValue(self.value)
             self._wslider.setTracking(False)
-            self._wslider.valueChanged.connect(self.setValue)
-            self._wslider.sliderMoved.connect(self._previewValue)
+            self._wslider.valueChanged[double].connect(self.setValue)
+            self._wslider.sliderMoved[double].connect(self._previewValue)
 
         def _resetValue(self):
             self._wslider.setValue(self._default)

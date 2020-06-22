@@ -24,6 +24,7 @@
 #
 
 import math
+from PyQt5.QtWidgets import *
 import traceback
 
 from PyQt5.Qt import QObject, QHBoxLayout, QComboBox, QLabel, QLineEdit, QDialog, QVBoxLayout, Qt, QErrorMessage,\
@@ -32,6 +33,12 @@ from PyQt5.Qt import QObject, QHBoxLayout, QComboBox, QLabel, QLineEdit, QDialog
 import TigGUI.kitties.utils
 from TigGUI.kitties.utils import curry
 from TigGUI.kitties.widgets import BusyIndicator
+
+try:
+    QString = unicode
+except NameError:
+    # Python 3
+    QString = str
 
 _verbosity = TigGUI.kitties.utils.verbosity(name="source_selector")
 dprint = _verbosity.dprint
@@ -59,7 +66,7 @@ class SourceSelectorDialog(QDialog):
         self.setModal(False)
         self.setWindowTitle("Select sources by...")
         lo = QVBoxLayout(self)
-        lo.setMargin(10)
+        lo.setContentsMargins(10, 10, 10, 10)
         lo.setSpacing(5)
         # select by
         lo1 = QHBoxLayout()
@@ -69,12 +76,12 @@ class SourceSelectorDialog(QDialog):
         #   lo1.addWidget(lab)
         self.wselby = QComboBox(self)
         lo1.addWidget(self.wselby, 0)
-        self.wselby.activated.connect(self._setup_selection_by)
+        self.wselby.activated['QString'].connect(self._setup_selection_by)
         # under/over
         self.wgele = QComboBox(self)
         lo1.addWidget(self.wgele, 0)
         self.wgele.addItems([">", ">=", "<=", "<", "sum<=", "sum>"])
-        self.wgele.activated.connect(self._select_threshold)
+        self.wgele.activated['QString'].connect(self._select_threshold)
         # threshold value
         self.wthreshold = QLineEdit(self)
         self.wthreshold.editingFinished.connect(self._select_threshold)
@@ -87,8 +94,8 @@ class SourceSelectorDialog(QDialog):
         lo.addLayout(lo1)
         self.wpercent = QSlider(self)
         self.wpercent.setTracking(False)
-        self.wpercent.valueChanged.connect(self._select_percentile)
-        self.wpercent.sliderMoved.connect(self._select_percentile_threshold)
+        self.wpercent.valueChanged[int].connect(self._select_percentile)
+        self.wpercent.sliderMoved[int].connect(self._select_percentile_threshold)
         self.wpercent.setRange(0, 100)
         self.wpercent.setOrientation(Qt.Horizontal)
         lo1.addWidget(self.wpercent)
