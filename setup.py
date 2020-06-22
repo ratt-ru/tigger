@@ -33,7 +33,6 @@ setup(
     name="astro-tigger",
     version=__version__,
     packages=find_packages(),
-    extras_require=extras_require,
     scripts=scripts,
     package_data=package_data,
     description="yet another FITS image viewer",
