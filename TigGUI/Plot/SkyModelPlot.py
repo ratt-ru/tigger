@@ -31,7 +31,6 @@ import numpy
 import re
 import time
 
-import numpy
 from PyQt5.Qt import QObject, QWidget, QHBoxLayout, QFileDialog, QComboBox, QLabel, \
     QDialog, QToolButton, QVBoxLayout, Qt, QAction, QEvent, QSize, QMouseEvent, \
     QSizePolicy, QApplication, QColor, QImage, QPixmap, QPainter, QToolTip, \
@@ -675,6 +674,9 @@ class SkyModelPlotter(QWidget):
             self._mainwin = mainwin
             self._drawing_key = None
 
+        def getUpdateSignal(self):
+            return self.updateLayoutEvent
+
         def dragEnterEvent(self, event):
             return self._mainwin.dragEnterEvent(event)
 
@@ -755,7 +757,7 @@ class SkyModelPlotter(QWidget):
     class PlotZoomer(QwtPlotZoomer):
         provisionalZoom = QtCore.pyqtSignal()
 
-        def __init__(self, canvas, track_callback=None, label=None):
+        def __init__(self, canvas, updateLayoutEvent, track_callback=None, label=None):
             QwtPlotZoomer.__init__(self, canvas)
             self.setMaxStackDepth(1000)
             self._use_wheel = True
@@ -770,9 +772,8 @@ class SkyModelPlotter(QWidget):
             # we recompute the actual zoom rect based on the aspect ratio and the desired rect.
             self._zoomrects = []
             # watch plot for changes: if resized, aspect ratios need to be checked
-
-            # todo (gijs): self.plot() returns a QWTplit, but it should be this Plot defined above?
-            #self.plot().updateLayoutEvent(self._checkAspects)
+            self._updateLayoutEvent = updateLayoutEvent
+            self._updateLayoutEvent.connect(self._checkAspects)
 
 
         def isFixedAspect(self):
@@ -1165,11 +1166,13 @@ class SkyModelPlotter(QWidget):
                                         track_callback=self._trackCoordinates)
         self._tracker.setTrackerMode(QwtPicker.AlwaysOn)
         # zoom picker
-        self._zoomer = self.PlotZoomer(self.plot.canvas(), label="zoom")
+        self._zoomer = self.PlotZoomer(self.plot.canvas(), self.plot.getUpdateSignal(), label="zoom")
         self._zoomer_pen = makeDualColorPen("navy", "yellow")
         self._zoomer.setRubberBandPen(self._zoomer_pen)
         self._zoomer.setTrackerPen(QColor("yellow"))
-        self._zoomer.zoomed[QRectF].connect(self._plotZoomed)
+        # self._zoomer.zoomed[QRectF].connect(self._plotZoomed) # TODO - [Raz]
+        # look into this line above
+        self._zoomer.zoomed.connect(self._plotZoomed)
         self._zoomer.provisionalZoom.connect(self._plotProvisionalZoom)
         self._zoomer_box = TiggerPlotCurve()
         self._zoomer_box.setPen(self._zoomer_pen)
