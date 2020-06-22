@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 from PyQt5.Qt import QCursor, Qt, QWidgetAction, QLabel, QFrame, QTreeWidget, QObject, QApplication, \
     QTreeWidgetItemIterator, QListWidget
-
-
+from PyQt5.QtWidgets import *
+from PyQt5 import *
+from PyQt5.QtCore import *
 
 def PYSIGNAL(sig):
     """PyQt4 no longer supports PYSIGNAL(). Instead, everything goes through SIGNAL(). "Proper" user-defined
@@ -46,15 +47,15 @@ def addMenuLabel(menu, text):
 
 
 class ClickableTreeWidget(QTreeWidget):
+    mouseButtonClicked = QtCore.pyqtSignal()
+    itemContextMenuRequested = QtCore.pyqtSignal()
+
     def __init__(self, *args):
         QTreeWidget.__init__(self, *args)
         self.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.customContextMenuRequested.connect(self._request_context_menu)
-        self.itemExpanded.connect(self._item_expanded_collapsed)
-        self.itemCollapsed.connect(self._item_expanded_collapsed)
-        #QObject.connect(self, SIGNAL('customContextMenuRequested(const QPoint &)'), self._request_context_menu)
-        #QObject.connect(self, SIGNAL('itemExpanded(QTreeWidgetItem *)'), self._item_expanded_collapsed)
-        #QObject.connect(self, SIGNAL('itemCollapsed(QTreeWidgetItem *)'), self._item_expanded_collapsed)
+        self.customContextMenuRequested[QPoint].connect(self._request_context_menu)
+        self.itemExpanded[QTreeWidgetItem].connect(self._item_expanded_collapsed)
+        self.itemCollapsed[QTreeWidgetItem].connect(self._item_expanded_collapsed)
 
     def mousePressEvent(self, ev):
         self._expanded_item = None
@@ -124,10 +125,12 @@ TreeWidgetItemIterator = ClickableTreeWidget.Iterator
 
 
 class ClickableListWidget(QListWidget):
+    itemContextMenuRequested = QtCore.pyqtSignal()
+
     def __init__(self, *args):
         QListWidget.__init__(self, *args)
         self.setContextMenuPolicy(Qt.CustomContextMenu)
-        QObject.connect(self, SIGNAL('customContextMenuRequested(const QPoint &)'), self._request_context_menu)
+        self.customContextMenuRequested[QPoint].connect(self._request_context_menu)
 
     def _request_context_menu(self, pos):
         item = self.itemAt(pos)

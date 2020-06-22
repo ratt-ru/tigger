@@ -23,6 +23,7 @@
 #
 from PyQt5.Qt import QWidget, QHBoxLayout, QLabel, QDialog, QVBoxLayout, \
     QPushButton, Qt, QSize, QSizePolicy, QSpacerItem
+from PyQt5.QtWidgets import *
 
 from TigGUI import release_string
 from TigGUI.init import pixmaps
@@ -85,7 +86,7 @@ class AboutDialog(QDialog):
         # self.resize(QSize(489,330).expandedTo(self.minimumSizeHint()))
         # self.clearWState(Qt.WState_Polished)
 
-        self.connect(self.btn_ok, SIGNAL("clicked()"), self.accept)
+        self.btn_ok.clicked.connect(self.accept)
 
     def languageChange(self):
         self.setWindowTitle(self.__tr("About Tigger"))
@@ -99,4 +100,4 @@ class AboutDialog(QDialog):
         self.btn_ok.setText(self.__tr("&OK"))
 
     def __tr(self, s, c=None):
-        return qApp.translate("About", s, c)
+        return QApplication.translate("About", s, c)

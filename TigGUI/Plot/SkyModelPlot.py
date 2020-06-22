@@ -25,6 +25,9 @@
 #
 
 import math
+from PyQt5.QtWidgets import *
+
+import numpy
 import re
 import time
 
@@ -41,6 +44,10 @@ import TigGUI.kitties.utils
 from TigGUI.kitties.utils import curry, PersistentCurrier
 from TigGUI.kitties.widgets import BusyIndicator
 from TigGUI.todo import QwtPicker, QwtEventPattern, QwtPlotZoomer, QwtPlotPicker, QwtScaleEngine
+from PyQt5 import *
+from PyQt5.QtCore import *
+
+QStringList = list
 
 _verbosity = TigGUI.kitties.utils.verbosity(name="plot")
 dprint = _verbosity.dprint
@@ -234,6 +241,8 @@ def makeDualColorPen(color1, color2, width=3):
 
 
 class ToolDialog(QDialog):
+    isVisible = QtCore.pyqtSignal()
+
     def __init__(self, parent, configname, menuname, show_shortcut=None):
         QDialog.__init__(self, parent)
         self.setModal(False)
@@ -250,10 +259,10 @@ class ToolDialog(QDialog):
         qa.setVisible(False)
         qa.setToolTip("""<P>The quick zoom & cross-sections window shows a zoom of the current image area
       under the mose pointer, and X/Y cross-sections through that area.</P>""")
-        qa.triggered.connect(self.setVisible)
+        qa.triggered[bool].connect(self.setVisible)
         self._closing = False
         self._write_config = curry(Config.set, "%s-show" % configname)
-        qa.triggered.connect(self._write_config)
+        qa.triggered[bool].connect(self._write_config)
         self.isVisible.connect(qa.setChecked)
 
     def getShowQAction(self):
@@ -326,8 +335,8 @@ class LiveImageZoom(ToolDialog):
         self._showcs = QCheckBox("show cross-sections", self)
         self._showzoom.setChecked(True)
         self._showcs.setChecked(True)
-        self._showzoom.toggled.connect(self._showZoom)
-        self._showcs.toggled.connect(self._showCrossSections)
+        self._showzoom.toggled[bool].connect(self._showZoom)
+        self._showcs.toggled[bool].connect(self._showCrossSections)
         lo1.addWidget(self._showzoom, 0)
         lo1.addSpacing(5)
         lo1.addWidget(self._showcs, 0)
@@ -526,7 +535,7 @@ class LiveProfile(ToolDialog):
         lo0.addLayout(lo1)
         lab = QLabel("Axis: ", self)
         self._wprofile_axis = QComboBox(self)
-        self._wprofile_axis.activated.connect(self.selectAxis)
+        self._wprofile_axis.activated[int].connect(self.selectAxis)
         lo1.addWidget(lab, 0)
         lo1.addWidget(self._wprofile_axis, 0)
         lo1.addStretch(1)
@@ -656,7 +665,7 @@ class SkyModelPlotter(QWidget):
         layout is updated of the plot is zoomed
         """
 
-        updateLayoutEvent = pyqtSignal()
+        updateLayoutEvent = QtCore.pyqtSignal()
 
         def __init__(self, mainwin, skymodelplotter, parent):
             QwtPlot.__init__(self, parent)
@@ -744,6 +753,8 @@ class SkyModelPlotter(QWidget):
             self._draw_cache = {}
 
     class PlotZoomer(QwtPlotZoomer):
+        provisionalZoom = QtCore.pyqtSignal()
+
         def __init__(self, canvas, track_callback=None, label=None):
             QwtPlotZoomer.__init__(self, canvas)
             self.setMaxStackDepth(1000)
@@ -897,11 +908,11 @@ class SkyModelPlotter(QWidget):
             self._select_callback = select_callback
             if select_callback:
                 if mode == QwtPicker.RectSelection:
-                    self.selected.connect(select_callback)
+                    self.selected[QRecF].connect(select_callback)
                 elif mode == QwtPicker.PointSelection:
-                    self.selected.connect(select_callback)
+                    self.selected[QPointF].connect(select_callback)
                 elif mode == QwtPicker.PolygonSelection:
-                    self.selected.connect(select_callback)
+                    self.selected[QwtPolygon].connect(select_callback)
 
         def setLabel(self, label, color=None):
             if color:
@@ -1033,8 +1044,8 @@ class SkyModelPlotter(QWidget):
         mouse_menu.addAction("Show quick mouse reference", self._showMouseModeTooltip, Qt.Key_F1)
         self._qa_mwzoom = qa = mouse_menu.addAction("Use mouse wheel zoom")
         qa.setCheckable(True)
-        qa.toggled.connect(self._zoomer.enableWheel)
-        qa.triggered.connect(self._currier.curry(Config.set, "mouse-wheel-zoom"))
+        qa.toggled[bool].connect(self._zoomer.enableWheel)
+        qa.triggered[bool].connect(self._currier.curry(Config.set, "mouse-wheel-zoom"))
         qa.setChecked(Config.getbool("mouse-wheel-zoom", True))
         self._zoomer.enableWheel(qa.isChecked())
         mouse_menu.addSeparator()
@@ -1053,8 +1064,8 @@ class SkyModelPlotter(QWidget):
         qa = self._menu.addAction("Fix aspect ratio")
         qa.setCheckable(True)
         qa.setChecked(Config.getbool("fix-aspect-ratio", True))
-        qa.toggled.connect(self._zoomer.setFixedAspect)
-        qa.triggered.connect(self._currier.curry(Config.set, "fix-aspect-ratio"))
+        qa.toggled[bool].connect(self._zoomer.setFixedAspect)
+        qa.triggered[bool].connect(self._currier.curry(Config.set, "fix-aspect-ratio"))
         self._zoomer.setFixedAspect(qa.isChecked())
         qa.setToolTip("""<P>Enable this to maintain a fixed aspect ratio in the plot.</P>""")
         # beam
@@ -1064,7 +1075,7 @@ class SkyModelPlotter(QWidget):
         self._psf_marker = TiggerPlotCurve()
         self._psf_marker.setPen(QPen(QColor("lightgreen")))
         self._psf_marker.setZ(Z_Grid)
-        self._qa_show_psf.toggled.connect(self._showPsfMarker)
+        self._qa_show_psf.toggled[bool].connect(self._showPsfMarker)
         # grid stepping
         self._grid_step_arcsec = DefaultGridStep_ArcSec
         gridmenu = self._menu.addMenu("Show grid circles")
@@ -1117,6 +1128,9 @@ class SkyModelPlotter(QWidget):
         im.imageRaised.connect(self._imageRaised)
 
     class UpdateEvent(QEvent):
+        showMessage = QtCore.pyqtSignal()
+        showErrorMessage = QtCore.pyqtSignal()
+
         def __init__(self, serial):
             QEvent.__init__(self, QEvent.User)
             self.serial = serial
@@ -1155,7 +1169,7 @@ class SkyModelPlotter(QWidget):
         self._zoomer_pen = makeDualColorPen("navy", "yellow")
         self._zoomer.setRubberBandPen(self._zoomer_pen)
         self._zoomer.setTrackerPen(QColor("yellow"))
-        self._zoomer.zoomed.connect(self._plotZoomed)
+        self._zoomer.zoomed[QRectF].connect(self._plotZoomed)
         self._zoomer.provisionalZoom.connect(self._plotProvisionalZoom)
         self._zoomer_box = TiggerPlotCurve()
         self._zoomer_box.setPen(self._zoomer_pen)

@@ -27,8 +27,9 @@ from PyQt5.Qt import QApplication, QColor
 
 from TigGUI.kitties import utils
 
-
 def main():
+    import TigGUI.init
+
     _verbosity = utils.verbosity(name="startup")
     dprint = _verbosity.dprint
     dprintf = _verbosity.dprintf

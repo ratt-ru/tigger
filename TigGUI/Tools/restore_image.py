@@ -25,6 +25,7 @@
 #
 
 import math
+from PyQt5.QtWidgets import *
 
 from PyQt5.Qt import QObject, QHBoxLayout, QFileDialog, SIGNAL, QLabel, \
     QLineEdit, QDialog, QDoubleValidator, QVBoxLayout, \
@@ -47,7 +48,7 @@ class RestoreImageDialog(QDialog):
         self.setModal(modal)
         self.setWindowTitle("Restore model into image")
         lo = QVBoxLayout(self)
-        lo.setMargin(10)
+        lo.setContentsMargins(10, 10, 10, 10)
         lo.setSpacing(5)
         # file selector
         self.wfile_in = FileSelector(self, label="Input FITS file:", dialog_label="Input FITS file",
@@ -90,7 +91,7 @@ class RestoreImageDialog(QDialog):
         lo2 = QHBoxLayout()
         lo.addLayout(lo2)
         lo2.setContentsMargins(0, 0, 0, 0)
-        lo2.setMargin(5)
+        lo2.setContentsMargins(5, 5, 5, 5)
         self.wokbtn = QPushButton("OK", self)
         self.wokbtn.setMinimumWidth(128)
         self.wokbtn.clicked.connect(self.accept)
