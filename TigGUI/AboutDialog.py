@@ -21,7 +21,7 @@
 # or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-from PyQt4.Qt import QWidget, QHBoxLayout, SIGNAL, QLabel, QDialog, QVBoxLayout, \
+from PyQt5.Qt import QWidget, QHBoxLayout, QLabel, QDialog, QVBoxLayout, \
     QPushButton, Qt, QSize, QSizePolicy, QSpacerItem
 
 from TigGUI import release_string

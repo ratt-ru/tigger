@@ -26,7 +26,7 @@
 import math
 
 import os.path
-from PyQt4.Qt import QObject, QHBoxLayout, SIGNAL, QDialog, QVBoxLayout, \
+from PyQt5.Qt import QObject, QHBoxLayout, SIGNAL, QDialog, QVBoxLayout, \
     QPushButton, Qt, QCheckBox, QMessageBox, QErrorMessage
 
 from TigGUI.kitties.widgets import BusyIndicator
@@ -41,7 +41,7 @@ class ExportKarmaDialog(QDialog):
         self.setModal(modal)
         self.setWindowTitle("Export Karma annotations")
         lo = QVBoxLayout(self)
-        lo.setMargin(10)
+        lo.setContentsMargins(10, 10, 10, 10)
         lo.setSpacing(5)
         # file selector
         self.wfile = FileSelector(self, label="Filename:", dialog_label="Karma annotations filename",
@@ -54,21 +54,20 @@ class ExportKarmaDialog(QDialog):
         lo.addSpacing(10)
         lo2 = QHBoxLayout()
         lo.addLayout(lo2)
-        lo2.setContentsMargins(0, 0, 0, 0)
-        lo2.setMargin(5)
+        lo2.setContentsMargins(5, 5, 5, 5)
         self.wokbtn = QPushButton("OK", self)
         self.wokbtn.setMinimumWidth(128)
-        QObject.connect(self.wokbtn, SIGNAL("clicked()"), self.accept)
+        self.wokbtn.clicked.connect(self.accept)
         self.wokbtn.setEnabled(False)
         cancelbtn = QPushButton("Cancel", self)
         cancelbtn.setMinimumWidth(128)
-        QObject.connect(cancelbtn, SIGNAL("clicked()"), self.reject)
+        cancelbtn.clicked.connect(self.reject)
         lo2.addWidget(self.wokbtn)
         lo2.addStretch(1)
         lo2.addWidget(cancelbtn)
         self.setMinimumWidth(384)
         # signals
-        QObject.connect(self.wfile, SIGNAL("valid"), self.wokbtn.setEnabled)
+        self.wfile.valid.connect(self.wokbtn.setEnabled)
         # internal state
         self.qerrmsg = QErrorMessage(self)
         self._model_filename = None

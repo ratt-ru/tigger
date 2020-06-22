@@ -26,8 +26,8 @@
 import math
 import traceback
 
-from PyQt4.Qt import QObject, QHBoxLayout, QComboBox, SIGNAL, QLabel, \
-    QLineEdit, QDialog, QVBoxLayout, Qt, QErrorMessage, QSlider
+from PyQt5.Qt import QObject, QHBoxLayout, QComboBox, QLabel, QLineEdit, QDialog, QVBoxLayout, Qt, QErrorMessage,\
+    QSlider
 
 import TigGUI.kitties.utils
 from TigGUI.kitties.utils import curry
@@ -69,15 +69,15 @@ class SourceSelectorDialog(QDialog):
         #   lo1.addWidget(lab)
         self.wselby = QComboBox(self)
         lo1.addWidget(self.wselby, 0)
-        QObject.connect(self.wselby, SIGNAL("activated(const QString &)"), self._setup_selection_by)
+        self.wselby.activated.connect(self._setup_selection_by)
         # under/over
         self.wgele = QComboBox(self)
         lo1.addWidget(self.wgele, 0)
         self.wgele.addItems([">", ">=", "<=", "<", "sum<=", "sum>"])
-        QObject.connect(self.wgele, SIGNAL("activated(const QString &)"), self._select_threshold)
+        self.wgele.activated.connect(self._select_threshold)
         # threshold value
         self.wthreshold = QLineEdit(self)
-        QObject.connect(self.wthreshold, SIGNAL("editingFinished()"), self._select_threshold)
+        self.wthreshold.editingFinished.connect(self._select_threshold)
         lo1.addWidget(self.wthreshold, 1)
         # min and max label
         self.wminmax = QLabel(self)
@@ -87,8 +87,8 @@ class SourceSelectorDialog(QDialog):
         lo.addLayout(lo1)
         self.wpercent = QSlider(self)
         self.wpercent.setTracking(False)
-        QObject.connect(self.wpercent, SIGNAL("valueChanged(int)"), self._select_percentile)
-        QObject.connect(self.wpercent, SIGNAL("sliderMoved(int)"), self._select_percentile_threshold)
+        self.wpercent.valueChanged.connect(self._select_percentile)
+        self.wpercent.sliderMoved.connect(self._select_percentile_threshold)
         self.wpercent.setRange(0, 100)
         self.wpercent.setOrientation(Qt.Horizontal)
         lo1.addWidget(self.wpercent)
@@ -282,8 +282,8 @@ def show_source_selector(mainwin, model):
     dialog = getattr(mainwin, '_source_selector_dialog', None)
     if not dialog:
         dialog = mainwin._source_selector_dialog = SourceSelectorDialog(mainwin)
-        QObject.connect(mainwin, SIGNAL("modelChanged"), dialog.setModel)
-        QObject.connect(mainwin, SIGNAL("closing"), dialog.close)
+        mainwin.modelChanged.connect(dialog.setModel)
+        mainwin.closing.connect(dialog.close)
     dialog.setModel(model)
     # show dialog
     dialog.show()

@@ -28,10 +28,9 @@ import sys
 import traceback
 
 import numpy
-from PyQt4.Qt import QObject, QHBoxLayout, QFileDialog, QComboBox, SIGNAL, QLabel, \
-    QLineEdit, QDialog, QToolButton, QStringList, Qt, QApplication, QColor, QPixmap, QPainter, \
-    QFrame, QMenu, QPen, QKeySequence
-from PyQt4.Qwt5 import QwtText, QwtPlotCurve, QwtPlotMarker, QwtScaleMap
+from PyQt5.Qt import QObject, QHBoxLayout, QFileDialog, QComboBox, QLabel, QLineEdit, QDialog, QToolButton, \
+    Qt, QApplication, QColor, QPixmap, QPainter, QFrame, QMenu, QPen, QKeySequence
+from qwt import QwtText, QwtPlotCurve, QwtPlotMarker, QwtScaleMap
 
 import TigGUI.kitties.utils
 from TigGUI.kitties.utils import PersistentCurrier
@@ -75,7 +74,7 @@ class ImageController(QFrame):
         self._wraise.setIcon(pixmaps.raise_up.icon())
         self._wraise.setAutoRaise(True)
         self._can_raise = False
-        QObject.connect(self._wraise, SIGNAL("clicked()"), self._raiseButtonPressed)
+        self._wraise.clicked.connect(self._raiseButtonPressed)
         self._wraise.setToolTip("""<P>Click here to raise this image above other images. Hold the button down briefly to
       show a menu of image operations.</P>""")
         # center label
@@ -98,7 +97,7 @@ class ImageController(QFrame):
             self._wsave.setText("save")
             self._wsave.setAutoRaise(True)
             self._save_dir = save if isinstance(save, str) else "."
-            QObject.connect(self._wsave, SIGNAL("clicked()"), self._saveImage)
+            self._wsave.clicked.connect(self._saveImage)
             self._wsave.setToolTip("""<P>Click here to write this image to a FITS file.</P>""")
         # render control
         dprint(2, "creating RenderControl")
@@ -119,7 +118,7 @@ class ImageController(QFrame):
             slicer.addItems(labels)
             slicer.setToolTip("""<P>Selects current slice along the %s axis.</P>""" % axisname)
             slicer.setCurrentIndex(curslice[iextra])
-            QObject.connect(slicer, SIGNAL("activated(int)"), self._currier.curry(self._rc.changeSlice, iextra))
+            slicer.activated.connect(self._currier.curry(self._rc.changeSlice, iextra))
         # min/max display ranges
         lo.addSpacing(5)
         self._wrangelbl = QLabel(self)
@@ -133,13 +132,13 @@ class ImageController(QFrame):
             w.setValidator(self._minmaxvalidator)
             w.setMaximumWidth(width)
             w.setMinimumWidth(width)
-            QObject.connect(w, SIGNAL("editingFinished()"), self._changeDisplayRange)
+            w.editingFinished.connect(self._changeDisplayRange)
         # full-range button
         self._wfullrange = QToolButton(self)
         lo.addWidget(self._wfullrange, 0)
         self._wfullrange.setIcon(pixmaps.zoom_range.icon())
         self._wfullrange.setAutoRaise(True)
-        QObject.connect(self._wfullrange, SIGNAL("clicked()"), self.renderControl().resetSubsetDisplayRange)
+        self._wfullrange.clicked.connect(self.renderControl().resetSubsetDisplayRange)
         rangemenu = QMenu(self)
         rangemenu.addAction(pixmaps.full_range.icon(), "Full subset", self.renderControl().resetSubsetDisplayRange)
         for percent in (99.99, 99.9, 99.5, 99, 98, 95):
@@ -155,9 +154,9 @@ class ImageController(QFrame):
         self._wlock.setToolTip("""<P>Click to lock or unlock the intensity range. When the intensity range is locked across multiple images, any changes in the intensity
           range of one are propagated to the others. Hold the button down briefly for additional options.</P>""")
         lo.addWidget(self._wlock)
-        QObject.connect(self._wlock, SIGNAL("clicked()"), self._toggleDisplayRangeLock)
-        QObject.connect(self.renderControl(), SIGNAL("displayRangeLocked"), self._setDisplayRangeLock)
-        QObject.connect(self.renderControl(), SIGNAL("dataSubsetChanged"), self._dataSubsetChanged)
+        self._wlock.clicked.connect(self._toggleDisplayRangeLock)
+        self.renderControl().displayRangeLocked.connect(self._setDisplayRangeLock)
+        self.renderControl().dataSubsetChanged.connect(self._dataSubsetChanged)
         lockmenu = QMenu(self)
         lockmenu.addAction(pixmaps.locked.icon(), "Lock all to this",
                            self._currier.curry(imgman.lockAllDisplayRanges, self.renderControl()))
@@ -171,7 +170,7 @@ class ImageController(QFrame):
         self._wshowdialog.setIcon(pixmaps.colours.icon())
         self._wshowdialog.setAutoRaise(True)
         self._wshowdialog.setToolTip("""<P>Click for colourmap and intensity policy options.</P>""")
-        QObject.connect(self._wshowdialog, SIGNAL("clicked()"), self.showRenderControls)
+        self._wshowdialog.clicked.connect(self.showRenderControls)
         tooltip = """<P>You can change the currently displayed intensity range by entering low and high limits here.</P>
     <TABLE>
       <TR><TD><NOBR>Image min:</NOBR></TD><TD>%g</TD><TD>max:</TD><TD>%g</TD></TR>
@@ -197,7 +196,7 @@ class ImageController(QFrame):
 
         # connect updates from renderControl and image
         self.image.connect(SIGNAL("slice"), self._updateImageSlice)
-        QObject.connect(self._rc, SIGNAL("displayRangeChanged"), self._updateDisplayRange)
+        self._rc.displayRangeChanged.connect(self._updateDisplayRange)
 
         # default plot depth of image markers
         self._z_markers = None
@@ -394,7 +393,7 @@ class ImageController(QFrame):
 
     def _raiseButtonPressed(self):
         if self._can_raise:
-            self.image.emit(SIGNAL("raise"))
+            self.image.Raised.emit()
         else:
             self._wraise.showMenu()
 
@@ -428,7 +427,7 @@ class ImageController(QFrame):
                 dialog.setFileMode(QFileDialog.AnyFile)
                 dialog.setAcceptMode(QFileDialog.AcceptSave)
                 dialog.setModal(True)
-                QObject.connect(dialog, SIGNAL("filesSelected(const QStringList &)"), self._exportImageToPNG)
+                dialog.filesSelected.connect(self._exportImageToPNG)
             return self._export_png_dialog.exec_() == QDialog.Accepted
         busy = BusyIndicator()
         if isinstance(filename, QStringList):
@@ -452,9 +451,9 @@ class ImageController(QFrame):
         try:
             pixmap.save(filename, "PNG")
         except Exception as exc:
-            self.emit(SIGNAL("showErrorMessage"), "Error writing %s: %s" % (filename, str(exc)))
+            self.showErrorMessage.emit("Error writing %s: %s" % (filename, str(exc)))
             return
-        self.emit(SIGNAL("showMessage"), "Exported image to file %s" % filename)
+        self.showMessage.emit("Exported image to file %s" % filename)
 
     def _toggleDisplayRangeLock(self):
         self.renderControl().lockDisplayRange(not self.renderControl().isDisplayRangeLocked())
