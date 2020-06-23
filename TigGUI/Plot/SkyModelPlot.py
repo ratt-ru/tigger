@@ -37,12 +37,14 @@ from PyQt5.Qt import QObject, QWidget, QHBoxLayout, QFileDialog, QComboBox, QLab
     QBrush, QTimer, QCheckBox, QMenu, QPen, QRect, QClipboard, \
     QInputDialog, QActionGroup, QRectF, QPointF, QPoint, QMessageBox, QTransform, QToolBar, QCoreApplication
 from PyQt5.QtCore import pyqtSignal
-from qwt import QwtPlot, QwtText, QwtPlotItem, QwtPlotCurve, QwtSymbol
+from PyQt5.Qwt import QwtPlot, QwtPlotPicker, QwtText, QwtPlotItem, QwtPlotCurve, QwtPicker, QwtEventPattern, \
+    QwtSymbol, QwtPlotZoomer, \
+    QwtScaleEngine
 
 import TigGUI.kitties.utils
 from TigGUI.kitties.utils import curry, PersistentCurrier
 from TigGUI.kitties.widgets import BusyIndicator
-from TigGUI.todo import QwtPicker, QwtEventPattern, QwtPlotZoomer, QwtPlotPicker, QwtScaleEngine
+# from TigGUI.todo import QwtPicker, QwtEventPattern, QwtPlotZoomer, QwtPlotPicker, QwtScaleEngine
 from PyQt5 import *
 from PyQt5.QtCore import *
 

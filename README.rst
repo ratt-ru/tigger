@@ -14,15 +14,11 @@ Enable the KERN repository and install the tigger package.
 from pypi or from source
 ------------------------
 
-Requirements: PyQt4, PyQwt5. These are already present in most Linux distros.
+Requirements: PyQt5, PyQwt6. These are already present in most Linux distros.
 
 To obtain on ubuntu you can run::
 
- $ sudo apt-get install python-qt4 python-qwt5-qt4 libicu48
-
-now from pip::
-
-    $ pip install astro-tigger
+ $ sudo apt install python3-pyqt5.qwt python3-pyqt5.qtsvg
 
 or from source::
 

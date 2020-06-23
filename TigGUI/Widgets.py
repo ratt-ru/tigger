@@ -4,7 +4,7 @@
 #
 #
 # Copyright (C) 2002-2011
-# The MeqTree Foundation & 
+# The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
 # P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
 #
@@ -20,7 +20,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>,
-# or write to the Free Software Foundation, Inc., 
+# or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
@@ -30,7 +30,7 @@ import re
 from PyQt5.Qt import QObject, QValidator, QWidget, QHBoxLayout, QFileDialog, QComboBox, QLabel, \
     QLineEdit, QDialog, QIntValidator, QDoubleValidator, QToolButton, QListWidget, QVBoxLayout, \
     QPushButton, Qt, QMessageBox
-from qwt import QwtPlotCurve, QwtPlotMarker
+from PyQt5.Qwt import QwtPlotCurve, QwtPlotMarker
 from PyQt5 import *
 
 
