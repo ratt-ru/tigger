@@ -8,19 +8,18 @@ Installing Tigger
 Ubuntu package
 --------------
 
-Enable the KERN repository and install the tigger package.
-
+N/A
 
 from pypi or from source
 ------------------------
 
 Requirements: PyQt5, PyQwt6. These are already present in most Linux distros.
 
-To obtain on ubuntu you can run::
+To obtain on Ubuntu 20.04 (should work on versions 19.10 and up) you can run::
 
  $ sudo apt install python3-pyqt5.qwt python3-pyqt5.qtsvg
 
-or from source::
+To build the source::
 
     $ git clone https://github.com/ska-sa/tigger
     $ cd tigger
