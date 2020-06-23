@@ -47,8 +47,6 @@ def addMenuLabel(menu, text):
 
 
 class ClickableTreeWidget(QTreeWidget):
-    mouseButtonClicked = QtCore.pyqtSignal()
-    itemContextMenuRequested = QtCore.pyqtSignal()
 
     def __init__(self, *args):
         QTreeWidget.__init__(self, *args)
@@ -125,8 +123,6 @@ TreeWidgetItemIterator = ClickableTreeWidget.Iterator
 
 
 class ClickableListWidget(QListWidget):
-    itemContextMenuRequested = QtCore.pyqtSignal()
-
     def __init__(self, *args):
         QListWidget.__init__(self, *args)
         self.setContextMenuPolicy(Qt.CustomContextMenu)

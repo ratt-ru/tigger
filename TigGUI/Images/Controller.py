@@ -59,9 +59,6 @@ class ImageController(QFrame):
     slice                     image slice has changed, need to redraw (emitted by SkyImage automatically)
     repaint                 image display range or colormap has changed, need to redraw (emitted by SkyImage automatically)
     """
-    braise = QtCore.pyqtSignal()
-    showErrorMessage = QtCore.pyqtSignal()
-    showMessage = QtCore.pyqtSignal()
 
     def __init__(self, image, parent, imgman, name=None, save=False):
         QFrame.__init__(self, parent)
@@ -400,7 +397,7 @@ class ImageController(QFrame):
 
     def _raiseButtonPressed(self):
         if self._can_raise:
-            self.image.braise.emit()
+            self.image.Raised.emit()
         else:
             self._wraise.showMenu()
 
