@@ -39,7 +39,7 @@ from PyQt5.Qt import QObject, QWidget, QHBoxLayout, QFileDialog, QComboBox, QLab
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.Qwt import QwtPlot, QwtPlotPicker, QwtText, QwtPlotItem, QwtPlotCurve, QwtPicker, QwtEventPattern, \
     QwtSymbol, QwtPlotZoomer, \
-    QwtScaleEngine
+    QwtScaleEngine, QwtPickerMachine
 
 import TigGUI.kitties.utils
 from TigGUI.kitties.utils import curry, PersistentCurrier
@@ -894,7 +894,7 @@ class SkyModelPlotter(QWidget):
         """Auguments QwtPlotPicker with functions for selecting objects"""
 
         def __init__(self, canvas, label, color="red", select_callback=None, track_callback=None,
-                     mode=QwtPicker.RectSelection, rubber_band=QwtPicker.RectRubberBand, text_bg=None):
+                     mode=QwtPickerMachine.RectSelection, rubber_band=QwtPicker.RectRubberBand, text_bg=None):
             QwtPlotPicker.__init__(self, QwtPlot.xBottom, QwtPlot.yLeft, mode, rubber_band, QwtPicker.ActiveOnly,
                                    canvas)
             # setup appearance
@@ -1164,7 +1164,7 @@ class SkyModelPlotter(QWidget):
     def _initPickers(self):
         """Called from __init__ to create the various plot pickers for support of mouse modes."""
         # this picker is invisible -- it is just there to make sure _trackCoordinates is always called
-        self._tracker = self.PlotPicker(self.plot.canvas(), "", mode=QwtPicker.PointSelection,
+        self._tracker = self.PlotPicker(self.plot.canvas(), "", mode=QwtPickerMachine.PointSelection,
                                         track_callback=self._trackCoordinates)
         self._tracker.setTrackerMode(QwtPicker.AlwaysOn)
         # zoom picker

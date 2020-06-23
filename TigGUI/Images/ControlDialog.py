@@ -32,7 +32,7 @@ from PyQt5.Qt import QObject, QWidget, QHBoxLayout, QComboBox, QLabel, QLineEdit
     Qt, QSize, QSizePolicy, QApplication, QColor, QBrush, QTimer, QFrame, QCheckBox, QStackedWidget, QIcon, QMenu, \
     QGridLayout, QPen, QRect
 from PyQt5.Qwt import QwtPlot, QwtText, QwtPlotItem, QwtPlotCurve, QwtSymbol, QwtLinearScaleEngine, QwtLogScaleEngine, \
-    QwtPlotPicker, QwtPicker, QwtEventPattern, QwtWheel, QwtSlider
+    QwtPlotPicker, QwtPicker, QwtEventPattern, QwtWheel, QwtSlider, QwtPickerMachine
 # from TigGUI.todo import QwtPlotPicker, QwtPicker, QwtEventPattern, QwtWheel, QwtSlider
 from scipy.ndimage import measurements
 
@@ -479,7 +479,7 @@ class ImageControlDialog(QDialog):
     class HistLimitPicker(QwtPlotPicker):
         """Auguments QwtPlotPicker with functions for selecting hist min/max values"""
 
-        def __init__(self, plot, label, color="green", mode=QwtPicker.PointSelection,
+        def __init__(self, plot, label, color="green", mode=QwtPickerMachine.PointSelection,
                      rubber_band=QwtPicker.VLineRubberBand, tracker_mode=QwtPicker.ActiveOnly, track=None):
             QwtPlotPicker.__init__(self, QwtPlot.xBottom, QwtPlot.yRight, mode, rubber_band, tracker_mode,
                                    plot.canvas())
