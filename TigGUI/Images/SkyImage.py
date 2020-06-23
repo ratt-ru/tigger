@@ -31,7 +31,7 @@ import numpy.ma
 import os.path
 import time
 from PyQt5.Qt import QObject, QRect, QRectF, QPointF, QPoint, QSizeF
-from qwt import QwtPlotItem
+from PyQt5.Qwt import QwtPlotItem
 from scipy.ndimage import interpolation, measurements
 
 import TigGUI.kitties.utils

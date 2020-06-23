@@ -12,8 +12,6 @@ requirements = [
     'astropy',
     'astro_tigger_lsm',
     'configparser',
-    'pyqt5',
-    'PythonQwt',
 ]
 
 scripts = [

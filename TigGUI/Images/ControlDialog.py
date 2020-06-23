@@ -31,8 +31,9 @@ import numpy
 from PyQt5.Qt import QObject, QWidget, QHBoxLayout, QComboBox, QLabel, QLineEdit, QDialog, QToolButton, QVBoxLayout, \
     Qt, QSize, QSizePolicy, QApplication, QColor, QBrush, QTimer, QFrame, QCheckBox, QStackedWidget, QIcon, QMenu, \
     QGridLayout, QPen, QRect
-from qwt import QwtPlot, QwtText, QwtPlotItem, QwtPlotCurve, QwtSymbol, QwtLinearScaleEngine, QwtLog10ScaleEngine
-from TigGUI.todo import QwtPlotPicker, QwtPicker, QwtEventPattern, QwtWheel, QwtSlider
+from PyQt5.Qwt import QwtPlot, QwtText, QwtPlotItem, QwtPlotCurve, QwtSymbol, QwtLinearScaleEngine, QwtLogScaleEngine, \
+    QwtPlotPicker, QwtPicker, QwtEventPattern, QwtWheel, QwtSlider
+# from TigGUI.todo import QwtPlotPicker, QwtPicker, QwtEventPattern, QwtWheel, QwtSlider
 from scipy.ndimage import measurements
 
 from TigGUI.kitties.utils import PersistentCurrier
