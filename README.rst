@@ -33,7 +33,7 @@ from source with Ubuntu 18.04
 
 With ``sudo`` create a file ``/etc/apt/apt.conf.d/01ubuntu`` and within place the following::
 
-    $ APT::Default-Release "bionic";
+    APT::Default-Release "bionic";
 
 With ``sudo`` create a file ``/etc/apt/preferences.d/eoan.pref`` and within place the following::
 
