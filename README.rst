@@ -47,7 +47,7 @@ Create a new apt ``sources.list`` file::
 
 With ``sudo`` edit ``/etc/apt/sources.list.d/eoan.list`` and replace all instances of ``bionic`` with ``eoan``. For example with ``vim /etc/apt/sources.list.d/eoan.list``::
 
-    $ :%s/bionic/eoan/g
+    :%s/bionic/eoan/g
 
 Update ``apt`` using::
 
@@ -71,19 +71,19 @@ All ``bionic`` package repositories should be listed like the following example:
          release v=18.04,o=Ubuntu,a=bionic,n=bionic,l=Ubuntu,c=main,b=amd64
          origin gb.archive.ubuntu.com
 
-Recommended to use ``aptitude`` to upgrade packages due to better conflict resolution ability. Using ``apt`` is also possible. 
+Recommended to use ``aptitude`` to upgrade packages due to better conflict resolution. Using ``apt`` is also possible. 
 
 Install ``aptitude`` with::
 
     $ sudo apt install aptitude
 
-Test package installation and examine changes::
+Test package installation and examine changes. Optionally replace ``aptitude`` with ``apt``::
 
     $ sudo aptitude -s install python3-pyqt5.qwt python3-pyqt5.qtsvg -t eoan
 
-Install packages::
+Install packages. Optionally replace ``aptitude`` with ``apt``::
 
-    $ sudo aptitude -s install python3-pyqt5.qwt python3-pyqt5.qtsvg -t eoan
+    $ sudo aptitude install python3-pyqt5.qwt python3-pyqt5.qtsvg -t eoan
 
 Example output from package installation::
 
