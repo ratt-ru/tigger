@@ -31,25 +31,25 @@ from source with Ubuntu 18.04
 
 **Warning the following process involves installing packages from 19.10, which could have unknown side effects.**
 
-With `sudo` create a file `/etc/apt/apt.conf.d/01ubuntu` and within place the following::
+With ``sudo`` create a file ``/etc/apt/apt.conf.d/01ubuntu`` and within place the following::
 
     $ APT::Default-Release "bionic";
 
-With `sudo` create a file `/etc/apt/preferences.d/eoan.pref` and within place the following::
+With ``sudo`` create a file ``/etc/apt/preferences.d/eoan.pref`` and within place the following::
 
     Package: *
     Pin: release n=eoan
     Pin-Priority: -10
 
-Create a new apt `sources.list` file::
+Create a new apt ``sources.list`` file::
 
     $ sudo cp /etc/apt/sources.list /etc/apt/sources.list.d/eoan.list
 
-With `sudo` edit `/etc/apt/sources.list.d/eoan.list` and replace all instances of `bionic` with `eoan`. For example with `vim /etc/apt/sources.list.d/eoan.list`::
+With ``sudo`` edit ``/etc/apt/sources.list.d/eoan.list`` and replace all instances of ``bionic`` with ``eoan``. For example with ``vim /etc/apt/sources.list.d/eoan.list``::
 
     $ :%s/bionic/eoan/g
 
-Update `apt` using::
+Update ``apt`` using::
 
     $ sudo apt update
 
@@ -59,21 +59,21 @@ Check package policy's using::
 
 Verify package policy: 
 
-All `eoan` package repoistories should be listed like the following example::
+All ``eoan`` package repoistories should be listed like the following example::
 
     -10 http://gb.archive.ubuntu.com/ubuntu eoan/main amd64 Packages
          release v=19.10,o=Ubuntu,a=eoan,n=eoan,l=Ubuntu,c=main,b=i386
          origin gb.archive.ubuntu.com
 
-All `bionic` package repositories should be listed like the following example::
+All ``bionic`` package repositories should be listed like the following example::
 
     990 http://gb.archive.ubuntu.com/ubuntu bionic/main amd64 Packages
          release v=18.04,o=Ubuntu,a=bionic,n=bionic,l=Ubuntu,c=main,b=amd64
          origin gb.archive.ubuntu.com
 
-Recommended to use `aptitude` to upgrade packages due to better conflict resolution ability. Using `apt` is also possible. 
+Recommended to use ``aptitude`` to upgrade packages due to better conflict resolution ability. Using ``apt`` is also possible. 
 
-Install `aptitude` with::
+Install ``aptitude`` with::
 
     $ sudo apt install aptitude
 
