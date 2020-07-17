@@ -1,8 +1,3 @@
-## -*- coding: utf-8 -*-
-#
-# % $Id$
-#
-#
 # Copyright (C) 2002-2011
 # The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
@@ -25,18 +20,18 @@
 #
 
 import sys
-from PyQt5.QtWidgets import *
 import traceback
 
 import numpy
-from PyQt5.Qt import QObject, QHBoxLayout, QFileDialog, QComboBox, QLabel, QLineEdit, QDialog, QToolButton, \
+from PyQt5.Qt import QHBoxLayout, QFileDialog, QComboBox, QLabel, QLineEdit, QDialog, QToolButton, \
     Qt, QApplication, QColor, QPixmap, QPainter, QFrame, QMenu, QPen, QKeySequence
 from PyQt5.Qwt import QwtText, QwtPlotCurve, QwtPlotMarker, QwtScaleMap
+from PyQt5.QtCore import pyqtSignal
 
 import TigGUI.kitties.utils
 from TigGUI.kitties.utils import PersistentCurrier
 from TigGUI.kitties.widgets import BusyIndicator
-from PyQt5 import *
+
 
 QStringList = list
 

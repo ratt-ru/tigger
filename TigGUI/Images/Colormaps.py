@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-#
-# % $Id$
-#
-#
 # Copyright (C) 2002-2011
 # The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
@@ -25,26 +20,24 @@
 #
 
 import copy
-from PyQt5.QtWidgets import *
 import math
 
 import numpy
 import numpy.ma
 from PyQt5.Qt import QObject, QWidget, QHBoxLayout, QLabel, \
     QToolButton, Qt, QColor, QImage, QPixmap, QPainter, QGridLayout, QBrush, QTimer
-# from TigGUI.todo import QwtSlider
 from PyQt5.Qwt import QwtSlider
+from PyQt5.QtCore import pyqtSignal
 from scipy.ndimage import measurements
 
 import TigGUI.kitties.utils
-from PyQt5 import *
 
 _verbosity = TigGUI.kitties.utils.verbosity(name="colormap")
 dprint = _verbosity.dprint
 dprintf = _verbosity.dprintf
 
 
-class IntensityMap(object):
+class IntensityMap:
     """An IntensityMap maps a float array into a 0...1 range."""
 
     def __init__(self, dmin=None, dmax=None):
@@ -156,7 +149,9 @@ class HistEqIntensityMap(IntensityMap):
 
 
 class Colormap(QObject):
-    """A Colormap provides operations for turning normalized float arrays into QImages. The default implementation is a linear colormap between two colors.
+    """
+    A Colormap provides operations for turning normalized float arrays into QImages.
+    The default implementation is a linear colormap between two colors.
     """
 
     def __init__(self, name, color0=QColor("black"), color1=QColor("white"), alpha=(1, 1)):
@@ -254,10 +249,10 @@ class ColormapWithControls(Colormap):
 
     class SliderControl(QObject):
         """This class implements a slider control for a colormap"""
-        valueChanged = QtCore.pyqtSignal()
-        valueMoved = QtCore.pyqtSignal()
-        colormapChanged = QtCore.pyqtSignal()
-        colormapPreviewed = QtCore.pyqtSignal()
+        valueChanged = pyqtSignal()
+        valueMoved = pyqtSignal()
+        colormapChanged = pyqtSignal()
+        colormapPreviewed = pyqtSignal()
 
         def __init__(self, name, value, minval, maxval, step, format="%s: %.1f"):
             QObject.__init__(self)
@@ -291,8 +286,8 @@ class ColormapWithControls(Colormap):
             self._wslider.setStep(self.step)
             self._wslider.setValue(self.value)
             self._wslider.setTracking(False)
-            self._wslider.valueChanged[double].connect(self.setValue)
-            self._wslider.sliderMoved[double].connect(self._previewValue)
+            self._wslider.valueChanged.connect(self.setValue)
+            self._wslider.sliderMoved.connect(self._previewValue)
 
         def _resetValue(self):
             self._wslider.setValue(self._default)
@@ -334,6 +329,8 @@ class CubeHelixColormap(ColormapWithControls):
     D. Green 2011, Bull. Astr. Soc. India (2011) 39, 289–295
     http://arxiv.org/pdf/1108.5083v1
     """
+
+    colormapChanged = pyqtSignal()
 
     def __init__(self, gamma=1, rgb=0.5, rots=-1.5, hue=1.2, name="CubeHelix"):
         ColormapWithControls.__init__(self, name)

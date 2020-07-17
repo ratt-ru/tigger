@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-#
-# % $Id$
-#
-#
 # Copyright (C) 2002-2011
 # The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
@@ -24,15 +19,13 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-from builtins import chr
 import math
-from PyQt5.QtWidgets import *
+from builtins import chr
 
-from PyQt5.Qt import QObject, QWidget, QHBoxLayout, QComboBox, QLabel, QToolButton, QVBoxLayout, \
+from PyQt5.Qt import QWidget, QHBoxLayout, QComboBox, QLabel, QToolButton, QVBoxLayout, \
     QPushButton, Qt, QTreeWidgetItem, QAbstractItemView, QHeaderView, QTreeWidget, QAction, QEvent, QSize, \
     QSizePolicy, QTableWidget, QTableWidgetItem, QItemSelectionRange, QItemSelection, QFontMetrics, QFont, \
     QApplication, QItemSelectionModel
-
 from Tigger.Models import ModelClasses, PlotStyles
 from Tigger.Models.SkyModel import SkyModel
 
@@ -40,13 +33,6 @@ import TigGUI.kitties.utils
 import TigGUI.kitties.widgets
 from TigGUI.kitties.utils import PersistentCurrier
 from TigGUI.kitties.widgets import BusyIndicator
-from PyQt5.QtCore import *
-
-try:
-    QString = unicode
-except NameError:
-    # Python 3
-    QString = str
 
 _verbosity = TigGUI.kitties.utils.verbosity(name="tw")
 dprint = _verbosity.dprint
@@ -80,7 +66,6 @@ ColumnSpi_err = 19
 ColumnShape = 20
 ColumnShape_err = 21
 ColumnTags = 22
-
 
 NumColumns = len(ViewColumns)
 
@@ -473,7 +458,7 @@ class ModelGroupsTable(QWidget):
         lo1 = QHBoxLayout()
         lo.addLayout(lo1)
         lo1.setContentsMargins(0, 0, 0, 0)
-        lbl = QLabel(QString("<nobr><b>Source groupings:</b></nobr>"), self)
+        lbl = QLabel("<nobr><b>Source groupings:</b></nobr>", self)
         lo1.addWidget(lbl, 0)
         lo1.addStretch(1)
         # add show/hide button
@@ -643,7 +628,7 @@ class ModelGroupsTable(QWidget):
                     cb.setEditText(str(getattr(group.style, attr)))
                 slot = self._currier.xcurry(self._valueChanged, (irow, icol))
                 cb.activated[int].connect(slot)
-                cb.editTextChanged['QString'].connect(slot)
+                cb.editTextChanged.connect(slot)
                 cb.setEnabled(group is model.defgroup or group.style.apply)
                 self.table.setCellWidget(irow, icol, cb)
                 label = attr

@@ -70,7 +70,7 @@ _missing_icon_xpm = ["16 16 14 1",
                      "f#.#.jaaad.cccdj"]
 
 
-class QPixmapWrapper(object):
+class QPixmapWrapper:
     """QPixmapWrapper can defer initialization of a pixmap until the pixmap
     is actually retrieved with the pm() or iconset() method for the first time.
     This gets around the problem of not being able to create QPixmaps until a Qt
@@ -3053,7 +3053,7 @@ def load_icons(appname, package=""):
 # if name is undefined, it will be inserted into globals 
 # as a default QPixmapWrapper containing the missing icon xpm. This may be overridden
 # later by load_icons() above. This allows apps to refer to icons before they're loaded.
-class __PixmapHook(object):
+class __PixmapHook:
     def __getattr__(self, name):
         _dprint(4, 'returning icon', name)
         return globals().setdefault(name, QPixmapWrapper())
@@ -3063,7 +3063,7 @@ pixmaps = __PixmapHook()
 
 
 # define a Pixmap cache
-class PixmapCache(object):
+class PixmapCache:
     def __init__(self, appname):
         self._appname = appname
         self._loaded = None

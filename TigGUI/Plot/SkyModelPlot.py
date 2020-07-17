@@ -25,28 +25,24 @@
 #
 
 import math
-from PyQt5.QtWidgets import *
-
-import numpy
 import re
 import time
 
-from PyQt5.Qt import QObject, QWidget, QHBoxLayout, QFileDialog, QComboBox, QLabel, \
-    QDialog, QToolButton, QVBoxLayout, Qt, QAction, QEvent, QSize, QMouseEvent, \
+import numpy
+from PyQt5.Qt import QWidget, QHBoxLayout, QFileDialog, QComboBox, QLabel, \
+    QDialog, QToolButton, QVBoxLayout, QAction, QEvent, QSize, QMouseEvent, \
     QSizePolicy, QApplication, QColor, QImage, QPixmap, QPainter, QToolTip, \
     QBrush, QTimer, QCheckBox, QMenu, QPen, QRect, QClipboard, \
     QInputDialog, QActionGroup, QRectF, QPointF, QPoint, QMessageBox, QTransform, QToolBar, QCoreApplication
+from PyQt5.QtCore import *
+from PyQt5.QtCore import Qt
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.Qwt import QwtPlot, QwtPlotPicker, QwtText, QwtPlotItem, QwtPlotCurve, QwtPicker, QwtEventPattern, \
-    QwtSymbol, QwtPlotZoomer, \
-    QwtScaleEngine
+    QwtSymbol, QwtPlotZoomer, QwtScaleEngine, QwtPickerMachine
 
 import TigGUI.kitties.utils
 from TigGUI.kitties.utils import curry, PersistentCurrier
 from TigGUI.kitties.widgets import BusyIndicator
-# from TigGUI.todo import QwtPicker, QwtEventPattern, QwtPlotZoomer, QwtPlotPicker, QwtScaleEngine
-from PyQt5 import *
-from PyQt5.QtCore import *
 
 QStringList = list
 
@@ -76,7 +72,7 @@ DefaultGridStep_ArcSec = 30 * 60
 DEG = math.pi / 180
 
 
-class SourceMarker(object):
+class SourceMarker:
     """SourceMarker implements a source marker corresponding to a SkyModel source.
   The base class implements a marker at the centre.
   """
@@ -242,7 +238,7 @@ def makeDualColorPen(color1, color2, width=3):
 
 
 class ToolDialog(QDialog):
-    isVisible = QtCore.pyqtSignal()
+    isVisible = pyqtSignal(bool)
 
     def __init__(self, parent, configname, menuname, show_shortcut=None):
         QDialog.__init__(self, parent)
@@ -308,7 +304,7 @@ class ToolDialog(QDialog):
         self._saveGeometry()
         QDialog.resizeEvent(self, event)
 
-    def setVisible(self, visible, emit=True):
+    def setVisible(self, visible: bool, emit=True):
         if not visible:
             self._geometry = self.geometry()
         else:
@@ -370,7 +366,7 @@ class LiveImageZoom(ToolDialog):
             self._zoomplot.axisWidget(axis).show()
             text = QwtText(title)
             text.setFont(font)
-            self._zoomplot.axisWidget(axis).setTitle(text)
+            self._zoomplot.axisWidget(axis).setTitle(title)
         self._zoomplot.setAxisLabelRotation(QwtPlot.yLeft, -90)
         self._zoomplot.setAxisLabelAlignment(QwtPlot.yLeft, Qt.AlignVCenter)
         self._zoomplot.setAxisLabelRotation(QwtPlot.yRight, 90)
@@ -402,7 +398,10 @@ class LiveImageZoom(ToolDialog):
         self._xcs.setYAxis(QwtPlot.yRight)
         self._ycs.setXAxis(QwtPlot.xTop)
         self._ycs.setYAxis(QwtPlot.yLeft)
-        self._ycs.setCurveType(QwtPlotCurve.Xfy)
+
+        # todo (gijs): qwt6 QwtPlotCurve has no setCurveType and Xfy
+        #self._ycs.setCurveType(QwtPlotCurve.Xfy)
+
         # make QTransform for flipping images upside-down
         self._xform = QTransform()
         self._xform.scale(1, -1)
@@ -653,14 +652,17 @@ class SkyModelPlotter(QWidget):
     SelectionClear = 1  # clear previous selection
     SelectionAdd = 2  # add to selection
     SelectionRemove = 4  # remove from selection
+
     # Mouse pointer modes
     MouseZoom = 0
     MouseMeasure = 1
     MouseSubset = 2
     MouseSelect = 3
     MouseDeselect = 4
-    showMessage = QtCore.pyqtSignal()
-    showErrorMessage = QtCore.pyqtSignal()
+
+    imagesChanged = pyqtSignal()
+    showMessage = pyqtSignal()
+    showErrorMessage = pyqtSignal()
 
     class Plot(QwtPlot):
         """
@@ -668,7 +670,7 @@ class SkyModelPlotter(QWidget):
         layout is updated of the plot is zoomed
         """
 
-        updateLayoutEvent = QtCore.pyqtSignal()
+        updateLayoutEvent = pyqtSignal()
 
         def __init__(self, mainwin, skymodelplotter, parent):
             QwtPlot.__init__(self, parent)
@@ -759,7 +761,7 @@ class SkyModelPlotter(QWidget):
             self._draw_cache = {}
 
     class PlotZoomer(QwtPlotZoomer):
-        provisionalZoom = QtCore.pyqtSignal()
+        provisionalZoom = pyqtSignal()
 
         def __init__(self, canvas, updateLayoutEvent, track_callback=None, label=None):
             QwtPlotZoomer.__init__(self, canvas)
@@ -778,7 +780,6 @@ class SkyModelPlotter(QWidget):
             # watch plot for changes: if resized, aspect ratios need to be checked
             self._updateLayoutEvent = updateLayoutEvent
             self._updateLayoutEvent.connect(self._checkAspects)
-
 
         def isFixedAspect(self):
             return self._fixed_aspect
@@ -812,8 +813,11 @@ class SkyModelPlotter(QWidget):
                 QwtPlotZoomer.setZoomBase(self)
                 dprint(2, "reset limits, zoom stack is now", self.zoomStack())
             dprint(2, "setting zoom stack", stack, index)
-            QwtPlotZoomer.setZoomStack(self, stack, index)
-            dprint(2, "zoom stack is now", self.zoomStack(), self.maxStackDepth())
+            p = dir(QwtPlotZoomer)
+
+            # todo (gijs): setZoomStack and zoomStack are documented in the QWT6 docs, but somehow missing? weird
+            # QwtPlotZoomer.setZoomStack(stack, index)
+            # dprint(2, "zoom stack is now", self.zoomStack(), self.maxStackDepth())
 
         def adjustRect(self, rect):
             """Adjusts rectangle w.r.t. aspect ratio settings. That is, if a fixed aspect ratio is in effect, adjusts the rectangle to match
@@ -894,9 +898,13 @@ class SkyModelPlotter(QWidget):
         """Auguments QwtPlotPicker with functions for selecting objects"""
 
         def __init__(self, canvas, label, color="red", select_callback=None, track_callback=None,
-                     mode=QwtPicker.RectSelection, rubber_band=QwtPicker.RectRubberBand, text_bg=None):
-            QwtPlotPicker.__init__(self, QwtPlot.xBottom, QwtPlot.yLeft, mode, rubber_band, QwtPicker.ActiveOnly,
+                     mode=QwtPickerMachine.RectSelection, rubber_band=QwtPicker.RubberBand.RectRubberBand,
+                     text_bg=None):
+            QwtPlotPicker.__init__(self, QwtPlot.xBottom, QwtPlot.yLeft, rubber_band, QwtPicker.DisplayMode.ActiveOnly,
                                    canvas)
+
+            # todo (gijs): not sure what to do with mode? QwtPlotPicker doesn't have this in constructor (anymore)
+
             # setup appearance
             self._text = QwtText(label)
             self._color = None
@@ -912,11 +920,11 @@ class SkyModelPlotter(QWidget):
             self._track_callback = track_callback
             self._select_callback = select_callback
             if select_callback:
-                if mode == QwtPicker.RectSelection:
-                    self.selected[QRecF].connect(select_callback)
-                elif mode == QwtPicker.PointSelection:
+                if mode == QwtPickerMachine.RectSelection:
+                    self.selected[QRectF].connect(select_callback)
+                elif mode == QwtPickerMachine.PointSelection:
                     self.selected[QPointF].connect(select_callback)
-                elif mode == QwtPicker.PolygonSelection:
+                elif mode == QwtPickerMachine.PolygonSelection:
                     self.selected[QwtPolygon].connect(select_callback)
 
         def setLabel(self, label, color=None):
@@ -946,11 +954,13 @@ class SkyModelPlotter(QWidget):
                 return text
 
     class PlotRuler(PlotPicker):
-        """This is an ugly kludge to get a QwtPicker in PolygonSelection mode (with a PolygonRubberBand)
-    to act as a DragSelection. By default, it is impossible to display a "ruler" that acts like
-    a RecSelection-style DragSelection: rulers are only available with a PolygonSelection,
-    which does not support drag, but rather requires two clicks. By intercepting the mouse release
-    event here and faking a second mouse press, we achieve DragSelection-like behaviour."""
+        """
+        This is an ugly kludge to get a QwtPicker in PolygonSelection mode (with a PolygonRubberBand)
+        to act as a DragSelection. By default, it is impossible to display a "ruler" that acts like
+        a RecSelection-style DragSelection: rulers are only available with a PolygonSelection,
+        which does not support drag, but rather requires two clicks. By intercepting the mouse release
+        event here and faking a second mouse press, we achieve DragSelection-like behaviour.
+        """
 
         def widgetLeaveEvent(self, event):
             self.reset()
@@ -1164,7 +1174,7 @@ class SkyModelPlotter(QWidget):
     def _initPickers(self):
         """Called from __init__ to create the various plot pickers for support of mouse modes."""
         # this picker is invisible -- it is just there to make sure _trackCoordinates is always called
-        self._tracker = self.PlotPicker(self.plot.canvas(), "", mode=QwtPicker.PointSelection,
+        self._tracker = self.PlotPicker(self.plot.canvas(), "", mode=QwtPickerMachine.PointSelection,
                                         track_callback=self._trackCoordinates)
         self._tracker.setTrackerMode(QwtPicker.AlwaysOn)
         # zoom picker
@@ -1189,10 +1199,13 @@ class SkyModelPlotter(QWidget):
         self._provisional_zoom = None
 
         #    self._zoomer.setStateMachine(QwtPickerDragRectMachine())
-        self._zoomer.setSelectionFlags(QwtPicker.RectSelection | QwtPicker.DragSelection)
+
+        # todo (gijs): setSelectionFlags is gone, DragSelection also
+        # self._zoomer.setSelectionFlags(QwtPicker.RectSelection | QwtPicker.DragSelection)
+
         # ruler picker for measurement mode
         self._ruler = self.PlotRuler(self.plot.canvas(), "measure", "cyan", self._measureRuler,
-                                     mode=QwtPicker.PolygonSelection,
+                                     # mode=QwtPicker.PolygonSelection,
                                      rubber_band=QwtPicker.PolygonRubberBand,
                                      track_callback=self._trackRuler)
         # this is the initial position of the ruler -- None if ruler is not tracking
@@ -1206,10 +1219,10 @@ class SkyModelPlotter(QWidget):
         self._picker3 = self.PlotPicker(self.plot.canvas(), "-select", "red",
                                         curry(self._selectRect, mode=self.SelectionRemove))
         self._picker4 = self.PlotPicker(self.plot.canvas(), "", "green", self._selectNearestSource,
-                                        mode=QwtPicker.PointSelection)
+                                        mode=QwtPickerMachine.PointSelection)
         for picker in self._zoomer, self._ruler, self._picker1, self._picker2, self._picker3, self._picker4:
             for sel in QwtEventPattern.MouseSelect1, QwtEventPattern.MouseSelect2, QwtEventPattern.MouseSelect3, QwtEventPattern.MouseSelect4:
-                picker.setMousePattern(sel, 0, 0)
+                picker.setMousePattern(sel, 0)
             picker.setTrackerMode(QwtPicker.ActiveOnly)
 
     #    for picker in self._ruler,self._picker1,self._picker2,self._picker3:
@@ -1232,8 +1245,13 @@ class SkyModelPlotter(QWidget):
             picker.setEnabled(mpat[0] or kpat[0])
         elif mpat[0] or kpat[0]:
             picker.setEnabled(True)
-        picker.setMousePattern(patt, *mpat)
-        picker.setKeyPattern(patt, *kpat)
+
+        mouse_button, mouse_mod = mpat
+        picker.setMousePattern(patt, mouse_button, Qt.KeyboardModifier(mouse_mod))
+
+        key_button, key_mod = kpat
+
+        picker.setKeyPattern(QwtEventPattern.KeyPatternCode(patt), key_button, Qt.KeyboardModifier(key_mod))
 
     def _setMouseMode(self, mode):
         """Sets the current mouse mode from patterns (see MouseModes), updates action shortcuts.
@@ -1341,13 +1359,13 @@ class SkyModelPlotter(QWidget):
             msgtext = ""
             if self.projection.has_projection():
                 tiptext += "X: %02dh%02dm%05.2fs %s%02d&deg;%02d'%05.2f\"  &nbsp;  r<sub>0</sub>=%d&deg;%02d'%05.2f\"   &nbsp;  PA<sub>0</sub>=%06.2f&deg;" % (
-                rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd)
+                    rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd)
                 msgtext += "X: %2dh%02dm%05.2fs %s%02d\u00B0%02d'%05.2f\" (%.6f\u00B0 %.6f\u00B0)  r=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0" % (
                     rh, rm, rs, dsign, dd, dm, ds, ra * 180 / math.pi, dec * 180 / math.pi, Rd, Rm, Rs,
                     dist * 180 / math.pi, PAd)
             if x is not None:
                 tiptext += " &nbsp;  x=%d y=%d value=blank" % (x, y) if flag else " &nbsp;  x=%d y=%d value=%g" % (
-                x, y, val)
+                    x, y, val)
                 msgtext += "   x=%d y=%d value=blank" % (x, y) if flag else "   x=%d y=%d value=%g" % (x, y, val)
             tiptext += "</NOBR>"
             # make marker
@@ -1363,26 +1381,26 @@ class SkyModelPlotter(QWidget):
             msgtext = ""
             if self.projection.has_projection():
                 tiptext += "A: %02dh%02dm%05.2fs %s%02d&deg;%02d'%05.2f\"  &nbsp; r<sub>0</sub>=%d&deg;%02d'%05.2f\"   &nbsp;  PA<sub>0</sub>=%06.2f&deg;" % (
-                rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd)
+                    rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd)
                 msgtext += "A: %2dh%02dm%05.2fs %s%02d\u00B0%02d'%05.2f\" (%.6f\u00B0 %.6f\u00B0)  r=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%06.2f\u00B0" % (
                     rh, rm, rs, dsign, dd, dm, ds, ra * 180 / math.pi, dec * 180 / math.pi, Rd, Rm, Rs,
                     dist * 180 / math.pi, PAd)
             if x is not None:
                 tiptext += " &nbsp; x=%d y=%d value=blank" % (x, y) if flag else " &nbsp; x=%d y=%d value=%g" % (
-                x, y, val)
+                    x, y, val)
                 msgtext += "   x=%d y=%d value=blank" % (x, y) if flag else "   x=%d y=%d value=%g" % (x, y, val)
             tiptext += "</NOBR><BR><NOBR>"
             if self.projection.has_projection():
                 tiptext += "B: %02dh%02dm%05.2fs %s%02d&deg;%02d'%05.2f\" &nbsp;  r<sub>0</sub>=%d&deg;%02d'%05.2f\"  &nbsp;  PA<sub>0</sub>=%06.2f&deg;" % (
-                rh1, rm1, rs1, dsign1, dd1, dm1, ds1, Rd1, Rm1, Rs1, PAd1)
+                    rh1, rm1, rs1, dsign1, dd1, dm1, ds1, Rd1, Rm1, Rs1, PAd1)
                 msgtext += "\nB: %2dh%02dm%05.2fs %s%02d\u00B0%02d'%05.2f\" (%.6f\u00B0 %.6f\u00B0)  r=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0" % (
                     rh1, rm1, rs1, dsign1, dd1, dm1, ds1, ra1 * 180 / math.pi, dec1 * 180 / math.pi, Rd1, Rm1, Rs1,
                     dist1 * 180 / math.pi, PAd1)
             if x1 is not None:
                 tiptext += " &nbsp; x=%d y=%d value=blank" % (x1, y1) if flag1 else " &nbsp; x=%d y=%d value=%g" % (
-                x1, y1, val1)
+                    x1, y1, val1)
                 msgtext += "   x=%d y=%d value=blank" % (x1, y1) if flag1 else "   x=%d y=%d value=%g" % (
-                x1, y1, val1)
+                    x1, y1, val1)
             tiptext += "</NOBR><BR>"
             # distance measurement
             dist2, pa2 = Coordinates.angular_dist_pos_angle(ra, dec, ra1, dec1)
@@ -1390,9 +1408,9 @@ class SkyModelPlotter(QWidget):
             pa2 *= 180 / math.pi
             pa2 += 360 * (pa2 < 0)
             tiptext += "<NOBR>|AB|=%d&deg;%02d'%05.2f\" &nbsp; PA<sub>AB</sub>=%06.2f&deg;</NOBR>" % (
-            Rd2, Rm2, Rs2, pa2)
+                Rd2, Rm2, Rs2, pa2)
             msgtext += "\n|AB|=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0" % (
-            Rd2, Rm2, Rs2, dist2 * 180 / math.pi, pa2)
+                Rd2, Rm2, Rs2, dist2 * 180 / math.pi, pa2)
             # make markers
             marka, markb = TiggerPlotMarker(), TiggerPlotMarker()
             marka.setValue(l, m)
@@ -1506,7 +1524,7 @@ class SkyModelPlotter(QWidget):
         msgtext = ""
         if self.projection.has_projection():
             msgtext = "%02dh%02dm%05.2fs %s%02d\u00B0%02d'%05.2f\"  r=%d\u00B0%02d'%05.2f\"  PA=%.2f\u00B0" % (
-            rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd)
+                rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd)
         # if we have an image, add pixel coordinates
         image = self._imgman and self._imgman.getTopImage()
         if image and x is not None:

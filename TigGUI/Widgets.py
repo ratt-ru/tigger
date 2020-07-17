@@ -25,14 +25,12 @@
 #
 
 import traceback
-from PyQt5.QtWidgets import *
 import re
-from PyQt5.Qt import QObject, QValidator, QWidget, QHBoxLayout, QFileDialog, QComboBox, QLabel, \
+from PyQt5.Qt import  QValidator, QWidget, QHBoxLayout, QFileDialog, QComboBox, QLabel, \
     QLineEdit, QDialog, QIntValidator, QDoubleValidator, QToolButton, QListWidget, QVBoxLayout, \
-    QPushButton, Qt, QMessageBox
+    QPushButton, QMessageBox
 from PyQt5.Qwt import QwtPlotCurve, QwtPlotMarker
-from PyQt5 import *
-
+from PyQt5.QtCore import pyqtSignal, Qt
 
 QStringList = list
 
@@ -135,8 +133,8 @@ class ValueTypeEditor(QWidget):
 
 class FileSelector(QWidget):
     """A FileSelector is a one-line widget for selecting a file."""
-    valid = QtCore.pyqtSignal()
-    filenameSelected = QtCore.pyqtSignal()
+    valid = pyqtSignal()
+    filenameSelected = pyqtSignal()
 
     def __init__(self, parent, label, filename=None, dialog_label=None, file_types=None, default_suffix=None,
                  file_mode=QFileDialog.AnyFile):
@@ -198,7 +196,7 @@ class FileSelector(QWidget):
 
 
 class AddTagDialog(QDialog):
-    def __init__(self, parent, modal=True, flags=QtCore.Qt.WindowFlags()):
+    def __init__(self, parent, modal=True, flags=Qt.WindowFlags()):
         QDialog.__init__(self, parent, flags)
         self.setModal(modal)
         self.setWindowTitle("Add Tag")
@@ -275,7 +273,7 @@ class AddTagDialog(QDialog):
 
 
 class SelectTagsDialog(QDialog):
-    def __init__(self, parent, modal=True, flags=QtCore.Qt.WindowFlags(), caption="Select Tags", ok_button="Select"):
+    def __init__(self, parent, modal=True, flags=Qt.WindowFlags(), caption="Select Tags", ok_button="Select"):
         QDialog.__init__(self, parent, flags)
         self.setModal(modal)
         self.setWindowTitle(caption)
