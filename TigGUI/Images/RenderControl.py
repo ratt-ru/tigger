@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-#
-# % $Id$
-#
-#
 # Copyright (C) 2002-2011
 # The MeqTree Foundation & 
 # ASTRON (Netherlands Foundation for Research in Astronomy)

@@ -25,8 +25,7 @@ import time
 import traceback
 
 import numpy
-from PyQt5.Qt import (QWidget, QFileDialog, QVBoxLayout, Qt, QApplication, QMenu, QClipboard, QInputDialog,
-                      QActionGroup)
+from PyQt5.Qt import (QWidget, QFileDialog, QVBoxLayout, QApplication, QMenu, QClipboard, QInputDialog, QActionGroup)
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtCore import Qt
 from astropy.io import fits as pyfits
@@ -55,7 +54,7 @@ class ImageManager(QWidget):
         self._lo.setSpacing(0)
         # init internal state
         self._currier = PersistentCurrier()
-        self._z0 = 0;  # z-depth of first image, the rest count down from it
+        self._z0 = 0  # z-depth of first image, the rest count down from it
         self._updating_imap = False
         self._locked_display_range = False
         self._imagecons = []
