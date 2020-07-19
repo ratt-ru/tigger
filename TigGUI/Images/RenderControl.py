@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-#
-# % $Id$
-#
-#
 # Copyright (C) 2002-2011
 # The MeqTree Foundation & 
 # ASTRON (Netherlands Foundation for Research in Astronomy)
@@ -29,6 +24,7 @@ import math
 import os.path
 import time
 from PyQt5.Qt import QObject
+from PyQt5.QtCore import pyqtSignal
 from scipy.ndimage import measurements
 
 import TigGUI.kitties.utils
@@ -41,7 +37,7 @@ dprintf = _verbosity.dprintf
 from TigGUI.Images import Colormaps
 
 import TigGUI.kitties.config
-from PyQt5 import *
+
 
 ImageConfigFile = TigGUI.kitties.config.DualConfigParser("tigger.images.conf")
 
@@ -50,11 +46,11 @@ class RenderControl(QObject):
     """RenderControl represents all the options (slices, color and intensity policy data) associated with an image. This object is shared by various GUI elements
     that control the rendering of images.
     """
-    intensityMapChanged = QtCore.pyqtSignal()
-    colorMapChanged = QtCore.pyqtSignal()
-    dataSubsetChanged = QtCore.pyqtSignal()
-    displayRangeChanged = QtCore.pyqtSignal()
-    displayRangeLocked = QtCore.pyqtSignal()
+    intensityMapChanged = pyqtSignal()
+    colorMapChanged = pyqtSignal()
+    dataSubsetChanged = pyqtSignal()
+    displayRangeChanged = pyqtSignal()
+    displayRangeLocked = pyqtSignal()
 
     SUBSET_FULL = "full"
     SUBSET_SLICE = "slice"

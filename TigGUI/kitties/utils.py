@@ -1,10 +1,5 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*-
 
-#
-# % $Id$
-#
-#
 # Copyright (C) 2002-2007
 # The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
@@ -346,7 +341,7 @@ def xcurry(func, _args=(), _argslice=slice(0), _kwds={}, **kwds):
     return callit
 
 
-class PersistentCurrier(object):
+class PersistentCurrier:
     """This class provides curry() and xcurry() instance methods that
     internally store the curries in a list. This is handy for currying
     callbacks to be passed to, e.g., PyQt slots: since PyQt holds the callbacks
@@ -371,7 +366,7 @@ class PersistentCurrier(object):
         self._curries = []
 
 
-class WeakInstanceMethod(object):
+class WeakInstanceMethod:
     # return value indicating call of a weakinstancemethod whose object
     # has gone
     DeadRef = object()

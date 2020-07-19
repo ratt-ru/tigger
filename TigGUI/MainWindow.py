@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-
-#
-# % $Id$
-#
-#
 # Copyright (C) 2002-2011
 # The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
@@ -26,27 +20,25 @@
 #
 
 import os
-from PyQt5.QtWidgets import *
 import sys
 
 import Tigger.Models.Formats
-from PyQt5.Qt import QObject, QWidget, QFileDialog, QDialog, QVBoxLayout, \
+from PyQt5.Qt import QWidget, QFileDialog, QDialog, QVBoxLayout, \
     Qt, QSize, QSizePolicy, QApplication, QMenu, QMessageBox, QErrorMessage, QMainWindow, QSplitter
+from PyQt5.QtCore import pyqtSignal
 from Tigger.Models import SkyModel
 from Tigger.Models.Formats import ModelHTML
 
 import TigGUI.Tools.source_selector
 import TigGUI.kitties.utils
+from TigGUI import AboutDialog
 from TigGUI import Images
+from TigGUI import Widgets
+from TigGUI.Images.Manager import ImageManager
+from TigGUI.Plot.SkyModelPlot import SkyModelPlotter, PersistentCurrier
+from TigGUI.SkyModelTreeWidget import SkyModelTreeWidget, ModelGroupsTable
 from TigGUI.init import pixmaps, Config
 from TigGUI.kitties.widgets import BusyIndicator
-from . import AboutDialog
-from . import Widgets
-from .Images.Manager import ImageManager
-from .Plot.SkyModelPlot import SkyModelPlotter, PersistentCurrier
-from .SkyModelTreeWidget import SkyModelTreeWidget, ModelGroupsTable
-from PyQt5 import *
-from PyQt5.QtCore import *
 
 QStringList = list
 
@@ -56,11 +48,11 @@ dprintf = _verbosity.dprintf
 
 
 class MainWindow(QMainWindow):
-    isUpdated = QtCore.pyqtSignal()
-    hasSkyModel = QtCore.pyqtSignal()
-    hasSelection = QtCore.pyqtSignal()
-    modelChanged = QtCore.pyqtSignal()
-    closing = QtCore.pyqtSignal()
+    isUpdated = pyqtSignal(bool)
+    hasSkyModel = pyqtSignal(bool)
+    hasSelection = pyqtSignal(bool)
+    modelChanged = pyqtSignal()
+    closing = pyqtSignal()
     ViewModelColumns = ["name", "RA", "Dec", "type", "Iapp", "I", "Q", "U", "V", "RM", "spi", "shape"]
 
     def __init__(self, parent, hide_on_close=False):
@@ -79,7 +71,7 @@ class MainWindow(QMainWindow):
         cwlo = QVBoxLayout(cw)
         cwlo.setContentsMargins(5, 5, 5, 5)
         # make splitter
-        spl1 = self._splitter1 = QSplitter(QtCore.Qt.Vertical, cw)
+        spl1 = self._splitter1 = QSplitter(Qt.Vertical, cw)
         spl1.setOpaqueResize(False)
         cwlo.addWidget(spl1)
         # Create listview of LSM entries
@@ -87,7 +79,7 @@ class MainWindow(QMainWindow):
         self.tw.hide()
 
         # split bottom pane
-        spl2 = self._splitter2 = QSplitter(QtCore.Qt.Horizontal, spl1)
+        spl2 = self._splitter2 = QSplitter(Qt.Horizontal, spl1)
         spl2.setOpaqueResize(False)
         self._skyplot_stack = QWidget(spl2)
         self._skyplot_stack_lo = QVBoxLayout(self._skyplot_stack)
@@ -395,7 +387,8 @@ class MainWindow(QMainWindow):
         return self.imgman.loadImage(filename)
 
     def setModel(self, model):
-        self.modelChanged.emit(model)
+        if model is not None:
+            self.modelChanged.emit(model)
         if model:
             self.model = model
             self.hasSkyModel.emit(True)
@@ -425,7 +418,7 @@ class MainWindow(QMainWindow):
         if not self._open_file_dialog:
             filters = ";;".join(
                 ["%s (%s)" % (name, " ".join(patterns)) for name, patterns, func in self._load_file_types])
-            dialog = self._open_file_dialog = QFileDialog(self, "Open sky model", ".", filters)
+            dialog = self._open_file_dialog = QFileDialog(self, "Open sky model", ".", filters)  # TODO - (raz) - parent=self here causes GTK warning.
             dialog.setFileMode(QFileDialog.ExistingFile)
             dialog.setModal(True)
             dialog.filesSelected['QStringList'].connect(self.openFile)
