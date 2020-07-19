@@ -517,11 +517,11 @@ class ImageManager(QWidget):
         if self._border_pen:
             ic.addPlotBorder(self._border_pen, basename, self._label_color, self._label_bg_brush)
         # attach appropriate signals
-        image.connect("slice", self.fastReplot)
-        image.connect("repaint", self.replot)
-        image.connect("raise", self._currier.curry(self.raiseImage, ic))
-        image.connect("unload", self._currier.curry(self.unloadImage, ic))
-        image.connect("center", self._currier.curry(self.centerImage, ic))
+        image.connect(pyqtSignal("slice()"), self.fastReplot)
+        image.connect(pyqtSignal("repaint()"), self.replot)
+        image.connect(pyqtSignal("raise()"), self._currier.curry(self.raiseImage, ic))
+        image.connect(pyqtSignal("unload()"), self._currier.curry(self.unloadImage, ic))
+        image.connect(pyqtSignal("center()"), self._currier.curry(self.centerImage, ic))
         ic.renderControl().displayRangeChanged.connect(
             self._currier.curry(self._updateDisplayRange, ic.renderControl()))
         ic.renderControl().displayRangeLocked.connect(self._currier.curry(self._lockDisplayRange, ic.renderControl()))
