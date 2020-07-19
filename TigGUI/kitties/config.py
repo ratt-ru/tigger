@@ -40,7 +40,7 @@ _default_system_paths = [
 _default_user_path = os.path.expanduser("~/")
 
 
-class DualConfigParser(object):
+class DualConfigParser:
     """A dual config parser taking into account both system-wide files
     and user defaults. Any changes are stored in the user defaults."""
 
@@ -74,12 +74,12 @@ class DualConfigParser(object):
         try:
             return getattr(self.syscp, method)(section, option)
         except (NoSectionError, NoOptionError, ValueError):
-            if default is not None:
+            if default is not None and option is not None:
                 self.syscp.set(section, option, str(default))
                 if init or save:
                     self.usercp.set(section, option, str(default))
                     if save:
-                        self.usercp.write(file(self._user_file, "w"))
+                        self.usercp.write(open(self._user_file, "w"))
                 return default
             # no default, so re-raise the error
             raise error
@@ -99,7 +99,8 @@ class DualConfigParser(object):
             pass
         self.usercp.set(section, option, value)
         if save:
-            self.usercp.write(file(self._user_file, "w"))
+            with open(self._user_file, "w") as f:
+                self.usercp.write(f)
 
     def has_option(self, section, option):
         return self.syscp.has_option(section, option) or \
@@ -109,7 +110,7 @@ class DualConfigParser(object):
         return self._get('get', option, default, section)
 
 
-class SectionParser(object):
+class SectionParser:
     """A section parser is basically a ConfigParser with a default section name."""
 
     def __init__(self, parser, section):

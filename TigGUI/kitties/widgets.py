@@ -23,7 +23,7 @@ def PYSIGNAL(sig):
         return SIGNAL(sig)
 
 
-class BusyIndicator(object):
+class BusyIndicator:
     """A BusyIndicator object is created to set the cursor to a hourglass.
     When the object is destroyed (i.e. when local variable goes out of scope), the cursor is reset."""
 

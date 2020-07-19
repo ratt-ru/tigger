@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-#
-# % $Id$
-#
-#
 # Copyright (C) 2002-2011
 # The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
@@ -32,6 +27,7 @@ import os.path
 import time
 from PyQt5.Qt import QObject, QRect, QRectF, QPointF, QPoint, QSizeF
 from PyQt5.Qwt import QwtPlotItem
+from PyQt5.QtCore import pyqtSignal
 from scipy.ndimage import interpolation, measurements
 
 import TigGUI.kitties.utils
@@ -41,7 +37,7 @@ from astropy.io import fits as pyfits
 from Tigger.Coordinates import Projection
 from TigGUI.Images import Colormaps
 from Tigger.Tools import FITSHeaders
-from PyQt5 import *
+
 
 DEG = math.pi / 180
 
@@ -52,7 +48,7 @@ dprintf = _verbosity.dprintf
 
 class SkyImagePlotItem(QwtPlotItem, QObject):
     """SkyImagePlotItem is a 2D image in l,m coordimnates"""
-    repaint = QtCore.pyqtSignal()
+    repaint = pyqtSignal()
 
     def __init__(self, nx=0, ny=0, l0=0, m0=0, dl=1, dm=1, image=None):
         QwtPlotItem.__init__(self)
@@ -332,7 +328,7 @@ def getScalePrefix(*values):
 
 class SkyCubePlotItem(SkyImagePlotItem):
     """Extends SkyImagePlotItem with a hypercube containing extra slices."""
-    slice = QtCore.pyqtSignal()
+    slice = pyqtSignal()
 
     def __init__(self, data=None, ndim=None):
         SkyImagePlotItem.__init__(self)

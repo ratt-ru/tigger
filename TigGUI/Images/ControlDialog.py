@@ -1,8 +1,4 @@
-# -*- coding: utf-8 -*-
-#
-# % $Id$
-#
-#
+
 # Copyright (C) 2002-2011
 # The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
@@ -25,15 +21,14 @@
 #
 
 import math
-from PyQt5.QtWidgets import *
 
 import numpy
-from PyQt5.Qt import QObject, QWidget, QHBoxLayout, QComboBox, QLabel, QLineEdit, QDialog, QToolButton, QVBoxLayout, \
+from PyQt5.Qt import QWidget, QHBoxLayout, QComboBox, QLabel, QLineEdit, QDialog, QToolButton, QVBoxLayout, \
     Qt, QSize, QSizePolicy, QApplication, QColor, QBrush, QTimer, QFrame, QCheckBox, QStackedWidget, QIcon, QMenu, \
     QGridLayout, QPen, QRect
 from PyQt5.Qwt import QwtPlot, QwtText, QwtPlotItem, QwtPlotCurve, QwtSymbol, QwtLinearScaleEngine, QwtLogScaleEngine, \
-    QwtPlotPicker, QwtPicker, QwtEventPattern, QwtWheel, QwtSlider
-# from TigGUI.todo import QwtPlotPicker, QwtPicker, QwtEventPattern, QwtWheel, QwtSlider
+    QwtPlotPicker, QwtPicker, QwtEventPattern, QwtWheel, QwtSlider,  QwtPickerMachine
+
 from scipy.ndimage import measurements
 
 from TigGUI.kitties.utils import PersistentCurrier
@@ -479,7 +474,7 @@ class ImageControlDialog(QDialog):
     class HistLimitPicker(QwtPlotPicker):
         """Auguments QwtPlotPicker with functions for selecting hist min/max values"""
 
-        def __init__(self, plot, label, color="green", mode=QwtPicker.PointSelection,
+        def __init__(self, plot, label, color="green", mode=QwtPickerMachine.PointSelection,
                      rubber_band=QwtPicker.VLineRubberBand, tracker_mode=QwtPicker.ActiveOnly, track=None):
             QwtPlotPicker.__init__(self, QwtPlot.xBottom, QwtPlot.yRight, mode, rubber_band, tracker_mode,
                                    plot.canvas())
@@ -532,7 +527,7 @@ class ImageControlDialog(QDialog):
             # plot image
             painter.drawImage(QRect(xp1, y0, xdp, dy), qimg)
 
-    class HistogramLineMarker(object):
+    class HistogramLineMarker:
         """Helper class implementing a line marker for a histogram plot"""
 
         def __init__(self, plot, color="black", linestyle=Qt.DotLine, align=Qt.AlignBottom | Qt.AlignRight, z=90,
