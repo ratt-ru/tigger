@@ -29,6 +29,7 @@ import re
 import time
 
 import numpy
+from PyQt5 import QtGui
 from PyQt5.Qt import QWidget, QHBoxLayout, QFileDialog, QComboBox, QLabel, \
     QDialog, QToolButton, QVBoxLayout, QAction, QEvent, QSize, QMouseEvent, \
     QSizePolicy, QApplication, QColor, QImage, QPixmap, QPainter, QToolTip, \
@@ -723,7 +724,9 @@ class SkyModelPlotter(QWidget):
                     width, height = painter.device().width(), painter.device().height()
                     dprint(5, "drawCanvas: not in cache, redrawing %dx%d pixmap" % (width, height))
                     self._draw_cache[self._drawing_key] = pm = QPixmap(width, height)
+                    print(self.canvasBackground())
                     # pm.fill(self.canvasBackground()) # TODO (raz)Error
+                    pm.fill(QtGui.QColor('#ffffff')) # TODO (raz)Error
                     QwtPlot.drawCanvas(self, QPainter(pm))
                 painter.drawPixmap(0, 0, pm)
                 dprint(5, "drawCanvas done", time.time() % 60)
