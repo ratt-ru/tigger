@@ -723,7 +723,7 @@ class SkyModelPlotter(QWidget):
                     width, height = painter.device().width(), painter.device().height()
                     dprint(5, "drawCanvas: not in cache, redrawing %dx%d pixmap" % (width, height))
                     self._draw_cache[self._drawing_key] = pm = QPixmap(width, height)
-                    pm.fill(self.canvasBackground())
+                    # pm.fill(self.canvasBackground()) # TODO (raz)Error
                     QwtPlot.drawCanvas(self, QPainter(pm))
                 painter.drawPixmap(0, 0, pm)
                 dprint(5, "drawCanvas done", time.time() % 60)
@@ -895,7 +895,7 @@ class SkyModelPlotter(QWidget):
             #          w = (x2-x1)/2
             #          h = (y2-y1)/2
             #          # self.zoom(QRectF(x-w/2,y-h/2,w,h))
-            #          self.emit(SIGNAL("provisionalZoom"),x,y,1)
+            #          self.emit(pyqtSignal("provisionalZoom"),x,y,1)
             QwtPlotPicker.widgetWheelEvent(self, ev)
 
     class PlotPicker(QwtPlotPicker):
@@ -1230,7 +1230,7 @@ class SkyModelPlotter(QWidget):
             picker.setTrackerMode(QwtPicker.ActiveOnly)
 
     #    for picker in self._ruler,self._picker1,self._picker2,self._picker3:
-    #      QObject.connect(picker,SIGNAL("wheelEvent"),self._zoomer.widgetWheelEvent)
+    #      QObject.connect(picker,pyqtSignal("wheelEvent"),self._zoomer.widgetWheelEvent)
 
     def _showMouseModeTooltip(self):
         tooltip = self._mousemodes.currentMode().tooltip

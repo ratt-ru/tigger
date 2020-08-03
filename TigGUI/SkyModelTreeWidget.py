@@ -34,11 +34,7 @@ import TigGUI.kitties.widgets
 from TigGUI.kitties.utils import PersistentCurrier
 from TigGUI.kitties.widgets import BusyIndicator
 
-try:
-    QString = unicode
-except NameError:
-    # Python 3
-    QString = str
+QString = str
 
 _verbosity = TigGUI.kitties.utils.verbosity(name="tw")
 dprint = _verbosity.dprint

@@ -38,7 +38,7 @@ class TiggerPlotCurve(QwtPlotCurve):
     """Wrapper around QwtPlotCurve to make it compatible with numpy float types"""
 
     def setData(self, x, y):
-        return QwtPlotCurve.setData(self, list(map(float, x)), list(map(float, y)))
+        return QwtPlotCurve.setSamples(self, list(map(float, x)), list(map(float, y)))
 
 
 class TiggerPlotMarker(QwtPlotMarker):

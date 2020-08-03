@@ -32,6 +32,7 @@ from astropy.io import fits as pyfits
 
 from TigGUI.Images import FITS_ExtensionList
 from TigGUI.Images import SkyImage
+from TigGUI.Images.SkyImage import FITSImagePlotItem
 from TigGUI.Images.Controller import ImageController, dprint
 from TigGUI.kitties.utils import PersistentCurrier
 from TigGUI.kitties.widgets import BusyIndicator
@@ -44,7 +45,7 @@ class ImageManager(QWidget):
     showMessage = pyqtSignal(str, int)
     showErrorMessage = pyqtSignal(str, int)
     imagesChanged = pyqtSignal()
-    imageRaised = pyqtSignal()
+    imageRaised = pyqtSignal(FITSImagePlotItem)
 
     def __init__(self, *args):
         QWidget.__init__(self, *args)
@@ -307,6 +308,7 @@ class ImageManager(QWidget):
                 next.setText("Show next slice along %s axis" % name)
                 prev.setText("Show previous slice along %s axis" % name)
         # emit signasl
+        print(type(img))
         self.imageRaised.emit(img)
 
     def resetDrawKey(self):
@@ -517,11 +519,16 @@ class ImageManager(QWidget):
         if self._border_pen:
             ic.addPlotBorder(self._border_pen, basename, self._label_color, self._label_bg_brush)
         # attach appropriate signals
-        image.connect(pyqtSignal("slice()"), self.fastReplot)
-        image.connect(pyqtSignal("repaint()"), self.replot)
-        image.connect(pyqtSignal("raise()"), self._currier.curry(self.raiseImage, ic))
-        image.connect(pyqtSignal("unload()"), self._currier.curry(self.unloadImage, ic))
-        image.connect(pyqtSignal("center()"), self._currier.curry(self.centerImage, ic))
+        #image.connect(pyqtSignal("slice()"), self.fastReplot)
+        #image.connect(pyqtSignal("repaint()"), self.replot)
+        #image.connect(pyqtSignal("raise()"), self._currier.curry(self.raiseImage, ic))
+        #image.connect(pyqtSignal("unload()"), self._currier.curry(self.unloadImage, ic))
+        #image.connect(pyqtSignal("center()"), self._currier.curry(self.centerImage, ic))
+        image.connect(self.fastReplot)
+        image.connect(self.replot)
+        image.connect(self._currier.curry(self.raiseImage, ic))
+        image.connect(self._currier.curry(self.unloadImage, ic))
+        image.connect(self._currier.curry(self.centerImage, ic))
         ic.renderControl().displayRangeChanged.connect(
             self._currier.curry(self._updateDisplayRange, ic.renderControl()))
         ic.renderControl().displayRangeLocked.connect(self._currier.curry(self._lockDisplayRange, ic.renderControl()))

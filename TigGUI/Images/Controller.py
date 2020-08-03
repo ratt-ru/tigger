@@ -26,7 +26,7 @@ import numpy
 from PyQt5.Qt import QHBoxLayout, QFileDialog, QComboBox, QLabel, QLineEdit, QDialog, QToolButton, \
     Qt, QApplication, QColor, QPixmap, QPainter, QFrame, QMenu, QPen, QKeySequence
 from PyQt5.Qwt import QwtText, QwtPlotCurve, QwtPlotMarker, QwtScaleMap
-from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtCore import pyqtSignal, QPointF
 
 import TigGUI.kitties.utils
 from TigGUI.kitties.utils import PersistentCurrier
@@ -104,7 +104,7 @@ class ImageController(QFrame):
         dprint(2, "done")
         # selectors for extra axes
         self._wslicers = []
-        curslice = self._rc.currentSlice();  # this may be loaded from config, so not necessarily 0
+        curslice = self._rc.currentSlice()  # this may be loaded from config, so not necessarily 0
         for iextra, axisname, labels in self._rc.slicedAxes():
             if axisname.upper() not in ["STOKES", "COMPLEX"]:
                 lbl = QLabel("%s:" % axisname, self)
@@ -180,21 +180,21 @@ class ImageController(QFrame):
         # create image operations menu
         self._menu = QMenu(self.name, self)
         self._qa_raise = self._menu.addAction(pixmaps.raise_up.icon(), "Raise image",
-                                              self._currier.curry(self.image.emit, SIGNAL("raise")))
+                                              self._currier.curry(self.image.emit, None))
         self._qa_center = self._menu.addAction(pixmaps.center_image.icon(), "Center plot on image",
-                                               self._currier.curry(self.image.emit, SIGNAL("center")))
+                                               self._currier.curry(self.image.emit, None))
         self._qa_show_rc = self._menu.addAction(pixmaps.colours.icon(), "Colours && Intensities...",
                                                 self.showRenderControls)
         if save:
             self._qa_save = self._menu.addAction("Save image...", self._saveImage)
         self._menu.addAction("Export image to PNG file...", self._exportImageToPNG)
         self._export_png_dialog = None
-        self._menu.addAction("Unload image", self._currier.curry(self.image.emit, SIGNAL("unload")))
+        self._menu.addAction("Unload image", self._currier.curry(self.image.emit, None))
         self._wraise.setMenu(self._menu)
         self._wraise.setPopupMode(QToolButton.DelayedPopup)
 
         # connect updates from renderControl and image
-        self.image.connect(SIGNAL("slice"), self._updateImageSlice)
+        self.image.connect(self._updateImageSlice)
         self._rc.displayRangeChanged.connect(self._updateDisplayRange)
 
         # default plot depth of image markers
@@ -259,7 +259,7 @@ class ImageController(QFrame):
         if self._image_border:
             (l0, l1), (m0, m1) = self.image.getExtents()
             path = numpy.array([l0, l0, l1, l1, l0]), numpy.array([m0, m1, m1, m0, m0])
-            self._image_border.setData(*path)
+            self._image_border.setSamples(*path)
             if self._image_label:
                 self._image_label.setValue(path[0][2], path[1][2])
 
@@ -269,7 +269,7 @@ class ImageController(QFrame):
         (l0, l1), (m0, m1) = self.image.getExtents()
         self._border_pen = QPen(border_pen)
         self._image_border.show()
-        self._image_border.setData([l0, l0, l1, l1, l0], [m0, m1, m1, m0, m0])
+        self._image_border.setSamples([l0, l0, l1, l1, l0], [m0, m1, m1, m0, m0])
         self._image_border.setPen(self._border_pen)
         self._image_border.setZ(self.image.z() + 1 if self._z_markers is None else self._z_markers)
         if label:

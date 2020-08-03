@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import *
 from PyQt5 import *
 from PyQt5.QtCore import *
 
-def PYSIGNAL(sig):
+def PYSIGNAL(sig):  # TODO - (raz) - This needs checking
     """PyQt4 no longer supports PYSIGNAL(). Instead, everything goes through SIGNAL(). "Proper" user-defined
     signals must include an argument list, just like standard Qt signals. This will prove troublesome
     to old code using a lot of PYSIGNALS(), since proper argument lists would have to be inserted.
@@ -18,9 +18,9 @@ def PYSIGNAL(sig):
     PYSIGNAL("x()") into SIGNAL("x"), to support old PyQt3-derived code.
     """
     if sig.endswith("()"):
-        return SIGNAL(sig[:-2])
+        return pyqtSignal(sig[:-2])
     else:
-        return SIGNAL(sig)
+        return pyqtSignal(sig)
 
 
 class BusyIndicator:

@@ -356,7 +356,7 @@ class ImageControlDialog(QDialog):
 
         #    self._wlock_imap_axis = [ QCheckBox(name,self) for iaxis,name,labels in sliced_axes ]
         #    for iw,w in enumerate(self._wlock_imap_axis):
-        #      QObject.connect(w,SIGNAL("toggled(bool)"),self._currier.curry(self._rc.lockDisplayRangeForAxis,iw))
+        #      QObject.connect(w,pyqtSignal("toggled(bool)"),self._currier.curry(self._rc.lockDisplayRangeForAxis,iw))
         #      lo1.addWidget(w,0)
         lo1.addStretch(1)
 
@@ -410,7 +410,7 @@ class ImageControlDialog(QDialog):
                 self._colmap_controls.append(self._wcolmap_control_blank)
 
         # connect updates from renderControl and image
-        self.image.connect(SIGNAL("slice"), self._updateImageSlice)
+        self.image.connect(pyqtSignal("slice"), self._updateImageSlice)
         self._rc.intensityMapChanged.connect(self._updateIntensityMap)
         self._rc.colorMapChanged.connect(self._updateColorMap)
         self._rc.dataSubsetChanged.connect(self._updateDataSubset)

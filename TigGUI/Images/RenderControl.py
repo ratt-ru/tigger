@@ -26,6 +26,7 @@ import time
 from PyQt5.Qt import QObject
 from PyQt5.QtCore import pyqtSignal
 from scipy.ndimage import measurements
+import numpy as np
 
 import TigGUI.kitties.utils
 from TigGUI.kitties.widgets import BusyIndicator
@@ -48,8 +49,8 @@ class RenderControl(QObject):
     """
     intensityMapChanged = pyqtSignal()
     colorMapChanged = pyqtSignal()
-    dataSubsetChanged = pyqtSignal()
-    displayRangeChanged = pyqtSignal()
+    dataSubsetChanged = pyqtSignal(np.ndarray, tuple, str, str)
+    displayRangeChanged = pyqtSignal(np.float32, np.float32)
     displayRangeLocked = pyqtSignal()
 
     SUBSET_FULL = "full"
@@ -273,6 +274,7 @@ class RenderControl(QObject):
         dprint(4, "range set")
         self.image.intensityMap().setDataSubset(self._displaydata, minmax=range)
         self.image.setIntensityMap(emit=False)
+        print(type(subset), type(range), type(desc), type(subset_type))
         self.dataSubsetChanged.emit(subset, range, desc, subset_type)
         if set_display_range:
             self.setDisplayRange(write_config=write_config, *range)
@@ -375,6 +377,7 @@ class RenderControl(QObject):
             if notify_image:
                 busy = BusyIndicator()
                 self.image.setIntensityMap(emit=True)
+            print(type(dmin), type(dmax))
             self.displayRangeChanged.emit(dmin, dmax)
             if self._config and write_config:
                 self._config.set("range-min", dmin, save=False)

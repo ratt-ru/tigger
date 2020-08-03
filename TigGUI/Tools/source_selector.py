@@ -109,7 +109,7 @@ class SourceSelectorDialog(QDialog):
         #    lo2.setContentsMargins(0,0,0,0)
         #    hidebtn = QPushButton("Close",self)
         #    hidebtn.setMinimumWidth(128)
-        #    QObject.connect(hidebtn,SIGNAL("clicked()"),self.hide)
+        #    QObject.connect(hidebtn,pyqtSignal("clicked()"),self.hide)
         #    lo2.addStretch(1)
         #    lo2.addWidget(hidebtn)
         #    lo2.addStretch(1)

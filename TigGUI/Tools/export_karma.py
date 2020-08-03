@@ -28,7 +28,7 @@ from PyQt5.QtWidgets import *
 
 
 import os.path
-from PyQt5.Qt import QObject, QHBoxLayout, SIGNAL, QDialog, QVBoxLayout, \
+from PyQt5.Qt import QObject, QHBoxLayout, pyqtSignal, QDialog, QVBoxLayout, \
     QPushButton, Qt, QCheckBox, QMessageBox, QErrorMessage
 
 from TigGUI.kitties.widgets import BusyIndicator

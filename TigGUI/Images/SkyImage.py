@@ -48,7 +48,7 @@ dprintf = _verbosity.dprintf
 
 class SkyImagePlotItem(QwtPlotItem, QObject):
     """SkyImagePlotItem is a 2D image in l,m coordimnates"""
-    repaint = pyqtSignal()
+    #repaint = pyqtSignal()
 
     def __init__(self, nx=0, ny=0, l0=0, m0=0, dl=1, dm=1, image=None):
         QwtPlotItem.__init__(self)
@@ -79,7 +79,9 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
         self._qo.emit(*args)
 
     def connect(self, *args):
-        QObject.connect(self._qo, *args)
+        print(f"SkyImage Connect: {args}")
+        # QObject.connect(self._qo, *args)
+        pass
 
     def clearDisplayCache(self):
         """Clears all display caches."""
@@ -92,11 +94,12 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
         if cmap:
             self.colormap = cmap
         if emit:
-            self.repaint.emit()
+            #self.repaint.emit() # TODO (raz) needs fixing
+            pass
 
     def updateCurrentColorMap(self):
         self._cache_qimage = {}
-        self.repaint.emit()
+        # self.repaint.emit() # TODO (raz) needs fixing
 
     def setIntensityMap(self, imap=None, emit=True):
         """Changes the intensity map. If called with no arguments, clears intensity map-dependent caches"""
@@ -105,7 +108,9 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
         if imap:
             self.imap = imap
         if emit:
-            self.repaint.emit()
+            # self._plot.replot()
+            # self.replot()  # TODO (raz) - was repaint.emit()
+            pass
 
     def colorMap(self):
         return self.colormap
@@ -503,7 +508,7 @@ class SkyCubePlotItem(SkyImagePlotItem):
 
     def setDefaultProjection(self, projection=None):
         """Sets default image projection. If None is given, sets up default SinWCS projection."""
-        self.projection = projection or Projection.SinWCS(ra0, dec0)
+        self.projection = projection or Projection.SinWCS(self.ra0, self.dec0)
         self.setPlotProjection()
 
     def _setupSlice(self):
@@ -518,7 +523,7 @@ class SkyCubePlotItem(SkyImagePlotItem):
         for i, (iaxis, name, labels, values, units, scale) in enumerate(self._extra_axes):
             self.imgslice[iaxis] = indices[i]
         self._setupSlice()
-        self.slice.emit(indices)
+        # self.slice.emit(indices)
 
     def currentSlice(self):
         return list(self.imgslice)
@@ -581,7 +586,7 @@ class FITSImagePlotItem(SkyCubePlotItem):
         # NB: all-data operations (such as getting global min/max or computing of histograms) are much faster
         # (almost x2) when data is iterated
         # over in the proper order. After a transpose(), data is in fortran order. Tell this to setData().
-        data = numpy.transpose(data);  # .copy()
+        data = numpy.transpose(data)  # .copy()
         dprint(3, "setting data")
         self.setData(data, fortran_order=True)
         dprint(3, "reading header")
