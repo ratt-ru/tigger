@@ -52,7 +52,7 @@ class RenderControl(QObject):
     dataSubsetChanged = pyqtSignal(np.ndarray, tuple, str, str)
     displayRangeChanged = pyqtSignal(np.float32, np.float32)
     displayRangeChanged = pyqtSignal(float, float)  # on file save np.float32's become float's?
-    displayRangeLocked = pyqtSignal()
+    displayRangeLocked = pyqtSignal(bool)
 
     SUBSET_FULL = "full"
     SUBSET_SLICE = "slice"
