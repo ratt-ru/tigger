@@ -120,11 +120,11 @@ class ImageControlDialog(QDialog):
         self._whistzoom.setOrientation(Qt.Horizontal)
         self._whistzoom.setMaximumWidth(80)
         self._whistzoom.setRange(10, 0)
-        self._whistzoom.setStep(0.1)
-        self._whistzoom.setTickCnt(30)
+        self._whistzoom.setSingleStep(0.1)
+        self._whistzoom.setTickCount(30)
         self._whistzoom.setTracking(False)
-        self._whistzoom.valueChanged[double].connect(self._zoomHistogramFinalize)
-        self._whistzoom.sliderMoved[double].connect(self._zoomHistogramPreview)
+        self._whistzoom.valueChanged.connect(self._zoomHistogramFinalize)
+        self._whistzoom.wheelMoved.connect(self._zoomHistogramPreview)
         self._whistzoom.setToolTip("""<P>Use this wheel control to zoom in/out of the histogram plot.
       This does not change the current intensity range.
       Note that the zoom wheel should also respond to your mouse wheel, if you have one.</P>""")
@@ -318,11 +318,13 @@ class ImageControlDialog(QDialog):
         self._wlogcycles_timer.setInterval(500)
         self._wlogcycles_timer.timeout.connect(self._setIntensityLogCycles)
         lo1.addWidget(self._wlogcycles, 1, 1)
-        self._wlogcycles.setRange(1., 10)
-        self._wlogcycles.setStep(0.1)
+        # self._wlogcycles.setRange(1., 10)  # need to find 6.1.5 change from v5
+        self._wlogcycles.setScale(1., 10)
+        # self._wlogcycles.setStep(0.1)  # need to find 6.1.5 change from v5
+        self._wlogcycles.setScaleStepSize(0.1)
         self._wlogcycles.setTracking(False)
-        self._wlogcycles.valueChanged[double].connect(self._setIntensityLogCycles)
-        self._wlogcycles.sliderMoved[double].connect(self._previewIntensityLogCycles)
+        self._wlogcycles.valueChanged.connect(self._setIntensityLogCycles)
+        self._wlogcycles.sliderMoved.connect(self._previewIntensityLogCycles)
         self._updating_imap = False
 
         # lock intensity map
@@ -410,7 +412,8 @@ class ImageControlDialog(QDialog):
                 self._colmap_controls.append(self._wcolmap_control_blank)
 
         # connect updates from renderControl and image
-        self.image.connect(pyqtSignal("slice"), self._updateImageSlice)
+        #self.image.connect(pyqtSignal("slice"), self._updateImageSlice)
+        self.image.connect(self._updateImageSlice)
         self._rc.intensityMapChanged.connect(self._updateIntensityMap)
         self._rc.colorMapChanged.connect(self._updateColorMap)
         self._rc.dataSubsetChanged.connect(self._updateDataSubset)
@@ -546,8 +549,8 @@ class ImageControlDialog(QDialog):
             self.line.setZ(z)
             self.marker.setZ(zlabel if zlabel is not None else z)
             # set axes -- using yRight, since that is the "markup" z-axis
-            self.line.setAxis(QwtPlot.xBottom, yaxis)
-            self.marker.setAxis(QwtPlot.xBottom, yaxis)
+            self.line.setAxes(QwtPlot.xBottom, yaxis)
+            self.marker.setAxes(QwtPlot.xBottom, yaxis)
             # attach to plot
             self.line.attach(plot)
             self.marker.attach(plot)
