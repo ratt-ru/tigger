@@ -289,7 +289,7 @@ class ImageManager(QWidget):
             for j, ic in enumerate(self._imagecons):
                 ic.setImageVisible(not j or bool(self._qa_plot_all.isChecked()))
             # issue replot signal
-            self.imageRaised.emit()
+            self.imageRaised.emit(self._imagecons[0])
             self.fastReplot()
         # else simply update labels
         else:
