@@ -1,1 +1,1 @@
-sudo pip3 uninstall -y astro-tigger ; sudo python3 setup.py install ; gdb -ex r --args python3 `which tigger` 
+pip3 uninstall -y astro-tigger ; python3 setup.py install --user; gdb -ex r --args python3 `which tigger` 
