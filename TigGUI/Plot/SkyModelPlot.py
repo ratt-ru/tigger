@@ -662,7 +662,7 @@ class SkyModelPlotter(QWidget):
     MouseDeselect = 4
 
     imagesChanged = pyqtSignal()
-    showMessage = pyqtSignal()
+    showMessage = pyqtSignal(str)
     showErrorMessage = pyqtSignal()
 
     class Plot(QwtPlot):
