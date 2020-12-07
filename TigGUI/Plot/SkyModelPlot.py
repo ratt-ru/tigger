@@ -764,7 +764,7 @@ class SkyModelPlotter(QWidget):
             self._draw_cache = {}
 
     class PlotZoomer(QwtPlotZoomer):
-        provisionalZoom = pyqtSignal()
+        provisionalZoom = pyqtSignal(int, int, int, int)
 
         def __init__(self, canvas, updateLayoutEvent, track_callback=None, label=None):
             QwtPlotZoomer.__init__(self, canvas)
@@ -885,20 +885,22 @@ class SkyModelPlotter(QWidget):
         def widgetWheelEvent(self, ev):
             x = self.plot().invTransform(self.xAxis(), ev.x())
             y = self.plot().invTransform(self.yAxis(), ev.y())
-            dprint(3, "zoomer wheel", ev.x(), ev.y(), ev.delta(), x, y, self._use_wheel)
+            dprint(3, "zoomer wheel", ev.x(), ev.y(), ev.pixelDelta(), x, y, self._use_wheel)
             if self._use_wheel:
-                self.provisionalZoom.emit(x, y, (1 if ev.delta() > 0 else -1), 200)
-            #        if ev.delta() < 0:
-            #          if self.zoomRectIndex() > 0:
-            #            self.zoom(-1)
-            #          else:
-            #            dprint(0,"zoomed all the way out, wheel event ignored")
-            #        else:
-            #          x1,y1,x2,y2 = self.zoomRect().getCoords()
-            #          w = (x2-x1)/2
-            #          h = (y2-y1)/2
-            #          # self.zoom(QRectF(x-w/2,y-h/2,w,h))
-            #          self.emit(pyqtSignal("provisionalZoom"),x,y,1)
+                print(f"X {ev.angleDelta().x()} Y {ev.angleDelta().y()}")
+                self.provisionalZoom.emit(x, y, (1 if ev.angleDelta().y() > 0 else -1), 200)
+                # below code was commented out in previous version??
+                # if ev.angleDelta().y() < 0:
+                #    if self.zoomRectIndex() > 0:
+                #        self.zoom(-1)
+                #    else:
+                #        print("zoomed all the way out, wheel event ignored")
+                # else:
+                #    x1, y1, x2, y2 = self.zoomRect().getCoords()
+                #    w = (x2-x1)/2
+                #    h = (y2-y1)/2
+                #    self.zoom(QRectF(x-w/2, y-h/2, w, h))
+                #    self.provisionalZoom.emit(x, y, 1, 200)
             QwtPlotPicker.widgetWheelEvent(self, ev)
 
     class PlotPicker(QwtPlotPicker):
