@@ -29,6 +29,7 @@ from scipy.ndimage import measurements
 import numpy as np
 
 import TigGUI.kitties.utils
+from TigGUI.Images.Colormaps import HistEqIntensityMap, LogIntensityMap, CubeHelixColormap
 from TigGUI.kitties.widgets import BusyIndicator
 
 _verbosity = TigGUI.kitties.utils.verbosity(name="rc")
@@ -47,11 +48,10 @@ class RenderControl(QObject):
     """RenderControl represents all the options (slices, color and intensity policy data) associated with an image. This object is shared by various GUI elements
     that control the rendering of images.
     """
-    intensityMapChanged = pyqtSignal()
-    colorMapChanged = pyqtSignal()
+    intensityMapChanged = pyqtSignal(object, float)
+    colorMapChanged = pyqtSignal(object)
     dataSubsetChanged = pyqtSignal(np.ndarray, tuple, str, str)
-    displayRangeChanged = pyqtSignal(np.float32, np.float32)
-    displayRangeChanged = pyqtSignal(float, float)  # on file save np.float32's become float's?
+    displayRangeChanged = pyqtSignal([float, float], [np.float32, np.float32], [HistEqIntensityMap, float])  # on file save np.float32's become float's on reload?
     displayRangeLocked = pyqtSignal(bool)
 
     SUBSET_FULL = "full"

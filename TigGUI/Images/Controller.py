@@ -306,6 +306,7 @@ class ImageController(QFrame):
         if not self._control_dialog:
             dprint(1, "creating control dialog")
             self._control_dialog = ImageControlDialog(self, self._rc, self._imgman)
+            self._control_dialog.setSizeGripEnabled(True)
             dprint(1, "done")
         if not self._control_dialog.isVisible():
             dprint(1, "showing control dialog")

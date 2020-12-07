@@ -251,8 +251,8 @@ class ColormapWithControls(Colormap):
 
     class SliderControl(QObject):
         """This class implements a slider control for a colormap"""
-        valueChanged = pyqtSignal()
-        valueMoved = pyqtSignal()
+        valueChanged = pyqtSignal(float)
+        valueMoved = pyqtSignal(float)
 
         def __init__(self, name, value, minval, maxval, step, format="%s: %.1f"):
             QObject.__init__(self)
@@ -283,7 +283,7 @@ class ColormapWithControls(Colormap):
             self._wslider_timer.timeout.connect(self.setValue)
             gridlayout.addWidget(self._wslider, row * 2 + 1, column)
             self._wslider.setScale(self.minval, self.maxval)
-            self._wslider.setScaleStepSize(self.step)
+            # self._wslider.setScaleStepSize(self.step)
             self._wslider.setValue(self.value)
             self._wslider.setTracking(False)
             self._wslider.valueChanged.connect(self.setValue)
