@@ -303,11 +303,12 @@ def curry(func, *args, **kwds):
         a = args + args1
         try:
             return func(*a, **kw)
-        except:
+        except Exception as e:
             print("======== curry: exception while calling a curried function")
-            print("  function:" + func)
-            print("  args:" + a)
-            print("  kwargs:" + kw)
+            print(f"  function:{func}")
+            print(f"  args: {a}")
+            print(f"  kwargs: {kw}")
+            print(f"  exception: {e}")
             _print_curry_exception()
             raise
 
