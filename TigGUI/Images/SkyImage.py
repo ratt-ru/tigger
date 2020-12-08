@@ -110,6 +110,8 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
         if emit:
             # self._plot.replot()
             # self.replot()  # TODO (raz) - was repaint.emit()
+            # c = self.canvas()
+            # c.replot()
             pass
 
     def colorMap(self):

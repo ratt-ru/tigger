@@ -39,7 +39,8 @@ from PyQt5.QtCore import *
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.Qwt import QwtPlot, QwtPlotPicker, QwtText, QwtPlotItem, QwtPlotCurve, QwtPicker, QwtEventPattern, \
-    QwtSymbol, QwtPlotZoomer, QwtScaleEngine, QwtPickerMachine
+    QwtSymbol, QwtPlotZoomer, QwtScaleEngine, QwtPickerMachine, QwtPickerClickRectMachine, QwtPickerClickPointMachine, \
+    QwtPickerPolygonMachine, QwtPickerDragRectMachine
 
 import TigGUI.kitties.utils
 from TigGUI.kitties.utils import curry, PersistentCurrier
@@ -821,9 +822,7 @@ class SkyModelPlotter(QWidget):
             # todo (gijs): setZoomStack and zoomStack are documented in the QWT6 docs, but somehow missing? weird
             # TODO - (raz) - changed setZoomStack to setZoomBase. Needs testing
             # TODO - (raz) - zoomStack replaced with zoomRectIndex. Needs
-            # testing
             QwtPlotZoomer.setZoomBase(self, doReplot=True)
-            #QwtPlotZoomer.setZoomStack(stack, index)
             dprint(2, "zoom stack is now", self.zoomRectIndex(), self.maxStackDepth())
 
         def adjustRect(self, rect):
@@ -907,13 +906,13 @@ class SkyModelPlotter(QWidget):
         """Auguments QwtPlotPicker with functions for selecting objects"""
 
         def __init__(self, canvas, label, color="red", select_callback=None, track_callback=None,
-                     mode=QwtPickerMachine.RectSelection, rubber_band=QwtPicker.RectRubberBand,
+                     mode=QwtPickerClickRectMachine(), rubber_band=QwtPicker.RectRubberBand,
                      text_bg=None):
             QwtPlotPicker.__init__(self, QwtPlot.xBottom, QwtPlot.yLeft, rubber_band, QwtPicker.ActiveOnly,
                                    canvas)
 
-            # todo (gijs): not sure what to do with mode? QwtPlotPicker doesn't have this in constructor (anymore)
-
+            self.setRubberBand(rubber_band)
+            self.setStateMachine(mode)
             # setup appearance
             self._text = QwtText(label)
             self._color = None
@@ -929,12 +928,18 @@ class SkyModelPlotter(QWidget):
             self._track_callback = track_callback
             self._select_callback = select_callback
             if select_callback:
-                if mode == QwtPickerMachine.RectSelection:
-                    self.selected[QRectF].connect(select_callback)
-                elif mode == QwtPickerMachine.PointSelection:
-                    self.selected[QPointF].connect(select_callback)
-                elif mode == QwtPickerMachine.PolygonSelection:
-                    self.selected[QwtPolygon].connect(select_callback)
+                if mode == QwtPickerClickRectMachine:
+                    self.setStateMachine(mode)
+                    # self.selected[QRectF].connect(select_callback)
+                    self.selected.connect(select_callback)
+                elif mode == QwtPickerClickPointMachine:
+                    self.setStateMachine(mode)
+                    # self.selected[QPointF].connect(select_callback)
+                    self.selected.connect(select_callback)
+                elif mode == QwtPickerPolygonMachine:
+                    self.setStateMachine(mode)
+                    # self.selected[QwtPolygon].connect(select_callback)
+                    self.selected.connect(select_callback)
 
         def setLabel(self, label, color=None):
             if color:
@@ -1183,7 +1188,7 @@ class SkyModelPlotter(QWidget):
     def _initPickers(self):
         """Called from __init__ to create the various plot pickers for support of mouse modes."""
         # this picker is invisible -- it is just there to make sure _trackCoordinates is always called
-        self._tracker = self.PlotPicker(self.plot.canvas(), "", mode=QwtPickerMachine.PointSelection,
+        self._tracker = self.PlotPicker(self.plot.canvas(), "", mode=QwtPickerClickPointMachine(),
                                         track_callback=self._trackCoordinates)
         self._tracker.setTrackerMode(QwtPicker.AlwaysOn)
         # zoom picker
@@ -1207,10 +1212,8 @@ class SkyModelPlotter(QWidget):
         self._provisional_zoom_timer.timeout.connect(self._finalizeProvisionalZoom)
         self._provisional_zoom = None
 
-        #    self._zoomer.setStateMachine(QwtPickerDragRectMachine())
-
-        # todo (gijs): setSelectionFlags is gone, DragSelection also
-        # self._zoomer.setSelectionFlags(QwtPicker.RectSelection | QwtPicker.DragSelection)
+        # previous version had Rect or Drag selection modes.
+        self._zoomer.setStateMachine(QwtPickerDragRectMachine())
 
         # ruler picker for measurement mode
         self._ruler = self.PlotRuler(self.plot.canvas(), "measure", "cyan", self._measureRuler,
@@ -1228,7 +1231,7 @@ class SkyModelPlotter(QWidget):
         self._picker3 = self.PlotPicker(self.plot.canvas(), "-select", "red",
                                         curry(self._selectRect, mode=self.SelectionRemove))
         self._picker4 = self.PlotPicker(self.plot.canvas(), "", "green", self._selectNearestSource,
-                                        mode=QwtPickerMachine.PointSelection)
+                                        mode=QwtPickerClickPointMachine())
         for picker in self._zoomer, self._ruler, self._picker1, self._picker2, self._picker3, self._picker4:
             for sel in QwtEventPattern.MouseSelect1, QwtEventPattern.MouseSelect2, QwtEventPattern.MouseSelect3, QwtEventPattern.MouseSelect4:
                 picker.setMousePattern(sel, 0)  # TODO - check (sel, 0, 0)
