@@ -180,16 +180,16 @@ class ImageController(QFrame):
         # create image operations menu
         self._menu = QMenu(self.name, self)
         self._qa_raise = self._menu.addAction(pixmaps.raise_up.icon(), "Raise image",
-                                              self._currier.curry(self.image.emit, None))
+                                              self._currier.curry(self.image.signalRaise.emit, None))
         self._qa_center = self._menu.addAction(pixmaps.center_image.icon(), "Center plot on image",
-                                               self._currier.curry(self.image.emit, None))
+                                               self._currier.curry(self.image.signalCenter.emit, None))
         self._qa_show_rc = self._menu.addAction(pixmaps.colours.icon(), "Colours && Intensities...",
                                                 self.showRenderControls)
         if save:
             self._qa_save = self._menu.addAction("Save image...", self._saveImage)
         self._menu.addAction("Export image to PNG file...", self._exportImageToPNG)
         self._export_png_dialog = None
-        self._menu.addAction("Unload image", self._currier.curry(self.image.emit, None))
+        self._menu.addAction("Unload image", self._currier.curry(self.image.signalUnload.emit, None))
         self._wraise.setMenu(self._menu)
         self._wraise.setPopupMode(QToolButton.DelayedPopup)
 

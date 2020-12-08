@@ -303,7 +303,10 @@ def curry(func, *args, **kwds):
         kw.update(kwds1)
         a = args + args1
         try:
-            return func(*a, **kw)
+            if func is not None:
+                return func(*a, **kw)
+            else:
+                raise
         except Exception as e:
             print("======== curry: exception while calling a curried function")
             print(f"  function:{func}")
