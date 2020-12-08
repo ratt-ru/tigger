@@ -220,6 +220,7 @@ class verbosity:
             argv = getattr(sys, 'argv', None)
             have_debug = False
             if argv:
+                print(argv)
                 patt = re.compile('-d' + name + '=(.*)$')
                 for arg in argv[1:]:
                     if arg.startswith('-d'):
@@ -229,7 +230,7 @@ class verbosity:
                     except:
                         pass
             if have_debug:
-                print("Registered verbosity context:" + name + "=" + self.verbose)
+                print("Registered verbosity context:" + name + "=" + str(self.verbose))
         # add name to map
         self._verbosities[name] = self
 

@@ -25,6 +25,8 @@ import numpy
 import numpy.ma
 import os.path
 import time
+
+from PyQt5 import QtCore
 from PyQt5.Qt import QObject, QRect, QRectF, QPointF, QPoint, QSizeF
 from PyQt5.Qwt import QwtPlotItem
 from PyQt5.QtCore import pyqtSignal
@@ -48,7 +50,6 @@ dprintf = _verbosity.dprintf
 
 class SkyImagePlotItem(QwtPlotItem, QObject):
     """SkyImagePlotItem is a 2D image in l,m coordimnates"""
-    #repaint = pyqtSignal()
 
     def __init__(self, nx=0, ny=0, l0=0, m0=0, dl=1, dm=1, image=None):
         QwtPlotItem.__init__(self)
@@ -74,14 +75,40 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
         # set default colormap and intensity map
         self.colormap = Colormaps.GreyscaleColormap
         self.imap = Colormaps.LinearIntensityMap()
+        self.signalRepaint = None
+        self.signalSlice = None
+        self.signalRaise = None
+        self.signalUnload = None
+        self.signalCenter = None
 
+    # should now be depreacted - TODO (Raz) Check
     def emit(self, *args):
         self._qo.emit(*args)
 
+    # should now be depreacted - TODO (Raz) Check
     def connect(self, *args):
         print(f"SkyImage Connect: {args}")
         # QObject.connect(self._qo, *args)
         pass
+
+    # start of signal connection methods
+
+    def connectRepaint(self, sig):
+        self.signalRepaint = sig
+
+    def connectSlice(self, sig):
+        self.signalSlice = sig
+
+    def connectRaise(self, sig):
+        self.signalRaise = sig
+
+    def connectUnload(self, sig):
+        self.signalUnload = sig
+
+    def connectCenter(self, sig):
+        self.signalCenter = sig
+
+    # end  of signal connection methods
 
     def clearDisplayCache(self):
         """Clears all display caches."""
@@ -94,12 +121,11 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
         if cmap:
             self.colormap = cmap
         if emit:
-            #self.repaint.emit() # TODO (raz) needs fixing
-            pass
+            self.signalRepaint.emit()
 
     def updateCurrentColorMap(self):
         self._cache_qimage = {}
-        # self.repaint.emit() # TODO (raz) needs fixing
+        self.signalRepaint.emit()
 
     def setIntensityMap(self, imap=None, emit=True):
         """Changes the intensity map. If called with no arguments, clears intensity map-dependent caches"""
@@ -108,11 +134,7 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
         if imap:
             self.imap = imap
         if emit:
-            # self._plot.replot()
-            # self.replot()  # TODO (raz) - was repaint.emit()
-            # c = self.canvas()
-            # c.replot()
-            pass
+            self.signalRepaint.emit()
 
     def colorMap(self):
         return self.colormap
@@ -525,7 +547,7 @@ class SkyCubePlotItem(SkyImagePlotItem):
         for i, (iaxis, name, labels, values, units, scale) in enumerate(self._extra_axes):
             self.imgslice[iaxis] = indices[i]
         self._setupSlice()
-        # self.slice.emit(indices)
+        self.signalSlice.emit(indices)
 
     def currentSlice(self):
         return list(self.imgslice)
