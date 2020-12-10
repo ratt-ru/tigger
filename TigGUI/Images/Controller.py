@@ -29,6 +29,7 @@ from PyQt5.Qwt import QwtText, QwtPlotCurve, QwtPlotMarker, QwtScaleMap
 from PyQt5.QtCore import pyqtSignal, QPointF
 
 import TigGUI.kitties.utils
+from TigGUI.Images.SkyImage import FITSImagePlotItem
 from TigGUI.kitties.utils import PersistentCurrier
 from TigGUI.kitties.widgets import BusyIndicator
 
@@ -194,7 +195,7 @@ class ImageController(QFrame):
         self._wraise.setPopupMode(QToolButton.DelayedPopup)
 
         # connect updates from renderControl and image
-        self.image.connect(self._updateImageSlice)
+        self.image.signalSlice.connect(self._updateImageSlice)
         self._rc.displayRangeChanged.connect(self._updateDisplayRange)
 
         # default plot depth of image markers
@@ -393,7 +394,7 @@ class ImageController(QFrame):
 
     def _raiseButtonPressed(self):
         if self._can_raise:
-            self.image.Raised.emit()
+            self.image.signalRaise.emit()
         else:
             self._wraise.showMenu()
 

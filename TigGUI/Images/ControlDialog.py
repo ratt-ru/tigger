@@ -413,7 +413,8 @@ class ImageControlDialog(QDialog):
 
         # connect updates from renderControl and image
         #self.image.connect(pyqtSignal("slice"), self._updateImageSlice)
-        self.image.connect(self._updateImageSlice)
+        self.image.signalSlice.connect(self._updateImageSlice)
+        #self.image.connect(self._updateImageSlice)
         self._rc.intensityMapChanged.connect(self._updateIntensityMap)
         self._rc.colorMapChanged.connect(self._updateColorMap)
         self._rc.dataSubsetChanged.connect(self._updateDataSubset)

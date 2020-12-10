@@ -46,6 +46,12 @@ class ImageManager(QWidget):
     showErrorMessage = pyqtSignal(str, int)
     imagesChanged = pyqtSignal()
     imageRaised = pyqtSignal(FITSImagePlotItem)
+    # image signals
+    imageSignalSlice = pyqtSignal(tuple)
+    imageSignalRepaint = pyqtSignal()
+    imageSignalRaise = pyqtSignal()
+    imageSignalUnload = pyqtSignal()
+    imageSignalCenter = pyqtSignal()
 
     def __init__(self, *args):
         QWidget.__init__(self, *args)
@@ -244,7 +250,7 @@ class ImageManager(QWidget):
         for ic in [ic for ic in self._imagecons if id(ic) in self._model_imagecons]:
             self.unloadImage(ic)
 
-    def unloadImage(self, imagecon):
+    def unloadImage(self, imagecon, foo=None):
         """Unloads the given imagecon object."""
         if imagecon not in self._imagecons:
             return
@@ -274,7 +280,7 @@ class ImageManager(QWidget):
         if emit:
             self.imagesChanged.emit()
 
-    def raiseImage(self, imagecon):
+    def raiseImage(self, imagecon, foo=None):
         # reshuffle image stack, if more than one image image
         if len(self._imagecons) > 1:
             busy = BusyIndicator()
@@ -509,7 +515,18 @@ class ImageManager(QWidget):
 
     def _createImageController(self, image, name, basename, model=False, save=False):
         dprint(2, "creating ImageController for", name)
+        # attach appropriate signals
+        self.imageSignalRepaint.connect(self.replot)
+        self.imageSignalSlice.connect(self.fastReplot)
+        image.connectRepaint(self.imageSignalRepaint)
+        image.connectSlice(self.imageSignalSlice)
+        image.connectRaise(self.imageSignalRaise)
+        image.connectUnload(self.imageSignalUnload)
+        image.connectCenter(self.imageSignalCenter)
         ic = ImageController(image, self, self, name, save=save)
+        self.imageSignalRaise.connect(self._currier.curry(self.raiseImage, ic))
+        self.imageSignalUnload.connect(self._currier.curry(self.unloadImage, ic))
+        self.imageSignalCenter.connect(self._currier.curry(self.centerImage, ic))
         ic.setNumber(len(self._imagecons))
         self._imagecons.insert(0, ic)
         self._imagecon_loadorder.append(ic)
@@ -518,17 +535,6 @@ class ImageManager(QWidget):
         self._lo.addWidget(ic)
         if self._border_pen:
             ic.addPlotBorder(self._border_pen, basename, self._label_color, self._label_bg_brush)
-        # attach appropriate signals
-        #image.connect(pyqtSignal("slice()"), self.fastReplot)
-        #image.connect(pyqtSignal("repaint()"), self.replot)
-        #image.connect(pyqtSignal("raise()"), self._currier.curry(self.raiseImage, ic))
-        #image.connect(pyqtSignal("unload()"), self._currier.curry(self.unloadImage, ic))
-        #image.connect(pyqtSignal("center()"), self._currier.curry(self.centerImage, ic))
-        image.connect(self.fastReplot)
-        image.connect(self.replot)
-        image.connect(self._currier.curry(self.raiseImage, ic))
-        image.connect(self._currier.curry(self.unloadImage, ic))
-        image.connect(self._currier.curry(self.centerImage, ic))
         ic.renderControl().displayRangeChanged.connect(
             self._currier.curry(self._updateDisplayRange, ic.renderControl()))
         ic.renderControl().displayRangeLocked.connect(self._currier.curry(self._lockDisplayRange, ic.renderControl()))
