@@ -80,6 +80,7 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
         self.signalRaise = None
         self.signalUnload = None
         self.signalCenter = None
+        self.signalPlotRaise = None
 
     # should now be depreacted - TODO (Raz) Check
     def emit(self, *args):
@@ -107,6 +108,9 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
 
     def connectCenter(self, sig):
         self.signalCenter = sig
+
+    def connectPlotRiased(self, sig):
+        self.signalPlotRaise = sig
 
     # end  of signal connection methods
 

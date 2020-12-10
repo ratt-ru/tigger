@@ -1159,7 +1159,7 @@ class SkyModelPlotter(QWidget):
         im.setZ0(Z_Image)
         im.enableImageBorders(self._image_pen, self._grid_color, self._bg_brush)
         im.imagesChanged.connect(self._currier.curry(self.postUpdateEvent, self.UpdateImages))
-        im.imageRaised.connect(self._imageRaised)
+        im.imagePlotRaised.connect(self._imageRaised)
 
     class UpdateEvent(QEvent):
 

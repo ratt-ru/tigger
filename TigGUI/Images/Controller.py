@@ -394,7 +394,7 @@ class ImageController(QFrame):
 
     def _raiseButtonPressed(self):
         if self._can_raise:
-            self.image.signalRaise.emit()
+            self.image.signalRaise.emit(self.image)  # TODO - FIX this signal
         else:
             self._wraise.showMenu()
 

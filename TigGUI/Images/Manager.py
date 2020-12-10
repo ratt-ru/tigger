@@ -46,10 +46,11 @@ class ImageManager(QWidget):
     showErrorMessage = pyqtSignal(str, int)
     imagesChanged = pyqtSignal()
     imageRaised = pyqtSignal(FITSImagePlotItem)
+    imagePlotRaised = pyqtSignal()  # TODO - Fix this signal
     # image signals
     imageSignalSlice = pyqtSignal(tuple)
     imageSignalRepaint = pyqtSignal()
-    imageSignalRaise = pyqtSignal(FITSImagePlotItem)
+    imageSignalRaise = pyqtSignal([FITSImagePlotItem])
     imageSignalUnload = pyqtSignal()
     imageSignalCenter = pyqtSignal()
 
@@ -295,7 +296,8 @@ class ImageManager(QWidget):
             for j, ic in enumerate(self._imagecons):
                 ic.setImageVisible(not j or bool(self._qa_plot_all.isChecked()))
             # issue replot signal
-            self.imageRaised.emit(self._imagecons[0])
+            self.imageRaised.emit(self._imagecons[0])  # TODO Fix this signal
+            # self.imagePlotRaised.emit()
             self.fastReplot()
         # else simply update labels
         else:
@@ -523,6 +525,7 @@ class ImageManager(QWidget):
         image.connectRaise(self.imageSignalRaise)
         image.connectUnload(self.imageSignalUnload)
         image.connectCenter(self.imageSignalCenter)
+        image.connectPlotRiased(self.imagePlotRaised)  # TODO - Fixe this signal
         ic = ImageController(image, self, self, name, save=save)
         self.imageSignalRaise.connect(self._currier.curry(self.raiseImage, ic))
         self.imageSignalUnload.connect(self._currier.curry(self.unloadImage, ic))
