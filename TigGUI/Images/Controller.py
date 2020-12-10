@@ -452,9 +452,9 @@ class ImageController(QFrame):
         try:
             pixmap.save(filename, "PNG")
         except Exception as exc:
-            self.showErrorMessage.emit("Error writing %s: %s" % (filename, str(exc)))
+            self._imgman.showErrorMessage.emit("Error writing %s: %s" % (filename, str(exc)), 3000)
             return
-        self.showMessage.emit("Exported image to file %s" % filename)
+        self._imgman.showMessage.emit("Exported image to file %s" % filename, 3000)
 
     def _toggleDisplayRangeLock(self):
         self.renderControl().lockDisplayRange(not self.renderControl().isDisplayRangeLocked())
