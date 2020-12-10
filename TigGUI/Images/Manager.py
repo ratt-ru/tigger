@@ -49,7 +49,7 @@ class ImageManager(QWidget):
     # image signals
     imageSignalSlice = pyqtSignal(tuple)
     imageSignalRepaint = pyqtSignal()
-    imageSignalRaise = pyqtSignal()
+    imageSignalRaise = pyqtSignal(FITSImagePlotItem)
     imageSignalUnload = pyqtSignal()
     imageSignalCenter = pyqtSignal()
 
