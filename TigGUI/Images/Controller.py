@@ -60,7 +60,7 @@ class ImageController(QFrame):
     imageSignalRepaint = pyqtSignal()
     imageSignalSlice = pyqtSignal(tuple)
     imageSignalRaise = pyqtSignal([FITSImagePlotItem])
-    imageSignalUnload = pyqtSignal()
+    imageSignalUnload = pyqtSignal(object)
     imageSignalCenter = pyqtSignal()
 
     def __init__(self, image, parent, imgman, name=None, save=False):
