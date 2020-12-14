@@ -1221,8 +1221,9 @@ class SkyModelPlotter(QWidget):
         self._zoomer.setStateMachine(QwtPickerDragRectMachine())
 
         # ruler picker for measurement mode
+        # TODO - check this mode =
         self._ruler = self.PlotRuler(self.plot.canvas(), "measure", "cyan", self._measureRuler,
-                                     # mode=QwtPicker.PolygonSelection,  £ TODO - check this mode =
+                                     mode=QwtPickerPolygonMachine(),
                                      rubber_band=QwtPicker.PolygonRubberBand,
                                      track_callback=self._trackRuler)
         # this is the initial position of the ruler -- None if ruler is not tracking
@@ -1676,6 +1677,7 @@ class SkyModelPlotter(QWidget):
         if self._provisional_zoom_level > 0:
             # make zoom box of size 2^level smaller than current screen
             x1, y1, x2, y2 = self._zoomer.zoomRect().getCoords()
+            print(f"_plotProvisionalZoom {self._zoomer.zoomRect().getCoords()}")
             w = (x2 - x1) / 2 ** self._provisional_zoom_level
             h = (y2 - y1) / 2 ** self._provisional_zoom_level
             self._provisional_zoom = QRectF(x - w / 2, y - h / 2, w, h)
@@ -1706,7 +1708,7 @@ class SkyModelPlotter(QWidget):
         self._zoomer_label.setVisible(False)
         self._provisional_zoom = None
         self._provisional_zoom_level = 0
-        self._zoomrect = QRectF(rect);  # make copy
+        self._zoomrect = QRectF(rect)  # make copy
         self._qa_unzoom.setEnabled(rect != self._zoomer.zoomBase())
         self._updatePsfMarker(rect, replot=True)
 

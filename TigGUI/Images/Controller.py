@@ -62,6 +62,7 @@ class ImageController(QFrame):
     imageSignalRaise = pyqtSignal([FITSImagePlotItem])
     imageSignalUnload = pyqtSignal(object)
     imageSignalCenter = pyqtSignal()
+    imagePlotRaised = pyqtSignal()  # TODO - Fix this signal
 
     def __init__(self, image, parent, imgman, name=None, save=False):
         QFrame.__init__(self, parent)
@@ -406,7 +407,7 @@ class ImageController(QFrame):
 
     def _raiseButtonPressed(self):
         if self._can_raise:
-            self.image.signalRaise.emit(self.image)  # TODO - FIX this signal
+            self.image.signalRaise.emit(self.image)
         else:
             self._wraise.showMenu()
 

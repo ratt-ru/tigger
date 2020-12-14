@@ -291,8 +291,8 @@ class ImageManager(QWidget):
             for j, ic in enumerate(self._imagecons):
                 ic.setImageVisible(not j or bool(self._qa_plot_all.isChecked()))
             # issue replot signal
-            self.imageRaised.emit(self._imagecons[0])  # TODO Fix this signal
-            # self.imagePlotRaised.emit()
+            # self.imageRaised.emit(self._imagecons[0])  # TODO Fix this signal
+            self.imagePlotRaised.emit()
             self.fastReplot()
         # else simply update labels
         else:
@@ -512,11 +512,11 @@ class ImageManager(QWidget):
 
     def _createImageController(self, image, name, basename, model=False, save=False):
         print(f"creating ImageController for {name}")
-        image.connectPlotRiased(self.imagePlotRaised)  # TODO - Fix this signal
         ic = ImageController(image, self, self, name, save=save)
         # attach appropriate signals
         ic.imageSignalRepaint.connect(self.replot)
         ic.imageSignalSlice.connect(self.fastReplot)
+        image.connectPlotRiased(self.imagePlotRaised)  # TODO - Fix this signal
         ic.imageSignalRaise.connect(self._currier.curry(self.raiseImage, ic))
         ic.imageSignalUnload.connect(self._currier.curry(self.unloadImage, ic))
         ic.imageSignalCenter.connect(self._currier.curry(self.centerImage, ic))

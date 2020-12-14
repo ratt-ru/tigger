@@ -363,6 +363,7 @@ class PersistentCurrier:
         return cr
 
     def curry(self, func, *args, **kwds):
+        print(f"curry: func {func} args {args} kwds {kwds}")
         return self._add_curry(curry(func, *args, **kwds))
 
     def xcurry(self, func, *args, **kwds):
