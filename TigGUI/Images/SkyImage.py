@@ -361,7 +361,7 @@ def getScalePrefix(*values):
 
 class SkyCubePlotItem(SkyImagePlotItem):
     """Extends SkyImagePlotItem with a hypercube containing extra slices."""
-    slice = pyqtSignal()
+    # slice = pyqtSignal()  # TODO - this needs checking should not be needed
 
     def __init__(self, data=None, ndim=None):
         SkyImagePlotItem.__init__(self)

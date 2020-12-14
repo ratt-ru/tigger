@@ -56,6 +56,13 @@ class ImageController(QFrame):
     repaint                 image display range or colormap has changed, need to redraw (emitted by SkyImage automatically)
     """
 
+    # image signals
+    imageSignalRepaint = pyqtSignal()
+    imageSignalSlice = pyqtSignal(tuple)
+    imageSignalRaise = pyqtSignal([FITSImagePlotItem])
+    imageSignalUnload = pyqtSignal()
+    imageSignalCenter = pyqtSignal()
+
     def __init__(self, image, parent, imgman, name=None, save=False):
         QFrame.__init__(self, parent)
         self.setFrameStyle(QFrame.StyledPanel | QFrame.Raised)
@@ -100,6 +107,11 @@ class ImageController(QFrame):
             self._wsave.clicked.connect(self._saveImage)
             self._wsave.setToolTip("""<P>Click here to write this image to a FITS file.</P>""")
         # render control
+        self.image.connectRepaint(self.imageSignalRepaint)
+        self.image.connectSlice(self.imageSignalSlice)
+        self.image.connectRaise(self.imageSignalRaise)
+        self.image.connectUnload(self.imageSignalUnload)
+        self.image.connectCenter(self.imageSignalCenter)
         dprint(2, "creating RenderControl")
         self._rc = RenderControl(image, self)
         dprint(2, "done")

@@ -395,8 +395,8 @@ class MainWindow(QMainWindow):
             self.hasSelection.emit(False)
             self.isUpdated.emit(False)
             self.model.enableSignals()
-            self.model.connect("updated", self._indicateModelUpdated)
-            self.model.connect("selected", self._updateModelSelection)
+            self.model.connect("updated", self._indicateModelUpdated)  # TODO - needs checking
+            self.model.connect("selected", self._updateModelSelection)  # TODO - needs checking
             # pass to children
             self.tw.setModel(self.model)
             self.grouptab.setModel(self.model)

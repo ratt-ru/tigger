@@ -289,7 +289,7 @@ def show_source_selector(mainwin, model):
     dialog = getattr(mainwin, '_source_selector_dialog', None)
     if not dialog:
         dialog = mainwin._source_selector_dialog = SourceSelectorDialog(mainwin)
-        mainwin.modelChanged.connect(dialog.setModel)
+        mainwin.modelChanged.connect(dialog.setModel)  # TODO - old signal conncets to mainwin model
         mainwin.closing.connect(dialog.close)
     dialog.setModel(model)
     # show dialog

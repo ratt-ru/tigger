@@ -997,11 +997,11 @@ class SkyModelPlotter(QWidget):
 
     def __init__(self, parent, mainwin, *args):
         QWidget.__init__(self, parent, *args)
-        # plot update logic -- handle updates via the event looop
-        self._updates_enabled = False;  # updates ignored until this is True
-        self._update_pending = 0;  # serial number of most recently posted update event
-        self._update_done = 0;  # serial number of most recently processed update event
-        self._update_what = 0;  # mask of updates ('what' arguments to _updateLayout) accumulated since last update was done
+        # plot update logic -- handle updates via the event loop
+        self._updates_enabled = False  # updates ignored until this is True
+        self._update_pending = 0  # serial number of most recently posted update event
+        self._update_done = 0  # serial number of most recently processed update event
+        self._update_what = 0  # mask of updates ('what' arguments to _updateLayout) accumulated since last update was done
         # create currier
         self._currier = PersistentCurrier()
         # init widgetry

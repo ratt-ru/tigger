@@ -47,12 +47,6 @@ class ImageManager(QWidget):
     imagesChanged = pyqtSignal()
     imageRaised = pyqtSignal(FITSImagePlotItem)
     imagePlotRaised = pyqtSignal()  # TODO - Fix this signal
-    # image signals
-    imageSignalSlice = pyqtSignal(tuple)
-    imageSignalRepaint = pyqtSignal()
-    imageSignalRaise = pyqtSignal([FITSImagePlotItem])
-    imageSignalUnload = pyqtSignal()
-    imageSignalCenter = pyqtSignal()
 
     def __init__(self, *args):
         QWidget.__init__(self, *args)
@@ -283,6 +277,7 @@ class ImageManager(QWidget):
 
     def raiseImage(self, imagecon, foo=None):
         # reshuffle image stack, if more than one image image
+        print(f"self sender {self.sender} type {type(self.sender)}")  # TODO - image signal origin
         if len(self._imagecons) > 1:
             busy = BusyIndicator()
             # reshuffle image stack
@@ -516,20 +511,15 @@ class ImageManager(QWidget):
         dprint(2, "image created")
 
     def _createImageController(self, image, name, basename, model=False, save=False):
-        dprint(2, "creating ImageController for", name)
-        # attach appropriate signals
-        self.imageSignalRepaint.connect(self.replot)
-        self.imageSignalSlice.connect(self.fastReplot)
-        image.connectRepaint(self.imageSignalRepaint)
-        image.connectSlice(self.imageSignalSlice)
-        image.connectRaise(self.imageSignalRaise)
-        image.connectUnload(self.imageSignalUnload)
-        image.connectCenter(self.imageSignalCenter)
-        image.connectPlotRiased(self.imagePlotRaised)  # TODO - Fixe this signal
+        print(f"creating ImageController for {name}")
+        image.connectPlotRiased(self.imagePlotRaised)  # TODO - Fix this signal
         ic = ImageController(image, self, self, name, save=save)
-        self.imageSignalRaise.connect(self._currier.curry(self.raiseImage, ic))
-        self.imageSignalUnload.connect(self._currier.curry(self.unloadImage, ic))
-        self.imageSignalCenter.connect(self._currier.curry(self.centerImage, ic))
+        # attach appropriate signals
+        ic.imageSignalRepaint.connect(self.replot)
+        ic.imageSignalSlice.connect(self.fastReplot)
+        ic.imageSignalRaise.connect(self._currier.curry(self.raiseImage, ic))
+        ic.imageSignalUnload.connect(self._currier.curry(self.unloadImage, ic))
+        ic.imageSignalCenter.connect(self._currier.curry(self.centerImage, ic))
         ic.setNumber(len(self._imagecons))
         self._imagecons.insert(0, ic)
         self._imagecon_loadorder.append(ic)
