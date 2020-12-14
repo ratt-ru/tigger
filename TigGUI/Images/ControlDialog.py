@@ -918,8 +918,12 @@ class ImageControlDialog(QDialog):
         self._updateHistogram()
         self._histplot.replot()
 
-    def _zoomHistogramByFactor(self, factor):
-        """Changes histogram limits by specified factor"""
+    def _zoomHistogramByFactor(self, factor, curry=None):
+        """
+        Changes histogram limits by specified factor.
+        curry=None is due to an error raised from the signal to zoom
+        and is unused.
+        """
         # get max distance of plot limit from peak
         dprint(1, "zooming histogram by", factor)
         halfdist = (self._hist_range[1] - self._hist_range[0]) / (factor * 2)
