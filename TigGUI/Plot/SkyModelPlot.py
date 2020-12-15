@@ -832,7 +832,8 @@ class SkyModelPlotter(QWidget):
 
             # todo (gijs): setZoomStack and zoomStack are documented in the QWT6 docs, but somehow missing? weird
             # TODO - (raz) - changed setZoomStack to setZoomBase. Needs testing
-            # TODO - (raz) - zoomStack replaced with zoomRectIndex. Needs
+            # TODO - (raz) - zoomStack replaced with zoomRectIndex. Needs testing
+            # TODO - linked to issue #37
             QwtPlotZoomer.setZoomBase(self, doReplot=True)
             print("zoom stack is now", self.zoomRectIndex(), self.maxStackDepth())
 
@@ -1227,7 +1228,6 @@ class SkyModelPlotter(QWidget):
         self._zoomer.setStateMachine(QwtPickerDragRectMachine())
 
         # ruler picker for measurement mode
-        # TODO - check this mode =
         self._ruler = self.PlotRuler(self.plot.canvas(), "measure", "cyan", self._measureRuler,
                                      mode=QwtPickerPolygonMachine(),
                                      rubber_band=QwtPicker.PolygonRubberBand,
