@@ -401,8 +401,9 @@ class LiveImageZoom(ToolDialog):
         self._ycs.setXAxis(QwtPlot.xTop)
         self._ycs.setYAxis(QwtPlot.yLeft)
 
-        # todo (gijs): qwt6 QwtPlotCurve has no setCurveType and Xfy
-        #self._ycs.setCurveType(QwtPlotCurve.Xfy)
+        # TODO - This new QWT 6 needs testing
+        #self._ycs.setCurveType(QwtPlotCurve.Xfy)  # old qwt5
+        self._ycs.setOrientation(Qt.Vertical)
 
         # make QTransform for flipping images upside-down
         self._xform = QTransform()
@@ -441,6 +442,9 @@ class LiveImageZoom(ToolDialog):
         self._zoomplot.setMinimumHeight(height + 80)
         self._zoomplot.setMinimumWidth(width + 80)
         # set data array
+        # TODO - Fix linked to issue #45 needs checking. If changed to int() zoom in with mouse wheel stops working.
+        # self._data = numpy.ma.masked_array(numpy.zeros((int(self._npix), int(self._npix)), float),
+        #                                    numpy.zeros((int(self._npix), int(self._npix)), bool))
         self._data = numpy.ma.masked_array(numpy.zeros((self._npix, self._npix), float),
                                            numpy.zeros((self._npix, self._npix), bool))
         # reset window size

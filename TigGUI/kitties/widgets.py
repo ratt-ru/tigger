@@ -5,23 +5,6 @@ from PyQt5.QtWidgets import *
 from PyQt5 import *
 from PyQt5.QtCore import *
 
-def PYSIGNAL(sig):  # TODO - (raz) - This needs checking
-    """PyQt4 no longer supports PYSIGNAL(). Instead, everything goes through SIGNAL(). "Proper" user-defined
-    signals must include an argument list, just like standard Qt signals. This will prove troublesome
-    to old code using a lot of PYSIGNALS(), since proper argument lists would have to be inserted.
-    Fortunately, PyQt3-PYSIGNAL-style argument passing -- where an arbitrary argument list was passed to
-    emit(), and from there on to the slot -- is available in PyQt4 via "short-circuited" signals:.
-
-      http://www.riverbankcomputing.co.uk/static/Docs/PyQt4/pyqt4ref.html#new-style-signal-and-slot-support
-
-    A short-circuited signal has no parentheses at the end. Hence this function here to turn
-    PYSIGNAL("x()") into SIGNAL("x"), to support old PyQt3-derived code.
-    """
-    if sig.endswith("()"):
-        return pyqtSignal(sig[:-2])
-    else:
-        return pyqtSignal(sig)
-
 
 class BusyIndicator:
     """A BusyIndicator object is created to set the cursor to a hourglass.

@@ -46,7 +46,7 @@ class ImageManager(QWidget):
     showErrorMessage = pyqtSignal(str, int)
     imagesChanged = pyqtSignal()
     imageRaised = pyqtSignal(FITSImagePlotItem)
-    imagePlotRaised = pyqtSignal()  # TODO - Fix this signal
+    imagePlotRaised = pyqtSignal()  # TODO - Partially fixed needs testing.
 
     def __init__(self, *args):
         QWidget.__init__(self, *args)
@@ -277,7 +277,6 @@ class ImageManager(QWidget):
 
     def raiseImage(self, imagecon, foo=None):
         # reshuffle image stack, if more than one image image
-        print(f"self sender {self.sender} type {type(self.sender)}")  # TODO - image signal origin
         if len(self._imagecons) > 1:
             busy = BusyIndicator()
             # reshuffle image stack
@@ -290,9 +289,9 @@ class ImageManager(QWidget):
             # adjust visibility
             for j, ic in enumerate(self._imagecons):
                 ic.setImageVisible(not j or bool(self._qa_plot_all.isChecked()))
-            # issue replot signal
-            # self.imageRaised.emit(self._imagecons[0])  # TODO Fix this signal
-            self.imagePlotRaised.emit()
+            # issue replot signal fixed with assumption that this signal is now correct according to the old version
+            # self.imageRaised.emit(self._imagecons[0])  # This was the old signal
+            self.imagePlotRaised.emit()  # TODO - this new signal needs checking
             self.fastReplot()
         # else simply update labels
         else:
@@ -310,8 +309,7 @@ class ImageManager(QWidget):
                 prev.setVisible(True)
                 next.setText("Show next slice along %s axis" % name)
                 prev.setText("Show previous slice along %s axis" % name)
-        # emit signasl
-        print(type(img))
+        # emit signals
         self.imageRaised.emit(img)
 
     def resetDrawKey(self):
@@ -516,7 +514,7 @@ class ImageManager(QWidget):
         # attach appropriate signals
         ic.imageSignalRepaint.connect(self.replot)
         ic.imageSignalSlice.connect(self.fastReplot)
-        image.connectPlotRiased(self.imagePlotRaised)  # TODO - Fix this signal
+        image.connectPlotRiased(self.imagePlotRaised)  # TODO - this signal needs checking
         ic.imageSignalRaise.connect(self._currier.curry(self.raiseImage, ic))
         ic.imageSignalUnload.connect(self._currier.curry(self.unloadImage, ic))
         ic.imageSignalCenter.connect(self._currier.curry(self.centerImage, ic))

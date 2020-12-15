@@ -62,7 +62,6 @@ class ImageController(QFrame):
     imageSignalRaise = pyqtSignal([FITSImagePlotItem])
     imageSignalUnload = pyqtSignal(object)
     imageSignalCenter = pyqtSignal()
-    imagePlotRaised = pyqtSignal()  # TODO - Fix this signal
 
     def __init__(self, image, parent, imgman, name=None, save=False):
         QFrame.__init__(self, parent)
