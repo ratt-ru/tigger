@@ -117,14 +117,16 @@ class ImageControlDialog(QDialog):
         self._whistunzoom.setToolTip("""<P>Click to reset the histogram plot back to its full extent.
       This does not change the current intensity range.</P>""")
         self._whistzoom = QwtWheel(self)
+        self._whistzoom.setMass(0.5)
         self._whistzoom.setOrientation(Qt.Horizontal)
         self._whistzoom.setMaximumWidth(80)
-        self._whistzoom.setRange(10, 0)
+        self._whistzoom.setRange(0, 10)
         self._whistzoom.setSingleStep(0.1)
+        self._whistzoom.setPageStepCount(1)
         self._whistzoom.setTickCount(30)
         self._whistzoom.setTracking(False)
-        self._whistzoom.valueChanged.connect(self._zoomHistogramFinalize)
-        self._whistzoom.wheelMoved.connect(self._zoomHistogramPreview)
+        self._whistzoom.valueChanged['double'].connect(self._zoomHistogramFinalize)
+        self._whistzoom.wheelMoved['double'].connect(self._zoomHistogramPreview)
         self._whistzoom.setToolTip("""<P>Use this wheel control to zoom in/out of the histogram plot.
       This does not change the current intensity range.
       Note that the zoom wheel should also respond to your mouse wheel, if you have one.</P>""")
