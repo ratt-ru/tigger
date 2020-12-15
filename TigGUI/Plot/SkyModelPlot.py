@@ -447,10 +447,11 @@ class LiveImageZoom(ToolDialog):
         self._zoomplot.setMinimumWidth(width + 80)
         # set data array
         # TODO - Fix linked to issue #45 needs checking. If changed to int() zoom in with mouse wheel stops working.
-        # self._data = numpy.ma.masked_array(numpy.zeros((int(self._npix), int(self._npix)), float),
-        #                                    numpy.zeros((int(self._npix), int(self._npix)), bool))
-        self._data = numpy.ma.masked_array(numpy.zeros((self._npix, self._npix), float),
-                                           numpy.zeros((self._npix, self._npix), bool))
+        # TODO - testing with int() based on pyqt-qwt bode.py example with zoom being a box rather than scroll.
+        self._data = numpy.ma.masked_array(numpy.zeros((int(self._npix), int(self._npix)), float),
+                                            numpy.zeros((int(self._npix), int(self._npix)), bool))
+        #self._data = numpy.ma.masked_array(numpy.zeros((self._npix, self._npix), float),
+        #                                   numpy.zeros((self._npix, self._npix), bool))
         # reset window size
         self._lo0.update()
         self.resize(self._lo0.minimumSize())
