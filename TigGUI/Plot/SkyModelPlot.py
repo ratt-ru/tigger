@@ -350,6 +350,9 @@ class LiveImageZoom(ToolDialog):
         lo1.addWidget(self._larger)
         self._has_zoom = self._has_xcs = self._has_ycs = False
         # setup zoom plot
+        self._npix = None
+        self._magfac = None
+        self._radius = None
         font = QApplication.font()
         self._zoomplot = QwtPlot(self)
         #    self._zoomplot.setSizePolicy(QSizePolicy.Fixed,QSizePolicy.Fixed)
@@ -403,7 +406,7 @@ class LiveImageZoom(ToolDialog):
 
         # TODO - This new QWT 6 needs testing
         #self._ycs.setCurveType(QwtPlotCurve.Xfy)  # old qwt5
-        self._ycs.setOrientation(Qt.Vertical)
+        self._ycs.setOrientation(Qt.Vertical)  # qwt6 equiv?
 
         # make QTransform for flipping images upside-down
         self._xform = QTransform()
@@ -411,6 +414,7 @@ class LiveImageZoom(ToolDialog):
         # init geometry
         self.setPlotSize(radius, factor)
         self.initGeometry()
+        print(f"_zoomplot {self._zoomplot.itemList()}")
 
     def _showZoom(self, show):
         if not show:
@@ -1551,7 +1555,7 @@ class SkyModelPlotter(QWidget):
         image = self._imgman and self._imgman.getTopImage()
         if image and x is not None:
             msgtext += "   x=%d y=%d value=blank" % (x, y) if flag else "   x=%d y=%d value=%g" % (x, y, val)
-            self._livezoom.trackImage(image, x, y)
+            self._livezoom.trackImage(image, x, y)  # TODO - this sets the image to the zoomer but nothing displayed #45
             self._liveprofile.trackImage(image, x, y)
         self.showMessage.emit(msgtext, 3000)
         return None
