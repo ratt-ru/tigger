@@ -446,8 +446,7 @@ class LiveImageZoom(ToolDialog):
         self._zoomplot.setMinimumHeight(height + 80)
         self._zoomplot.setMinimumWidth(width + 80)
         # set data array
-        # TODO - Fix linked to issue #45 needs checking. If changed to int() zoom in with mouse wheel stops working.
-        # TODO - testing with int() based on pyqt-qwt bode.py example with zoom being a box rather than scroll.
+        # TODO - #45 testing with int() based on pyqt-qwt bode.py example with zoom being a box rather than scroll.
         self._data = numpy.ma.masked_array(numpy.zeros((int(self._npix), int(self._npix)), float),
                                             numpy.zeros((int(self._npix), int(self._npix)), bool))
         #self._data = numpy.ma.masked_array(numpy.zeros((self._npix, self._npix), float),
@@ -736,9 +735,7 @@ class SkyModelPlotter(QWidget):
                     width, height = painter.device().width(), painter.device().height()
                     print("drawCanvas: not in cache, redrawing %dx%d pixmap" % (width, height))
                     self._draw_cache[self._drawing_key] = pm = QPixmap(width, height)
-                    print(self.canvasBackground())
-                    # pm.fill(self.canvasBackground()) # TODO (raz)Error
-                    pm.fill(QtGui.QColor('#ffffff')) # TODO (raz)Error
+                    pm.fill(self.canvasBackground().color())
                     QwtPlot.drawCanvas(self, QPainter(pm))
                 painter.drawPixmap(0, 0, pm)
                 print("drawCanvas done", time.time() % 60)
