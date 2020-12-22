@@ -804,7 +804,8 @@ class SkyModelPlotter(QWidget):
             self._checkAspects()
 
         def setDoubleClickZoom(self, button, modifiers):
-            self._dczoom_button, self._dczoom_modifiers = button, modifiers
+            pass
+            # self._dczoom_button, self._dczoom_modifiers = button, modifiers
 
         def _checkAspects(self):
             """If fixed-aspect mode is in effect, goes through zoom rects and adjusts them to the plot aspect"""
