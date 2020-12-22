@@ -834,6 +834,7 @@ class SkyModelPlotter(QWidget):
             # TODO - (raz) - changed setZoomStack to setZoomBase. Needs testing
             # TODO - (raz) - zoomStack replaced with zoomRectIndex. Needs testing
             # TODO - linked to issue #37
+            # Original code, QwtPlotZoomer.setZoomStack(stack, index)
             QwtPlotZoomer.setZoomBase(self, doReplot=True)
             print("zoom stack is now", self.zoomRectIndex(), self.maxStackDepth())
 
@@ -899,8 +900,14 @@ class SkyModelPlotter(QWidget):
             print("zoomer wheel", ev.x(), ev.y(), ev.pixelDelta(), x, y, self._use_wheel)
             if self._use_wheel:
                 print(f"X {ev.angleDelta().x()} Y {ev.angleDelta().y()}")
-                self.provisionalZoom.emit(x, y, (1 if ev.angleDelta().y() > 0 else -1), 200)
-                # below code was commented out in previous version??
+                # TODO - find work around for issue #37 currently wheel zoom in is disabled
+                # self.provisionalZoom.emit(x, y, (1 if ev.angleDelta().y() > 0 else -1), 200)
+                if ev.angleDelta().y() < 0:
+                    if self.zoomRectIndex() > 0:
+                        self.zoom(-1)
+                    else:
+                        print("zoomed all the way out, wheel event ignored")
+                # below code was commented out in previous version
                 # if ev.angleDelta().y() < 0:
                 #    if self.zoomRectIndex() > 0:
                 #        self.zoom(-1)
