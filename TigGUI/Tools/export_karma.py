@@ -28,7 +28,7 @@ from PyQt5.QtWidgets import *
 
 
 import os.path
-from PyQt5.Qt import QObject, QHBoxLayout, SIGNAL, QDialog, QVBoxLayout, \
+from PyQt5.Qt import QObject, QHBoxLayout, pyqtSignal, QDialog, QVBoxLayout, \
     QPushButton, Qt, QCheckBox, QMessageBox, QErrorMessage
 
 from TigGUI.kitties.widgets import BusyIndicator
@@ -138,10 +138,10 @@ class ExportKarmaDialog(QDialog):
                         f.write('TEXT %.12f %.12f %s\n' % (ra, dec, label))
             f.close()
         except IOError as err:
-            busy = None
+            busy.reset_cursor()
             self.qerrmsg.showMessage("Error writing Karma annotations file %s: %s" % (filename, str(err)))
             return
-        busy = None
+        busy.reset_cursor()
         self.parent().showMessage("Wrote Karma annotations for %d sources to file %s" % (len(sources), filename))
         return QDialog.accept(self)
 

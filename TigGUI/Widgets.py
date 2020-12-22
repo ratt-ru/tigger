@@ -38,7 +38,7 @@ class TiggerPlotCurve(QwtPlotCurve):
     """Wrapper around QwtPlotCurve to make it compatible with numpy float types"""
 
     def setData(self, x, y):
-        return QwtPlotCurve.setData(self, list(map(float, x)), list(map(float, y)))
+        return QwtPlotCurve.setSamples(self, list(map(float, x)), list(map(float, y)))
 
 
 class TiggerPlotMarker(QwtPlotMarker):
@@ -48,7 +48,7 @@ class TiggerPlotMarker(QwtPlotMarker):
         return QwtPlotMarker.setValue(self, float(x), float(y))
 
 
-class FloatValidator(QValidator):
+class FloatValidator(QValidator):  # Validator broken
     """QLineEdit validator for float items in standard or scientific notation"""
     re_intermediate = re.compile("^-?([0-9]*)\.?([0-9]*)([eE]([+-])?[0-9]*)?$")
 
@@ -56,12 +56,12 @@ class FloatValidator(QValidator):
         input = str(input)
         try:
             x = float(input)
-            return QValidator.Acceptable, pos
+            return QValidator.Acceptable, input, pos
         except:
             pass
         if not input or self.re_intermediate.match(input):
-            return QValidator.Intermediate, pos
-        return QValidator.Invalid, pos
+            return QValidator.Intermediate, input, pos
+        return QValidator.Acceptable, input, pos
 
 
 class ValueTypeEditor(QWidget):

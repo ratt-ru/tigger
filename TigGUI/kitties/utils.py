@@ -220,6 +220,7 @@ class verbosity:
             argv = getattr(sys, 'argv', None)
             have_debug = False
             if argv:
+                print(argv)
                 patt = re.compile('-d' + name + '=(.*)$')
                 for arg in argv[1:]:
                     if arg.startswith('-d'):
@@ -229,7 +230,7 @@ class verbosity:
                     except:
                         pass
             if have_debug:
-                print("Registered verbosity context:" + name + "=" + self.verbose)
+                print("Registered verbosity context:" + name + "=" + str(self.verbose))
         # add name to map
         self._verbosities[name] = self
 
@@ -301,13 +302,18 @@ def curry(func, *args, **kwds):
         kw = kwds.copy()
         kw.update(kwds1)
         a = args + args1
+        print(f"curry args {args}")
+        print(f"curry args1 {args1}")
+        print(f"curry args a {a}")
+        print(f"curry kw {kw}")
         try:
             return func(*a, **kw)
-        except:
+        except Exception as e:
             print("======== curry: exception while calling a curried function")
-            print("  function:" + func)
-            print("  args:" + a)
-            print("  kwargs:" + kw)
+            print(f"  function:{func}")
+            print(f"  args: {a}")
+            print(f"  kwargs: {kw}")
+            print(f"  exception: {e}")
             _print_curry_exception()
             raise
 
@@ -357,6 +363,7 @@ class PersistentCurrier:
         return cr
 
     def curry(self, func, *args, **kwds):
+        print(f"curry: func {func} args {args} kwds {kwds}")
         return self._add_curry(curry(func, *args, **kwds))
 
     def xcurry(self, func, *args, **kwds):

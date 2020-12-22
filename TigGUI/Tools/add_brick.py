@@ -27,7 +27,7 @@
 import math
 from PyQt5.QtWidgets import *
 
-from PyQt5.Qt import QObject, QHBoxLayout, QFileDialog, SIGNAL, QLabel, \
+from PyQt5.Qt import QObject, QHBoxLayout, QFileDialog, pyqtSignal, QLabel, \
     QLineEdit, QDialog, QDoubleValidator, QVBoxLayout, \
     QPushButton, Qt, QGridLayout, QMessageBox, QErrorMessage
 
@@ -134,7 +134,7 @@ class AddBrickDialog(QDialog):
         try:
             input_hdu = pyfits.open(filename)[0]
         except Exception as err:
-            busy = None
+            busy.reset_cursor()
             QMessageBox.warning(self, "Error reading FITS", "Error reading FITS file %s: %s" % (filename, str(err)))
             return
         # check name
@@ -176,7 +176,7 @@ class AddBrickDialog(QDialog):
         img_src = SkyModel.Source(srcname, pos, flux, shape=shape)
         self.model.setSources(self.model.sources + [img_src])
         self.model.emitUpdate(SkyModel.SkyModel.UpdateAll, origin=self)
-        busy = None
+        busy.reset_cursor()
         return QDialog.accept(self)
 
 

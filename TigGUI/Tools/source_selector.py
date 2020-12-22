@@ -109,7 +109,7 @@ class SourceSelectorDialog(QDialog):
         #    lo2.setContentsMargins(0,0,0,0)
         #    hidebtn = QPushButton("Close",self)
         #    hidebtn.setMinimumWidth(128)
-        #    QObject.connect(hidebtn,SIGNAL("clicked()"),self.hide)
+        #    QObject.connect(hidebtn,pyqtSignal("clicked()"),self.hide)
         #    lo2.addStretch(1)
         #    lo2.addWidget(hidebtn)
         #    lo2.addStretch(1)
@@ -234,7 +234,7 @@ class SourceSelectorDialog(QDialog):
             self.model.emitSelection(self)
         finally:
             self._in_select_threshold = False
-            busy = None
+            busy.reset_cursor()
 
     def _select_percentile(self, percent):
         self._select_percentile_threshold(percent, do_select=True)
@@ -268,6 +268,7 @@ class SourceSelectorDialog(QDialog):
             self.model.emitSelection(self)
         self.wpercent_lbl.setText("%3d%%" % percent)
         self.wthreshold.setText("%g" % (thr[2] if opstr.startswith("sum") else thr[0]))
+        busy.reset_cursor()
         return nsel
 
     def setModel(self, model):
@@ -289,7 +290,7 @@ def show_source_selector(mainwin, model):
     dialog = getattr(mainwin, '_source_selector_dialog', None)
     if not dialog:
         dialog = mainwin._source_selector_dialog = SourceSelectorDialog(mainwin)
-        mainwin.modelChanged.connect(dialog.setModel)
+        mainwin.modelChanged.connect(dialog.setModel)  # TODO - old signal conncets to mainwin model
         mainwin.closing.connect(dialog.close)
     dialog.setModel(model)
     # show dialog

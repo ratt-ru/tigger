@@ -32,6 +32,7 @@ from astropy.io import fits as pyfits
 
 from TigGUI.Images import FITS_ExtensionList
 from TigGUI.Images import SkyImage
+from TigGUI.Images.SkyImage import FITSImagePlotItem
 from TigGUI.Images.Controller import ImageController, dprint
 from TigGUI.kitties.utils import PersistentCurrier
 from TigGUI.kitties.widgets import BusyIndicator
@@ -44,7 +45,8 @@ class ImageManager(QWidget):
     showMessage = pyqtSignal(str, int)
     showErrorMessage = pyqtSignal(str, int)
     imagesChanged = pyqtSignal()
-    imageRaised = pyqtSignal()
+    imageRaised = pyqtSignal(FITSImagePlotItem)
+    imagePlotRaised = pyqtSignal()  # TODO - Partially fixed needs testing.
 
     def __init__(self, *args):
         QWidget.__init__(self, *args)
@@ -132,7 +134,7 @@ class ImageManager(QWidget):
         except KeyboardInterrupt:
             raise
         except:
-            busy = None
+            busy.reset_cursor()
             traceback.print_exc()
             self._showErrorMessage("""<P>Error loading FITS image %s: %s. This may be due to a bug in Tigger; if the FITS file loads fine in another viewer,
           please send the FITS file, along with a copy of any error messages from the text console, to osmirnov@gmail.com.</P>""" % (
@@ -143,6 +145,7 @@ class ImageManager(QWidget):
                                          model=model)
         self._showMessage("""Loaded FITS image %s""" % filename, 3000)
         dprint(2, "image loaded")
+        busy.reset_cursor()
         return ic
 
     def _showMessage(self, message, time=None):
@@ -243,7 +246,7 @@ class ImageManager(QWidget):
         for ic in [ic for ic in self._imagecons if id(ic) in self._model_imagecons]:
             self.unloadImage(ic)
 
-    def unloadImage(self, imagecon):
+    def unloadImage(self, imagecon, foo=None):
         """Unloads the given imagecon object."""
         if imagecon not in self._imagecons:
             return
@@ -273,7 +276,8 @@ class ImageManager(QWidget):
         if emit:
             self.imagesChanged.emit()
 
-    def raiseImage(self, imagecon):
+    def raiseImage(self, imagecon, foo=None):
+        busy = None
         # reshuffle image stack, if more than one image image
         if len(self._imagecons) > 1:
             busy = BusyIndicator()
@@ -287,8 +291,9 @@ class ImageManager(QWidget):
             # adjust visibility
             for j, ic in enumerate(self._imagecons):
                 ic.setImageVisible(not j or bool(self._qa_plot_all.isChecked()))
-            # issue replot signal
-            self.imageRaised.emit()
+            # issue replot signal fixed with assumption that this signal is now correct according to the old version
+            # self.imageRaised.emit(self._imagecons[0])  # This was the old signal
+            self.imagePlotRaised.emit()  # TODO - this new signal needs checking
             self.fastReplot()
         # else simply update labels
         else:
@@ -306,8 +311,10 @@ class ImageManager(QWidget):
                 prev.setVisible(True)
                 next.setText("Show next slice along %s axis" % name)
                 prev.setText("Show previous slice along %s axis" % name)
-        # emit signasl
+        # emit signals
         self.imageRaised.emit(img)
+        if busy is not None:
+            busy.reset_cursor()
 
     def resetDrawKey(self):
         """Makes and sets the current plot's drawing key"""
@@ -352,6 +359,7 @@ class ImageManager(QWidget):
             for ic in self._imagecons[1:]:
                 ic.setImageVisible(False)
         self.replot()
+        busy.reset_cursor()
 
     def _checkClipboardPath(self, mode=QClipboard.Clipboard):
         if self._qa_load_clipboard:
@@ -443,11 +451,11 @@ class ImageManager(QWidget):
         try:
             result = exprfunc(*[trimarray(x[1].data()) for x in arglist])
         except Exception as exc:
-            busy = None
+            busy.reset_cursor()
             traceback.print_exc()
             self._showErrorMessage("""Error evaluating "%s": %s.""" % (expression, str(exc)))
             return None
-        busy = None
+        busy.reset_cursor()
         if type(result) != numpy.ma.masked_array and type(result) != numpy.ndarray:
             self._showErrorMessage(
                 """Result of "%s" is of invalid type "%s" (array expected).""" % (expression, type(result).__name__))
@@ -490,7 +498,7 @@ class ImageManager(QWidget):
             hdu = pyfits.PrimaryHDU(result.transpose(), template.fits_header)
             skyimage = SkyImage.FITSImagePlotItem(name=expression, filename=None, hdu=hdu)
         except:
-            busy = None
+            busy.reset_cursor()
             traceback.print_exc()
             self._showErrorMessage("""Error creating FITS image %s: %s""" % (expression, str(sys.exc_info()[1])))
             return None
@@ -504,10 +512,18 @@ class ImageManager(QWidget):
                                     save=((dirname and os.path.dirname(dirname)) or "."))
         self._showMessage("Created new image for %s" % expression, 3000)
         dprint(2, "image created")
+        busy.reset_cursor()
 
     def _createImageController(self, image, name, basename, model=False, save=False):
-        dprint(2, "creating ImageController for", name)
+        print(f"creating ImageController for {name}")
         ic = ImageController(image, self, self, name, save=save)
+        # attach appropriate signals
+        ic.imageSignalRepaint.connect(self.replot)
+        ic.imageSignalSlice.connect(self.fastReplot)
+        image.connectPlotRiased(self.imagePlotRaised)  # TODO - this signal needs checking
+        ic.imageSignalRaise.connect(self._currier.curry(self.raiseImage, ic))
+        ic.imageSignalUnload.connect(self._currier.curry(self.unloadImage, ic))
+        ic.imageSignalCenter.connect(self._currier.curry(self.centerImage, ic))
         ic.setNumber(len(self._imagecons))
         self._imagecons.insert(0, ic)
         self._imagecon_loadorder.append(ic)
@@ -516,12 +532,6 @@ class ImageManager(QWidget):
         self._lo.addWidget(ic)
         if self._border_pen:
             ic.addPlotBorder(self._border_pen, basename, self._label_color, self._label_bg_brush)
-        # attach appropriate signals
-        image.connect(pyqtSignal("slice()"), self.fastReplot)
-        image.connect(pyqtSignal("repaint()"), self.replot)
-        image.connect(pyqtSignal("raise()"), self._currier.curry(self.raiseImage, ic))
-        image.connect(pyqtSignal("unload()"), self._currier.curry(self.unloadImage, ic))
-        image.connect(pyqtSignal("center()"), self._currier.curry(self.centerImage, ic))
         ic.renderControl().displayRangeChanged.connect(
             self._currier.curry(self._updateDisplayRange, ic.renderControl()))
         ic.renderControl().displayRangeLocked.connect(self._currier.curry(self._lockDisplayRange, ic.renderControl()))

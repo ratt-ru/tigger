@@ -6,12 +6,12 @@ from setuptools import setup, find_packages
 __version__ = "1.5.0"
 
 requirements = [
-    'numpy',
-    'scipy',
-    'astlib',
-    'astropy',
-    'astro_tigger_lsm',
-    'configparser',
+    'numpy>=1.17',
+    'scipy>=1.5.2',
+    'astlib>=0.11.4',
+    'astropy==4.1',
+    'astro_tigger_lsm==1.6.0',
+    'configparser>=5.0.1',
 ]
 
 scripts = [

@@ -27,7 +27,7 @@
 import math
 from PyQt5.QtWidgets import *
 
-from PyQt5.Qt import QObject, QHBoxLayout, QFileDialog, SIGNAL, QLabel, \
+from PyQt5.Qt import QObject, QHBoxLayout, QFileDialog, pyqtSignal, QLabel, \
     QLineEdit, QDialog, QDoubleValidator, QVBoxLayout, \
     QPushButton, Qt, QCheckBox, QMessageBox, QErrorMessage, \
     QRadioButton
@@ -180,7 +180,7 @@ class MakeBrickDialog(QDialog):
                     self.wfreq.setText(str(hdr['CRVAL%d' % axis] / 1e+6))
                     break
         except Exception as err:
-            busy = None
+            busy.reset_cursor()
             self.wfile.setFilename('')
             if not quiet:
                 QMessageBox.warning(self, "Error reading FITS",
@@ -198,6 +198,7 @@ class MakeBrickDialog(QDialog):
                 break
         else:
             self.wadd.setText("add image to sky model")
+        busy.reset_cursor()
         return filename
 
     def accept(self):
@@ -227,7 +228,7 @@ class MakeBrickDialog(QDialog):
         try:
             input_hdu = pyfits.open(filename)[0]
         except Exception as err:
-            busy = None
+            busy.reset_cursor()
             QMessageBox.warning(self, "Error reading FITS", "Error reading FITS file %s: %s" % (filename, str(err)))
             return
         # reset data if asked to
@@ -245,7 +246,7 @@ class MakeBrickDialog(QDialog):
             input_hdu.writeto(filename)
         except Exception as err:
             traceback.print_exc()
-            busy = None
+            busy.reset_cursor()
             QMessageBox.warning(self, "Error writing FITS", "Error writing FITS file %s: %s" % (filename, str(err)))
             return
         changed = False
@@ -302,7 +303,7 @@ class MakeBrickDialog(QDialog):
             self.model.setSources(sources)
             self.model.emitUpdate(SkyModel.SkyModel.UpdateAll, origin=self)
         self.parent().showMessage("Wrote %d sources to FITS file %s" % (len(sources), filename))
-        busy = None
+        busy.reset_cursor()
         return QDialog.accept(self)
 
 

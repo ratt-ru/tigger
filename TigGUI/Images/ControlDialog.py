@@ -27,7 +27,7 @@ from PyQt5.Qt import QWidget, QHBoxLayout, QComboBox, QLabel, QLineEdit, QDialog
     Qt, QSize, QSizePolicy, QApplication, QColor, QBrush, QTimer, QFrame, QCheckBox, QStackedWidget, QIcon, QMenu, \
     QGridLayout, QPen, QRect
 from PyQt5.Qwt import QwtPlot, QwtText, QwtPlotItem, QwtPlotCurve, QwtSymbol, QwtLinearScaleEngine, QwtLogScaleEngine, \
-    QwtPlotPicker, QwtPicker, QwtEventPattern, QwtWheel, QwtSlider,  QwtPickerMachine
+    QwtPlotPicker, QwtPicker, QwtEventPattern, QwtWheel, QwtSlider,  QwtPickerMachine, QwtPickerClickPointMachine, QwtPickerClickRectMachine
 
 from scipy.ndimage import measurements
 
@@ -117,14 +117,16 @@ class ImageControlDialog(QDialog):
         self._whistunzoom.setToolTip("""<P>Click to reset the histogram plot back to its full extent.
       This does not change the current intensity range.</P>""")
         self._whistzoom = QwtWheel(self)
+        self._whistzoom.setMass(0.5)
         self._whistzoom.setOrientation(Qt.Horizontal)
         self._whistzoom.setMaximumWidth(80)
-        self._whistzoom.setRange(10, 0)
-        self._whistzoom.setStep(0.1)
-        self._whistzoom.setTickCnt(30)
+        self._whistzoom.setRange(0, 10)
+        self._whistzoom.setSingleStep(0.1)
+        self._whistzoom.setPageStepCount(1)
+        self._whistzoom.setTickCount(30)
         self._whistzoom.setTracking(False)
-        self._whistzoom.valueChanged[double].connect(self._zoomHistogramFinalize)
-        self._whistzoom.sliderMoved[double].connect(self._zoomHistogramPreview)
+        self._whistzoom.valueChanged['double'].connect(self._zoomHistogramFinalize)
+        self._whistzoom.wheelMoved['double'].connect(self._zoomHistogramPreview)
         self._whistzoom.setToolTip("""<P>Use this wheel control to zoom in/out of the histogram plot.
       This does not change the current intensity range.
       Note that the zoom wheel should also respond to your mouse wheel, if you have one.</P>""")
@@ -318,11 +320,13 @@ class ImageControlDialog(QDialog):
         self._wlogcycles_timer.setInterval(500)
         self._wlogcycles_timer.timeout.connect(self._setIntensityLogCycles)
         lo1.addWidget(self._wlogcycles, 1, 1)
-        self._wlogcycles.setRange(1., 10)
-        self._wlogcycles.setStep(0.1)
+        # self._wlogcycles.setRange(1., 10)  # need to find 6.1.5 change from v5
+        self._wlogcycles.setScale(1., 10)
+        # self._wlogcycles.setStep(0.1)  # need to find 6.1.5 change from v5
+        # self._wlogcycles.setScaleStepSize(0.1)
         self._wlogcycles.setTracking(False)
-        self._wlogcycles.valueChanged[double].connect(self._setIntensityLogCycles)
-        self._wlogcycles.sliderMoved[double].connect(self._previewIntensityLogCycles)
+        self._wlogcycles.valueChanged.connect(self._setIntensityLogCycles)
+        self._wlogcycles.sliderMoved.connect(self._previewIntensityLogCycles)
         self._updating_imap = False
 
         # lock intensity map
@@ -356,7 +360,7 @@ class ImageControlDialog(QDialog):
 
         #    self._wlock_imap_axis = [ QCheckBox(name,self) for iaxis,name,labels in sliced_axes ]
         #    for iw,w in enumerate(self._wlock_imap_axis):
-        #      QObject.connect(w,SIGNAL("toggled(bool)"),self._currier.curry(self._rc.lockDisplayRangeForAxis,iw))
+        #      QObject.connect(w,pyqtSignal("toggled(bool)"),self._currier.curry(self._rc.lockDisplayRangeForAxis,iw))
         #      lo1.addWidget(w,0)
         lo1.addStretch(1)
 
@@ -410,7 +414,9 @@ class ImageControlDialog(QDialog):
                 self._colmap_controls.append(self._wcolmap_control_blank)
 
         # connect updates from renderControl and image
-        self.image.connect(SIGNAL("slice"), self._updateImageSlice)
+        #self.image.connect(pyqtSignal("slice"), self._updateImageSlice)
+        self.image.signalSlice.connect(self._updateImageSlice)
+        #self.image.connect(self._updateImageSlice)
         self._rc.intensityMapChanged.connect(self._updateIntensityMap)
         self._rc.colorMapChanged.connect(self._updateColorMap)
         self._rc.dataSubsetChanged.connect(self._updateDataSubset)
@@ -458,7 +464,7 @@ class ImageControlDialog(QDialog):
             self._updateHistogram()
             dprint(4, "updating stats")
             self._updateStats(self._subset, self._subset_range)
-            busy = None
+            busy.reset_cursor()
         dprint(4, "calling QDialog.show")
         QDialog.show(self)
 
@@ -474,15 +480,18 @@ class ImageControlDialog(QDialog):
     class HistLimitPicker(QwtPlotPicker):
         """Auguments QwtPlotPicker with functions for selecting hist min/max values"""
 
-        def __init__(self, plot, label, color="green", mode=QwtPickerMachine.PointSelection,
+        def __init__(self, plot, label, color="green", mode=QwtPickerClickPointMachine(),
                      rubber_band=QwtPicker.VLineRubberBand, tracker_mode=QwtPicker.ActiveOnly, track=None):
-            QwtPlotPicker.__init__(self, QwtPlot.xBottom, QwtPlot.yRight, mode, rubber_band, tracker_mode,
+            QwtPlotPicker.__init__(self, QwtPlot.xBottom, QwtPlot.yRight, rubber_band, tracker_mode,
                                    plot.canvas())
+
+            self.setStateMachine(mode)
             self.plot = plot
             self.label = label
             self.track = track
             self.color = QColor(color)
             self.setRubberBandPen(QPen(self.color))
+            self.setRubberBand(rubber_band)
 
         def trackerText(self, pos):
             x, y = self.plot.invTransform(QwtPlot.xBottom, pos.x()), self.plot.invTransform(QwtPlot.yLeft, pos.y())
@@ -546,8 +555,8 @@ class ImageControlDialog(QDialog):
             self.line.setZ(z)
             self.marker.setZ(zlabel if zlabel is not None else z)
             # set axes -- using yRight, since that is the "markup" z-axis
-            self.line.setAxis(QwtPlot.xBottom, yaxis)
-            self.marker.setAxis(QwtPlot.xBottom, yaxis)
+            self.line.setAxes(QwtPlot.xBottom, yaxis)
+            self.marker.setAxes(QwtPlot.xBottom, yaxis)
             # attach to plot
             self.line.attach(plot)
             self.marker.attach(plot)
@@ -640,20 +649,21 @@ class ImageControlDialog(QDialog):
         # add pickers
         self._hist_minpicker = self.HistLimitPicker(self._histplot, "low: %(x).4g")
         self._hist_minpicker.setMousePattern(QwtEventPattern.MouseSelect1, Qt.LeftButton)
-        self._hist_minpicker.selected[QPointF].connect(self._selectLowLimit)
+        self._hist_minpicker.selected.connect(self._selectLowLimit)
         self._hist_maxpicker = self.HistLimitPicker(self._histplot, "high: %(x).4g")
         self._hist_maxpicker.setMousePattern(QwtEventPattern.MouseSelect1, Qt.RightButton)
-        self._hist_maxpicker.selected[QPointF].connect(self._selectHighLimit)
+        self._hist_maxpicker.selected.connect(self._selectHighLimit)
         self._hist_maxpicker1 = self.HistLimitPicker(self._histplot, "high: %(x).4g")
-        self._hist_maxpicker1.setMousePattern(QwtEventPattern.MouseSelect1, Qt.LeftButton, Qt.CTRL)
-        self._hist_maxpicker1.selected[QPointF].connect(self._selectHighLimit)
+        self._hist_maxpicker1.setMousePattern(QwtEventPattern.MouseSelect1, Qt.LeftButton, Qt.ControlModifier)
+        self._hist_maxpicker1.selected.connect(self._selectHighLimit)
         self._hist_zoompicker = self.HistLimitPicker(self._histplot, label="zoom",
                                                      tracker_mode=QwtPicker.AlwaysOn, track=self._trackHistCoordinates,
                                                      color="black",
-                                                     mode=QwtPicker.RectSelection,
+                                                     mode=QwtPickerClickRectMachine(),
                                                      rubber_band=QwtPicker.RectRubberBand)
-        self._hist_zoompicker.setMousePattern(QwtEventPattern.MouseSelect1, Qt.LeftButton, Qt.SHIFT)
-        self._hist_zoompicker.selected[QRectF].connect(self._zoomHistogramIntoRect)
+        self._hist_zoompicker.setMousePattern(QwtEventPattern.MouseSelect1, Qt.LeftButton, Qt.ShiftModifier)
+        # self._hist_zoompicker.selected[QRectF].connect(self._zoomHistogramIntoRect)
+        self._hist_zoompicker.selected.connect(self._zoomHistogramIntoRect)
 
     def _trackHistCoordinates(self, x, y):
         self._wlab_histpos.setText((DataValueFormat + " %d") % (x, y) if x is not None else self._wlab_histpos_text)
@@ -692,7 +702,7 @@ class ImageControlDialog(QDialog):
         if hmin is None:
             hmin, hmax = hmin0, hmax0
             # downsample to low-res histogram
-            self._hist = self._hist_hires.reshape((self.NumHistBins, self.NumHistBinsHi / self.NumHistBins)).sum(1)
+            self._hist = self._hist_hires.reshape((self.NumHistBins, int(self.NumHistBinsHi / self.NumHistBins))).sum(1)
         else:
             # zoomed-in low-res histogram
             # bracket limits at subset range
@@ -734,6 +744,7 @@ class ImageControlDialog(QDialog):
         self._line_halfmax.marker.setValue(hmin, self._hist_max / 2)
         # update ITF
         self._updateITF()
+        busy.reset_cursor()
 
     def _updateStats(self, subset, minmax):
         """Recomputes subset statistics."""
@@ -787,6 +798,7 @@ class ImageControlDialog(QDialog):
         self._line_std.setText(("\u03C3=" + DataValueFormat) % std)
         self._line_std.show()
         self._histplot.replot()
+        busy.reset_cursor()
 
     def _setIntensityLogCyclesLabel(self, value):
         self._wlogcycles_label.setText("Log cycles: %4.1f" % value)
@@ -896,6 +908,7 @@ class ImageControlDialog(QDialog):
         x0, x1 = numpy.interp([delta, self._subset.size - delta], cumsum, bins)
         # and change the display range (this will also cause a histplot.replot() via _updateDisplayRange above)
         self._rc.setDisplayRange(x0, x1)
+        busy.reset_cursor()
 
     def _setZeroLeftLimit(self):
         self._rc.setDisplayRange(0., self._rc.displayRange()[1])
@@ -910,8 +923,12 @@ class ImageControlDialog(QDialog):
         self._updateHistogram()
         self._histplot.replot()
 
-    def _zoomHistogramByFactor(self, factor):
-        """Changes histogram limits by specified factor"""
+    def _zoomHistogramByFactor(self, factor, curry=None):
+        """
+        Changes histogram limits by specified factor.
+        curry=None is due to an error raised from the signal to zoom
+        and is unused.
+        """
         # get max distance of plot limit from peak
         dprint(1, "zooming histogram by", factor)
         halfdist = (self._hist_range[1] - self._hist_range[0]) / (factor * 2)
@@ -951,7 +968,7 @@ class ImageControlDialog(QDialog):
     def _setHistLogScale(self, logscale, replot=True):
         self._ylogscale = logscale
         if logscale:
-            self._histplot.setAxisScaleEngine(QwtPlot.yLeft, QwtLog10ScaleEngine())
+            self._histplot.setAxisScaleEngine(QwtPlot.yLeft, QwtLogScaleEngine())
             ymax = max(1, self._hist_max)
             self._histplot.setAxisScale(QwtPlot.yLeft, 1, 10 ** (math.log10(ymax) * (1 + self.ColorBarHeight)))
             y = self._hist.copy()
