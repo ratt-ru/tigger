@@ -82,16 +82,6 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
         self.signalCenter = None
         self.signalPlotRaised = None
 
-    # should now be depreacted - TODO (Raz) Check
-    def emit(self, *args):
-        self._qo.emit(*args)
-
-    # should now be depreacted - TODO (Raz) Check
-    def connect(self, *args):
-        print(f"SkyImage Connect: {args}")
-        # QObject.connect(self._qo, *args)
-        pass
-
     # start of signal connection methods
 
     def connectRepaint(self, sig):
