@@ -198,6 +198,7 @@ class RenderControl(QObject):
         self.setSliceSubset(set_display_range=False)
         if write_config and self._config:
             self._config.set("slice", " ".join(map(str, indices)))
+        busy.reset_cursor()
 
     def displayRange(self):
         return self._displayrange
@@ -227,6 +228,7 @@ class RenderControl(QObject):
         self.intensityMapChanged.emit(imap, index)
         if self._config and write_config:
             self._config.set("intensity-map-number", index)
+        busy.reset_cursor()
 
     def setIntensityMapLogCycles(self, cycles, notify_image=True, write_config=True):
         busy = BusyIndicator()
@@ -238,6 +240,7 @@ class RenderControl(QObject):
             self.intensityMapChanged.emit(imap, self._current_imap_index)
         if self._config and write_config:
             self._config.set("intensity-log-cycles", cycles)
+        busy.reset_cursor()
 
     def lockDisplayRangeForAxis(self, iaxis, lock):
         pass
@@ -251,6 +254,7 @@ class RenderControl(QObject):
         self.image.updateCurrentColorMap()
         if self._config:
             self._cmap_list[self._current_cmap_index].saveConfig(self._config)
+        busy.reset_cursor()
 
     def setColorMapNumber(self, index, write_config=True):
         busy = BusyIndicator()
@@ -260,6 +264,7 @@ class RenderControl(QObject):
         self.colorMapChanged.emit(cmap)
         if self._config and write_config:
             self._config.set("colour-map-number", index)
+        busy.reset_cursor()
 
     def currentSubset(self):
         """Returns tuple of subset,(dmin,dmax),description for current data subset"""
@@ -378,6 +383,7 @@ class RenderControl(QObject):
             if notify_image:
                 busy = BusyIndicator()
                 self.image.setIntensityMap(emit=True)
+                busy.reset_cursor()
             print(type(dmin), type(dmax))
             self.displayRangeChanged.emit(dmin, dmax)
             if self._config and write_config:

@@ -16,6 +16,9 @@ class BusyIndicator:
     def __del__(self):
         QApplication.restoreOverrideCursor()
 
+    def reset_cursor(self):
+        QApplication.restoreOverrideCursor()
+
 
 def addMenuLabel(menu, text):
     """Adds a QLabel contaning text to the given menu"""

@@ -134,7 +134,7 @@ class ImageManager(QWidget):
         except KeyboardInterrupt:
             raise
         except:
-            busy = None
+            busy.reset_cursor()
             traceback.print_exc()
             self._showErrorMessage("""<P>Error loading FITS image %s: %s. This may be due to a bug in Tigger; if the FITS file loads fine in another viewer,
           please send the FITS file, along with a copy of any error messages from the text console, to osmirnov@gmail.com.</P>""" % (
@@ -145,6 +145,7 @@ class ImageManager(QWidget):
                                          model=model)
         self._showMessage("""Loaded FITS image %s""" % filename, 3000)
         dprint(2, "image loaded")
+        busy.reset_cursor()
         return ic
 
     def _showMessage(self, message, time=None):
@@ -276,6 +277,7 @@ class ImageManager(QWidget):
             self.imagesChanged.emit()
 
     def raiseImage(self, imagecon, foo=None):
+        busy = None
         # reshuffle image stack, if more than one image image
         if len(self._imagecons) > 1:
             busy = BusyIndicator()
@@ -311,6 +313,8 @@ class ImageManager(QWidget):
                 prev.setText("Show previous slice along %s axis" % name)
         # emit signals
         self.imageRaised.emit(img)
+        if busy is not None:
+            busy.reset_cursor()
 
     def resetDrawKey(self):
         """Makes and sets the current plot's drawing key"""
@@ -355,6 +359,7 @@ class ImageManager(QWidget):
             for ic in self._imagecons[1:]:
                 ic.setImageVisible(False)
         self.replot()
+        busy.reset_cursor()
 
     def _checkClipboardPath(self, mode=QClipboard.Clipboard):
         if self._qa_load_clipboard:
@@ -446,11 +451,11 @@ class ImageManager(QWidget):
         try:
             result = exprfunc(*[trimarray(x[1].data()) for x in arglist])
         except Exception as exc:
-            busy = None
+            busy.reset_cursor()
             traceback.print_exc()
             self._showErrorMessage("""Error evaluating "%s": %s.""" % (expression, str(exc)))
             return None
-        busy = None
+        busy.reset_cursor()
         if type(result) != numpy.ma.masked_array and type(result) != numpy.ndarray:
             self._showErrorMessage(
                 """Result of "%s" is of invalid type "%s" (array expected).""" % (expression, type(result).__name__))
@@ -493,7 +498,7 @@ class ImageManager(QWidget):
             hdu = pyfits.PrimaryHDU(result.transpose(), template.fits_header)
             skyimage = SkyImage.FITSImagePlotItem(name=expression, filename=None, hdu=hdu)
         except:
-            busy = None
+            busy.reset_cursor()
             traceback.print_exc()
             self._showErrorMessage("""Error creating FITS image %s: %s""" % (expression, str(sys.exc_info()[1])))
             return None
@@ -507,6 +512,7 @@ class ImageManager(QWidget):
                                     save=((dirname and os.path.dirname(dirname)) or "."))
         self._showMessage("Created new image for %s" % expression, 3000)
         dprint(2, "image created")
+        busy.reset_cursor()
 
     def _createImageController(self, image, name, basename, model=False, save=False):
         print(f"creating ImageController for {name}")

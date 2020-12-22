@@ -216,7 +216,7 @@ class SkyModelTreeWidget(TigGUI.kitties.widgets.ClickableTreeWidget):
         self._enableColumn(ColumnR, 'r' in self.model.tagnames)
         dprint(2, "re-sorting")
         self.sortItems(('Iapp' in self.model.tagnames and ColumnIapp) or ColumnI, Qt.DescendingOrder)
-        busy = None
+        busy.reset_cursor()
 
     def addColumnViewActionsTo(self, menu):
         for name, qa, columns in self._column_views:
@@ -261,7 +261,7 @@ class SkyModelTreeWidget(TigGUI.kitties.widgets.ClickableTreeWidget):
                 dprint(4, "resetting item", item._src.name)
                 item.setSource(item._src)
         dprint(3, "refreshing selected items done")
-        busy = None
+        busy.reset_cursor()
 
     def changeGroupingVisibility(self, group, origin=None):
         if origin is self:
@@ -702,7 +702,7 @@ class ModelGroupsTable(QWidget):
         for src in self.model.sources:
             src.selected = predicate(src)
         self.model.emitSelection(origin=self)
-        busy = None
+        busy.reset_cursor()
 
     def updateModelSelection(self, nsel, origin=None):
         """This is called when some other widget changes the set of selected model sources"""

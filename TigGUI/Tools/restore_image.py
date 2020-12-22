@@ -149,7 +149,7 @@ class RestoreImageDialog(QDialog):
         try:
             bmaj, bmin, pa = [x / DEG for x in Imaging.fitPsf(filename)]
         except Exception as err:
-            busy = None
+            busy.reset_cursor()
             self.qerrmsg.showMessage("Error fitting PSF file %s: %s" % (filename, str(err)))
             return
         bmaj *= 3600 * Imaging.FWHM
@@ -157,6 +157,7 @@ class RestoreImageDialog(QDialog):
         self.wbmaj.setText(str(bmaj))
         self.wbmin.setText(str(bmin))
         self.wbpa.setText(str(pa))
+        busy.reset_cursor()
 
     def accept(self):
         """Tries to restore the image, and closes the dialog if successful."""
@@ -178,7 +179,7 @@ class RestoreImageDialog(QDialog):
         try:
             input_hdu = pyfits.open(infile)[0]
         except Exception as err:
-            busy = None
+            busy.reset_cursor()
             self.qerrmsg.showMessage("Error reading FITS file %s: %s" % (infile, str(err)))
             return
         # get beam sizes
@@ -187,7 +188,7 @@ class RestoreImageDialog(QDialog):
             bmin = float(str(self.wbmin.text()))
             pa = float(str(self.wbpa.text()) or "0")
         except Exception as err:
-            busy = None
+            busy.reset_cursor()
             self.qerrmsg.showMessage("Invalid beam size specified")
             return
         bmaj = bmaj / (Imaging.FWHM * 3600) * DEG
@@ -197,18 +198,18 @@ class RestoreImageDialog(QDialog):
         try:
             Imaging.restoreSources(input_hdu, sources, bmaj, bmin, pa)
         except Exception as err:
-            busy = None
+            busy.reset_cursor()
             self.qerrmsg.showMessage("Error restoring model into image: %s" % str(err))
             return
         # save fits file
         try:
             input_hdu.writeto(outfile, clobber=True)
         except Exception as err:
-            busy = None
+            busy.reset_cursor()
             self.qerrmsg.showMessage("Error writing FITS file %s: %s" % (outfile, str(err)))
             return
         self.parent().loadImage(outfile)
-        busy = None
+        busy.reset_cursor()
         return QDialog.accept(self)
 
 

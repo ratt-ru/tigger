@@ -464,7 +464,7 @@ class ImageControlDialog(QDialog):
             self._updateHistogram()
             dprint(4, "updating stats")
             self._updateStats(self._subset, self._subset_range)
-            busy = None
+            busy.reset_cursor()
         dprint(4, "calling QDialog.show")
         QDialog.show(self)
 
@@ -744,6 +744,7 @@ class ImageControlDialog(QDialog):
         self._line_halfmax.marker.setValue(hmin, self._hist_max / 2)
         # update ITF
         self._updateITF()
+        busy.reset_cursor()
 
     def _updateStats(self, subset, minmax):
         """Recomputes subset statistics."""
@@ -797,6 +798,7 @@ class ImageControlDialog(QDialog):
         self._line_std.setText(("\u03C3=" + DataValueFormat) % std)
         self._line_std.show()
         self._histplot.replot()
+        busy.reset_cursor()
 
     def _setIntensityLogCyclesLabel(self, value):
         self._wlogcycles_label.setText("Log cycles: %4.1f" % value)
@@ -906,6 +908,7 @@ class ImageControlDialog(QDialog):
         x0, x1 = numpy.interp([delta, self._subset.size - delta], cumsum, bins)
         # and change the display range (this will also cause a histplot.replot() via _updateDisplayRange above)
         self._rc.setDisplayRange(x0, x1)
+        busy.reset_cursor()
 
     def _setZeroLeftLimit(self):
         self._rc.setDisplayRange(0., self._rc.displayRange()[1])

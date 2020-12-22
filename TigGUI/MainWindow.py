@@ -225,6 +225,7 @@ class MainWindow(QMainWindow):
             busy = BusyIndicator()
             for name in filenames:
                 self.imgman.loadImage(name)
+        busy.reset_cursor()
 
     def saveSizes(self):
         if self._current_layout is not None:
@@ -342,6 +343,7 @@ class MainWindow(QMainWindow):
         for src in self.model.sources:
             src.selected = True
         self.model.emitSelection(self)
+        busy.reset_cursor()
 
     def _selectInvert(self):
         if not self.model:
@@ -350,6 +352,7 @@ class MainWindow(QMainWindow):
         for src in self.model.sources:
             src.selected = not src.selected
         self.model.emitSelection(self)
+        busy.reset_cursor()
 
     def _deleteSelection(self):
         unselected = [src for src in self.model.sources if not src.selected]
@@ -456,27 +459,30 @@ class MainWindow(QMainWindow):
             model = import_func(filename)
             model.setFilename(filename)
         except:
-            busy = None
+            busy.reset_cursor()
             self.showErrorMessage("""Error loading '%s' file %s: %s""" % (filetype, filename, str(sys.exc_info()[1])))
             return
-        # set the layout
-        if show:
-            self.setLayout(self.LayoutImageModel)
-        # add to content
-        if merge and self.model:
-            self.model.addSources(model.sources)
-            self.showMessage("""Merged in %d sources from '%s' file %s""" % (len(model.sources), filetype, filename),
-                             3000)
-            self.model.emitUpdate(SkyModel.UpdateAll)
         else:
-            self.showMessage("""Loaded %d sources from '%s' file %s""" % (len(model.sources), filetype, filename),
-                             3000)
-            self._display_filename = os.path.basename(filename)
-            self.setModel(model)
-            self._indicateModelUpdated(updated=False)
-            # only set self.filename if an export function is available for this format. Otherwise set it to None, so that trying to save
-            # the file results in a save-as operation (so that we don't save to a file in an unsupported format).
-            self.filename = filename if export_func else None
+            # set the layout
+            if show:
+                self.setLayout(self.LayoutImageModel)
+            # add to content
+            if merge and self.model:
+                self.model.addSources(model.sources)
+                self.showMessage("""Merged in %d sources from '%s' file %s""" % (len(model.sources), filetype, filename),
+                                 3000)
+                self.model.emitUpdate(SkyModel.UpdateAll)
+            else:
+                self.showMessage("""Loaded %d sources from '%s' file %s""" % (len(model.sources), filetype, filename),
+                                 3000)
+                self._display_filename = os.path.basename(filename)
+                self.setModel(model)
+                self._indicateModelUpdated(updated=False)
+                # only set self.filename if an export function is available for this format. Otherwise set it to None, so that trying to save
+                # the file results in a save-as operation (so that we don't save to a file in an unsupported format).
+                self.filename = filename if export_func else None
+        finally:
+            busy.reset_cursor()
 
     def closeEvent(self, event):
         dprint(1, "closing")
@@ -556,14 +562,17 @@ class MainWindow(QMainWindow):
                 export_func(self.model, filename)
                 self.model.setFilename(filename)
             except:
-                busy = None
+                busy.reset_cursor()
                 self.showErrorMessage("""Error saving model file %s: %s""" % (filename, str(sys.exc_info()[1])))
                 return False
-            self.showMessage("""Saved model to file %s""" % filename, 3000)
-            self._display_filename = os.path.basename(filename)
-            self._indicateModelUpdated(updated=False)
-            self.filename = filename
-            return True
+            else:
+                self.showMessage("""Saved model to file %s""" % filename, 3000)
+                self._display_filename = os.path.basename(filename)
+                self._indicateModelUpdated(updated=False)
+                self.filename = filename
+                return True
+            finally:
+                busy.reset_cursor()
 
     def saveFileAs(self, filename=None):
         """Saves file using the specified 'filename'. If filename is None, opens dialog to get a filename.
@@ -617,12 +626,15 @@ class MainWindow(QMainWindow):
         try:
             export_func(self.model, filename, sources=sources)
         except:
-            busy = None
+            busy.reset_cursor()
             self.showErrorMessage(
                 """Error saving selection to model file %s: %s""" % (filename, str(sys.exc_info()[1])))
             return False
-        self.showMessage("""Wrote %d selected source%s to file %s""" % (
-            len(selmodel.sources), "" if len(selmodel.sources) == 1 else "s", filename), 3000)
+        else:
+            self.showMessage("""Wrote %d selected source%s to file %s""" % (
+                len(selmodel.sources), "" if len(selmodel.sources) == 1 else "s", filename), 3000)
+        finally:
+            busy.reset_cursor()
         pass
 
     def addTagToSelection(self):

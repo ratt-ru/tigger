@@ -1623,7 +1623,7 @@ class SkyModelPlotter(QWidget):
             # get image stats
             busy = BusyIndicator()
             stats = self._imgman.getLMRectStats(self._image_subset)
-            busy = None
+            busy.reset_cursor()
             if stats is None:
                 self._removePlotMarkup()
                 self._image_subset = None
@@ -1977,7 +1977,9 @@ class SkyModelPlotter(QWidget):
             pixmap.save(filename, "PNG")
         except Exception as exc:
             self.showErrorMessage.emit("Error writing %s: %s" % (filename, str(exc)))
+            busy.reset_cursor()
             return
+        busy.reset_cursor()
         self.showMessage.emit("Exported plot to file %s" % filename)
 
     def setCurrentSource(self, src, src0=None, origin=None):

@@ -234,7 +234,7 @@ class SourceSelectorDialog(QDialog):
             self.model.emitSelection(self)
         finally:
             self._in_select_threshold = False
-            busy = None
+            busy.reset_cursor()
 
     def _select_percentile(self, percent):
         self._select_percentile_threshold(percent, do_select=True)
@@ -268,6 +268,7 @@ class SourceSelectorDialog(QDialog):
             self.model.emitSelection(self)
         self.wpercent_lbl.setText("%3d%%" % percent)
         self.wthreshold.setText("%g" % (thr[2] if opstr.startswith("sum") else thr[0]))
+        busy.reset_cursor()
         return nsel
 
     def setModel(self, model):
