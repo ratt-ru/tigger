@@ -163,7 +163,7 @@ class ImageManager(QWidget):
         self._border_pen, self._label_color, self._label_bg_brush = \
             border_pen, label_color, label_bg_brush
 
-    def lockAllDisplayRanges(self, rc0):
+    def lockAllDisplayRanges(self, rc0, curry=False):
         """Locks all display ranges, and sets the intensity from rc0"""
         if not self._updating_imap:
             self._updating_imap = True
