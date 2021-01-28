@@ -379,8 +379,8 @@ class ImageManager(QWidget):
 
     def _repopulateMenu(self):
         self._menu.clear()
-        self._menu.addAction("&Load image...", self.loadImage, Qt.Key_Control + Qt.Key_L)
-        self._menu.addAction("&Compute image...", self.computeImage, Qt.Key_Control + Qt.Key_M)
+        self._menu.addAction("&Load image...", self.loadImage, Qt.CTRL + Qt.Key_L)
+        self._menu.addAction("&Compute image...", self.computeImage, Qt.CTRL + Qt.Key_M)
         self._qa_load_clipboard = self._menu.addAction("Load from clipboard &path", self._loadClipboardPath,
                                                        Qt.CTRL + Qt.Key_P)
         self._checkClipboardPath()
