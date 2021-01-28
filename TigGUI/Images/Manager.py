@@ -163,7 +163,7 @@ class ImageManager(QWidget):
         self._border_pen, self._label_color, self._label_bg_brush = \
             border_pen, label_color, label_bg_brush
 
-    def lockAllDisplayRanges(self, rc0):
+    def lockAllDisplayRanges(self, rc0, curry=False):
         """Locks all display ranges, and sets the intensity from rc0"""
         if not self._updating_imap:
             self._updating_imap = True
@@ -379,8 +379,8 @@ class ImageManager(QWidget):
 
     def _repopulateMenu(self):
         self._menu.clear()
-        self._menu.addAction("&Load image...", self.loadImage, Qt.Key_Control + Qt.Key_L)
-        self._menu.addAction("&Compute image...", self.computeImage, Qt.Key_Control + Qt.Key_M)
+        self._menu.addAction("&Load image...", self.loadImage, Qt.CTRL + Qt.Key_L)
+        self._menu.addAction("&Compute image...", self.computeImage, Qt.CTRL + Qt.Key_M)
         self._qa_load_clipboard = self._menu.addAction("Load from clipboard &path", self._loadClipboardPath,
                                                        Qt.CTRL + Qt.Key_P)
         self._checkClipboardPath()
