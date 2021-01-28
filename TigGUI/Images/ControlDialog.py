@@ -798,7 +798,8 @@ class ImageControlDialog(QDialog):
         self._line_std.setText(("\u03C3=" + DataValueFormat) % std)
         self._line_std.show()
         self._histplot.replot()
-        busy.reset_cursor()
+        if not isinstance(busy, bool):
+            busy.reset_cursor()
 
     def _setIntensityLogCyclesLabel(self, value):
         self._wlogcycles_label.setText("Log cycles: %4.1f" % value)
