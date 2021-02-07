@@ -696,7 +696,7 @@ class ModelGroupsTable(QWidget):
         # in all cases emit a signal
         self.model.emitChangeGroupingStyle(group, origin=self)
 
-    def selectSources(self, predicate):
+    def selectSources(self, predicate, curry=False):
         """Selects sources according to predicate(src)"""
         busy = BusyIndicator()
         for src in self.model.sources:

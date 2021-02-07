@@ -167,7 +167,7 @@ class SourceMarker:
         txt = QwtText(self._label)
         txt.setColor(label_color)
         txt.setFont(self._font)
-        txt.setBackgroundPen(lab_pen)
+        txt.setBorderPen(lab_pen)
         txt.setBackgroundBrush(lab_brush)
         self.plotmarker.setLabel(txt)
         self.plotmarker.setLabelAlignment(Qt.AlignBottom | Qt.AlignRight)
