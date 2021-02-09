@@ -54,8 +54,10 @@ class ClickableTreeWidget(QTreeWidget):
         QTreeWidget.mouseReleaseEvent(self, ev)
         # now see if the item was expanded or collapsed because of the event. Only emit signal if this was
         # not the case (i.e. swallow the clicks that have to do with expansion/collapse of items)
-        if item and item is not self._expanded_item:
-            self.mouseButtonClicked.emit(ev.button(), item, self._mouse_press_pos, col)
+        if item and item is not self._expanded_item:  # I AM HERE
+            print(f"mouseButtonClicked ev {ev.button}, item {item}, mouse pos {self._mouse_press_pos}, col {col}")
+            self.itemClicked.emit(item, col)
+            #self.mouseButtonClicked.emit(ev.button(), item, self._mouse_press_pos, col)
 
     def _item_expanded_collapsed(self, item):
         self._expanded_item = item

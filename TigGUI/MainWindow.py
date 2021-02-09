@@ -51,7 +51,7 @@ class MainWindow(QMainWindow):
     isUpdated = pyqtSignal(bool)
     hasSkyModel = pyqtSignal(bool)
     hasSelection = pyqtSignal(bool)
-    modelChanged = pyqtSignal()
+    modelChanged = pyqtSignal(object)
     closing = pyqtSignal()
     ViewModelColumns = ["name", "RA", "Dec", "type", "Iapp", "I", "Q", "U", "V", "RM", "spi", "shape"]
 

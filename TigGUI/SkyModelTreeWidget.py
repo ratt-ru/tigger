@@ -436,10 +436,16 @@ class SkyModelTreeWidgetItem(QTreeWidgetItem):
 
     def __lt__(self, other):
         icol = self.treeWidget().sortColumn()
-        if isinstance(other, SkyModelTreeWidgetItem):
-            return self._values[icol] < other._values[icol]
-        else:
-            return self.text(icol) < other.text(icol)
+        if icol is not None:
+            if isinstance(other, SkyModelTreeWidgetItem):
+                if self._values[icol] is not None and other._values[icol] is not None:
+                    return self._values[icol] < other._values[icol]
+                else:
+                    print(f"SkyModelTreeWidget def __it__ icol RETURN values are None")
+                    return False
+            else:
+                return self.text(icol) < other.text(icol)
+        print(f"SkyModelTreeWidget def __it__ icol is None!")
 
     def __ge__(self, other):
         return other < self
@@ -696,7 +702,7 @@ class ModelGroupsTable(QWidget):
         # in all cases emit a signal
         self.model.emitChangeGroupingStyle(group, origin=self)
 
-    def selectSources(self, predicate):
+    def selectSources(self, predicate, curry=False):
         """Selects sources according to predicate(src)"""
         busy = BusyIndicator()
         for src in self.model.sources:
