@@ -144,7 +144,7 @@ class SourceSelectorDialog(QDialog):
         self.wpercent_lbl.setText("--%")
 
     def _setup_selection_by(self, tag):
-        tag = str(tag);  # may be QString
+        tag = str(tag)  # may be QString
         # clear threshold value and percentiles
         self._reset_percentile()
         # get min/max values, and sort indices
