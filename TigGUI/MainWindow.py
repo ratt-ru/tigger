@@ -586,7 +586,7 @@ class MainWindow(QMainWindow):
                 dialog.setDefaultSuffix(ModelHTML.DefaultExtension)
                 dialog.setFileMode(QFileDialog.AnyFile)
                 dialog.setAcceptMode(QFileDialog.AcceptSave)
-                dialog.setConfirmOverwrite(False)
+                dialog.setOption(QFileDialog.DontConfirmOverwrite, True)
                 dialog.setModal(True)
                 dialog.filesSelected['QStringList'].connect(self.saveFileAs)
             return self._save_as_dialog.exec_() == QDialog.Accepted
@@ -604,7 +604,7 @@ class MainWindow(QMainWindow):
                 dialog.setDefaultSuffix(ModelHTML.DefaultExtension)
                 dialog.setFileMode(QFileDialog.AnyFile)
                 dialog.setAcceptMode(QFileDialog.AcceptSave)
-                dialog.setConfirmOverwrite(True)
+                dialog.setOption(QFileDialog.DontConfirmOverwrite, False)
                 dialog.setModal(True)
                 dialog.filesSelected['QStringList'].connect(self.saveSelectionAs)
             return self._save_sel_as_dialog.exec_() == QDialog.Accepted
