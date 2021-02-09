@@ -302,10 +302,10 @@ def curry(func, *args, **kwds):
         kw = kwds.copy()
         kw.update(kwds1)
         a = args + args1
-        print(f"curry args {args}")
-        print(f"curry args1 {args1}")
-        print(f"curry args a {a}")
-        print(f"curry kw {kw}")
+        # print(f"curry args {args}")
+        # print(f"curry args1 {args1}")
+        # print(f"curry args a {a}")
+        # print(f"curry kw {kw}")
         try:
             return func(*a, **kw)
         except Exception as e:

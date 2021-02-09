@@ -722,23 +722,24 @@ class SkyModelPlotter(QWidget):
             return pos
 
         def drawCanvas(self, painter):
-            print("drawCanvas", time.time() % 60)
+            # print("drawCanvas", time.time() % 60)
             if self._drawing_key is None:
-                print("drawCanvas: key not set, redrawing")
+                # print("drawCanvas: key not set, redrawing")
                 return QwtPlot.drawCanvas(self, painter)
             else:
-                print("drawCanvas: current key is", self._drawing_key)
+                # print("drawCanvas: current key is", self._drawing_key)
                 pm = self._draw_cache.get(self._drawing_key)
                 if pm:
-                    print("drawCanvas: found pixmap in cache, drawing")
+                    # print("drawCanvas: found pixmap in cache, drawing")
+                    pass
                 else:
                     width, height = painter.device().width(), painter.device().height()
-                    print("drawCanvas: not in cache, redrawing %dx%d pixmap" % (width, height))
+                    # print("drawCanvas: not in cache, redrawing %dx%d pixmap" % (width, height))
                     self._draw_cache[self._drawing_key] = pm = QPixmap(width, height)
                     pm.fill(self.canvasBackground().color())
                     QwtPlot.drawCanvas(self, QPainter(pm))
                 painter.drawPixmap(0, 0, pm)
-                print("drawCanvas done", time.time() % 60)
+                # print("drawCanvas done", time.time() % 60)
                 return
 
         def clear(self):
