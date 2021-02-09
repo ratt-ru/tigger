@@ -98,8 +98,8 @@ class ValueTypeEditor(QWidget):
 
     def _selectTypeNum(self, index):
         tp = self.ValueTypes[index]
-        self.wbool.setShown(tp is bool)
-        self.wvalue.setShown(tp is not bool)
+        self.wbool.setVisible(tp is bool)
+        self.wvalue.setVisible(tp is not bool)
         self.wvalue_lab.setBuddy(self.wbool if tp is bool else self.wvalue)
         self.wvalue.setValidator(self._validators.get(tp, None))
 

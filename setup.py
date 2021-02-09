@@ -10,7 +10,7 @@ requirements = [
     'scipy>=1.5.2',
     'astlib>=0.11.4',
     'astropy==4.1',
-    'astro_tigger_lsm==1.6.1',
+    'astro_tigger_lsm==1.7.0',
     'configparser>=5.0.1',
 ]
 
