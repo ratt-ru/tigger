@@ -363,7 +363,7 @@ class MainWindow(QMainWindow):
             return
         self.model.setSources(unselected)
         self.showMessage("""Deleted %d sources""" % nsel)
-        self.model.emitUpdate(SkyModel.UpdateAll, origin=self)
+        self.model.emitUpdate(SkyModel.SkyModel.UpdateAll, origin=self)
 
     def _showSourceSelector(self):
         TigGUI.Tools.source_selector.show_source_selector(self, self.model)
@@ -658,7 +658,7 @@ class MainWindow(QMainWindow):
         dprint(1, "recomputing totals")
         self.model.getTagGrouping(tagname).computeTotal(self.model.sources)
         dprint(1, "emitting update signal")
-        what = SkyModel.UpdateSourceContent + SkyModel.UpdateTags + SkyModel.UpdateSelectionOnly
+        what = SkyModel.SkyModel.UpdateSourceContent + SkyModel.SkyModel.UpdateTags + SkyModel.SkyModel.UpdateSelectionOnly
         self.model.emitUpdate(what, origin=self)
 
     def removeTagsFromSelection(self):
@@ -696,7 +696,7 @@ class MainWindow(QMainWindow):
         self.model.scanTags()
         self.model.initGroupings()
         # emit signal
-        what = SkyModel.UpdateSourceContent + SkyModel.UpdateTags + SkyModel.UpdateSelectionOnly
+        what = SkyModel.SkyModel.UpdateSourceContent + SkyModel.SkyModel.UpdateTags + SkyModel.SkyModel.UpdateSelectionOnly
         self.model.emitUpdate(what, origin=self)
 
     def _indicateModelUpdated(self, what=None, origin=None, updated=True):
