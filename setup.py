@@ -3,9 +3,9 @@
 from __future__ import print_function
 from setuptools import setup, find_packages
 
-__version__ = "1.5.0"
+__version__ = "1.5.1"
 
-requirements = ['numpy', 'scipy', 'astlib', 'astropy', 'astro_tigger_lsm', 'configparser']
+requirements = ['numpy', 'scipy', 'astlib', 'astropy', 'astro_tigger_lsm <= 1.6.0', 'configparser']
 
 scripts = [
     'TigGUI/tigger',
