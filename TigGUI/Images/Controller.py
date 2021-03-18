@@ -184,12 +184,11 @@ class ImageController(QFrame):
         self._wshowdialog.setToolTip("""<P>Click for colourmap and intensity policy options.</P>""")
         self._wshowdialog.clicked.connect(self.showRenderControls)
         tooltip = """<P>You can change the currently displayed intensity range by entering low and high limits here.</P>
-    <TABLE>
-      <TR><TD><NOBR>Image min:</NOBR></TD><TD>%g</TD><TD>max:</TD><TD>%g</TD></TR>
-      </TABLE>""" % self.image.imageMinMax()
+            <TABLE>
+            <TR><TD><NOBR>Image min:</NOBR></TD><TD>%g</TD><TD>max:</TD><TD>%g</TD></TR>
+            </TABLE>""" % self.image.imageMinMax()
         for w in self._wmin, self._wmax, self._wrangelbl:
             w.setToolTip(tooltip)
-
         # create image operations menu
         self._menu = QMenu(self.name, self)
         self._qa_raise = self._menu.addAction(pixmaps.raise_up.icon(), "Raise image",
@@ -205,17 +204,14 @@ class ImageController(QFrame):
         self._menu.addAction("Unload image", self._currier.curry(self.image.signalUnload.emit, None))
         self._wraise.setMenu(self._menu)
         self._wraise.setPopupMode(QToolButton.DelayedPopup)
-
         # connect updates from renderControl and image
         self.image.signalSlice.connect(self._updateImageSlice)
         self._rc.displayRangeChanged.connect(self._updateDisplayRange)
-
         # default plot depth of image markers
         self._z_markers = None
         # and the markers themselves
         self._image_border = QwtPlotCurve()
         self._image_label = QwtPlotMarker()
-
         # subset markers
         self._subset_pen = QPen(QColor("Light Blue"))
         self._subset_border = QwtPlotCurve()
@@ -228,7 +224,6 @@ class ImageController(QFrame):
         self._subset_label.setLabelAlignment(Qt.AlignRight | Qt.AlignBottom)
         self._subset_label.setVisible(False)
         self._setting_lmrect = False
-
         self._all_markers = [self._image_border, self._image_label, self._subset_border, self._subset_label]
 
     def close(self):
@@ -357,7 +352,7 @@ class ImageController(QFrame):
     def setLMRectSubset(self, rect):
         self._subset = rect
         l0, m0, l1, m1 = rect.getCoords()
-        self._subset_border.setData([l0, l0, l1, l1, l0], [m0, m1, m1, m0, m0])
+        self._subset_border.setSamples([l0, l0, l1, l1, l0], [m0, m1, m1, m0, m0])
         self._subset_border.setVisible(True)
         self._subset_label.setValue(max(l0, l1), max(m0, m1))
         self._subset_label.setVisible(True)

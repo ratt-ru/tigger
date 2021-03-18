@@ -913,16 +913,16 @@ class SkyModelPlotter(QWidget):
                 # self.provisionalZoom.emit(x, y, (1 if ev.angleDelta().y() > 0 else -1), 200)
                 # below code was commented out in previous version - re-enabled
                 if ev.angleDelta().y() < 0:
-                   if self.zoomRectIndex() > 0:
-                       self.zoom(-1)
-                   else:
-                       print("zoomed all the way out, wheel event ignored")
+                    if self.zoomRectIndex() > 0:
+                        self.zoom(-1)
+                    else:
+                        print("zoomed all the way out, wheel event ignored")
                 else:
-                   x1, y1, x2, y2 = self.zoomRect().getCoords()
-                   w = (x2-x1)/2
-                   h = (y2-y1)/2
-                   self.zoom(QRectF(x-w/2, y-h/2, w, h))
-                   self.provisionalZoom.emit(x, y, 1, 200)
+                    x1, y1, x2, y2 = self.zoomRect().getCoords()
+                    w = (x2-x1)/2
+                    h = (y2-y1)/2
+                    self.zoom(QRectF(x-w/2, y-h/2, w, h))
+                    self.provisionalZoom.emit(x, y, 1, 200)
             QwtPlotPicker.widgetWheelEvent(self, ev)
 
     class PlotPicker(QwtPlotPicker):
