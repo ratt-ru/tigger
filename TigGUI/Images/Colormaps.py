@@ -130,22 +130,28 @@ class HistEqIntensityMap(IntensityMap):
             # make cumulative histogram, normalize to 0...1
             hist = measurements.histogram(self.subset if self.subset is not None else data, dmin, dmax, self._nbins)
             cdf = numpy.cumsum(hist)
-            cdf = cdf / float(cdf[-1])
-            # append 0 at beginning, as left side of bin
-            self._cdf = numpy.zeros(len(cdf) + 1, float)
-            self._cdf[1:] = cdf[...]
-            # make array of bin edges
-            self._bins = dmin + (dmax - dmin) * numpy.arange(self._nbins + 1) / float(self._nbins)
+            if not numpy.all(cdf == 0):
+                cdf = cdf / float(cdf[-1])
+                # append 0 at beginning, as left side of bin
+                self._cdf = numpy.zeros(len(cdf) + 1, float)
+                self._cdf[1:] = cdf[...]
+                # make array of bin edges
+                self._bins = dmin + (dmax - dmin) * numpy.arange(self._nbins + 1) / float(self._nbins)
 
     def remap(self, data):
+        values = None
         if self._bins is None:
             self._computeCDF(data)
         if self._cdf is None:
             return numpy.zeros(data.shape, float)
-        values = numpy.interp(data.ravel(), self._bins, self._cdf).reshape(data.shape)
-        if hasattr(data, 'mask'):
+        if self._bins is not None:
+            values = numpy.interp(data.ravel(), self._bins, self._cdf).reshape(data.shape)
+        if hasattr(data, 'mask') and values is not None:
             values = numpy.ma.masked_array(values, data.mask)
-        return values
+        if values is not None:
+            return values
+        else:
+            return numpy.zeros(data.shape, float)
 
 
 class Colormap(QObject):
