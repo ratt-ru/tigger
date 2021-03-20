@@ -245,6 +245,7 @@ class ToolDialog(QDialog):
 
     def __init__(self, parent, configname, menuname, show_shortcut=None):
         QDialog.__init__(self, parent)
+        print("tool dialog called **************************")
         self.setModal(False)
         self.setFocusPolicy(Qt.NoFocus)
         self.hide()
@@ -484,7 +485,7 @@ class LiveImageZoom(ToolDialog):
             self._qimg and painter.drawImage(QRect(xmap.p1(), ymap.p2(), xmap.pDist(), ymap.pDist()), self._qimg)
 
     def trackImage(self, image, ix, iy):
-        print("trackImage called")
+        print("trackImage called Live Zoom")
         if not self.isVisible():
             print("trackImage not visible")
             return
@@ -632,6 +633,7 @@ class LiveProfile(ToolDialog):
                 self._lastsel = name
 
     def trackImage(self, image, ix, iy):
+        print("track image")
         if not self.isVisible():
             return
         nx, ny = image.imageDims()
@@ -845,7 +847,7 @@ class SkyModelPlotter(QWidget):
             # TODO - (raz) - zoomStack replaced with zoomRectIndex. Needs testing
             # TODO - linked to issue #37
             # Original code, QwtPlotZoomer.setZoomStack(stack, index)
-            QwtPlotZoomer.setZoomBase(self)
+            QwtPlotZoomer.setZoomBase(self, doReplot=True)
             #print("zoom stack is now", self.zoomRectIndex(), self.maxStackDepth())
 
         def adjustRect(self, rect):
@@ -963,7 +965,7 @@ class SkyModelPlotter(QWidget):
                     print(f"PlotPicker mode PickerClickPoint")
                 elif isinstance(mode, QwtPickerPolygonMachine):  # TODO - current deb fails, git repo shows available
                     self.setStateMachine(mode)
-                    self.selected.connect(select_callback)  # TODO - missing QPolygon overload
+                    self.selected['const QVector<QPointF> &'].connect(select_callback)  # TODO - missing QPolygon overload
                     # self.selected['const QPolygon &'].connect(select_callback)
                     # self.selected[QPolygon].connect(select_callback)
                     print(f"PlotPicker mode PickerPolygon")
@@ -1022,6 +1024,7 @@ class SkyModelPlotter(QWidget):
 
     def __init__(self, parent, mainwin, *args):
         QWidget.__init__(self, parent, *args)
+        print(f"PlotRuler args {args}, parent {parent} mainwin {mainwin}")
         # plot update logic -- handle updates via the event loop
         self._updates_enabled = False  # updates ignored until this is True
         self._update_pending = 0  # serial number of most recently posted update event
@@ -1247,7 +1250,8 @@ class SkyModelPlotter(QWidget):
         self._zoomer.setStateMachine(QwtPickerDragRectMachine())
 
         # ruler picker for measurement mode
-        self._ruler = self.PlotRuler(self.plot.canvas(), "measure", "cyan", self._measureRuler,
+        print(f"Setting up self._ruler Qwt...")
+        self._ruler = self.PlotRuler(self.plot.canvas(), "measure", "cyan", select_callback=self._measureRuler,
                                      mode=QwtPickerPolygonMachine(),
                                      rubber_band=QwtPicker.PolygonRubberBand,
                                      track_callback=self._trackRuler)
@@ -1288,7 +1292,7 @@ class SkyModelPlotter(QWidget):
             picker.setEnabled(mpat[0] or kpat[0])
         elif mpat[0] or kpat[0]:
             picker.setEnabled(True)
-	# TODO - check below
+        # TODO - check below
         mouse_button, mouse_mod = mpat
         picker.setMousePattern(patt, mouse_button, Qt.KeyboardModifier(mouse_mod))
 
@@ -1355,7 +1359,8 @@ class SkyModelPlotter(QWidget):
             PAd += 360
         # if we have an image, add pixel coordinates
         x = y = val = flag = None
-        image = self._imgman and self._imgman.getTopImage()
+        if self._imgman:
+            image = self._imgman.getTopImage()
         if image:
             x, y = list(map(int, list(map(round, image.lmToPix(l, m)))))
             nx, ny = image.imageDims()
@@ -1389,6 +1394,7 @@ class SkyModelPlotter(QWidget):
             return QwtText(msgtext)
 
     def _measureRuler(self, polygon):
+        print(f"_measureRuler polygon {polygon}")
         self._ruler_pos0 = None
         if not self.projection or polygon.size() < 2:
             return
@@ -1509,10 +1515,12 @@ class SkyModelPlotter(QWidget):
 
     def _updatePsfMarker(self, rect=None, replot=False):
         # show PSF if asked to
-        topimage = self._imgman and self._imgman.getTopImage()
-        pmaj, pmin, ppa = topimage.getPsfSize() if topimage else (0, 0, 0)
-        self._qa_show_psf.setVisible(bool(topimage and pmaj != 0))
-        self._psf_marker.setVisible(bool(topimage and pmaj != 0 and self._qa_show_psf.isChecked()))
+        if self._imgman:
+            topimage = self._imgman.getTopImage()
+        if topimage:
+            pmaj, pmin, ppa = topimage.getPsfSize() if topimage else (0, 0, 0)
+            self._qa_show_psf.setVisible(bool(topimage and pmaj != 0))
+            self._psf_marker.setVisible(bool(topimage and pmaj != 0 and self._qa_show_psf.isChecked()))
         if self._qa_show_psf.isVisible():
             rect = rect or self._zoomer.zoomBase()
             rect &= topimage.boundingRect()
@@ -1571,7 +1579,8 @@ class SkyModelPlotter(QWidget):
             msgtext = "%02dh%02dm%05.2fs %s%02d\u00B0%02d'%05.2f\"  r=%d\u00B0%02d'%05.2f\"  PA=%.2f\u00B0" % (
                 rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd)
         # if we have an image, add pixel coordinates
-        image = self._imgman and self._imgman.getTopImage()
+        if self._imgman:
+            image = self._imgman.getTopImage()
         print(f"livezoom track image {image}")
         if image and x is not None:
             msgtext += "   x=%d y=%d value=blank" % (x, y) if flag else "   x=%d y=%d value=%g" % (x, y, val)
@@ -1673,7 +1682,8 @@ class SkyModelPlotter(QWidget):
         self._qa_colorzoom.setVisible(False)
 
     def _selectRectStats(self, rect):
-        image = self._imgman and self._imgman.getTopImage()
+        if self._imgman:
+            image = self._imgman.getTopImage()
         print("subset selection", rect, "image:", image and image.boundingRect())
         if not image or not rect.intersects(image.boundingRect()):
             self._selectImageSubset(None)
@@ -1804,7 +1814,8 @@ class SkyModelPlotter(QWidget):
         self._zoomer_box.setVisible(False)
         self._zoomer_label.setVisible(False)
         # get current image (None if no images)
-        self._image = self._imgman and self._imgman.getCenterImage()
+        if self._imgman:
+            self._image = self._imgman.getCenterImage()
         # show/hide live zoomer with image
         if self._image:
             for tool in self._livezoom, self._liveprofile:
@@ -1841,7 +1852,8 @@ class SkyModelPlotter(QWidget):
                 print("plot extents for model", extent)
         # account for bounding rects of images
         # TODO: check that images are visible
-        for img in ((self._imgman and self._imgman.getImages()) or []):
+        for img in (self._imgman.getImages() or []):
+        # for img in ((self._imgman and self._imgman.getImages()) or []):
             ext = img.getExtents()
             print("image extents", ext)
             for i in 0, 1:
@@ -1948,7 +1960,7 @@ class SkyModelPlotter(QWidget):
         print("updating zoomer")
         self._zoomer.setZoomStack(zooms, len(zooms) - 1)
         self._updatePsfMarker(None, replot=True)
-        # self.plot.replot()
+        #  self.plot.replot()
 
     def setModel(self, model):
         self._source_lm = {}
