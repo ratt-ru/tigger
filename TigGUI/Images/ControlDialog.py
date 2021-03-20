@@ -414,9 +414,7 @@ class ImageControlDialog(QDialog):
                 self._colmap_controls.append(self._wcolmap_control_blank)
 
         # connect updates from renderControl and image
-        #self.image.connect(pyqtSignal("slice"), self._updateImageSlice)
         self.image.signalSlice.connect(self._updateImageSlice)
-        #self.image.connect(self._updateImageSlice)
         self._rc.intensityMapChanged.connect(self._updateIntensityMap)
         self._rc.colorMapChanged.connect(self._updateColorMap)
         self._rc.dataSubsetChanged.connect(self._updateDataSubset)
@@ -485,13 +483,13 @@ class ImageControlDialog(QDialog):
             QwtPlotPicker.__init__(self, QwtPlot.xBottom, QwtPlot.yRight, rubber_band, tracker_mode,
                                    plot.canvas())
 
-            self.setStateMachine(mode)
+            self.setStateMachine(mode)  # TODO - check other pickers set this too
             self.plot = plot
             self.label = label
             self.track = track
             self.color = QColor(color)
             self.setRubberBandPen(QPen(self.color))
-            self.setRubberBand(rubber_band)
+            self.setRubberBand(rubber_band)  # TODO - check other pickers set this too
 
         def trackerText(self, pos):
             x, y = self.plot.invTransform(QwtPlot.xBottom, pos.x()), self.plot.invTransform(QwtPlot.yLeft, pos.y())

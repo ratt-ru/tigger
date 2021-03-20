@@ -515,7 +515,7 @@ class ImageManager(QWidget):
         busy.reset_cursor()
 
     def _createImageController(self, image, name, basename, model=False, save=False):
-        print(f"creating ImageController for {name}")
+        dprint(2, "creating ImageController for", name)
         ic = ImageController(image, self, self, name, save=save)
         # attach appropriate signals
         ic.imageSignalRepaint.connect(self.replot)

@@ -525,7 +525,7 @@ class SkyCubePlotItem(SkyImagePlotItem):
 
     def setDefaultProjection(self, projection=None):
         """Sets default image projection. If None is given, sets up default SinWCS projection."""
-        self.projection = projection or Projection.SinWCS(self.ra0, self.dec0)
+        self.projection = projection or Projection.SinWCS(self.ra0, self.dec0)  # TODO - check these two self's
         self.setPlotProjection()
 
     def _setupSlice(self):

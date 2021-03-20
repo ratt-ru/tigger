@@ -32,6 +32,7 @@ from PyQt5.Qt import QObject, QHBoxLayout, QFileDialog, pyqtSignal, QLabel, \
     QPushButton, Qt, QCheckBox, QMessageBox, QErrorMessage, \
     QRadioButton
 
+# import TigGUI.kitties.utils
 
 from astropy.io import fits as pyfits
 

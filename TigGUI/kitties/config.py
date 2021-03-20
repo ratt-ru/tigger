@@ -64,7 +64,7 @@ class DualConfigParser:
         return self.syscp.has_section(section) or self.usercp.has_section(section)
 
     def _get(self, method, section, option, default=None, init=False, save=False):
-        section = section or self.defsection
+        section = section or self.defsection  # TODO - check defsection
         # try user defaults
         try:
             return getattr(self.usercp, method)(section, option)

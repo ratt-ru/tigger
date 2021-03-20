@@ -130,9 +130,9 @@ class MainWindow(QMainWindow):
         qa_save_selection_as = file_menu.addAction("Save selection as...", self.saveSelectionAs)
         self.hasSelection.connect(qa_save_selection_as.setEnabled)  # (raz) - checked
         file_menu.addSeparator()
-        qa_close = file_menu.addAction("&Close model", self.closeFile, Qt.CTRL + Qt.Key_W)
+        qa_close = file_menu.addAction("&Close model", self.closeFile, Qt.CTRL + Qt.Key_W)  # TODO - needs checking
         self.hasSkyModel.connect(qa_close.setEnabled)  # (raz) - checked
-        qa_quit = file_menu.addAction("Quit", self.close, Qt.CTRL + Qt.Key_Q)
+        qa_quit = file_menu.addAction("Quit", self.close, Qt.CTRL + Qt.Key_Q)  # TODO - needs checking
 
         # Image menu
         menubar.addMenu(self.imgman.getMenu())
@@ -389,7 +389,7 @@ class MainWindow(QMainWindow):
     def loadImage(self, filename):
         return self.imgman.loadImage(filename)
 
-    def setModel(self, model):  # I AM HERE
+    def setModel(self, model):
         if model is not None:
             self.modelChanged.emit(model)
         if model:
@@ -663,6 +663,7 @@ class MainWindow(QMainWindow):
 
     def removeTagsFromSelection(self):
         if not hasattr(self, '_remove_tag_dialog'):
+            # TODO - check line below _remote_tag_dialog outside of init()
             self._remove_tag_dialog = Widgets.SelectTagsDialog(self, modal=True, caption="Remove Tags",
                                                                ok_button="Remove")
         # get set of all tags in selected sources

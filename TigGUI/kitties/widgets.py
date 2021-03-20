@@ -75,7 +75,7 @@ class ClickableTreeWidget(QTreeWidget):
                 if hasattr(QTreeWidget, 'invisibleRootItem'):
                     self._parent = parent.invisibleRootItem()
                 else:
-                    self._parent = None;  # Qt 4.1 item.parent() returns None for top-level items
+                    self._parent = None  # Qt 4.1 item.parent() returns None for top-level items
             else:
                 self._parent = parent
 

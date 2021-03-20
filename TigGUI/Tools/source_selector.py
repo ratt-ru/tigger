@@ -34,6 +34,7 @@ import TigGUI.kitties.utils
 from TigGUI.kitties.utils import curry
 from TigGUI.kitties.widgets import BusyIndicator
 
+# TODO - check this try/except (not in original code)
 try:
     QString = unicode
 except NameError:
@@ -126,6 +127,7 @@ class SourceSelectorDialog(QDialog):
         alltags = set(self.model.tagnames)
         alltags -= NonSortingTags
         # make list of tags from StandardTags that are present in model
+        # TODO - check sorttags outside of init()
         self.sorttags = [tag for tag in StandardTags if tag in alltags or tag in TagAccessors]
         # append model tags that were not in StandardTags
         self.sorttags += list(alltags - set(self.sorttags))

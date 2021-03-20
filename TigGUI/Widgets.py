@@ -48,7 +48,7 @@ class TiggerPlotMarker(QwtPlotMarker):
         return QwtPlotMarker.setValue(self, float(x), float(y))
 
 
-class FloatValidator(QValidator):  # Validator broken
+class FloatValidator(QValidator):  # TODO - check validator is working
     """QLineEdit validator for float items in standard or scientific notation"""
     re_intermediate = re.compile("^-?([0-9]*)\.?([0-9]*)([eE]([+-])?[0-9]*)?$")
 
@@ -61,6 +61,7 @@ class FloatValidator(QValidator):  # Validator broken
             pass
         if not input or self.re_intermediate.match(input):
             return QValidator.Intermediate, input, pos
+        # return QValidator.Invalid, pos  # old line
         return QValidator.Acceptable, input, pos
 
 

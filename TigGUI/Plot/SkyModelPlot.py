@@ -196,7 +196,7 @@ class ImageSourceMarker(SourceMarker):
     def __init__(self, src, l, m, size, model, imgman):
         # load image if needed
         self.imgman = imgman
-        #print("loading Image source", src.shape.filename)
+        dprint(2, "loading Image source", src.shape.filename)
         self.imagecon = imgman.loadImage(src.shape.filename, duplicate=False, to_top=False, model=src.name)
         # this will return None if the image fails to load, in which case we still produce a marker,
         # but nothing else
@@ -264,7 +264,7 @@ class ToolDialog(QDialog):
         self._closing = False
         self._write_config = curry(Config.set, "%s-show" % configname)
         qa.triggered[bool].connect(self._write_config)
-        self.isVisible.connect(qa.setChecked)
+        self.isVisible.connect(qa.setChecked)  # TODO - this needs checking
 
     def getShowQAction(self):
         return self._qa_show
@@ -308,7 +308,7 @@ class ToolDialog(QDialog):
         self._saveGeometry()
         QDialog.resizeEvent(self, event)
 
-    def setVisible(self, visible: bool, emit=True):
+    def setVisible(self, visible, emit=True):
         if not visible:
             self._geometry = self.geometry()
         else:
@@ -354,9 +354,10 @@ class LiveImageZoom(ToolDialog):
         lo1.addWidget(self._larger)
         self._has_zoom = self._has_xcs = self._has_ycs = False
         # setup zoom plot
-        self._npix = None
-        self._magfac = None
-        self._radius = None
+        # TODO - check 3 variables below
+        # self._npix = None
+        # self._magfac = None
+        # self._radius = None
         font = QApplication.font()
         self._zoomplot = QwtPlot(self)
         print(f"LiveImageZoom created plot {self._zoomplot}")
@@ -376,7 +377,8 @@ class LiveImageZoom(ToolDialog):
             self._zoomplot.axisWidget(axis).show()
             text = QwtText(title)
             text.setFont(font)
-            self._zoomplot.axisWidget(axis).setTitle(title)  # TODO - check QwtText error
+            self._zoomplot.axisWidget(axis).setTitle(text.text())  # TODO - check QwtText error
+            # self._zoomplot.axisWidget(axis).setTitle(title)  # TODO - check QwtText error
         self._zoomplot.setAxisLabelRotation(QwtPlot.yLeft, -90)
         self._zoomplot.setAxisLabelAlignment(QwtPlot.yLeft, Qt.AlignVCenter)
         self._zoomplot.setAxisLabelRotation(QwtPlot.yRight, 90)
@@ -690,7 +692,7 @@ class SkyModelPlotter(QWidget):
         layout is updated of the plot is zoomed
         """
 
-        updateLayoutEvent = pyqtSignal()
+        updateLayoutEvent = pyqtSignal()  # TODO - check where this connects
         updateCurrentPlot = pyqtSignal()
 
         def __init__(self, mainwin, skymodelplotter, parent):
@@ -702,6 +704,7 @@ class SkyModelPlotter(QWidget):
             self._drawing_key = None
             self.updateCurrentPlot.connect(self.updatePlot)
 
+        # TODO - this method is not in the original code
         def getUpdateSignal(self):
             return self.updateLayoutEvent
 
@@ -732,24 +735,24 @@ class SkyModelPlotter(QWidget):
             return pos
 
         def drawCanvas(self, painter):
-            # print("drawCanvas", time.time() % 60)
+            dprint(5, "drawCanvas", time.time() % 60)
             if self._drawing_key is None:
-                # print("drawCanvas: key not set, redrawing")
+                dprint(5, "drawCanvas: key not set, redrawing")
                 return QwtPlot.drawCanvas(self, painter)
             else:
-                # print("drawCanvas: current key is", self._drawing_key)
+                dprint(5, "drawCanvas: current key is", self._drawing_key)
                 pm = self._draw_cache.get(self._drawing_key)
                 if pm:
-                    # print("drawCanvas: found pixmap in cache, drawing")
-                    pass
+                    dprint(5, "drawCanvas: found pixmap in cache, drawing")
                 else:
                     width, height = painter.device().width(), painter.device().height()
-                    # print("drawCanvas: not in cache, redrawing %dx%d pixmap" % (width, height))
+                    dprint(5, "drawCanvas: not in cache, redrawing %dx%d pixmap" % (width, height))
                     self._draw_cache[self._drawing_key] = pm = QPixmap(width, height)
                     pm.fill(self.canvasBackground().color())
+                    # pm.fill(self.canvasBackground())
                     QwtPlot.drawCanvas(self, QPainter(pm))
                 painter.drawPixmap(0, 0, pm)
-                # print("drawCanvas done", time.time() % 60)
+                dprint(5, "drawCanvas done", time.time() % 60)
                 return
 
         def clear(self):
@@ -760,10 +763,10 @@ class SkyModelPlotter(QWidget):
         def updateLayout(self):
             # if an update event is pending, skip our internal stuff
             if self._skymodelplotter.isUpdatePending():
-                #print("updateLayout: ignoring, since a plot update is pending")
+                dprint(5, "updateLayout: ignoring, since a plot update is pending")
                 QwtPlot.updateLayout(self)
             else:
-                #print("updateLayout")
+                dprint(5, "updateLayout")
                 self.clearCaches()
                 QwtPlot.updateLayout(self)
                 self.updateLayoutEvent.emit()
@@ -772,23 +775,26 @@ class SkyModelPlotter(QWidget):
             """Sets the current drawing key. If key is set to not None, then drawCanvas() will look in the draw cache
       for a pixmap matching the key, instead of redrawing the canvas. It will also cache the results of the draw.
       """
-            #print("setting drawing key", key)
+            dprint(2, "setting drawing key", key)
             self._drawing_key = key
 
         def clearCaches(self):
-            #print("clearing plot caches")
+            dprint(2, "clearing plot caches")
             self._coord_cache = {}
             self._draw_cache = {}
 
         def clearDrawCache(self):
             self._draw_cache = {}
 
+        # TODO - this method is not in the original code
         def updatePlot(self):
             self.replot()
 
     class PlotZoomer(QwtPlotZoomer):
         provisionalZoom = pyqtSignal(float, float, int, int)
 
+        # TODO - check where updateLayoutEvent is being used here
+        # Not in original code
         def __init__(self, canvas, updateLayoutEvent, track_callback=None, label=None):
             QwtPlotZoomer.__init__(self, canvas)
             self.setMaxStackDepth(1000)
@@ -805,6 +811,7 @@ class SkyModelPlotter(QWidget):
             # we recompute the actual zoom rect based on the aspect ratio and the desired rect.
             self._zoomrects = []
             # watch plot for changes: if resized, aspect ratios need to be checked
+            # TODO - confirm this is working
             self._updateLayoutEvent = updateLayoutEvent
             self._updateLayoutEvent.connect(self._checkAspects)
 
@@ -821,8 +828,8 @@ class SkyModelPlotter(QWidget):
         def _checkAspects(self):
             """If fixed-aspect mode is in effect, goes through zoom rects and adjusts them to the plot aspect"""
             if self._fixed_aspect:
-                #print("plot canvas size is", self.plot().size())
-                #print("zoom rects are", self._zoomrects)
+                dprint(2, "plot canvas size is", self.plot().size())
+                dprint(2, "zoom rects are", self._zoomrects)
                 self._resetZoomStack(self.zoomRectIndex())
 
         def setZoomStack(self, stack, index=0):
@@ -833,13 +840,15 @@ class SkyModelPlotter(QWidget):
             stack = list(map(self.adjustRect, self._zoomrects))
             if stack:
                 zs = stack[index]
-                #print("resetting plot limits to", zs)
+                dprint(2, "resetting plot limits to", zs)
                 self.plot().setAxisScale(QwtPlot.yLeft, zs.top(), zs.bottom())
                 self.plot().setAxisScale(QwtPlot.xBottom, zs.right(), zs.left())
                 self.plot().axisScaleEngine(QwtPlot.xBottom).setAttribute(QwtScaleEngine.Inverted, True)
                 QwtPlotZoomer.setZoomBase(self, doReplot=True)
-                #print("reset limits, zoom stack is now", self.zoomRectIndex())
-            #print("setting zoom stack", stack, index)
+                dprint(2, "reset limits, zoom stack is now", self.zoomRectIndex())
+            dprint(2, "setting zoom stack", stack, index)
+
+            # TODO - line below is not in original code
             p = dir(QwtPlotZoomer)
 
             # todo (gijs): setZoomStack and zoomStack are documented in the QWT6 docs, but somehow missing? weird
@@ -848,13 +857,13 @@ class SkyModelPlotter(QWidget):
             # TODO - linked to issue #37
             # Original code, QwtPlotZoomer.setZoomStack(stack, index)
             QwtPlotZoomer.setZoomBase(self, doReplot=True)
-            #print("zoom stack is now", self.zoomRectIndex(), self.maxStackDepth())
+            dprint(2, "zoom stack is now", self.zoomRectIndex(), self.maxStackDepth())
 
         def adjustRect(self, rect):
             """Adjusts rectangle w.r.t. aspect ratio settings. That is, if a fixed aspect ratio is in effect, adjusts the rectangle to match
       the aspect ratio of the plot canvas. Returns adjusted version."""
             if self._fixed_aspect:
-                #print("adjusting rect to canvas size:", self.canvas().size(), rect)
+                dprint(2, "adjusting rect to canvas size:", self.canvas().size(), rect)
                 aspect0 = self.canvas().width() / float(self.canvas().height()) if self.canvas().height() else 1
                 aspect = rect.width() / float(rect.height())
                 # increase rectangle, if needed to match the aspect
@@ -879,19 +888,19 @@ class SkyModelPlotter(QWidget):
                 y1 = self.plot().transform(self.yAxis(), y1)
                 x2 = self.plot().transform(self.xAxis(), x2)
                 y2 = self.plot().transform(self.yAxis(), y2)
-                #print("zoom by", abs(x1 - x2), abs(y1 - y2))
+                dprint(2, "zoom by", abs(x1 - x2), abs(y1 - y2))
                 if abs(x1 - x2) <= 20 and abs(y1 - y2) <= 20:
                     return
             if isinstance(rect, int) or rect.isValid():
-                #print("zoom", rect)
+                dprint(2, "zoom", rect)
                 if not isinstance(rect, int):
                     self._zoomrects[self.zoomRectIndex() + 1:] = [QRectF(rect)]
                     rect = self.adjustRect(rect)
-                    #print("zooming to", rect)
+                    dprint(2, "zooming to", rect)
                 QwtPlotZoomer.zoom(self, rect)
-                #print("zoom stack is now", self.zoomRectIndex())
+                dprint(2, "zoom stack is now", self.zoomRectIndex())
             else:
-                print("invalid zoom selected, ignoring", rect)
+                dprint(2, "invalid zoom selected, ignoring", rect)
 
         def trackerText(self, pos):
             print(f"trackerText ***************** being called {pos}")
@@ -1190,7 +1199,6 @@ class SkyModelPlotter(QWidget):
         im.imagePlotRaised.connect(self._imageRaised)
 
     class UpdateEvent(QEvent):
-
         def __init__(self, serial):
             QEvent.__init__(self, QEvent.User)
             self.serial = serial
@@ -1201,7 +1209,7 @@ class SkyModelPlotter(QWidget):
     def postUpdateEvent(self, what=SkyModel.UpdateAll, origin=None):
         """Posts an update event. Since plot updates are somewhat expensive, and certain operations can cause multiple updates,
     we handle them through the event loop."""
-        print("postUpdateEvent(what=%x,origin=%s)\n", what, origin)
+        dprintf(3, "postUpdateEvent(what=%x,origin=%s)\n", what, origin)
         self._update_what |= what
         self._update_pending += 1
         dprintf(3, "posting update event, serial %d, new mask %x\n", self._update_pending, self._update_what)
@@ -1226,6 +1234,7 @@ class SkyModelPlotter(QWidget):
                                         track_callback=self._trackCoordinates)
         self._tracker.setTrackerMode(QwtPicker.AlwaysOn)
         # zoom picker
+        # TODO - check getUpdateSignal() - this is new
         self._zoomer = self.PlotZoomer(self.plot.canvas(), self.plot.getUpdateSignal(), label="zoom")
         self._zoomer_pen = makeDualColorPen("navy", "yellow")
         self._zoomer.setRubberBandPen(self._zoomer_pen)
@@ -1247,10 +1256,12 @@ class SkyModelPlotter(QWidget):
         self._provisional_zoom = None
 
         # previous version had Rect or Drag selection modes.
+        # self._zoomer.setSelectionFlags(QwtPicker.RectSelection | QwtPicker.DragSelection)
         self._zoomer.setStateMachine(QwtPickerDragRectMachine())
 
         # ruler picker for measurement mode
         print(f"Setting up self._ruler Qwt...")
+        # TODO check select_callback and if correct arg
         self._ruler = self.PlotRuler(self.plot.canvas(), "measure", "cyan", select_callback=self._measureRuler,
                                      mode=QwtPickerPolygonMachine(),
                                      rubber_band=QwtPicker.PolygonRubberBand,
@@ -1293,6 +1304,8 @@ class SkyModelPlotter(QWidget):
         elif mpat[0] or kpat[0]:
             picker.setEnabled(True)
         # TODO - check below
+        # picker.setMousePattern(patt, *mpat)
+        # picker.setKeyPattern(patt, *kpat)
         mouse_button, mouse_mod = mpat
         picker.setMousePattern(patt, mouse_button, Qt.KeyboardModifier(mouse_mod))
 
@@ -1306,7 +1319,7 @@ class SkyModelPlotter(QWidget):
     For each MM_xx function defined in MouseModes, patterns[MM_xx] = (mouse_patt,key_patt)
     Each pattern is either None, or a (button,state) pair. If MM_xx is not in the dict, then thatfunction is
     disabled."""
-        print("setting mouse mode", mode.id)
+        dprint(1, "setting mouse mode", mode.id)
         self._mouse_mode = mode.id
         # remove markup
         self._removePlotMarkup()
@@ -1330,7 +1343,7 @@ class SkyModelPlotter(QWidget):
         self._setPickerPattern(self._picker2, QwtEventPattern.MouseSelect1, MouseModes.MM_SELWINPLUS, mode)
         self._setPickerPattern(self._picker3, QwtEventPattern.MouseSelect1, MouseModes.MM_DESEL, mode)
         self._setPickerPattern(self._picker4, QwtEventPattern.MouseSelect1, MouseModes.MM_SELSRC, mode)
-        print("picker4 pattern:", mode.patterns.get(MouseModes.MM_SELSRC, None))
+        dprint(2, "picker4 pattern:", mode.patterns.get(MouseModes.MM_SELSRC, None))
 
     def findNearestSource(self, pos, world=True, range=10):
         """Returns source object nearest to the specified point (within range, in pixels), or None if nothing is in range.
@@ -1496,7 +1509,7 @@ class SkyModelPlotter(QWidget):
         QApplication.clipboard().setText(msgtext + "\n", QClipboard.Selection)
 
     def _showCoordinateToolTip(self, text, rect=True):
-        print(text)
+        dprint(2, text)
         if rect:
             QToolTip.showText(self.plot.mapToGlobal(QPoint(0, 0)), text, self.plot, self.plot.rect())
         else:
@@ -1524,11 +1537,11 @@ class SkyModelPlotter(QWidget):
         if self._qa_show_psf.isVisible():
             rect = rect or self._zoomer.zoomBase()
             rect &= topimage.boundingRect()
-            print("updating PSF for zoom rect", rect)
+            dprint(1, "updating PSF for zoom rect", rect)
             lm = rect.bottomLeft()
             l00 = lm.x() + pmaj / 1.2
             m00 = lm.y() - pmaj / 1.2
-            print("drawing PSF at", l00, m00, "z", self._psf_marker.z())
+            dprint(1, "drawing PSF at", l00, m00, "z", self._psf_marker.z())
             arg = numpy.arange(0, 1.02, .02) * math.pi * 2
             mp0, lp0 = pmaj * numpy.cos(arg) / 2, pmin * numpy.sin(arg) / 2;  # angle 0 is m direction
             c, s = numpy.cos(ppa), numpy.sin(ppa)
@@ -1539,7 +1552,7 @@ class SkyModelPlotter(QWidget):
                 self._replot()
 
     def _replot(self):
-        print("replot")
+        dprint(1, "replot")
         self.plot.clearDrawCache()
         self.plot.replot()
 
@@ -1585,7 +1598,7 @@ class SkyModelPlotter(QWidget):
         if image and x is not None:
             msgtext += "   x=%d y=%d value=blank" % (x, y) if flag else "   x=%d y=%d value=%g" % (x, y, val)
             self._livezoom.trackImage(image, x, y)  # TODO - this sets the image to the zoomer but nothing displayed #45
-            self._liveprofile.trackImage(image, x, y)
+            self._liveprofile.trackImage(image, x, y)  # TODO - same problem as above
         self.showMessage.emit(msgtext, 3000)
         return None
 
@@ -1597,7 +1610,7 @@ class SkyModelPlotter(QWidget):
         for src in self.model.sources:
             newsel = src.selected
             if id(src) in subset:
-                print("selecting", src.name)
+                dprint(3, "selecting", src.name)
                 if mode & self.SelectionAdd:
                     newsel = True
                 elif mode & self.SelectionRemove:
@@ -1614,7 +1627,7 @@ class SkyModelPlotter(QWidget):
         """Selects or deselects source object nearest to the specified point (within range, in pixels).
         Note that _mouse_mode == MouseDeselect will force mode=SelectionRemove.
         'pos' is a QPointF/QwtDoublePoint object in lm coordinates if world=True, else a QPoint object."""
-        print("selectNearestSource", pos)
+        dprint(1, "selectNearestSource", pos)
         # deselect mouse mode implies removing from selection, in all other modes we add
         if self._mouse_mode == self.MouseDeselect:
             mode = self.SelectionRemove
@@ -1674,7 +1687,7 @@ class SkyModelPlotter(QWidget):
 
     def _colourZoomIntoSubset(self):
         # zoom into current image subset (if any), and hide the zoom button
-        print(self._image_subset)
+        dprint(1, self._image_subset)
         if self._image_subset is not None:
             self._imgman.setLMRectSubset(self._image_subset)
             self._removePlotMarkup()
@@ -1684,18 +1697,18 @@ class SkyModelPlotter(QWidget):
     def _selectRectStats(self, rect):
         if self._imgman:
             image = self._imgman.getTopImage()
-        print("subset selection", rect, "image:", image and image.boundingRect())
+            dprint(1, "subset selection", rect, "image:", image and image.boundingRect())
         if not image or not rect.intersects(image.boundingRect()):
             self._selectImageSubset(None)
             return
         zoomrect = image.boundingRect().intersected(rect)
-        print("selecting image subset", zoomrect)
+        dprint(1, "selecting image subset", zoomrect)
         self._selectImageSubset(zoomrect, image)
 
     def _selectRect(self, rect, world=True, mode=SelectionClear | SelectionAdd):
         """Selects sources within the specified rectangle. For meaning of 'mode', see flags above.
         'rect' is a QRectF/QwtDoubleRect object in lm coordinates if world=True, else a QRect object in screen coordinates."""
-        print("selectRect", rect)
+        dprint(1, "selectRect", rect)
         if not world:
             rect = self.plot.screenRectToLm(rect)
         sources = [marker.source() for marker in self._markers.values() if
@@ -1740,7 +1753,7 @@ class SkyModelPlotter(QWidget):
         self._provisional_zoom_timer.start(timeout)
 
     def _plotZoomed(self, rect):
-        # print("zoomed to", rect)
+        dprint(2, "zoomed to", rect)
         self._zoomer_box.setVisible(False)
         self._zoomer_label.setVisible(False)
         self._provisional_zoom = None
@@ -1800,7 +1813,7 @@ class SkyModelPlotter(QWidget):
                 SkyModel.UpdateSourceList | SkyModel.UpdateSourceContent | self.UpdateImages):
             return
         # clear any plot markup
-        print("clearing plot markup")
+        dprint(2, "clearing plot markup")
         for item in self._plot_markup:
             item.detach()
         self._plot_markup = []
@@ -1830,11 +1843,11 @@ class SkyModelPlotter(QWidget):
         # Use projection of first image, or 'Sin' by default
         if self._image:
             self.projection = self._image.projection
-            print("using projection from image", self._image.name)
+            dprint(1, "using projection from image", self._image.name)
             ra, dec = self.projection.radec(0, 0)
         else:
             self.projection = Projection.SinWCS(*self.model.fieldCenter())
-            print("using default Sin projection")
+            dprint(1, "using default Sin projection")
         # compute lm: dict from source ID to l,m tuple
         if self.model:
             self._source_lm = dict(
@@ -1849,13 +1862,13 @@ class SkyModelPlotter(QWidget):
                 margin = .05 * (xmax - xmin)
                 extent[iext][0] -= margin
                 extent[iext][1] += margin
-                print("plot extents for model", extent)
+                dprint(2, "plot extents for model", extent)
         # account for bounding rects of images
         # TODO: check that images are visible
         for img in (self._imgman.getImages() or []):
         # for img in ((self._imgman and self._imgman.getImages()) or []):
             ext = img.getExtents()
-            print("image extents", ext)
+            dprint(2, "image extents", ext)
             for i in 0, 1:
                 extent[i][0] = min(extent[i][0], ext[i][0])
                 extent[i][1] = max(extent[i][1], ext[i][1])
@@ -1863,21 +1876,21 @@ class SkyModelPlotter(QWidget):
         for i in 0, 1:
             if extent[i][0] == extent[i][1]:
                 extent[i] = [-DEG * 0.5, DEG * 0.5]
-        print("plot extents for model & images", extent)
+        dprint(2, "plot extents for model & images", extent)
         (lmin, lmax), (mmin, mmax) = extent
         # adjust plot limits, if a fixed ratio is in effect, and set the zoom base
         zbase = QRectF(QPointF(lmin, mmin), QPointF(lmax, mmax))
         #    zbase = self._zoomer.adjustRect(zbase)
         zooms = [zbase]
-        print("zoom base, adjusted for aspect:", zbase)
+        dprint(2, "zoom base, adjusted for aspect:", zbase)
         # zooms = [ self._zoomer.adjustRect(zbase) ]
         # if previously set zoom rect intersects the zoom base at all (and is not a superset), try to restore it
-        print("previous zoom area:", self._zoomrect)
+        dprint(2, "previous zoom area:", self._zoomrect)
         if self._zoomrect and self._zoomrect.intersects(zbase):
             rect = self._zoomrect.intersected(zbase)
             #      rect = self._zoomer.adjustRect(self._zoomrect.intersected(zbase))
             if rect != zbase:
-                print("will restore zoomed area", rect)
+                dprint(2, "will restore zoomed area", rect)
                 zooms.append(rect)
         self._qa_unzoom.setEnabled(len(zooms) > 1)
         self._provisional_zoom_level = 0
@@ -1889,7 +1902,7 @@ class SkyModelPlotter(QWidget):
         #    self.plot.axisScaleEngine(QwtPlot.xBottom).setAttribute(QwtScaleEngine.Inverted, True)
         #    dprint(2,"setting zoom base",zbase)
         #    self._zoomer.setZoomBase(zbase)
-        print("drawing grid")
+        dprint(5, "drawing grid")
         # add grid lines & circles
         circstep = self._grid_step_arcsec
         if circstep:
@@ -1937,7 +1950,7 @@ class SkyModelPlotter(QWidget):
                 gr.attach(self.plot)
         # make a new set of source markers, since either the image or the model may have been updated
         if self.model:
-            print("making skymodel markers")
+            dprint(5, "making skymodel markers")
             # compute min/max brightness
             # brightnesses <=1e-20 are specifically excluded (as they're probably "dummy" sources, etc.)
             b = [abs(src.brightness()) for src in self.model.sources if abs(src.brightness()) > 1e-20]
@@ -1954,10 +1967,10 @@ class SkyModelPlotter(QWidget):
             marker.attach(self.plot)
         # attach images to plot
         if self._imgman:
-            print("attaching images")
+            dprint(5, "attaching images")
             self._imgman.attachImagesToPlot(self.plot)
         # update the PlotZoomer with our set of zooms. This implictly causes a plot update
-        print("updating zoomer")
+        dprint(5, "updating zoomer")
         self._zoomer.setZoomStack(zooms, len(zooms) - 1)
         self._updatePsfMarker(None, replot=True)
         #  self.plot.replot()
@@ -1966,7 +1979,7 @@ class SkyModelPlotter(QWidget):
         self._source_lm = {}
         self._markers = {}
         self.model = model
-        print("setModel", model)
+        dprint(2, "setModel", model)
         if model:
             # connect signals
             self.model.connect("updated", self.postUpdateEvent)
@@ -2008,7 +2021,7 @@ class SkyModelPlotter(QWidget):
         self.showMessage.emit("Exported plot to file %s" % filename)
 
     def setCurrentSource(self, src, src0=None, origin=None):
-        #print("setCurrentSource", src and src.name, src0 and src0.name, origin)
+        dprint(2, "setCurrentSource", src and src.name, src0 and src0.name, origin)
         if self.model and self.model.curgroup.style.apply:
             for s in src, src0:
                 marker = s and self._markers.get(s.name)

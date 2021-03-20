@@ -48,7 +48,7 @@ def main():
 
     if options.timestamps:
         try:
-            utils.verbosity.enable_timestamps()
+            TigGUI.kitties.utils.verbosity.enable_timestamps()
         except:
             pass
     dprint(1, "starting up")
@@ -135,7 +135,7 @@ def main():
         mainwin.close()
 
     import signal
-    signal.signal(signal.SIGINT, sigint_handler)
+    signal.signal(signal.SIGINT, sigint_handler)  # TODO -check this is still valid
     dprint(1, "added signal handler")
 
     # splash.finish(mainwin)

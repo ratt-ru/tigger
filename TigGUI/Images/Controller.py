@@ -314,6 +314,7 @@ class ImageController(QFrame):
         if not self._control_dialog:
             dprint(1, "creating control dialog")
             self._control_dialog = ImageControlDialog(self, self._rc, self._imgman)
+            # line below allows window to be resized by the user
             self._control_dialog.setSizeGripEnabled(True)
             dprint(1, "done")
         if not self._control_dialog.isVisible():
