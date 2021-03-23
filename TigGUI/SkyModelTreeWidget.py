@@ -86,6 +86,7 @@ class SkyModelTreeWidget(TigGUI.kitties.widgets.ClickableTreeWidget):
         TigGUI.kitties.widgets.ClickableTreeWidget.__init__(self, *args)
         self._currier = PersistentCurrier()
         self.model = None
+        self._itemdict = None
         # insert columns
         self.setHeaderLabels(ViewColumns)
         self.headerItem().setText(ColumnIapp, "I(app)")
@@ -149,12 +150,14 @@ class SkyModelTreeWidget(TigGUI.kitties.widgets.ClickableTreeWidget):
         busy = BusyIndicator()
         self._column_enabled[column] = enable
         self._showColumn(column, enable and self._column_shown[column])
+        busy.reset_cursor()
 
     def _showColumnCategory(self, columns, show):
         busy = BusyIndicator()
         for col in columns:
             self._column_shown[col] = show
             self._showColumn(col, self._column_enabled[col] and show)
+        busy.reset_cursor()
 
     def _selectionChanged(self):
         if self._updating_selection:
