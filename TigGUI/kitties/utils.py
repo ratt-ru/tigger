@@ -93,7 +93,7 @@ def extract_stack(f=None, limit=None):
         lim += 1
     tb = traceback.extract_stack(None, lim)
     if tb:
-        return tb[:-1];  # skip current frame
+        return tb[:-1]  # skip current frame
     # else presumably running under psyco
     return nonportable_extract_stack(f, limit)
 
@@ -102,7 +102,7 @@ def nonportable_extract_stack(f=None, limit=None):
     if f is not None:
         raise RuntimeError("Timba.utils.nonportable_extract_stack: f has to be None, don't ask why")
     tb = []
-    fr = sys._getframe(1);  # caller's frame
+    fr = sys._getframe(1)  # caller's frame
     while fr and (limit is None or len(tb) < limit):
         tb.insert(0, (fr.f_code.co_filename, fr.f_lineno, fr.f_code.co_name, None))
         fr = fr.f_back
@@ -116,8 +116,8 @@ _scale = {'kB': 1024.0, 'mB': 1024.0 * 1024.0,
 
 
 def _VmB(VmKey):
-    '''Private.
-    '''
+    """Private.
+    """
     global _proc_status, _scale
     # get pseudo file  /proc/<pid>/status
     try:
@@ -136,20 +136,20 @@ def _VmB(VmKey):
 
 
 def _memory(since=0.0):
-    '''Return memory usage in bytes.
-    '''
+    """Return memory usage in bytes.
+    """
     return _VmB('VmSize:') - since
 
 
 def _resident(since=0.0):
-    '''Return resident memory usage in bytes.
-    '''
+    """Return resident memory usage in bytes.
+    """
     return _VmB('VmRSS:') - since
 
 
 def _stacksize(since=0.0):
-    '''Return stack size in bytes.
-    '''
+    """Return stack size in bytes.
+    """
     return _VmB('VmStk:') - since
 
 
