@@ -20,6 +20,9 @@
 # or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 import faulthandler
+
+from PyQt5.QtWidgets import QStyleFactory
+
 faulthandler.enable()
 import sys
 import traceback
@@ -63,14 +66,15 @@ def main():
     TigGUI.startup_dprint = dprint
     TigGUI.startup_dprintf = dprintf
 
-    dprint(1, "imported Qt4")
+    dprint(1, "imported Qt5")
+    QApplication.setDesktopSettingsAware(True)  # App will use System fonts, colours etc...
     app = QApplication(sys.argv)
-    app.setDesktopSettingsAware(True)
+    app.setStyle(QStyleFactory.create("Fusion"))  # TODO - even after adding this it still causes a style warning from Qt
     from TigGUI.init import pixmaps
     app.setWindowIcon(pixmaps.tigger_starface.icon())
     # Need for PlotStyles colors -- ignore error on non-X11 platforms like the Mac
     try:
-        QColor.setAllowX11ColorNames(True)
+        QColor.setAllowX11ColorNames(True)  # TODO - this seems to be a Qt4 call and needs updating.
     except AttributeError:
         pass
 
