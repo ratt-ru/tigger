@@ -258,13 +258,13 @@ class verbosity:
             stream.write(self.dheader(-3))
             stream.write(string.join(list(map(str, args)), ' ') + '\n')
 
-    def dprintf(self, level, format, *args):
-        if level <= self.verbose:
+    def dprintf(self, _level, _format, *args):
+        if _level <= self.verbose:
             stream = self.stream or sys.stderr
             try:
-                s = format % args
+                s = _format % args
             except:
-                stream.write('dprintf format exception: ' + str(format) + '\n')
+                stream.write('dprintf format exception: ' + str(_format) + '\n')
             else:
                 stream.write(self.dheader(-3))
                 stream.write(s)

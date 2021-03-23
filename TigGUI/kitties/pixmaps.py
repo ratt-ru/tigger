@@ -79,6 +79,9 @@ class QPixmapWrapper:
 
     def __init__(self, pm=_missing_icon_xpm):
         """Initialize wrapper with a pixmap or with an xpm string array"""
+        self._xpmstr = None
+        self._pm = None
+        self._icon = None
         self.assign(pm)
 
     def assign(self, pm):
@@ -3105,7 +3108,7 @@ class PixmapCache:
                 # loop over all files
                 nicons = 0
                 for f in files:
-                    (name, ext) = os.path.splitext(f);  # check extension
+                    (name, ext) = os.path.splitext(f)  # check extension
                     if ext in ('.png', '.xpm', '.gif'):
                         f = os.path.join(trydir, f)
                         try:

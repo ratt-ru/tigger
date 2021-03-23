@@ -54,88 +54,88 @@ class DualConfigParser:
         self._user_file = os.path.join(user_path, "." + filename)
         self.usercp.read([self._user_file])
 
-    def add_section(self, section):
-        if not self.syscp.has_section(section):
-            self.syscp.add_section(section)
-        if not self.usercp.has_section(section):
-            self.usercp.add_section(section)
+    def add_section(self, _section):
+        if not self.syscp.has_section(_section):
+            self.syscp.add_section(_section)
+        if not self.usercp.has_section(_section):
+            self.usercp.add_section(_section)
 
-    def has_section(self, section):
-        return self.syscp.has_section(section) or self.usercp.has_section(section)
+    def has_section(self, _section):
+        return self.syscp.has_section(_section) or self.usercp.has_section(_section)
 
-    def _get(self, method, section, option, default=None, init=False, save=False):
-        section = section or self.defsection  # TODO - check defsection
+    def _get(self, _method, _section, _option, default=None, init=False, save=False):
+        _section = _section or self.defsection  # TODO - defsection is unresolved for DualConfigParser
         # try user defaults
         try:
-            return getattr(self.usercp, method)(section, option)
+            return getattr(self.usercp, _method)(_section, _option)
         except (NoSectionError, NoOptionError, ValueError):
             error = sys.exc_info()[1]
         # try systemwide
         try:
-            return getattr(self.syscp, method)(section, option)
+            return getattr(self.syscp, _method)(_section, _option)
         except (NoSectionError, NoOptionError, ValueError):
-            if default is not None and option is not None:
-                self.syscp.set(section, option, str(default))
+            if default is not None and _option is not None:
+                self.syscp.set(_section, _option, str(default))
                 if init or save:
-                    self.usercp.set(section, option, str(default))
+                    self.usercp.set(_section, _option, str(default))
                     if save:
                         self.usercp.write(open(self._user_file, "w"))
                 return default
             # no default, so re-raise the error
             raise error
 
-    def set(self, section, option, value, save=True):
-        value = str(value)
+    def set(self, _section, _option, _value, save=True):
+        _value = str(_value)
         # try to get option first, and do nothing if no change
         try:
-            if self.get(section, option) == value:
+            if self.get(_section, _option) == _value:
                 return
         except (NoSectionError, NoOptionError):
             pass
         # save to user section
         try:
-            self.usercp.add_section(section)
+            self.usercp.add_section(_section)
         except DuplicateSectionError:
             pass
-        self.usercp.set(section, option, value)
+        self.usercp.set(_section, _option, _value)
         if save:
             with open(self._user_file, "w") as f:
                 self.usercp.write(f)
 
-    def has_option(self, section, option):
-        return self.syscp.has_option(section, option) or \
-               self.usercp.has_option(section, option)
+    def has_option(self, _section, _option):
+        return self.syscp.has_option(_section, _option) or \
+               self.usercp.has_option(_section, _option)
 
-    def get(self, section, option, default=None):
-        return self._get('get', option, default, section)
+    def get(self, _section, _option, default=None):
+        return self._get('get', _option, default, _section)
 
 
 class SectionParser:
     """A section parser is basically a ConfigParser with a default section name."""
 
-    def __init__(self, parser, section):
+    def __init__(self, _parser, _section):
         """Creates a SectionParser from a DualConfigParser and a section name"""
-        self.parser = parser
-        parser.add_section(section)
-        self.section = section
+        self.parser = _parser
+        _parser.add_section(_section)
+        self.section = _section
 
-    def has_option(self, option, section=None):
-        return self.parser.has_option(section or self.section, option)
+    def has_option(self, _option, section=None):
+        return self.parser.has_option(section or self.section, _option)
 
-    def get(self, option, default=None, section=None, init=False, save=False):
-        return self.parser._get('get', section or self.section, option, default, init=init, save=save)
+    def get(self, _option, default=None, section=None, init=False, save=False):
+        return self.parser._get('get', section or self.section, _option, default, init=init, save=save)
 
-    def getint(self, option, default=None, section=None, init=False, save=False):
-        return self.parser._get('getint', section or self.section, option, default, init=init, save=save)
+    def getint(self, _option, default=None, section=None, init=False, save=False):
+        return self.parser._get('getint', section or self.section, _option, default, init=init, save=save)
 
-    def getfloat(self, option, default=None, section=None, init=False, save=False):
-        return self.parser._get('getfloat', section or self.section, option, default, init=init, save=save)
+    def getfloat(self, _option, default=None, section=None, init=False, save=False):
+        return self.parser._get('getfloat', section or self.section, _option, default, init=init, save=save)
 
-    def getbool(self, option, default=None, section=None, init=False, save=False):
-        return self.parser._get('getboolean', section or self.section, option, default, init=init, save=save)
+    def getbool(self, _option, default=None, section=None, init=False, save=False):
+        return self.parser._get('getboolean', section or self.section, _option, default, init=init, save=save)
 
-    def set(self, option, value, section=None, save=True):
-        return self.parser.set(section or self.section, option, value, save=save)
+    def set(self, _option, _value, section=None, save=True):
+        return self.parser.set(section or self.section, _option, _value, save=save)
 
 
 Config = DualConfigParser()
