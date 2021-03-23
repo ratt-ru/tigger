@@ -113,7 +113,7 @@ def main():
     for mod in models:
         print("Loading model" + mod)
         try:
-            mainwin.openFile(mod, show=False)
+            mainwin.openFile(mod, _show=False)
         except:
             traceback.print_exc()
             print("Error loading model %s" % mod)

@@ -57,6 +57,8 @@ class MainWindow(QMainWindow):
 
     def __init__(self, parent, hide_on_close=False):
         QMainWindow.__init__(self, parent)
+        self._add_tag_dialog = None
+        self._remove_tag_dialog = None
         self.setWindowIcon(pixmaps.tigger_starface.icon())
         self._currier = PersistentCurrier()
         self.hide()
@@ -218,6 +220,7 @@ class MainWindow(QMainWindow):
             dprint(1, "drag-enter rejected")
 
     def dropEvent(self, event):
+        busy = None
         filenames = self._getFilenamesFromDropEvent(event)
         dprint(1, "dropping", filenames)
         if filenames:
@@ -225,7 +228,8 @@ class MainWindow(QMainWindow):
             busy = BusyIndicator()
             for name in filenames:
                 self.imgman.loadImage(name)
-        busy.reset_cursor()
+        if busy is not None:
+            busy.reset_cursor()
 
     def saveSizes(self):
         if self._current_layout is not None:
@@ -439,48 +443,48 @@ class MainWindow(QMainWindow):
         self._merge_file_dialog.exec_()
         return
 
-    def openFile(self, filename=None, format=None, merge=False, show=True):
+    def openFile(self, _filename=None, _format=None, _merge=False, _show=True):
         # check that we can close existing model
-        if not merge and not self._canCloseExistingModel():
+        if not _merge and not self._canCloseExistingModel():
             return False
-        if isinstance(filename, QStringList):
-            filename = filename[0]
-        filename = str(filename)
+        if isinstance(_filename, QStringList):
+            _filename = _filename[0]
+        _filename = str(_filename)
         # try to determine the file type
-        filetype, import_func, export_func, doc = Tigger.Models.Formats.resolveFormat(filename, format)
+        filetype, import_func, export_func, doc = Tigger.Models.Formats.resolveFormat(_filename, _format)
         if import_func is None:
-            self.showErrorMessage("""Error loading model file %s: unknown file format""" % filename)
+            self.showErrorMessage("""Error loading model file %s: unknown file format""" % _filename)
             return
         # try to load the specified file
         busy = BusyIndicator()
-        self.showMessage("""Reading %s file %s""" % (filetype, filename), 3000)
+        self.showMessage("""Reading %s file %s""" % (filetype, _filename), 3000)
         QApplication.flush()
         try:
-            model = import_func(filename)
-            model.setFilename(filename)
+            model = import_func(_filename)
+            model.setFilename(_filename)
         except:
             busy.reset_cursor()
-            self.showErrorMessage("""Error loading '%s' file %s: %s""" % (filetype, filename, str(sys.exc_info()[1])))
+            self.showErrorMessage("""Error loading '%s' file %s: %s""" % (filetype, _filename, str(sys.exc_info()[1])))
             return
         else:
             # set the layout
-            if show:
+            if _show:
                 self.setLayout(self.LayoutImageModel)
             # add to content
-            if merge and self.model:
+            if _merge and self.model:
                 self.model.addSources(model.sources)
-                self.showMessage("""Merged in %d sources from '%s' file %s""" % (len(model.sources), filetype, filename),
+                self.showMessage("""Merged in %d sources from '%s' file %s""" % (len(model.sources), filetype, _filename),
                                  3000)
-                self.model.emitUpdate(SkyModel.UpdateAll)
+                self.model.emitUpdate(SkyModel.SkyModel.UpdateAll)
             else:
-                self.showMessage("""Loaded %d sources from '%s' file %s""" % (len(model.sources), filetype, filename),
+                self.showMessage("""Loaded %d sources from '%s' file %s""" % (len(model.sources), filetype, _filename),
                                  3000)
-                self._display_filename = os.path.basename(filename)
+                self._display_filename = os.path.basename(_filename)
                 self.setModel(model)
                 self._indicateModelUpdated(updated=False)
                 # only set self.filename if an export function is available for this format. Otherwise set it to None, so that trying to save
                 # the file results in a save-as operation (so that we don't save to a file in an unsupported format).
-                self.filename = filename if export_func else None
+                self.filename = _filename if export_func else None
         finally:
             busy.reset_cursor()
 
