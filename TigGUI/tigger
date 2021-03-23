@@ -29,6 +29,7 @@ from PyQt5.Qt import QApplication, QColor
 
 from TigGUI.kitties import utils
 
+
 def main():
     import TigGUI.init
 
