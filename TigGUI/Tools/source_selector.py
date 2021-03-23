@@ -34,12 +34,7 @@ import TigGUI.kitties.utils
 from TigGUI.kitties.utils import curry
 from TigGUI.kitties.widgets import BusyIndicator
 
-# TODO - check this try/except (not in original code)
-try:
-    QString = unicode
-except NameError:
-    # Python 3
-    QString = str
+QString = str
 
 _verbosity = TigGUI.kitties.utils.verbosity(name="source_selector")
 dprint = _verbosity.dprint
@@ -64,6 +59,8 @@ NonSortingTags = set(["name", "typecode"])
 class SourceSelectorDialog(QDialog):
     def __init__(self, parent, flags=Qt.WindowFlags()):
         QDialog.__init__(self, parent, flags)
+        self.model = None
+        self.sorttags = None
         self.setModal(False)
         self.setWindowTitle("Select sources by...")
         lo = QVBoxLayout(self)
