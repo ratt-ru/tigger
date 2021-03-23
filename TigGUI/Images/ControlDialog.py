@@ -511,6 +511,8 @@ class ImageControlDialog(QDialog):
     class ColorBarPlotItem(QwtPlotItem):
         def __init__(self, y0, y1, *args):
             QwtPlotItem.__init__(self, *args)
+            self.imap = None
+            self.cmap = None
             self._y0 = y1
             self._dy = y1 - y0
 
@@ -883,9 +885,9 @@ class ImageControlDialog(QDialog):
     def _setHistDisplayRange(self):
         self._rc.setDisplayRange(*self._hist_range)
 
-    def _updateImageSlice(self, slice):
+    def _updateImageSlice(self, _slice):
         for i, (iextra, name, labels) in enumerate(self._rc.slicedAxes()):
-            self._wslicers[i].setCurrentIndex(slice[iextra])
+            self._wslicers[i].setCurrentIndex(_slice[iextra])
 
     def _changeDisplayRangeToPercent(self, percent):
         busy = BusyIndicator()

@@ -43,6 +43,8 @@ class IntensityMap:
     def __init__(self, dmin=None, dmax=None):
         """Constructor. An optional data range may be supplied."""
         self.range = None
+        self.subset = None
+        self.subset_minmax = None
         if dmin is not None:
             if dmax is None:
                 raise TypeError("both dmin and dmax must be specified, or neither.""")
@@ -114,11 +116,11 @@ class HistEqIntensityMap(IntensityMap):
 
     def setDataSubset(self, subset, minmax=None):
         IntensityMap.setDataSubset(self, subset, minmax)
-        self._bins = None;  # to recompute the CDF
+        self._bins = None  # to recompute the CDF
 
     def setDataRange(self, *range):
         IntensityMap.setDataRange(self, *range)
-        self._bins = None;  # to recompute the CDF
+        self._bins = None  # to recompute the CDF
 
     def _computeCDF(self, data):
         """Recomputes the CDF using the current data subset and range"""
@@ -266,6 +268,9 @@ class ColormapWithControls(Colormap):
                 name, value, minval, maxval, step, format
             self._default = value
             self._wlabel = None
+            self._wreset = None
+            self._wslider = None
+            self._wslider_timer = None
 
         def makeControlWidgets(self, parent, gridlayout, row, column):
             toprow = QWidget(parent)
