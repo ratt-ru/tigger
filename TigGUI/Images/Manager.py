@@ -66,6 +66,8 @@ class ImageManager(QWidget):
         self._border_pen = None
         self._drawing_key = None
         self._load_image_dialog = None
+        self._label_color = None
+        self._label_bg_brush = None
         self._model_imagecons = set()
         # init menu and standard actions
         self._menu = QMenu("&Image", self)
@@ -302,15 +304,15 @@ class ImageManager(QWidget):
         # update slice menus
         img = imagecon.image
         axes = imagecon.renderControl().slicedAxes()
-        for i, (next, prev) in enumerate(self._qa_slices):
-            next.setVisible(False)
-            prev.setVisible(False)
+        for i, (_next, _prev) in enumerate(self._qa_slices):
+            _next.setVisible(False)
+            _prev.setVisible(False)
             if i < len(axes):
                 iaxis, name, labels = axes[i]
-                next.setVisible(True)
-                prev.setVisible(True)
-                next.setText("Show next slice along %s axis" % name)
-                prev.setText("Show previous slice along %s axis" % name)
+                _next.setVisible(True)
+                _prev.setVisible(True)
+                _next.setText("Show next slice along %s axis" % name)
+                _prev.setText("Show previous slice along %s axis" % name)
         # emit signals
         self.imageRaised.emit(img)
         if busy is not None:
