@@ -1534,22 +1534,24 @@ class SkyModelPlotter(QWidget):
             pmaj, pmin, ppa = topimage.getPsfSize() if topimage else (0, 0, 0)
             self._qa_show_psf.setVisible(bool(topimage and pmaj != 0))
             self._psf_marker.setVisible(bool(topimage and pmaj != 0 and self._qa_show_psf.isChecked()))
-        if self._qa_show_psf.isVisible():
-            rect = rect or self._zoomer.zoomBase()
-            rect &= topimage.boundingRect()
-            dprint(1, "updating PSF for zoom rect", rect)
-            lm = rect.bottomLeft()
-            l00 = lm.x() + pmaj / 1.2
-            m00 = lm.y() - pmaj / 1.2
-            dprint(1, "drawing PSF at", l00, m00, "z", self._psf_marker.z())
-            arg = numpy.arange(0, 1.02, .02) * math.pi * 2
-            mp0, lp0 = pmaj * numpy.cos(arg) / 2, pmin * numpy.sin(arg) / 2;  # angle 0 is m direction
-            c, s = numpy.cos(ppa), numpy.sin(ppa)
-            lp = lp0 * c + mp0 * s
-            mp = - lp0 * s + mp0 * c
-            self._psf_marker.setData(lp + l00, mp + m00)
-            if replot and self._psf_marker.isVisible():
-                self._replot()
+            if self._qa_show_psf.isVisible():
+                rect = rect or self._zoomer.zoomBase()
+                rect &= topimage.boundingRect()
+                dprint(1, "updating PSF for zoom rect", rect)
+                lm = rect.bottomLeft()
+                l00 = lm.x() + pmaj / 1.2
+                m00 = lm.y() - pmaj / 1.2
+                dprint(1, "drawing PSF at", l00, m00, "z", self._psf_marker.z())
+                arg = numpy.arange(0, 1.02, .02) * math.pi * 2
+                mp0, lp0 = pmaj * numpy.cos(arg) / 2, pmin * numpy.sin(arg) / 2;  # angle 0 is m direction
+                c, s = numpy.cos(ppa), numpy.sin(ppa)
+                lp = lp0 * c + mp0 * s
+                mp = - lp0 * s + mp0 * c
+                self._psf_marker.setData(lp + l00, mp + m00)
+                if replot and self._psf_marker.isVisible():
+                    self._replot()
+        elif replot:
+            self._replot()
 
     def _replot(self):
         dprint(1, "replot")
