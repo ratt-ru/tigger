@@ -45,6 +45,7 @@ DEG = math.pi / 180
 class RestoreImageDialog(QDialog):
     def __init__(self, parent, modal=True, flags=Qt.WindowFlags()):
         QDialog.__init__(self, parent, flags)
+        self.model = None
         self.setModal(modal)
         self.setWindowTitle("Restore model into image")
         lo = QVBoxLayout(self)

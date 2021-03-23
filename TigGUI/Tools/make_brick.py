@@ -52,6 +52,8 @@ from astLib.astWCS import WCS
 class MakeBrickDialog(QDialog):
     def __init__(self, parent, modal=True, flags=Qt.WindowFlags()):
         QDialog.__init__(self, parent, flags)
+        self.model = None
+        self._model_dir = None
         self.setModal(modal)
         self.setWindowTitle("Convert sources to FITS brick")
         lo = QVBoxLayout(self)

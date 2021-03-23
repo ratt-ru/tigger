@@ -40,6 +40,7 @@ DEG = math.pi / 180
 class ExportKarmaDialog(QDialog):
     def __init__(self, parent, modal=True, flags=Qt.WindowFlags()):
         QDialog.__init__(self, parent, flags)
+        self.model = None
         self.setModal(modal)
         self.setWindowTitle("Export Karma annotations")
         lo = QVBoxLayout(self)
@@ -91,7 +92,7 @@ class ExportKarmaDialog(QDialog):
                                                                  QMessageBox.Yes | QMessageBox.No,
                                                                  QMessageBox.Yes) != QMessageBox.Yes:
                 return
-            f = file(self.wfile.filename(), "wt")
+            f = open(self.wfile.filename(), "wt")
             f.write('COORD W\nPA STANDARD\nCOLOR GREEN\nFONT hershey12\n')
             # source list
             if self.wsel.isChecked():
