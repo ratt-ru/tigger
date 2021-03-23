@@ -67,6 +67,9 @@ class ImageController(QFrame):
         QFrame.__init__(self, parent)
         self.setFrameStyle(QFrame.StyledPanel | QFrame.Raised)
         # init state
+        self._border_pen = None
+        self._image_label_text = None
+        self._subset = None
         self.image = image
         self._imgman = imgman
         self._currier = PersistentCurrier()
@@ -364,13 +367,13 @@ class ImageController(QFrame):
     def currentSlice(self):
         return self._rc.currentSlice()
 
-    def _updateImageSlice(self, slice):
-        dprint(2, slice)
+    def _updateImageSlice(self, _slice):
+        dprint(2, _slice)
         for i, (iextra, name, labels) in enumerate(self._rc.slicedAxes()):
             slicer = self._wslicers[i]
-            if slicer.currentIndex() != slice[iextra]:
-                dprint(3, "setting widget", i, "to", slice[iextra])
-                slicer.setCurrentIndex(slice[iextra])
+            if slicer.currentIndex() != _slice[iextra]:
+                dprint(3, "setting widget", i, "to", _slice[iextra])
+                slicer.setCurrentIndex(_slice[iextra])
 
     def setMarkersZ(self, z):
         self._z_markers = z
