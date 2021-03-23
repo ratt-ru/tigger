@@ -65,6 +65,19 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
         self._cache_qimage = {}
         self._cache_mapping = self._cache_imap = self._cache_interp = None
         self._psfsize = 0, 0, 0
+        self.projection = None
+        self._nx, self._ny = 0, 0
+        self._l0, self._m0 = 0, 0
+        self._dl, self._dm = 0, 0
+        self._x0, self._y0 = 0, 0
+        self._lminmax = None
+        self._mminmax = None
+        self._bounding_rect = None
+        self._bounding_rect_pix = None
+        self._image_key = None
+        self._prefilter = None
+        self._current_rect = None
+        self._current_rect_pix = None
         # set image, if specified
         if image is not None:
             nx, ny = image.shape
@@ -325,8 +338,8 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
         painter.drawImage(xp1, yp2, qimg)
         dprint(2, "drawing took", time.time() - t0, "secs")
 
-    def setPsfSize(self, maj, min, pa):
-        self._psfsize = maj, min, pa
+    def setPsfSize(self, _maj, _min, _pa):
+        self._psfsize = _maj, _min, _pa
 
     def getPsfSize(self):
         return self._psfsize
@@ -355,6 +368,7 @@ class SkyCubePlotItem(SkyImagePlotItem):
     def __init__(self, data=None, ndim=None):
         SkyImagePlotItem.__init__(self)
         # datacube (array of any rank)
+        self._data_fortran_order = None
         self._data = self._dataminmax = None
         # current image slice (a list of indices) applied to data to make an image
         self.imgslice = None
@@ -363,6 +377,8 @@ class SkyCubePlotItem(SkyImagePlotItem):
         # info about other axes
         self._extra_axes = []
         # set other info
+        self.ra0 = 0
+        self.dec0 = 0
         if data is not None:
             self.setData(data)
         elif ndim:
@@ -547,6 +563,7 @@ class SkyCubePlotItem(SkyImagePlotItem):
 
 
 class FITSImagePlotItem(SkyCubePlotItem):
+    fits_header = None
 
     @staticmethod
     def hasComplexAxis(hdr):
