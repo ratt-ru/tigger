@@ -34,6 +34,7 @@ from PyQt5.QtCore import pyqtSignal, Qt
 
 QStringList = list
 
+
 class TiggerPlotCurve(QwtPlotCurve):
     """Wrapper around QwtPlotCurve to make it compatible with numpy float types"""
 
@@ -52,17 +53,17 @@ class FloatValidator(QValidator):  # TODO - check validator is working
     """QLineEdit validator for float items in standard or scientific notation"""
     re_intermediate = re.compile("^-?([0-9]*)\.?([0-9]*)([eE]([+-])?[0-9]*)?$")
 
-    def validate(self, input, pos):
-        input = str(input)
+    def validate(self, _input, _pos):
+        _input = str(_input)
         try:
-            x = float(input)
-            return QValidator.Acceptable, input, pos
+            x = float(_input)
+            return QValidator.Acceptable, _input, _pos
         except:
             pass
-        if not input or self.re_intermediate.match(input):
-            return QValidator.Intermediate, input, pos
+        if not _input or self.re_intermediate.match(_input):
+            return QValidator.Intermediate, _input, _pos
         # return QValidator.Invalid, pos  # old line
-        return QValidator.Acceptable, input, pos
+        return QValidator.Acceptable, _input, _pos
 
 
 class ValueTypeEditor(QWidget):
