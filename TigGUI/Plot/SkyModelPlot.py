@@ -38,7 +38,6 @@ from PyQt5.Qt import QWidget, QHBoxLayout, QFileDialog, QComboBox, QLabel, \
 from PyQt5.QtCore import *
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtGui import QPolygon, QPolygonF
 from PyQt5.Qwt import QwtPlot, QwtPlotPicker, QwtText, QwtPlotItem, QwtPlotCurve, QwtPicker, QwtEventPattern, \
     QwtSymbol, QwtPlotZoomer, QwtScaleEngine, QwtPickerMachine, QwtPickerClickRectMachine, QwtPickerClickPointMachine, \
     QwtPickerPolygonMachine, QwtPickerDragRectMachine
@@ -98,6 +97,9 @@ class SourceMarker:
                            hexagon=QwtSymbol.Hexagon)
 
     def __init__(self, src, l, m, size, model):
+        self.style = None
+        self.label = None
+        self._selected = None
         self.src = src
         self._lm, self._size = (l, m), size
         self.plotmarker = TiggerPlotMarker()
@@ -354,10 +356,10 @@ class LiveImageZoom(ToolDialog):
         lo1.addWidget(self._larger)
         self._has_zoom = self._has_xcs = self._has_ycs = False
         # setup zoom plot
-        # TODO - check 3 variables below
-        # self._npix = None
-        # self._magfac = None
-        # self._radius = None
+        self._npix = None
+        self._magfac = None
+        self._radius = None
+        self._data = None
         font = QApplication.font()
         self._zoomplot = QwtPlot(self)
         print(f"LiveImageZoom created plot {self._zoomplot}")
@@ -547,6 +549,9 @@ class LiveImageZoom(ToolDialog):
 class LiveProfile(ToolDialog):
     def __init__(self, parent):
         ToolDialog.__init__(self, parent, configname="liveprofile", menuname="profiles", show_shortcut=Qt.Key_F3)
+        self._yaxis = None
+        self._xaxis = None
+        self._selaxis = None
         self.setWindowTitle("Profiles")
         # add plots
         lo0 = QVBoxLayout(self)
@@ -697,6 +702,9 @@ class SkyModelPlotter(QWidget):
 
         def __init__(self, mainwin, skymodelplotter, parent):
             QwtPlot.__init__(self, parent)
+            self._coord_cache = None
+            self._draw_cache = None
+            self._label = None
             self._skymodelplotter = skymodelplotter
             self.setAcceptDrops(True)
             self.clearCaches()
@@ -1867,8 +1875,7 @@ class SkyModelPlotter(QWidget):
                 dprint(2, "plot extents for model", extent)
         # account for bounding rects of images
         # TODO: check that images are visible
-        for img in (self._imgman.getImages() or []):
-        # for img in ((self._imgman and self._imgman.getImages()) or []):
+        for img in ((self._imgman and self._imgman.getImages()) or []):
             ext = img.getExtents()
             dprint(2, "image extents", ext)
             for i in 0, 1:
