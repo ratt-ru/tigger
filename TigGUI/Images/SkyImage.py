@@ -65,7 +65,7 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
         self._cache_qimage = {}
         self._cache_mapping = self._cache_imap = self._cache_interp = None
         self._psfsize = 0, 0, 0
-        self.projection = None
+        #self.projection = None
         self._nx, self._ny = 0, 0
         self._l0, self._m0 = 0, 0
         self._dl, self._dm = 0, 0
