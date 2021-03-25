@@ -412,8 +412,7 @@ class LiveImageZoom(ToolDialog):
         self._xcs.setYAxis(QwtPlot.yRight)
         self._ycs.setXAxis(QwtPlot.xTop)
         self._ycs.setYAxis(QwtPlot.yLeft)
-        # TODO - This new QWT 6 needs testing
-        #self._ycs.setCurveType(QwtPlotCurve.Xfy)  # old qwt5
+        # self._ycs.setCurveType(QwtPlotCurve.Xfy)  # old qwt5
         self._ycs.setOrientation(Qt.Vertical)  # Qwt 6 version
         self._xcs.setOrientation(Qt.Horizontal)  # Qwt 6 version
         # make QTransform for flipping images upside-down
@@ -456,11 +455,8 @@ class LiveImageZoom(ToolDialog):
         self._zoomplot.setMinimumHeight(height + 80)
         self._zoomplot.setMinimumWidth(width + 80)
         # set data array
-        # TODO - #45 testing with int() based on pyqt-qwt bode.py example with zoom being a box rather than scroll.
         self._data = numpy.ma.masked_array(numpy.zeros((int(self._npix), int(self._npix)), float),
-                                            numpy.zeros((int(self._npix), int(self._npix)), bool))
-        #self._data = numpy.ma.masked_array(numpy.zeros((self._npix, self._npix), float),
-        #                                   numpy.zeros((self._npix, self._npix), bool))
+                                           numpy.zeros((int(self._npix), int(self._npix)), bool))
         # reset window size
         self._lo0.update()
         self.resize(self._lo0.minimumSize())
@@ -701,7 +697,7 @@ class SkyModelPlotter(QWidget):
         layout is updated of the plot is zoomed
         """
 
-        updateLayoutEvent = pyqtSignal()  # TODO - check where this connects
+        updateLayoutEvent = pyqtSignal()  # TODO - check where this connects and if working correctly
         updateCurrentPlot = pyqtSignal()
 
         def __init__(self, mainwin, skymodelplotter, parent):
@@ -717,7 +713,6 @@ class SkyModelPlotter(QWidget):
             self._drawing_key = None
             self.updateCurrentPlot.connect(self.updatePlot)
 
-        # TODO - this method is not in the original code
         def getUpdateSignal(self):
             return self.updateLayoutEvent
 
@@ -762,7 +757,6 @@ class SkyModelPlotter(QWidget):
                     dprint(5, "drawCanvas: not in cache, redrawing %dx%d pixmap" % (width, height))
                     self._draw_cache[self._drawing_key] = pm = QPixmap(width, height)
                     pm.fill(self.canvasBackground().color())
-                    # pm.fill(self.canvasBackground())
                     QwtPlot.drawCanvas(self, QPainter(pm))
                 painter.drawPixmap(0, 0, pm)
                 dprint(5, "drawCanvas done", time.time() % 60)
@@ -834,8 +828,8 @@ class SkyModelPlotter(QWidget):
         def isFixedAspect(self):
             return self._fixed_aspect
 
-        def setFixedAspect(self, fixed):
-            self._fixed_aspect = fixed
+        def setFixedAspect(self, _fixed):
+            self._fixed_aspect = _fixed
             self._checkAspects()
 
         def setDoubleClickZoom(self, button, modifiers):
@@ -864,13 +858,8 @@ class SkyModelPlotter(QWidget):
                 dprint(2, "reset limits, zoom stack is now", self.zoomRectIndex())
             dprint(2, "setting zoom stack", stack, index)
 
-            # TODO - line below is not in original code
-            p = dir(QwtPlotZoomer)
-            print(f"PlotZoomer random p {p}")
-
-            # TODO - (raz) - changed setZoomStack to setZoomBase.
-            # TODO - (raz) - zoomStack replaced with zoomRectIndex.
             # Original code, QwtPlotZoomer.setZoomStack(stack, index)
+            # Fix below for Qwt 6 - not ideal but seems to work.
             QwtPlotZoomer.setZoomBase(self, doReplot=True)
             dprint(2, "zoom stack is now", self.zoomRectIndex(), self.maxStackDepth())
 
@@ -918,7 +907,6 @@ class SkyModelPlotter(QWidget):
                 dprint(2, "invalid zoom selected, ignoring", rect)
 
         def trackerText(self, pos):
-            print(f"trackerText ***************** being called {pos}")
             return (self._track_callback and self._track_callback(pos)) or (
                 self._label if self.isActive() else QwtText(""))
 
@@ -942,7 +930,7 @@ class SkyModelPlotter(QWidget):
                     if self.zoomRectIndex() > 0:
                         self.zoom(-1)
                     else:
-                        print("zoomed all the way out, wheel event ignored")
+                        dprint(2, "zoomed all the way out, wheel event ignored")
                 else:
                     x1, y1, x2, y2 = self.zoomRect().getCoords()
                     w = (x2-x1)/2
@@ -952,14 +940,14 @@ class SkyModelPlotter(QWidget):
             QwtPlotPicker.widgetWheelEvent(self, ev)
 
     class PlotPicker(QwtPlotPicker):
+
         """Auguments QwtPlotPicker with functions for selecting objects"""
 
         def __init__(self, canvas, label, color="red", select_callback=None, track_callback=None,
                      mode=QwtPickerClickRectMachine(), rubber_band=QwtPicker.RectRubberBand,
                      text_bg=None):
             QwtPlotPicker.__init__(self, QwtPlot.xBottom, QwtPlot.yLeft, rubber_band, QwtPicker.ActiveOnly,
-                                   canvas)
-
+                                       canvas)
             self.setRubberBand(rubber_band)
             # setup appearance
             self._text = QwtText(label)
@@ -972,23 +960,23 @@ class SkyModelPlotter(QWidget):
             if text_bg:
                 self._text.setBackgroundBrush(text_bg)
                 self._text_inactive.setBackgroundBrush(text_bg)
-            # setup callbacks
+            # setup track_callbacks
             if track_callback is not None:
                 print(f"PlotPicker track_callback {track_callback.__name__}")
                 self._track_callback = track_callback
                 if track_callback.__name__ == "_trackRuler":
                     print("PlotPicker adding _trackRuler")
-                    # self.selected.connect(self._track_callback)
+                    # self.moved[QPointF].connect(self._track_callback)
                 elif track_callback.__name__ == "_trackCoordinates":
                     print("PlotPicker adding _trackCoordinates")
                     self.appended[QPointF].connect(self._track_callback)
+            # setup select_callbacks
             if select_callback:
                 print(f"PlotPicker select_callback {select_callback.__name__}")
                 print(f"PlotPicker mode {mode}")
                 self._select_callback = select_callback
                 if select_callback.__name__ == '_measureRuler':
                     self.setStateMachine(mode)
-                    self.appended.connect(select_callback)  # TODO - missing QPolygon overload
                     print(f"PlotPicker mode PickerPolygon _measureRuler")
                 elif isinstance(mode, QwtPickerClickRectMachine):
                     self.setStateMachine(mode)
@@ -999,10 +987,12 @@ class SkyModelPlotter(QWidget):
                     self.selected[QPointF].connect(select_callback)
                     print(f"PlotPicker mode PickerClickPoint")
                 else:
+                    # handle unrecognised state machine modes
                     self.setStateMachine(mode)
                     self.selected[QPointF].connect(select_callback)
                     print(f"PlotPicker mode unknown")
             else:
+                # handle pickers that have no callbacks
                 self.setStateMachine(mode)
 
         def setLabel(self, label, color=None):
@@ -1018,7 +1008,7 @@ class SkyModelPlotter(QWidget):
             text = self._track_callback and self._track_callback(pos)
             if text is None:
                 self._text.setText(self._label)
-                return self._text  # if self.isActive() else self._text_inactive
+                return self._text  # if self.isActive() else self._text_inactive  #TODO - check this return
             else:
                 if not isinstance(text, QwtText):
                     if self._label:
@@ -1041,6 +1031,8 @@ class SkyModelPlotter(QWidget):
         event here and faking a second mouse press, we achieve DragSelection-like behaviour.
         """
 
+        signalMeasureRuler = pyqtSignal(QPolygon)
+
         def widgetLeaveEvent(self, event):
             self.reset()
 
@@ -1050,6 +1042,22 @@ class SkyModelPlotter(QWidget):
                 ev1 = QMouseEvent(QEvent.MouseButtonPress, event.pos(), event.button(), event.buttons(),
                                   event.modifiers())
                 SkyModelPlotter.PlotPicker.transition(self, ev1)
+                # this is the _measureRuler callback, which now uses a signal instead
+                # check for a polygon state machine, with mouse button and shift key modifier
+                if isinstance(self.stateMachine(), QwtPickerPolygonMachine):
+                    if self.rubberBand() == QwtPicker.PolygonRubberBand:
+                        if event.modifiers() == Qt.ShiftModifier:
+                            pos = self.selection()
+                            if pos.point(0) == pos.point(1):
+                                dprint(2, "Transition only has one point")
+                            self.signalMeasureRuler.emit(pos)
+                        else:
+                            dprint(2, f"modifier is not Shift {event.modifiers()}")
+                    else:
+                        dprint(2, f"rubberband is not a polygon {self.rubberBand()}")
+                else:
+                    dprint(2, f"transition is not a polygon {self.stateMachine()}")
+
                 ev2 = QMouseEvent(QEvent.MouseButtonRelease, event.pos(), event.button(), event.buttons(),
                                   event.modifiers())
                 SkyModelPlotter.PlotPicker.transition(self, ev2)
@@ -1058,6 +1066,7 @@ class SkyModelPlotter(QWidget):
     def __init__(self, parent, mainwin, *args):
         QWidget.__init__(self, parent, *args)
         print(f"PlotRuler args {args}, parent {parent} mainwin {mainwin}")
+        print(f"PlotRuler {self.PlotPicker.__mro__}")
         # plot update logic -- handle updates via the event loop
         self._updates_enabled = False  # updates ignored until this is True
         self._update_pending = 0  # serial number of most recently posted update event
@@ -1099,19 +1108,21 @@ class SkyModelPlotter(QWidget):
         self._subset_pen = QPen(self._subset_color, 1)
         self._markup_color = QColor("cyan")
         self._markup_pen = QPen(self._markup_color, 1)
+        self._markup_pen.setStyle(Qt.DotLine)
+        self._markup_symbol_pen = QPen(self._markup_color, 1)
         self._markup_brush = QBrush(Qt.NoBrush)
-        self._markup_xsymbol = QwtSymbol(QwtSymbol.XCross, self._markup_brush, self._markup_pen, QSize(16, 16))
-        self._markup_absymbol = QwtSymbol(QwtSymbol.Ellipse, self._markup_brush, self._markup_pen, QSize(4, 4))
+        self._markup_xsymbol = QwtSymbol(QwtSymbol.XCross, self._markup_brush, self._markup_symbol_pen, QSize(16, 16))
+        self._markup_absymbol = QwtSymbol(QwtSymbol.Ellipse, self._markup_brush, self._markup_symbol_pen, QSize(4, 4))
         self._markup_a_label = QwtText("A")
         self._markup_a_label.setColor(self._markup_color)
         self._markup_b_label = QwtText("B")
         self._markup_b_label.setColor(self._markup_color)
-        # init live zoomers
+        # init live zoomers  # TODO - do zoomers need to be init'd inside PlotRuler?
         self._livezoom = LiveImageZoom(self)
         self._liveprofile = LiveProfile(self)
         # other internal init
         self.model = None
-        #self.projection = None
+        self.projection = None
         self._zoomrect = None
         self._text_no_source = QwtText("")
         self._text_no_source.setColor(QColor("red"))
@@ -1257,6 +1268,7 @@ class SkyModelPlotter(QWidget):
         self._tracker = self.PlotPicker(self.plot.canvas(), "", mode=QwtPickerClickPointMachine(),
                                         track_callback=self._trackCoordinates)
         self._tracker.setTrackerMode(QwtPicker.AlwaysOn)
+        self._tracker.setTrackerPen(QColor('white'))  # TODO - adjust the colour of the coordinate tracker according to image colour map.
         # self._tracker.appended[QPointF].connect(self._trackCoordinates)
         # self._tracker.appended.connect(self._trackCoordinates)  # TODO - check this call_back= next
         # zoom picker
@@ -1281,17 +1293,18 @@ class SkyModelPlotter(QWidget):
         self._provisional_zoom_timer.timeout.connect(self._finalizeProvisionalZoom)
         self._provisional_zoom = None
 
-        # previous version had Rect or Drag selection modes.
+        # previous version of Qwt had Rect or Drag selection modes.
         # self._zoomer.setSelectionFlags(QwtPicker.RectSelection | QwtPicker.DragSelection)
         self._zoomer.setStateMachine(QwtPickerDragRectMachine())
 
         # ruler picker for measurement mode
         print(f"Setting up self._ruler Qwt...")
-        # TODO check select_callback and if correct arg
         self._ruler = self.PlotRuler(self.plot.canvas(), "measure", "cyan", select_callback=self._measureRuler,
                                      mode=QwtPickerPolygonMachine(),
                                      rubber_band=QwtPicker.PolygonRubberBand,
                                      track_callback=self._trackRuler)
+        # connect signal for transiton() output to ruler
+        self._ruler.signalMeasureRuler.connect(self._measureRuler)
         # this is the initial position of the ruler -- None if ruler is not tracking
         self._ruler_pos0 = None
         # stats picker
@@ -1306,7 +1319,7 @@ class SkyModelPlotter(QWidget):
                                         mode=QwtPickerClickPointMachine())
         for picker in self._zoomer, self._ruler, self._picker1, self._picker2, self._picker3, self._picker4:
             for sel in QwtEventPattern.MouseSelect1, QwtEventPattern.MouseSelect2, QwtEventPattern.MouseSelect3, QwtEventPattern.MouseSelect4:
-                picker.setMousePattern(sel, 0)  # TODO - old code had (sel, 0, 0) that does not work anymore
+                picker.setMousePattern(sel, 0)
             picker.setTrackerMode(QwtPicker.ActiveOnly)
 
     #    for picker in self._ruler,self._picker1,self._picker2,self._picker3:  # TODO - check why this code is commented out
@@ -1319,7 +1332,7 @@ class SkyModelPlotter(QWidget):
       Rolling the wheel down will zoom back out.</P>"""
         QMessageBox.information(self, "Quick mouse reference", tooltip)
 
-    #    self._showCoordinateToolTip(self._mousemodes.currentMode().tooltip,rect=False)
+    #    self._showCoordinateToolTip(self._mousemodes.currentMode().tooltip,rect=False)  # TODO - check why commented out
 
     @staticmethod
     def _setPickerPattern(picker, patt, func, mousemode, auto_disable=True):
@@ -1334,9 +1347,7 @@ class SkyModelPlotter(QWidget):
         # picker.setKeyPattern(patt, *kpat)
         mouse_button, mouse_mod = mpat
         picker.setMousePattern(patt, mouse_button, Qt.KeyboardModifier(mouse_mod))
-
         key_button, key_mod = kpat
-
         picker.setKeyPattern(QwtEventPattern.KeyPatternCode(patt), key_button, Qt.KeyboardModifier(key_mod))
 
     def _setMouseMode(self, mode):
@@ -1384,12 +1395,12 @@ class SkyModelPlotter(QWidget):
                 return mindist[1].src
         return None
 
-    def _convertCoordinates(self, _pos):
-        print(f"****** _convertCoordinate called point {_pos}")
+    def _convertCoordinatesRuler(self, _pos):
+        print(f"****** _convertCoordinate called point {type(_pos)}")
         # get ra/dec coordinates of point
         pos = self.plot.screenPosToLm(_pos)
         print(f"****** _convertCoordinate called screenPosToLm pos {pos} vs before ")
-        l, m = _pos.x(), _pos.y()
+        l, m = pos.x(), pos.y()
         ra, dec = self.projection.radec(l, m)
         print(f"****** _convertCoordinate ra {ra} dec {dec} ")
         rh, rm, rs = ModelClasses.Position.ra_hms_static(ra)
@@ -1415,24 +1426,46 @@ class SkyModelPlotter(QWidget):
                 x = y = None
         return l, m, ra, dec, dist, pa, rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd, x, y, val, flag
 
+    def _convertCoordinates(self, _pos):
+        """This method is used to calculate coordinates from the GUI position."""
+        # get ra/dec coordinates of point
+        l, m = _pos.x(), _pos.y()
+        ra, dec = self.projection.radec(l, m)
+        rh, rm, rs = ModelClasses.Position.ra_hms_static(ra)
+        dsign, dd, dm, ds = ModelClasses.Position.dec_sdms_static(dec)
+        dist, pa = Coordinates.angular_dist_pos_angle(self.projection.ra0, self.projection.dec0, ra, dec)
+        Rd, Rm, Rs = ModelClasses.Position.dec_dms_static(dist)
+        PAd = pa * 180 / math.pi
+        if PAd < 0:
+            PAd += 360
+        # if we have an image, add pixel coordinates
+        x = y = val = flag = None
+        image = self._imgman and self._imgman.getTopImage()
+        if image:
+            x, y = list(map(int, list(map(round, image.lmToPix(l, m)))))
+            nx, ny = image.imageDims()
+            if x >= 0 and x < nx and y >= 0 and y < ny:
+                #        text += "<BR>x=%d y=%d"%(round(x),round(y))
+                val, flag = image.imagePixel(x, y)
+            else:
+                x = y = None
+        return l, m, ra, dec, dist, pa, rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd, x, y, val, flag
+
     def _trackRuler(self, pos):
-        # print(f"_trackRuler {type(pos)} values pos x {pos.x()} y {pos.y()}")
+        print("Are we tracking....")
         # beginning to track?
         if not self.projection:
-            print("no projected exit _trackeRuler")
             return None
+        #pos = polygon.point(0)
         if self._ruler_pos0 is None:
-            print("_trackeRuler None")
-            self._ruler_pos0 = pos
+            print(type(pos))
             #self._ruler_pos0 = QPoint(pos.x(), pos.y())
+            self._ruler_pos0 = pos
             lmpos = self.plot.screenPosToLm(pos)
-            print(f"_trackeRuler {lmpos}")
             ra, dec = self.projection.radec(lmpos.x(), lmpos.y())
             self._ruler_radec0 = [ra, dec]
-            print(f"_trackeRuler {self._ruler_radec0}")
             return None
         if (pos - self._ruler_pos0).manhattanLength() > 1:
-            print(f"trackerRuler pos type {type(pos)} pos {pos} ")
             lmpos = self.plot.screenPosToLm(pos)
             ra, dec = self.projection.radec(lmpos.x(), lmpos.y())
             dist, pa = Coordinates.angular_dist_pos_angle(*(self._ruler_radec0 + [ra, dec]))
@@ -1440,22 +1473,24 @@ class SkyModelPlotter(QWidget):
             pa *= 180 / math.pi
             pa += 360 * (pa < 0)
             msgtext = "%d\u00B0%02d'%05.2f\"  PA=%.2f\u00B0" % (Rd, Rm, Rs, pa)
-            print(msgtext)
+            print(f"_trackRuler msgtext {msgtext}")
             # self._ruler1.setLabel("")
             return QwtText(msgtext)
 
-    def _measureRuler(self, pos):
-        print(f"*********************** _measureRuler polygon {pos} type {type(pos)}")
+    def _measureRuler(self, polygon):
         self._ruler_pos0 = None
-        if not self.projection or (pos.x() == 0 and pos.y() == 0):
-            print(f"****** _measureRuler - no projection and pa is null")
+        if not self.projection or polygon.size() < 2:
             return
         # get distance between points, if <=1, report coordinates rather than a measurement
         markup_items = []
-        pos0, pos1 = pos.x(), pos.y()
-        l, m, ra, dec, dist, pa, rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd, x, y, val, flag = self._convertCoordinates(
-            pos)
-        if self._ruler_pos0 is not None and self._ruler_pos0.manhattanLength() <= 1:
+        pos0, pos1 = polygon.point(0), polygon.point(1)
+
+        l, m, ra, dec, dist, pa, rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd, x, y, val, flag = self._convertCoordinatesRuler(
+            pos0)
+        print(f"_measureRuler got values from coords X {x} Y {y}")
+        print(f"_measureRuler pos0 {pos0} pos1 {pos1}")
+        if (pos0 - pos1).manhattanLength() <= 1:
+            print("_measureRuler manhattan <= 1")
             # make tooltip text with HTML, make console (and cliboard) text w/o HTML
             tiptext = "<NOBR>"
             msgtext = ""
@@ -1476,8 +1511,9 @@ class SkyModelPlotter(QWidget):
             marker.setSymbol(self._markup_xsymbol)
             markup_items.append(marker)
         else:
-            l1, m1, ra1, dec1, dist1, pa1, rh1, rm1, rs1, dsign1, dd1, dm1, ds1, Rd1, Rm1, Rs1, PAd1, x1, y1, val1, flag1 = self._convertCoordinates(
-                pos)
+            print("_measureRuler manhattan > 1")
+            l1, m1, ra1, dec1, dist1, pa1, rh1, rm1, rs1, dsign1, dd1, dm1, ds1, Rd1, Rm1, Rs1, PAd1, x1, y1, val1, flag1 = self._convertCoordinatesRuler(
+                pos1)
             # make tooltip text with HTML, and console/clipboard text without HTML
             tiptext = "<NOBR>"
             msgtext = ""
@@ -1494,15 +1530,15 @@ class SkyModelPlotter(QWidget):
             tiptext += "</NOBR><BR><NOBR>"
             if self.projection.has_projection():
                 tiptext += "B: %02dh%02dm%05.2fs %s%02d&deg;%02d'%05.2f\" &nbsp;  r<sub>0</sub>=%d&deg;%02d'%05.2f\"  &nbsp;  PA<sub>0</sub>=%06.2f&deg;" % (
-                    rh1, rm1, rs1, dsign1, dd1, dm1, ds1, Rd1, Rm1, Rs1, PAd1)
+                rh1, rm1, rs1, dsign1, dd1, dm1, ds1, Rd1, Rm1, Rs1, PAd1)
                 msgtext += "\nB: %2dh%02dm%05.2fs %s%02d\u00B0%02d'%05.2f\" (%.6f\u00B0 %.6f\u00B0)  r=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0" % (
                     rh1, rm1, rs1, dsign1, dd1, dm1, ds1, ra1 * 180 / math.pi, dec1 * 180 / math.pi, Rd1, Rm1, Rs1,
                     dist1 * 180 / math.pi, PAd1)
             if x1 is not None:
                 tiptext += " &nbsp; x=%d y=%d value=blank" % (x1, y1) if flag1 else " &nbsp; x=%d y=%d value=%g" % (
-                    x1, y1, val1)
+                x1, y1, val1)
                 msgtext += "   x=%d y=%d value=blank" % (x1, y1) if flag1 else "   x=%d y=%d value=%g" % (
-                    x1, y1, val1)
+                x1, y1, val1)
             tiptext += "</NOBR><BR>"
             # distance measurement
             dist2, pa2 = Coordinates.angular_dist_pos_angle(ra, dec, ra1, dec1)
@@ -1510,9 +1546,9 @@ class SkyModelPlotter(QWidget):
             pa2 *= 180 / math.pi
             pa2 += 360 * (pa2 < 0)
             tiptext += "<NOBR>|AB|=%d&deg;%02d'%05.2f\" &nbsp; PA<sub>AB</sub>=%06.2f&deg;</NOBR>" % (
-                Rd2, Rm2, Rs2, pa2)
+            Rd2, Rm2, Rs2, pa2)
             msgtext += "\n|AB|=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0" % (
-                Rd2, Rm2, Rs2, dist2 * 180 / math.pi, pa2)
+            Rd2, Rm2, Rs2, dist2 * 180 / math.pi, pa2)
             # make markers
             marka, markb = TiggerPlotMarker(), TiggerPlotMarker()
             marka.setValue(l, m)
@@ -1522,10 +1558,10 @@ class SkyModelPlotter(QWidget):
             marka.setSymbol(self._markup_absymbol)
             markb.setSymbol(self._markup_absymbol)
             # work out optimal label alignment
-            aligna = Qt.AlignRight if pos0 > pos1 else Qt.AlignLeft
-            alignb = Qt.AlignLeft if pos0 > pos1 else Qt.AlignRight
-            aligna |= Qt.AlignBottom if pos0 > pos1 else Qt.AlignTop
-            alignb |= Qt.AlignTop if pos0 > pos1 else Qt.AlignBottom
+            aligna = Qt.AlignRight if pos0.x() > pos1.x() else Qt.AlignLeft
+            alignb = Qt.AlignLeft if pos0.x() > pos1.x() else Qt.AlignRight
+            aligna |= Qt.AlignBottom if pos0.y() > pos1.y() else Qt.AlignTop
+            alignb |= Qt.AlignTop if pos0.y() > pos1.y() else Qt.AlignBottom
             marka.setLabelAlignment(aligna)
             markb.setLabelAlignment(alignb)
             marka.setSpacing(0)
@@ -1538,12 +1574,11 @@ class SkyModelPlotter(QWidget):
         # since this is going to hide the stats box, hide the colour zoom button too
         self._qa_colorzoom.setVisible(False)
         # calling QToolTip.showText() directly from here doesn't work, so set a timer on it
-        QTimer.singleShot(10, self._currier.curry(self._showCoordinateToolTip, tiptext))
+        QTimer.singleShot(10, self._currier.curry(self._showCoordinateToolTip, tiptext))  # TODO - this may no longer be the case
         # same deal for markup items
         for item in markup_items:
             item.setZ(Z_Markup)
         QTimer.singleShot(10, self._currier.curry(self._addPlotMarkup, markup_items))
-        print(msgtext)
         QApplication.clipboard().setText(msgtext + "\n")
         QApplication.clipboard().setText(msgtext + "\n", QClipboard.Selection)
 
@@ -1638,9 +1673,9 @@ class SkyModelPlotter(QWidget):
         if image and x is not None:
             print(f"livezoom track image {image}")
             msgtext += "   x=%d y=%d value=blank" % (x, y) if flag else "   x=%d y=%d value=%g" % (x, y, val)
-            self._livezoom.trackImage(image, x, y)  # TODO - this sets the image to the zoomer but nothing displayed #45
-            self._liveprofile.trackImage(image, x, y)  # TODO - same problem as above
-        self.showMessage.emit(msgtext) #, 3000)
+            self._livezoom.trackImage(image, x, y)
+            self._liveprofile.trackImage(image, x, y)
+        self.showMessage.emit(msgtext) #, 3000)  # TODO - fix this signal with multiple overloads.
         return None
 
     def _selectSources(self, sources, mode):
@@ -1722,7 +1757,6 @@ class SkyModelPlotter(QWidget):
             for item in markup_items:
                 item.setZ(Z_Markup)
             QTimer.singleShot(10, self._currier.curry(self._addPlotMarkup, markup_items))
-            print(msgtext)
             QApplication.clipboard().setText(msgtext + "\n")
             QApplication.clipboard().setText(msgtext + "\n", QClipboard.Selection)
 
@@ -2014,7 +2048,7 @@ class SkyModelPlotter(QWidget):
         dprint(5, "updating zoomer")
         self._zoomer.setZoomStack(zooms, len(zooms) - 1)
         self._updatePsfMarker(None, replot=True)
-        #  self.plot.replot()
+        #  self.plot.replot()  # this shouldn't be needed as it is handled in the line above.
 
     def setModel(self, model):
         self._source_lm = {}
