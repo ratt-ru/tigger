@@ -313,7 +313,7 @@ class MakeBrickDialog(QDialog):
 def make_brick(mainwin, model):
     # check that something is selected
     if not [src for src in model.sources if src.selected]:
-        mainwin.showErrorMessage(
+        mainwin.signalshowErrorMessage.emit(
             "Cannot make FITS brick without a source selection. Please select some sources first.")
         return
     dialog = getattr(mainwin, '_make_brick_dialog', None)

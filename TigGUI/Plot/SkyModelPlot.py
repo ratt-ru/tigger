@@ -499,12 +499,12 @@ class LiveImageZoom(ToolDialog):
         if ix0 < nx and ix1 >= 0 and iy0 < ny and iy1 >= 0:
             if self._showzoom.isChecked():
                 self._data.mask[...] = False
-                self._data.mask[:zx0, ...] = True
-                self._data.mask[zx1:, ...] = True  # TODO - error here when using zoom window zoom buttons (TypeError: slice indices must be integers or None or have an __index__ method)
-                self._data.mask[..., :zy0] = True
-                self._data.mask[..., zy1:] = True
+                self._data.mask[:int(zx0), ...] = True
+                self._data.mask[int(zx1):, ...] = True  # TODO - error here when using zoom window zoom buttons (TypeError: slice indices must be integers or None or have an __index__ method)
+                self._data.mask[..., :int(zy0)] = True
+                self._data.mask[..., int(zy1):] = True
                 # copy & colorize region
-                self._data[zx0:zx1, zy0:zy1] = image.image()[ix0:ix1, iy0:iy1]
+                self._data[int(zx0):int(zx1), int(zy0):int(zy1)] = image.image()[int(ix0):int(ix1), int(iy0):int(iy1)]
                 intensity = image.intensityMap().remap(self._data)
                 self._zi.setImage(
                     image.colorMap().colorize(image.intensityMap().remap(self._data)).transformed(self._xform))
@@ -512,7 +512,7 @@ class LiveImageZoom(ToolDialog):
             # set cross-sections
             if self._showcs.isChecked():
                 if iy >= 0 and iy < ny and ix1 > ix0:
-                    xcs = [float(x) for x in image.image()[ix0:ix1, iy]]
+                    xcs = [float(x) for x in image.image()[int(ix0):int(ix1), int(iy)]]
                     self._xcs.setData(numpy.arange(ix0 - 1, ix1) + .5, [xcs[0]] + xcs)
                     self._xcs.setVisible(True)
                     self._zoomplot.setAxisAutoScale(QwtPlot.yRight)
@@ -521,7 +521,7 @@ class LiveImageZoom(ToolDialog):
                     self._xcs.setVisible(False)
                     self._zoomplot.setAxisScale(QwtPlot.yRight, 0, 1)
                 if ix >= 0 and ix < nx and iy1 > iy0:
-                    ycs = [float(y) for y in image.image()[ix, iy0:iy1]]
+                    ycs = [float(y) for y in image.image()[int(ix), int(iy0):int(iy1)]]
                     # self._ycs.setData([ycs[0]] + ycs, numpy.arange(iy0 - 1, iy1) + .5)
                     self._ycs.setData([ycs[0]] + ycs, numpy.arange(iy0 - 1, iy1) + .5)
                     self._ycs.setVisible(True)
@@ -688,7 +688,6 @@ class SkyModelPlotter(QWidget):
     MouseDeselect = 4
 
     imagesChanged = pyqtSignal()
-    showMessage = pyqtSignal(str)
     showErrorMessage = pyqtSignal()
 
     class Plot(QwtPlot):
@@ -966,7 +965,7 @@ class SkyModelPlotter(QWidget):
                 self._track_callback = track_callback
                 if track_callback.__name__ == "_trackRuler":
                     print("PlotPicker adding _trackRuler")
-                    # self.moved[QPointF].connect(self._track_callback)
+                    self.moved[QPointF].connect(self._track_callback)
                 elif track_callback.__name__ == "_trackCoordinates":
                     print("PlotPicker adding _trackCoordinates")
                     self.appended[QPointF].connect(self._track_callback)
@@ -1032,12 +1031,20 @@ class SkyModelPlotter(QWidget):
         """
 
         signalMeasureRuler = pyqtSignal(QPolygon)
+        signalTrackFirstRuler = pyqtSignal(QPolygon)
 
         def widgetLeaveEvent(self, event):
             self.reset()
 
         def transition(self, event):
             SkyModelPlotter.PlotPicker.transition(self, event)
+            if event.type() == QEvent.MouseButtonPress:
+                if isinstance(self.stateMachine(), QwtPickerPolygonMachine):
+                    if self.rubberBand() == QwtPicker.PolygonRubberBand:
+                        if event.modifiers() == Qt.ShiftModifier:
+                            pos = self.selection()
+                            print(f"transition pos {pos}")
+                            self.signalTrackFirstRuler.emit(pos)
             if event.type() == QEvent.MouseButtonRelease:
                 ev1 = QMouseEvent(QEvent.MouseButtonPress, event.pos(), event.button(), event.buttons(),
                                   event.modifiers())
@@ -1122,7 +1129,6 @@ class SkyModelPlotter(QWidget):
         self._liveprofile = LiveProfile(self)
         # other internal init
         self.model = None
-        self.projection = None
         self._zoomrect = None
         self._text_no_source = QwtText("")
         self._text_no_source.setColor(QColor("red"))
@@ -1207,12 +1213,20 @@ class SkyModelPlotter(QWidget):
             qa.setChecked(True)
         # save as PNG file
         self._menu.addAction("Export plot to PNG file...", self._exportPlotToPNG, Qt.CTRL + Qt.Key_F12)
+        self.plotShowMessage = None
+        self.plotShowErrorMessage = None
 
     def close(self):
         self._menu.clear()
         self._wtoolbar.clear()
         self._livezoom.close()
         self._liveprofile.close()
+
+    def setupShowMessages(self, _signal):
+        self.plotShowMessage = _signal
+
+    def setupShowErrorMessages(self, _signal):
+        self.plotShowErrorMessage = _signal
 
     def getMenu(self):
         return self._menu
@@ -1242,6 +1256,7 @@ class SkyModelPlotter(QWidget):
         return self._update_pending > self._update_done
 
     def postUpdateEvent(self, what=SkyModel.UpdateAll, origin=None):
+        print("imageChanged signal postUpdate")
         """Posts an update event. Since plot updates are somewhat expensive, and certain operations can cause multiple updates,
     we handle them through the event loop."""
         dprintf(3, "postUpdateEvent(what=%x,origin=%s)\n", what, origin)
@@ -1305,8 +1320,10 @@ class SkyModelPlotter(QWidget):
                                      track_callback=self._trackRuler)
         # connect signal for transiton() output to ruler
         self._ruler.signalMeasureRuler.connect(self._measureRuler)
+        self._ruler.signalTrackFirstRuler.connect(self._trackRulerStartPoint)
         # this is the initial position of the ruler -- None if ruler is not tracking
         self._ruler_pos0 = None
+        self._ruler_start_point = None
         # stats picker
         self._picker_stats = self.PlotPicker(self.plot.canvas(), "stats", "red", self._selectRectStats)
         # model selection pickers
@@ -1451,31 +1468,35 @@ class SkyModelPlotter(QWidget):
                 x = y = None
         return l, m, ra, dec, dist, pa, rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd, x, y, val, flag
 
+    def _trackRulerStartPoint(self, polygon):
+        if not self.projection or polygon.size() < 2:
+            return
+        # store first point when ruler-drag is initiated
+        pos0 = polygon.point(0)
+        self._ruler_start_point = pos0
+
     def _trackRuler(self, pos):
-        print("Are we tracking....")
-        # beginning to track?
-        if not self.projection:
+        if not self.projection and self._ruler_start_point is None:
             return None
-        #pos = polygon.point(0)
-        if self._ruler_pos0 is None:
-            print(type(pos))
-            #self._ruler_pos0 = QPoint(pos.x(), pos.y())
-            self._ruler_pos0 = pos
-            lmpos = self.plot.screenPosToLm(pos)
-            ra, dec = self.projection.radec(lmpos.x(), lmpos.y())
-            self._ruler_radec0 = [ra, dec]
-            return None
-        if (pos - self._ruler_pos0).manhattanLength() > 1:
-            lmpos = self.plot.screenPosToLm(pos)
-            ra, dec = self.projection.radec(lmpos.x(), lmpos.y())
-            dist, pa = Coordinates.angular_dist_pos_angle(*(self._ruler_radec0 + [ra, dec]))
-            Rd, Rm, Rs = ModelClasses.Position.dec_dms_static(dist)
-            pa *= 180 / math.pi
-            pa += 360 * (pa < 0)
-            msgtext = "%d\u00B0%02d'%05.2f\"  PA=%.2f\u00B0" % (Rd, Rm, Rs, pa)
-            print(f"_trackRuler msgtext {msgtext}")
-            # self._ruler1.setLabel("")
-            return QwtText(msgtext)
+        if (pos - self._ruler_start_point).manhattanLength() > 1:
+            print("tracking manhattanLength > 1")
+            # find first point details
+            l, m, ra, dec, dist, pa, rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd, x, y, val, flag = self._convertCoordinatesRuler(self._ruler_start_point)
+            # find second point details
+            l1, m1, ra1, dec1, dist1, pa1, rh1, rm1, rs1, dsign1, dd1, dm1, ds1, Rd1, Rm1, Rs1, PAd1, x1, y1, val1, flag1 = self._convertCoordinates(pos)
+            # distance measurement
+            dist2, pa2 = Coordinates.angular_dist_pos_angle(ra, dec, ra1, dec1)
+            Rd2, Rm2, Rs2 = ModelClasses.Position.dec_dms_static(dist2)
+            pa2 *= 180 / math.pi
+            pa2 += 360 * (pa2 < 0)
+            # send current point B and ruler length AB to GUI display
+            msgtext = ""
+            msgtext += "\nB: %2dh%02dm%05.2fs %s%02d\u00B0%02d'%05.2f\" (%.6f\u00B0 %.6f\u00B0)  r=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0" % (
+                rh1, rm1, rs1, dsign1, dd1, dm1, ds1, ra1 * 180 / math.pi, dec1 * 180 / math.pi, Rd1, Rm1, Rs1,
+                dist1 * 180 / math.pi, PAd1)
+            msgtext += "\n|AB|=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0" % (
+                Rd2, Rm2, Rs2, dist2 * 180 / math.pi, pa2)
+            self.plotShowMessage.emit(msgtext, 3000)
 
     def _measureRuler(self, polygon):
         self._ruler_pos0 = None
@@ -1602,8 +1623,7 @@ class SkyModelPlotter(QWidget):
 
     def _updatePsfMarker(self, rect=None, replot=False):
         # show PSF if asked to
-        if self._imgman:
-            topimage = self._imgman.getTopImage()
+        topimage = self._imgman and self._imgman.getTopImage()
         if topimage:
             pmaj, pmin, ppa = topimage.getPsfSize() if topimage else (0, 0, 0)
             self._qa_show_psf.setVisible(bool(topimage and pmaj != 0))
@@ -1675,8 +1695,9 @@ class SkyModelPlotter(QWidget):
             msgtext += "   x=%d y=%d value=blank" % (x, y) if flag else "   x=%d y=%d value=%g" % (x, y, val)
             self._livezoom.trackImage(image, x, y)
             self._liveprofile.trackImage(image, x, y)
-        self.showMessage.emit(msgtext) #, 3000)  # TODO - fix this signal with multiple overloads.
-        return None
+        print(f"trackCoords msgtext {msgtext}")
+        self.plotShowMessage[str, int].emit(msgtext, 3000)
+        return msgtext
 
     def _selectSources(self, sources, mode):
         """Helper function to select sources in list"""
@@ -2093,7 +2114,7 @@ class SkyModelPlotter(QWidget):
             busy.reset_cursor()
             return
         busy.reset_cursor()
-        self.showMessage.emit("Exported plot to file %s" % filename)
+        self.plotShowMessage.emit("Exported plot to file %s" % filename)
 
     def setCurrentSource(self, src, src0=None, origin=None):
         dprint(2, "setCurrentSource", src and src.name, src0 and src0.name, origin)

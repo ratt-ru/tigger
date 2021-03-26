@@ -42,7 +42,6 @@ QStringList = list
 
 class ImageManager(QWidget):
     """An ImageManager manages a stack of images (and associated ImageControllers)"""
-    showMessage = pyqtSignal(str, int)
     showErrorMessage = pyqtSignal(str, int)
     imagesChanged = pyqtSignal()
     imageRaised = pyqtSignal(FITSImagePlotItem)
@@ -86,12 +85,20 @@ class ImageManager(QWidget):
         QApplication.clipboard().changed[QClipboard.Mode].connect(self._checkClipboardPath)
         # populate the menu
         self._repopulateMenu()
+        self.signalShowMessage = None
+        self.signalShowErrorMessage = None
 
     def close(self):
         dprint(1, "closing Manager")
         self._closing = True
         for ic in self._imagecons:
             ic.close()
+
+    def setShowMessageSignal(self, _signal):
+        self.signalShowMessage = _signal
+
+    def setShowErrorMessageSignal(self, _signal):
+        self.signalShowErrorMessage = _signal
 
     def loadImage(self, filename=None, duplicate=True, to_top=True, model=None):
         """Loads image. Returns ImageControlBar object.
@@ -115,7 +122,7 @@ class ImageManager(QWidget):
         filename = str(filename)
         # report error if image does not exist
         if not os.path.exists(filename):
-            self._showErrorMessage("""FITS image %s does not exist.""" % filename)
+            self.signalShowErrorMessage.emit("""FITS image %s does not exist.""" % filename)
             return None
         # see if image is already loaded
         if not duplicate:
@@ -129,7 +136,7 @@ class ImageManager(QWidget):
         # load the FITS image
         busy = BusyIndicator()
         dprint(2, "reading FITS image", filename)
-        self._showMessage("""Reading FITS image %s""" % filename, 3000)
+        self.signalShowMessage.emit("""Reading FITS image %s""" % filename, 3000)
         QApplication.flush()
         try:
             image = SkyImage.FITSImagePlotItem(str(filename))
@@ -138,23 +145,17 @@ class ImageManager(QWidget):
         except:
             busy.reset_cursor()
             traceback.print_exc()
-            self._showErrorMessage("""<P>Error loading FITS image %s: %s. This may be due to a bug in Tigger; if the FITS file loads fine in another viewer,
+            self.signalShowErrorMessage.emit("""<P>Error loading FITS image %s: %s. This may be due to a bug in Tigger; if the FITS file loads fine in another viewer,
           please send the FITS file, along with a copy of any error messages from the text console, to osmirnov@gmail.com.</P>""" % (
                 filename, str(sys.exc_info()[1])))
             return None
         # create control bar, add to widget stack
         ic = self._createImageController(image, "model source '%s'" % model if model else filename, model or image.name,
                                          model=model)
-        self._showMessage("""Loaded FITS image %s""" % filename, 3000)
+        self.signalShowMessage.emit("""Loaded FITS image %s""" % filename, 3000)
         dprint(2, "image loaded")
         busy.reset_cursor()
         return ic
-
-    def _showMessage(self, message, time=None):
-        self.showMessage.emit(message, time)
-
-    def _showErrorMessage(self, message, time=None):
-        self.showErrorMessage.emit(message, time)
 
     def setZ0(self, z0):
         self._z0 = z0
@@ -432,10 +433,10 @@ class ImageManager(QWidget):
             exprfunc = eval("lambda " + (",".join([x[0] for x in arglist])) + ":" + expression,
                             numpy.__dict__, {})
         except Exception as exc:
-            self._showErrorMessage("""Error parsing expression "%s": %s.""" % (expression, str(exc)))
+            self.signalShowErrorMessage.emit("""Error parsing expression "%s": %s.""" % (expression, str(exc)))
             return None
         # try to evaluate expression
-        self._showMessage("Computing expression \"%s\"" % expression, 10000)
+        self.signalShowMessage.emit("Computing expression \"%s\"" % expression, 10000)
         busy = BusyIndicator()
         QApplication.flush()
 
@@ -455,16 +456,16 @@ class ImageManager(QWidget):
         except Exception as exc:
             busy.reset_cursor()
             traceback.print_exc()
-            self._showErrorMessage("""Error evaluating "%s": %s.""" % (expression, str(exc)))
+            self.signalShowErrorMessage.emit("""Error evaluating "%s": %s.""" % (expression, str(exc)))
             return None
         busy.reset_cursor()
         if type(result) != numpy.ma.masked_array and type(result) != numpy.ndarray:
-            self._showErrorMessage(
+            self.signalShowErrorMessage.emit(
                 """Result of "%s" is of invalid type "%s" (array expected).""" % (expression, type(result).__name__))
             return None
         # convert coomplex results to real
         if numpy.iscomplexobj(result):
-            self._showErrorMessage("""Result of "%s" is complex. Complex images are currently
+            self.signalShowErrorMessage.emit("""Result of "%s" is complex. Complex images are currently
       not fully supported, so we'll implicitly use the absolute value instead.""" % (expression))
             expression = "abs(%s)" % expression
             result = abs(result)
@@ -472,7 +473,7 @@ class ImageManager(QWidget):
         res_shape = trimshape(result.shape)
         arglist = [x for x in arglist if hasattr(x[1], 'fits_header') and trimshape(x[1].data().shape) == res_shape]
         if not arglist:
-            self._showErrorMessage("""Result of "%s" has shape %s, which does not match any loaded FITS image.""" % (
+            self.signalShowErrorMessage.emit("""Result of "%s" has shape %s, which does not match any loaded FITS image.""" % (
                 expression, "x".join(map(str, result.shape))))
             return None
         # look for an image in the arglist with the same projection, and with a valid dirname
@@ -494,7 +495,7 @@ class ImageManager(QWidget):
         # create a FITS image
         busy = BusyIndicator()
         dprint(2, "creating FITS image", expression)
-        self._showMessage("""Creating image for %s""" % expression, 3000)
+        self.signalShowMessage.emit("""Creating image for %s""" % expression, 3000)
         QApplication.flush()
         try:
             hdu = pyfits.PrimaryHDU(result.transpose(), template.fits_header)
@@ -502,7 +503,7 @@ class ImageManager(QWidget):
         except:
             busy.reset_cursor()
             traceback.print_exc()
-            self._showErrorMessage("""Error creating FITS image %s: %s""" % (expression, str(sys.exc_info()[1])))
+            self.signalShowErrorMessage.emit("""Error creating FITS image %s: %s""" % (expression, str(sys.exc_info()[1])))
             return None
         # get directory name for save-to hint
         dirname = getattr(template, 'filename', None)
@@ -512,7 +513,7 @@ class ImageManager(QWidget):
         # create control bar, add to widget stack
         self._createImageController(skyimage, expression, expression,
                                     save=((dirname and os.path.dirname(dirname)) or "."))
-        self._showMessage("Created new image for %s" % expression, 3000)
+        self.signalShowMessage.emit("Created new image for %s" % expression, 3000)
         dprint(2, "image created")
         busy.reset_cursor()
 

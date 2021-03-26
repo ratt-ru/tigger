@@ -48,15 +48,20 @@ dprintf = _verbosity.dprintf
 
 
 class MainWindow(QMainWindow):
+
     isUpdated = pyqtSignal(bool)
     hasSkyModel = pyqtSignal(bool)
     hasSelection = pyqtSignal(bool)
     modelChanged = pyqtSignal(object)
     closing = pyqtSignal()
+    signalShowMessage = pyqtSignal([str, int], [str])
+    signalShowErrorMessage = pyqtSignal([str], [str, int])
     ViewModelColumns = ["name", "RA", "Dec", "type", "Iapp", "I", "Q", "U", "V", "RM", "spi", "shape"]
 
     def __init__(self, parent, hide_on_close=False):
         QMainWindow.__init__(self, parent)
+        self.signalShowMessage.connect(self.showMessage, type=Qt.QueuedConnection)
+        self.signalShowErrorMessage.connect(self.showErrorMessage, type=Qt.QueuedConnection)
         self._add_tag_dialog = None
         self._remove_tag_dialog = None
         self.setWindowIcon(pixmaps.tigger_starface.icon())
@@ -94,8 +99,8 @@ class MainWindow(QMainWindow):
         self._skyplot_stack_lo.addWidget(self.skyplot, 1000)
         self.skyplot.hide()
         self.skyplot.imagesChanged.connect(self._imagesChanged)  # (raz) - checked
-        self.skyplot.showMessage.connect(self.showMessage)  # (raz) - checked
-        self.skyplot.showErrorMessage.connect(self.showErrorMessage)  # (raz) - checked
+        self.skyplot.setupShowMessages(self.signalShowMessage)  # (raz) - checked
+        self.skyplot.setupShowErrorMessages(self.signalShowErrorMessage)  # (raz) - checked
 
         self._grouptab_stack = QWidget(spl2)
         self._grouptab_stack_lo = lo = QVBoxLayout(self._grouptab_stack)
@@ -110,10 +115,10 @@ class MainWindow(QMainWindow):
 
         # add image controls -- parentless for now (setLayout will reparent them anyway)
         self.imgman = ImageManager()
+        self.imgman.setShowMessageSignal(self.signalShowMessage)
+        self.imgman.setShowErrorMessageSignal(self.signalShowErrorMessage)
         self.skyplot.setImageManager(self.imgman)
         self.imgman.imagesChanged.connect(self._imagesChanged)  # (raz) - checked
-        self.imgman.showMessage.connect(self.showMessage)  # (raz) - checked
-        self.imgman.showErrorMessage.connect(self.showErrorMessage)  # (raz) - checked
 
         # enable status line
         self.statusBar().show()
@@ -332,6 +337,7 @@ class MainWindow(QMainWindow):
         callback(self, self.model)
 
     def _imagesChanged(self):
+        print("imageChanged signal MainWindow")
         """Called when the set of loaded images has changed"""
         if self.imgman.getImages():
             if self._current_layout is self.LayoutEmpty:
@@ -366,7 +372,7 @@ class MainWindow(QMainWindow):
                                 QMessageBox.Ok | QMessageBox.Cancel, QMessageBox.Cancel) != QMessageBox.Ok:
             return
         self.model.setSources(unselected)
-        self.showMessage("""Deleted %d sources""" % nsel)
+        self.signalShowMessage[str].emit("""Deleted %d sources""" % nsel)
         self.model.emitUpdate(SkyModel.SkyModel.UpdateAll, origin=self)
 
     def _showSourceSelector(self):
@@ -385,7 +391,8 @@ class MainWindow(QMainWindow):
                         save]
 
     def showMessage(self, msg, time=3000):
-        self.statusBar().showMessage(msg, 3000)
+        print(f"*********** showMessage Called with {msg}")
+        self.statusBar().showMessage(msg, time)
 
     def showErrorMessage(self, msg, time=3000):
         self.qerrmsg.showMessage(msg)
@@ -453,18 +460,18 @@ class MainWindow(QMainWindow):
         # try to determine the file type
         filetype, import_func, export_func, doc = Tigger.Models.Formats.resolveFormat(_filename, _format)
         if import_func is None:
-            self.showErrorMessage("""Error loading model file %s: unknown file format""" % _filename)
+            self.signalShowErrorMessage.emit("""Error loading model file %s: unknown file format""" % _filename)
             return
         # try to load the specified file
         busy = BusyIndicator()
-        self.showMessage("""Reading %s file %s""" % (filetype, _filename), 3000)
+        self.signalShowMessage.emit("""Reading %s file %s""" % (filetype, _filename), 3000)
         QApplication.flush()
         try:
             model = import_func(_filename)
             model.setFilename(_filename)
         except:
             busy.reset_cursor()
-            self.showErrorMessage("""Error loading '%s' file %s: %s""" % (filetype, _filename, str(sys.exc_info()[1])))
+            self.signalShowErrorMessage.emit("""Error loading '%s' file %s: %s""" % (filetype, _filename, str(sys.exc_info()[1])))
             return
         else:
             # set the layout
@@ -473,11 +480,11 @@ class MainWindow(QMainWindow):
             # add to content
             if _merge and self.model:
                 self.model.addSources(model.sources)
-                self.showMessage("""Merged in %d sources from '%s' file %s""" % (len(model.sources), filetype, _filename),
+                self.signalShowMessage.emit("""Merged in %d sources from '%s' file %s""" % (len(model.sources), filetype, _filename),
                                  3000)
                 self.model.emitUpdate(SkyModel.SkyModel.UpdateAll)
             else:
-                self.showMessage("""Loaded %d sources from '%s' file %s""" % (len(model.sources), filetype, _filename),
+                self.signalShowMessage.emit("""Loaded %d sources from '%s' file %s""" % (len(model.sources), filetype, _filename),
                                  3000)
                 self._display_filename = os.path.basename(_filename)
                 self.setModel(model)
@@ -547,7 +554,7 @@ class MainWindow(QMainWindow):
             # try to determine the file type
             filetype, import_func, export_func, doc = Tigger.Models.Formats.resolveFormat(filename, None)
             if export_func is None:
-                self.showErrorMessage("""Error saving model file %s: unsupported output format""" % filename)
+                self.signalShowErrorMessage.emit("""Error saving model file %s: unsupported output format""" % filename)
                 return
             if os.path.exists(filename) and not overwrite:
                 warning += "<P>The file already exists and will be overwritten.</P>"
@@ -567,10 +574,10 @@ class MainWindow(QMainWindow):
                 self.model.setFilename(filename)
             except:
                 busy.reset_cursor()
-                self.showErrorMessage("""Error saving model file %s: %s""" % (filename, str(sys.exc_info()[1])))
+                self.signalShowErrorMessage.emit("""Error saving model file %s: %s""" % (filename, str(sys.exc_info()[1])))
                 return False
             else:
-                self.showMessage("""Saved model to file %s""" % filename, 3000)
+                self.signalShowMessage.emit("""Saved model to file %s""" % filename, 3000)
                 self._display_filename = os.path.basename(filename)
                 self._indicateModelUpdated(updated=False)
                 self.filename = filename
@@ -619,23 +626,23 @@ class MainWindow(QMainWindow):
         selmodel = self.model.copy()
         sources = [src for src in self.model.sources if src.selected]
         if not sources:
-            self.showErrorMessage("""You have not selected any sources to save.""")
+            self.signalShowErrorMessage.emit("""You have not selected any sources to save.""")
             return
         # try to determine the file type
         filetype, import_func, export_func, doc = Tigger.Models.Formats.resolveFormat(filename, None)
         if export_func is None:
-            self.showErrorMessage("""Error saving model file %s: unsupported output format""" % filename)
+            self.signalShowErrorMessage.emit("""Error saving model file %s: unsupported output format""" % filename)
             return
         busy = BusyIndicator()
         try:
             export_func(self.model, filename, sources=sources)
         except:
             busy.reset_cursor()
-            self.showErrorMessage(
+            self.signalShowErrorMessage.emit(
                 """Error saving selection to model file %s: %s""" % (filename, str(sys.exc_info()[1])))
             return False
         else:
-            self.showMessage("""Wrote %d selected source%s to file %s""" % (
+            self.signalShowMessage.emit("""Wrote %d selected source%s to file %s""" % (
                 len(selmodel.sources), "" if len(selmodel.sources) == 1 else "s", filename), 3000)
         finally:
             busy.reset_cursor()
