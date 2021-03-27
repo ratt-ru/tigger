@@ -2110,11 +2110,11 @@ class SkyModelPlotter(QWidget):
         try:
             pixmap.save(filename, "PNG")
         except Exception as exc:
-            self.showErrorMessage.emit("Error writing %s: %s" % (filename, str(exc)))
+            self.plotShowErrorMessage.emit("Error writing %s: %s" % (filename, str(exc)))
             busy.reset_cursor()
-            return
-        busy.reset_cursor()
-        self.plotShowMessage.emit("Exported plot to file %s" % filename)
+        else:
+            busy.reset_cursor()
+            self.plotShowMessage[str].emit("Exported plot to file %s" % filename)
 
     def setCurrentSource(self, src, src0=None, origin=None):
         dprint(2, "setCurrentSource", src and src.name, src0 and src0.name, origin)

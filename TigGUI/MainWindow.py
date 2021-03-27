@@ -391,7 +391,6 @@ class MainWindow(QMainWindow):
                         save]
 
     def showMessage(self, msg, time=3000):
-        print(f"*********** showMessage Called with {msg}")
         self.statusBar().showMessage(msg, time)
 
     def showErrorMessage(self, msg, time=3000):
