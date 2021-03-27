@@ -276,7 +276,7 @@ class ImageManager(QWidget):
         self._center_image = imagecon and imagecon.image
         for ic in self._imagecons:
             ic.setPlotProjection(self._center_image.projection)
-        if emit:
+        if emit or emit is None:  # TODO - check curry() call to this method via signal; emit=None in this case.
             self.imagesChanged.emit()
 
     def raiseImage(self, imagecon, foo=None):
