@@ -197,7 +197,7 @@ class ImageController(QFrame):
         self._qa_raise = self._menu.addAction(pixmaps.raise_up.icon(), "Raise image",
                                               self._currier.curry(self.image.signalRaise.emit, None))
         self._qa_center = self._menu.addAction(pixmaps.center_image.icon(), "Center plot on image",
-                                               self._currier.curry(self.image.signalCenter.emit, None))
+                                               self._currier.curry(self.image.signalCenter.emit, True))
         self._qa_show_rc = self._menu.addAction(pixmaps.colours.icon(), "Colours && Intensities...",
                                                 self.showRenderControls)
         if save:
