@@ -2100,12 +2100,14 @@ class SkyModelPlotter(QWidget):
             filename = filename[0]
         filename = str(filename)
         # make QPixmap
-        pixmap = QPixmap(self.plot.width(), self.plot.height())
+        pixmap = self.plot.grab()  # Qt 5 method
+        # old method below
+        """pixmap = QPixmap(self.plot.width(), self.plot.height())
         pixmap.fill(self._bg_color)
         painter = QPainter(pixmap)
         # use QwtPlot implementation of draw canvas, since we want to avoid caching
         QwtPlot.drawCanvas(self.plot, painter)
-        painter.end()
+        painter.end()"""
         # save to file
         try:
             pixmap.save(filename, "PNG")
