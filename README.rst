@@ -14,7 +14,8 @@ from source with Ubuntu 20.04
 ------------------------------
 
 System dependencies: PyQt 5.14.1 (or 5.15), PyQt-Qwt and Qwt6.1.4 (or 6.1.5). These are already present in most Linux distributions.
-Please note this package **does not** use the version of PyQt 5 that is installable from PyPI.
+
+Please note that, this package **does not** use the version of PyQt 5 that is installable from PyPI.
 
 To install the system dependencies on Ubuntu 20.04 you can run::
 
