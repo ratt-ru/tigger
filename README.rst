@@ -24,8 +24,8 @@ To install the system dependencies on Ubuntu 20.04 you can run::
 Then build the source::
 
     $ git clone https://github.com/razman786/tigger_py5.git
-    $ git checkout develop
     $ cd tigger_py5
+    $ git checkout develop
     $ python3 setup.py install --user
 
 
