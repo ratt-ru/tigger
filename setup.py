@@ -5,6 +5,7 @@ from setuptools import setup, find_packages
 
 __version__ = "1.5.0"
 
+# PyQt has not been added here are it needs to be installed via apt-get instead to support Qwt.
 requirements = [
     'numpy>=1.17',
     'scipy==1.5.2',
