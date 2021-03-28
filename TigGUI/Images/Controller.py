@@ -416,14 +416,14 @@ class ImageController(QFrame):
         if not filename:
             return
         busy = BusyIndicator()
-        self._imgman.plotShowMessage.emit("""Writing FITS image %s""" % filename, 3000)
+        self._imgman.signalShowMessage.emit("""Writing FITS image %s""" % filename, 3000)
         QApplication.flush()
         try:
             self.image.save(filename)
         except Exception as exc:
             busy.reset_cursor()
             traceback.print_exc()
-            self._imgman.signalshowErrorMessage.emit("""Error writing FITS image %s: %s""" % (filename, str(sys.exc_info()[1])))
+            self._imgman.signalShowErrorMessage.emit("""Error writing FITS image %s: %s""" % (filename, str(sys.exc_info()[1])))
             return None
         self.renderControl().startSavingConfig(filename)
         self.setName(self.image.name)

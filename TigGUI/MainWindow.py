@@ -337,7 +337,6 @@ class MainWindow(QMainWindow):
         callback(self, self.model)
 
     def _imagesChanged(self):
-        print("imageChanged signal MainWindow")
         """Called when the set of loaded images has changed"""
         if self.imgman.getImages():
             if self._current_layout is self.LayoutEmpty:

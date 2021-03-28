@@ -280,7 +280,7 @@ class RenderControl(QObject):
         dprint(4, "range set")
         self.image.intensityMap().setDataSubset(self._displaydata, minmax=range)
         self.image.setIntensityMap(emit=False)
-        print(f"dataSubsetChanged {type(subset)}, {type(range)}, {type(desc)}, {type(subset_type)}")
+        dprint(2, f"dataSubsetChanged {type(subset)}, {type(range)}, {type(desc)}, {type(subset_type)}")
         self.dataSubsetChanged.emit(subset, range, desc, subset_type)
         if set_display_range:
             self.setDisplayRange(write_config=write_config, *range)
@@ -384,7 +384,6 @@ class RenderControl(QObject):
                 busy = BusyIndicator()
                 self.image.setIntensityMap(emit=True)
                 busy.reset_cursor()
-            print(f"setDisplayRange {type(dmin)}, {type(dmax)}")
             self.displayRangeChanged.emit(dmin, dmax)
             if self._config and write_config:
                 self._config.set("range-min", dmin, save=False)

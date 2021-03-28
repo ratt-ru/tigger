@@ -109,14 +109,13 @@ def main():
 
     # load images first
     for img in images:
-        print("Loading image" + img)
         # splash.showMessage("Loading image %s"%img,Qt.AlignHCenter|Qt.AlignBottom)
         mainwin.loadImage(img)
         dprint(1, "loaded image", img)
 
     # load model, if specified
     for mod in models:
-        print("Loading model" + mod)
+        dprint(2, "Loading model" + mod)
         try:
             mainwin.openFile(mod, _show=False)
         except:
