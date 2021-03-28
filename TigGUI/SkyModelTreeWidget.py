@@ -444,11 +444,11 @@ class SkyModelTreeWidgetItem(QTreeWidgetItem):
                 if self._values[icol] is not None and other._values[icol] is not None:
                     return self._values[icol] < other._values[icol]
                 else:
-                    print(f"SkyModelTreeWidget def __it__ icol RETURN values are None")
+                    dprint(2, f"SkyModelTreeWidget def __it__ icol RETURN values are None")
                     return False
             else:
                 return self.text(icol) < other.text(icol)
-        print(f"SkyModelTreeWidget def __it__ icol is None!")
+        dprint(2, f"SkyModelTreeWidget def __it__ icol is None!")
 
     def __ge__(self, other):
         return other < self
