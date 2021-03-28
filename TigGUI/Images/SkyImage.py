@@ -697,6 +697,6 @@ class FITSImagePlotItem(SkyCubePlotItem):
         hdu.verify('silentfix')
         if os.path.exists(filename):
             os.remove(filename)
-        hdu.writeto(filename, clobber=True)
+        hdu.writeto(filename, overwrite=True)
         self.filename = filename
         self.name = os.path.basename(filename)

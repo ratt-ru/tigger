@@ -412,7 +412,7 @@ class ImageController(QFrame):
     def _saveImage(self):
         filename = QFileDialog.getSaveFileName(self, "Save FITS file", self._save_dir,
                                                "FITS files(*.fits *.FITS *fts *FTS)")
-        filename = str(filename)
+        filename = str(filename[0])
         if not filename:
             return
         busy = BusyIndicator()
