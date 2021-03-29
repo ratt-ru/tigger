@@ -1672,7 +1672,7 @@ class SkyModelPlotter(QWidget):
             msgtext += "   x=%d y=%d value=blank" % (x, y) if flag else "   x=%d y=%d value=%g" % (x, y, val)
             self._livezoom.trackImage(image, x, y)
             self._liveprofile.trackImage(image, x, y)
-        self.plotShowMessage[str, int].emit(msgtext, 3000)
+        self.plotShowMessage[str, int].emit(msgtext, 60000)
         return msgtext
 
     def _selectSources(self, sources, mode):
