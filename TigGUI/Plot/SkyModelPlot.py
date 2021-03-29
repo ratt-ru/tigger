@@ -937,7 +937,7 @@ class SkyModelPlotter(QWidget):
         def __init__(self, canvas, label, color="red", select_callback=None, track_callback=None,
                      mode=QwtPickerClickRectMachine(), rubber_band=QwtPicker.RectRubberBand,
                      text_bg=None):
-            QwtPlotPicker.__init__(self, QwtPlot.xBottom, QwtPlot.yLeft, rubber_band, QwtPicker.ActiveOnly,
+            QwtPlotPicker.__init__(self, QwtPlot.xBottom, QwtPlot.yLeft, rubber_band, QwtPicker.AlwaysOff,
                                        canvas)
             self.setRubberBand(rubber_band)
             # setup appearance
@@ -1324,7 +1324,7 @@ class SkyModelPlotter(QWidget):
         for picker in self._zoomer, self._ruler, self._picker1, self._picker2, self._picker3, self._picker4:
             for sel in QwtEventPattern.MouseSelect1, QwtEventPattern.MouseSelect2, QwtEventPattern.MouseSelect3, QwtEventPattern.MouseSelect4:
                 picker.setMousePattern(sel, 0)
-            picker.setTrackerMode(QwtPicker.ActiveOnly)
+            picker.setTrackerMode(QwtPicker.AlwaysOff)
 
     #    for picker in self._ruler,self._picker1,self._picker2,self._picker3:  # TODO - check why this code is commented out
     #      QObject.connect(picker,pyqtSignal("wheelEvent"),self._zoomer.widgetWheelEvent)
