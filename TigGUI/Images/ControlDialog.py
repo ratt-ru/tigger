@@ -511,6 +511,7 @@ class ImageControlDialog(QDialog):
     class ColorBarPlotItem(QwtPlotItem):
         def __init__(self, y0, y1, *args):
             QwtPlotItem.__init__(self, *args)
+            self.RenderAntialiased
             self.imap = None
             self.cmap = None
             self._y0 = y1
@@ -543,9 +544,11 @@ class ImageControlDialog(QDialog):
                      label="", zlabel=None, linewidth=1, spacing=2,
                      yaxis=QwtPlot.yRight):
             self.line = TiggerPlotCurve()
+            self.line.setRenderHint(QwtPlotItem.RenderAntialiased)
             self.color = color = color if isinstance(color, QColor) else QColor(color)
             self.line.setPen(QPen(color, linewidth, linestyle))
             self.marker = TiggerPlotMarker()
+            self.marker.setRenderHint(QwtPlotItem.RenderAntialiased)
             self.marker.setLabelAlignment(align)
             try:
                 self.marker.setSpacing(spacing)
@@ -580,7 +583,9 @@ class ImageControlDialog(QDialog):
         self._histplot.setAxisFont(QwtPlot.xBottom, QApplication.font())
         # add histogram curves
         self._histcurve1 = TiggerPlotCurve()
+        self._histcurve1.setRenderHint(QwtPlotItem.RenderAntialiased)
         self._histcurve2 = TiggerPlotCurve()
+        self._histcurve2.setRenderHint(QwtPlotItem.RenderAntialiased)
         self._histcurve1.setStyle(QwtPlotCurve.Steps)
         self._histcurve2.setStyle(QwtPlotCurve.Steps)
         self._histcurve1.setPen(QPen(Qt.NoPen))
@@ -613,6 +618,7 @@ class ImageControlDialog(QDialog):
                                                       label="half-max", yaxis=QwtPlot.yLeft)
         # add current range
         self._rangebox = TiggerPlotCurve()
+        self._rangebox.setRenderHint(QwtPlotItem.RenderAntialiased)
         self._rangebox.setStyle(QwtPlotCurve.Steps)
         self._rangebox.setYAxis(QwtPlot.yRight)
         self._rangebox.setPen(QPen(Qt.NoPen))
@@ -620,18 +626,21 @@ class ImageControlDialog(QDialog):
         self._rangebox.setZ(50)
         self._rangebox.attach(self._histplot)
         self._rangebox2 = TiggerPlotCurve()
+        self._rangebox2.setRenderHint(QwtPlotItem.RenderAntialiased)
         self._rangebox2.setStyle(QwtPlotCurve.Sticks)
         self._rangebox2.setYAxis(QwtPlot.yRight)
         self._rangebox2.setZ(60)
         #  self._rangebox2.attach(self._histplot)
         # add intensity transfer function
         self._itfcurve = TiggerPlotCurve()
+        self._itfcurve.setRenderHint(QwtPlotItem.RenderAntialiased)
         self._itfcurve.setStyle(QwtPlotCurve.Lines)
         self._itfcurve.setPen(QPen(QColor("blue")))
         self._itfcurve.setYAxis(QwtPlot.yRight)
         self._itfcurve.setZ(120)
         self._itfcurve.attach(self._histplot)
         self._itfmarker = TiggerPlotMarker()
+        self._itfmarker.setRenderHint(QwtPlotItem.RenderAntialiased)
         label = QwtText("ITF")
         label.setColor(QColor("blue"))
         self._itfmarker.setLabel(label)

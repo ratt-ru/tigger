@@ -21,10 +21,12 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 import faulthandler
 
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QStyleFactory
 
 faulthandler.enable()
 import sys
+import os
 import traceback
 from optparse import OptionParser
 
@@ -67,6 +69,12 @@ def main():
     TigGUI.startup_dprintf = dprintf
 
     dprint(1, "imported Qt5")
+    os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"  # enable auto scaling based on monitor's pixel density
+    os.environ["QT_SCALE_FACTOR"] = "1"  # set global scale factor for entire application
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)  # enable highdpi scaling
+    # QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)  # only for PyQt 5.15
+    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)  # enable highdpi icons
+    QApplication.setAttribute(Qt.AA_UseDesktopOpenGL, True)  # force the use of OpenGL
     QApplication.setDesktopSettingsAware(True)  # App will use System fonts, colours etc...
     app = QApplication(sys.argv)
     app.setStyle(QStyleFactory.create("Fusion"))  # TODO - even after adding this it still causes a style warning from Qt

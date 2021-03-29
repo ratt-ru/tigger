@@ -56,6 +56,7 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
         # name, if any
         self.name = self.filename = None
         # internal init
+        self.RenderAntialiased
         self._qo = QObject()
         self._image = self._imgminmax = None
         self._nvaluecalls = 0
@@ -367,6 +368,7 @@ class SkyCubePlotItem(SkyImagePlotItem):
 
     def __init__(self, data=None, ndim=None):
         SkyImagePlotItem.__init__(self)
+        self.RenderAntialiased
         # datacube (array of any rank)
         self._data_fortran_order = None
         self._data = self._dataminmax = None
@@ -599,6 +601,7 @@ class FITSImagePlotItem(SkyCubePlotItem):
 
     def __init__(self, filename=None, name=None, hdu=None):
         SkyCubePlotItem.__init__(self)
+        self.RenderAntialiased
         self.name = name
         if filename or hdu:
             self.read(filename, hdu)

@@ -25,7 +25,7 @@ import traceback
 import numpy
 from PyQt5.Qt import QHBoxLayout, QFileDialog, QComboBox, QLabel, QLineEdit, QDialog, QToolButton, \
     Qt, QApplication, QColor, QPixmap, QPainter, QFrame, QMenu, QPen, QKeySequence
-from PyQt5.Qwt import QwtText, QwtPlotCurve, QwtPlotMarker, QwtScaleMap
+from PyQt5.Qwt import QwtText, QwtPlotCurve, QwtPlotMarker, QwtScaleMap, QwtPlotItem
 from PyQt5.QtCore import pyqtSignal, QPointF
 
 import TigGUI.kitties.utils
@@ -214,13 +214,17 @@ class ImageController(QFrame):
         self._z_markers = None
         # and the markers themselves
         self._image_border = QwtPlotCurve()
+        self._image_border.setRenderHint(QwtPlotItem.RenderAntialiased)
         self._image_label = QwtPlotMarker()
+        self._image_label.setRenderHint(QwtPlotItem.RenderAntialiased)
         # subset markers
         self._subset_pen = QPen(QColor("Light Blue"))
         self._subset_border = QwtPlotCurve()
+        self._subset_border.setRenderHint(QwtPlotItem.RenderAntialiased)
         self._subset_border.setPen(self._subset_pen)
         self._subset_border.setVisible(False)
         self._subset_label = QwtPlotMarker()
+        self._subset_label.setRenderHint(QwtPlotItem.RenderAntialiased)
         text = QwtText("subset")
         text.setColor(self._subset_pen.color())
         self._subset_label.setLabel(text)

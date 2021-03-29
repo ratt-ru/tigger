@@ -104,6 +104,7 @@ class SourceMarker:
         self.src = src
         self._lm, self._size = (l, m), size
         self.plotmarker = TiggerPlotMarker()
+        self.plotmarker.setRenderHint(QwtPlotItem.RenderAntialiased)
         self.plotmarker.setValue(l, m)
         self._symbol = QwtSymbol()
         self._font = QApplication.font()
@@ -389,6 +390,7 @@ class LiveImageZoom(ToolDialog):
         # setup targeting reticule for zoom plot
         self._reticules = TiggerPlotCurve(), TiggerPlotCurve()
         for curve in self._reticules:
+            curve.setRenderHint(QwtPlotItem.RenderAntialiased)
             curve.setPen(QPen(QColor("green")))
             curve.setStyle(QwtPlotCurve.Lines)
             curve.attach(self._zoomplot)
@@ -396,7 +398,9 @@ class LiveImageZoom(ToolDialog):
         # setup cross-section curves
         pen = makeDualColorPen("navy", "yellow")
         self._xcs = TiggerPlotCurve()
+        self._xcs.setRenderHint(QwtPlotItem.RenderAntialiased)
         self._ycs = TiggerPlotCurve()
+        self._ycs.setRenderHint(QwtPlotItem.RenderAntialiased)
         self._xcs.setPen(makeDualColorPen("navy", "yellow"))
         self._ycs.setPen(makeDualColorPen("black", "cyan"))
         for curve in self._xcs, self._ycs:
@@ -467,6 +471,7 @@ class LiveImageZoom(ToolDialog):
         def __init__(self):
             QwtPlotItem.__init__(self)
             self._qimg = None
+            self.RenderAntialiased
 
         def setImage(self, qimg):
             self._qimg = qimg
@@ -572,7 +577,9 @@ class LiveProfile(ToolDialog):
         self._profplot.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         # and profile curve
         self._profcurve = TiggerPlotCurve()
+        self._profcurve.setRenderHint(QwtPlotItem.RenderAntialiased)
         self._ycs = TiggerPlotCurve()
+        self._ycs.setRenderHint(QwtPlotItem.RenderAntialiased)
         self._profcurve.setPen(QPen(QColor("black")))
         self._profcurve.setStyle(QwtPlotCurve.Lines)
         self._profcurve.setOrientation(Qt.Horizontal)
@@ -1039,8 +1046,6 @@ class SkyModelPlotter(QWidget):
                     if self.rubberBand() == QwtPicker.PolygonRubberBand:
                         if event.modifiers() == Qt.ShiftModifier:
                             pos = self.selection()
-                            if pos.point(0) == pos.point(1):
-                                dprint(2, "Transition only has one point")
                             self.signalMeasureRuler.emit(pos)
                         else:
                             dprint(2, f"modifier is not Shift {event.modifiers()}")
@@ -1167,6 +1172,7 @@ class SkyModelPlotter(QWidget):
         self._qa_show_psf.setCheckable(True)
         self._qa_show_psf.setChecked(True)
         self._psf_marker = TiggerPlotCurve()
+        self._psf_marker.setRenderHint(QwtPlotItem.RenderAntialiased)
         self._psf_marker.setPen(QPen(QColor("lightgreen")))
         self._psf_marker.setZ(Z_Grid)
         self._qa_show_psf.toggled[bool].connect(self._showPsfMarker)
@@ -1275,8 +1281,10 @@ class SkyModelPlotter(QWidget):
         self._zoomer.zoomed[QRectF].connect(self._plotZoomed)
         self._zoomer.provisionalZoom.connect(self._plotProvisionalZoom)
         self._zoomer_box = TiggerPlotCurve()
+        self._zoomer_box.setRenderHint(QwtPlotItem.RenderAntialiased)
         self._zoomer_box.setPen(self._zoomer_pen)
         self._zoomer_label = TiggerPlotMarker()
+        self._zoomer_label.setRenderHint(QwtPlotItem.RenderAntialiased)
         self._zoomer_label_text = QwtText("")
         self._zoomer_label_text.setColor(QColor("yellow"))
         self._zoomer_label.setLabel(self._zoomer_label_text)
@@ -1451,7 +1459,7 @@ class SkyModelPlotter(QWidget):
     def _trackRuler(self, pos):
         if not self.projection and self._ruler_start_point is None:
             return None
-        if (pos - self._ruler_start_point).manhattanLength() > 1:
+        if self._ruler_start_point is not None and (pos - self._ruler_start_point).manhattanLength() > 1:
             # find first point details
             l, m, ra, dec, dist, pa, rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd, x, y, val, flag = self._convertCoordinatesRuler(self._ruler_start_point)
             # find second point details
@@ -1497,6 +1505,7 @@ class SkyModelPlotter(QWidget):
             tiptext += "</NOBR>"
             # make marker
             marker = TiggerPlotMarker()
+            marker.setRenderHint(QwtPlotItem.RenderAntialiased)
             marker.setValue(l, m)
             marker.setSymbol(self._markup_xsymbol)
             markup_items.append(marker)
@@ -1540,6 +1549,8 @@ class SkyModelPlotter(QWidget):
             Rd2, Rm2, Rs2, dist2 * 180 / math.pi, pa2)
             # make markers
             marka, markb = TiggerPlotMarker(), TiggerPlotMarker()
+            marka.setRenderHint(QwtPlotItem.RenderAntialiased)
+            markb.setRenderHint(QwtPlotItem.RenderAntialiased)
             marka.setValue(l, m)
             markb.setValue(l1, m1)
             marka.setLabel(self._markup_a_label)
@@ -1556,6 +1567,7 @@ class SkyModelPlotter(QWidget):
             marka.setSpacing(0)
             markb.setSpacing(0)
             line = TiggerPlotCurve()
+            line.setRenderHint(QwtPlotItem.RenderAntialiased)
             line.setData([l, l1], [m, m1])
             line.setBrush(self._markup_brush)
             line.setPen(self._markup_pen)
@@ -1699,10 +1711,12 @@ class SkyModelPlotter(QWidget):
     def _makeRectMarker(self, rect, pen):
         x1, y1, x2, y2 = rect.getCoords()
         line = TiggerPlotCurve()
+        line.setRenderHint(QwtPlotItem.RenderAntialiased)
         line.setData([x1, x1, x2, x2, x1], [y1, y2, y2, y1, y1])
         #      line.setBrush(self._stats_brush)
         line.setPen(pen)
         label = TiggerPlotMarker()
+        label.setRenderHint(QwtPlotItem.RenderAntialiased)
         label.setValue(max(x1, x2), max(y1, y2))
         text = QwtText("stats")
         text.setColor(pen.color())
@@ -1965,6 +1979,8 @@ class SkyModelPlotter(QWidget):
         circstep = self._grid_step_arcsec
         if circstep:
             self._grid = [TiggerPlotCurve(), TiggerPlotCurve()]
+            self._grid[0].setRenderHint(QwtPlotItem.RenderAntialiased)
+            self._grid[1].setRenderHint(QwtPlotItem.RenderAntialiased)
             self._grid[0].setData([lmin, lmax], [0, 0])
             self._grid[1].setData([0, 0], [mmin, mmax])
             # see how many units (of arcminute) fit in max diagonal direction
@@ -1980,12 +1996,14 @@ class SkyModelPlotter(QWidget):
                 dum, rm = self.projection.offset(0, r * DEG / 3600)
                 # make curve
                 curve = TiggerPlotCurve()
+                curve.setRenderHint(QwtPlotItem.RenderAntialiased)
                 x, y = rl * cosines, rm * sines
                 curve.setData(x, y)
                 curve.setCurveAttribute(QwtPlotCurve.Fitted, True)
                 self._grid.append(curve)
                 # make a text label and marker
                 marker = TiggerPlotMarker()
+                marker.setRenderHint(QwtPlotItem.RenderAntialiased)
                 m, s = divmod(r, 60)
                 d, m = divmod(m, 60)
                 if d:
