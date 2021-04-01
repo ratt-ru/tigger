@@ -233,7 +233,7 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
             dprint(3, self._imgminmax)
         return self._imgminmax
 
-    def draw(self, painter, xmap, ymap, rect):
+    def draw(self, painter, xmap, ymap, rect, use_cache=True):
         """Implements QwtPlotItem.draw(), to render the image on the given painter."""
         xp1, xp2, xdp, xs1, xs2, xds = xinfo = xmap.p1(), xmap.p2(), xmap.pDist(), xmap.s1(), xmap.s2(), xmap.sDist()
         yp1, yp2, ydp, ys1, ys2, yds = yinfo = ymap.p1(), ymap.p2(), ymap.pDist(), ymap.s1(), ymap.s2(), ymap.sDist()
@@ -333,12 +333,16 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
             self.qimg = self.colormap.colorize(self._cache_imap)
             dprint(2, "colorizing took", time.time() - t0, "secs")
             t0 = time.time()
-            # cache the qimage
-            self._cache_qimage[self._image_key] = self.qimg.copy()
+            if use_cache:
+                # cache the qimage
+                self._cache_qimage[self._image_key] = self.qimg.copy()
         # now draw the image
         t0 = time.time()
         painter.drawImage(xp1, yp2, self.qimg)
         dprint(2, "drawing took", time.time() - t0, "secs")
+        # when exporting images to PNG cache needs to be cleared
+        if not use_cache:
+            self.clearDisplayCache()
 
     def setPsfSize(self, _maj, _min, _pa):
         self._psfsize = _maj, _min, _pa

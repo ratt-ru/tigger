@@ -439,7 +439,10 @@ class ImageController(QFrame):
     def _exportImageResolution(self):
         sender = self.sender()
         if isinstance(sender, QCheckBox):
-            self._exportMaxRes = True
+            if sender.isChecked():
+                self._exportMaxRes = True
+            else:
+                self._exportMaxRes = False
 
     def _exportImageToPNG(self, filename=None):
         if not filename:
@@ -451,9 +454,9 @@ class ImageController(QFrame):
                 dialog.setModal(True)
                 dialog.filesSelected['QStringList'].connect(self._exportImageToPNG)
                 layout = dialog.layout()
-                checkbox = QCheckBox("Max resolution")
+                checkbox = QCheckBox("Limit to 4K image")
                 checkbox.setChecked(False)
-                checkbox.setToolTip("Use all the free computer memory available to export the maximum image size possible")
+                checkbox.setToolTip("Limits the image output to 4K")
                 checkbox.toggled.connect(self._exportImageResolution)
                 layout.addWidget(checkbox)
                 dialog.setLayout(layout)
@@ -465,7 +468,7 @@ class ImageController(QFrame):
         # get image dimensions
         nx, ny = self.image.imageDims()
         # export either max resolution possible or default to 4K. If image is small then no scaling occurs.
-        if self._exportMaxRes:
+        if not self._exportMaxRes:
             # get free memory. Note: Linux only!
             import os
             total_memory, used_memory, free_memory = map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
@@ -500,11 +503,18 @@ class ImageController(QFrame):
         ymap = QwtScaleMap()
         ymap.setPaintInterval(ny, 0)
         ymap.setScaleInterval(m0, m1)
-        self.image.draw(painter, xmap, ymap, pixmap.rect())
+        # call painter with clear cache option for consistent file size output.
+        self.image.draw(painter, xmap, ymap, pixmap.rect(), use_cache=False)
         painter.end()
         # save to file
         try:
             pixmap.save(filename, "PNG")
+            # clean up export items
+            pixmap.detach()
+            del xmap
+            del ymap
+            del pixmap
+            del painter
         except Exception as exc:
             self._imgman.signalShowErrorMessage[str, int].emit("Error writing %s: %s" % (filename, str(exc)), 3000)
             busy.reset_cursor()
