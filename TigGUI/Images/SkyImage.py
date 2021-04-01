@@ -58,6 +58,7 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
         # internal init
         self.RenderAntialiased
         self._qo = QObject()
+        self.qimg = None
         self._image = self._imgminmax = None
         self._nvaluecalls = 0
         self._value_time = self._value_time0 = None
@@ -251,8 +252,8 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
             self._cache_mapping = mapping
         t0 = time.time()
         # check cached QImage for current image key.
-        qimg = self._cache_qimage.get(self._image_key)
-        if qimg:
+        self.qimg = self._cache_qimage.get(self._image_key)
+        if self.qimg:
             dprint(5, "QImage found in cache, reusing")
         # else regenerate image
         else:
@@ -329,14 +330,14 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
                 dprint(2, "intensity mapping took", time.time() - t0, "secs")
                 t0 = time.time()
             # ok, we have intensity-mapped data in _cache_imap
-            qimg = self.colormap.colorize(self._cache_imap)
+            self.qimg = self.colormap.colorize(self._cache_imap)
             dprint(2, "colorizing took", time.time() - t0, "secs")
             t0 = time.time()
             # cache the qimage
-            self._cache_qimage[self._image_key] = qimg.copy()
+            self._cache_qimage[self._image_key] = self.qimg.copy()
         # now draw the image
         t0 = time.time()
-        painter.drawImage(xp1, yp2, qimg)
+        painter.drawImage(xp1, yp2, self.qimg)
         dprint(2, "drawing took", time.time() - t0, "secs")
 
     def setPsfSize(self, _maj, _min, _pa):

@@ -24,9 +24,9 @@ import traceback
 
 import numpy
 from PyQt5.Qt import QHBoxLayout, QFileDialog, QComboBox, QLabel, QLineEdit, QDialog, QToolButton, \
-    Qt, QApplication, QColor, QPixmap, QPainter, QFrame, QMenu, QPen, QKeySequence
+    Qt, QApplication, QColor, QPixmap, QPainter, QFrame, QMenu, QPen, QKeySequence, QCheckBox
 from PyQt5.Qwt import QwtText, QwtPlotCurve, QwtPlotMarker, QwtScaleMap, QwtPlotItem
-from PyQt5.QtCore import pyqtSignal, QPointF
+from PyQt5.QtCore import pyqtSignal, QPointF, QSize
 
 import TigGUI.kitties.utils
 from TigGUI.Images.SkyImage import FITSImagePlotItem
@@ -232,6 +232,7 @@ class ImageController(QFrame):
         self._subset_label.setVisible(False)
         self._setting_lmrect = False
         self._all_markers = [self._image_border, self._image_label, self._subset_border, self._subset_label]
+        self._exportMaxRes = False
 
     def close(self):
         if self._control_dialog:
@@ -415,7 +416,7 @@ class ImageController(QFrame):
 
     def _saveImage(self):
         filename = QFileDialog.getSaveFileName(self, "Save FITS file", self._save_dir,
-                                               "FITS files(*.fits *.FITS *fts *FTS)")
+                                               "FITS files(*.fits *.FITS *fts *FTS)", options=QFileDialog.DontUseNativeDialog)
         filename = str(filename[0])
         if not filename:
             return
@@ -435,6 +436,11 @@ class ImageController(QFrame):
         self._wsave.hide()
         busy.reset_cursor()
 
+    def _exportImageResolution(self):
+        sender = self.sender()
+        if isinstance(sender, QCheckBox):
+            self._exportMaxRes = True
+
     def _exportImageToPNG(self, filename=None):
         if not filename:
             if not self._export_png_dialog:
@@ -444,13 +450,46 @@ class ImageController(QFrame):
                 dialog.setAcceptMode(QFileDialog.AcceptSave)
                 dialog.setModal(True)
                 dialog.filesSelected['QStringList'].connect(self._exportImageToPNG)
+                layout = dialog.layout()
+                checkbox = QCheckBox("Max resolution")
+                checkbox.setChecked(False)
+                checkbox.setToolTip("Use all the free computer memory available to export the maximum image size possible")
+                checkbox.toggled.connect(self._exportImageResolution)
+                layout.addWidget(checkbox)
+                dialog.setLayout(layout)
             return self._export_png_dialog.exec_() == QDialog.Accepted
         busy = BusyIndicator()
         if isinstance(filename, QStringList):
             filename = filename[0]
         filename = str(filename)
-        # make QPixmap
+        # get image dimensions
         nx, ny = self.image.imageDims()
+        # export either max resolution possible or default to 4K. If image is small then no scaling occurs.
+        if self._exportMaxRes:
+            # get free memory. Note: Linux only!
+            import os
+            total_memory, used_memory, free_memory = map(int, os.popen('free -t -m').readlines()[-1].split()[1:])
+            # use 90% of free memory available
+            free_memory = free_memory * 0.9
+            # use an approximation to find the max image size that can be generated
+            if nx >= ny and nx > free_memory:
+                scale_factor = round(free_memory / nx, 1)
+            elif ny > nx and ny > free_memory:
+                scale_factor = round(free_memory / ny, 1)
+            else:
+                scale_factor = 1
+        else:
+            # default to 4K
+            if nx > 4000:
+                scale_factor = 4000 / nx
+            elif ny > nx and ny > 4000:
+                scale_factor = 4000 / ny
+            else:
+                scale_factor = 1
+
+        # make QPixmap
+        nx = nx * scale_factor
+        ny = ny * scale_factor
         (l0, l1), (m0, m1) = self.image.getExtents()
         pixmap = QPixmap(nx, ny)
         painter = QPainter(pixmap)
@@ -467,11 +506,11 @@ class ImageController(QFrame):
         try:
             pixmap.save(filename, "PNG")
         except Exception as exc:
-            self._imgman.signalShowErrorMessage.emit("Error writing %s: %s" % (filename, str(exc)), 3000)
+            self._imgman.signalShowErrorMessage[str, int].emit("Error writing %s: %s" % (filename, str(exc)), 3000)
             busy.reset_cursor()
         else:
             busy.reset_cursor()
-            self._imgman.signalShowMessage.emit("Exported image to file %s" % filename, 3000)
+            self._imgman.signalShowMessage[str, int].emit("Exported image to file %s" % filename, 3000)
 
     def _toggleDisplayRangeLock(self):
         self.renderControl().lockDisplayRange(not self.renderControl().isDisplayRangeLocked())
