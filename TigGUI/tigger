@@ -22,6 +22,7 @@
 import faulthandler
 
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QPalette
 from PyQt5.QtWidgets import QStyleFactory
 
 faulthandler.enable()
@@ -78,6 +79,37 @@ def main():
     QApplication.setDesktopSettingsAware(True)  # App will use System fonts, colours etc...
     app = QApplication(sys.argv)
     app.setStyle(QStyleFactory.create("Fusion"))  # TODO - even after adding this it still causes a style warning from Qt
+    # setup Dark Mode QPalette - initial setup  # TODO - still needs tweaking.
+    palette = QPalette()
+    palette.setColor(QPalette.Window, QColor(53, 53, 53))
+    palette.setColor(QPalette.WindowText, Qt.white)
+    palette.setColor(QPalette.Light, QColor(68, 68, 68))
+    palette.setColor(QPalette.Base, QColor(25, 25, 25))
+    palette.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
+    palette.setColor(QPalette.ToolTipBase, Qt.white)
+    palette.setColor(QPalette.ToolTipText, Qt.black)
+    palette.setColor(QPalette.Text, Qt.white)
+    palette.setColor(QPalette.Button, QColor(53, 53, 53))
+    palette.setColor(QPalette.ButtonText, Qt.white)
+    palette.setColor(QPalette.BrightText, Qt.red)
+    palette.setColor(QPalette.Link, QColor(42, 130, 218))
+    palette.setColor(QPalette.Highlight, QColor(42, 130, 218, 192))
+    palette.setColor(QPalette.HighlightedText, Qt.white)
+
+    # setup Dark Mode disabled QPalette
+    palette.setColor(QPalette.Disabled, QPalette.Window, Qt.black)
+    palette.setColor(QPalette.Disabled, QPalette.WindowText, QColor(255, 255, 255, 128))
+    palette.setColor(QPalette.Disabled, QPalette.Base, QColor(68, 68, 68))
+    palette.setColor(QPalette.Disabled, QPalette.Text, QColor(255, 255, 255, 128))
+    palette.setColor(QPalette.Disabled, QPalette.Button, QColor(53, 53, 53, 128))
+    palette.setColor(QPalette.Disabled, QPalette.ButtonText, QColor(255, 255, 255, 128))
+    palette.setColor(QPalette.Disabled, QPalette.BrightText, Qt.black)
+    palette.setColor(QPalette.Disabled, QPalette.Link, Qt.black)
+    palette.setColor(QPalette.Disabled, QPalette.Highlight, Qt.black)
+    palette.setColor(QPalette.Disabled, QPalette.HighlightedText, Qt.black)
+
+    # add Dark Mode to Tigger
+    app.setPalette(palette)
     from TigGUI.init import pixmaps
     app.setWindowIcon(pixmaps.tigger_starface.icon())
     # Need for PlotStyles colors -- ignore error on non-X11 platforms like the Mac
