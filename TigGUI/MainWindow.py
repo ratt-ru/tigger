@@ -62,8 +62,6 @@ class MainWindow(QMainWindow):
         QMainWindow.__init__(self, parent)
         self.signalShowMessage.connect(self.showMessage, type=Qt.QueuedConnection)
         self.signalShowErrorMessage.connect(self.showErrorMessage, type=Qt.QueuedConnection)
-        self._add_tag_dialog = None
-        self._remove_tag_dialog = None
         self.setWindowIcon(pixmaps.tigger_starface.icon())
         self._currier = PersistentCurrier()
         self.hide()

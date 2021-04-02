@@ -24,6 +24,8 @@
 #
 
 import math
+import operator
+
 from PyQt5.QtWidgets import *
 import traceback
 
@@ -59,8 +61,6 @@ NonSortingTags = set(["name", "typecode"])
 class SourceSelectorDialog(QDialog):
     def __init__(self, parent, flags=Qt.WindowFlags()):
         QDialog.__init__(self, parent, flags)
-        self.model = None
-        self.sorttags = None
         self.setModal(False)
         self.setWindowTitle("Select sources by...")
         lo = QVBoxLayout(self)
@@ -74,12 +74,12 @@ class SourceSelectorDialog(QDialog):
         #   lo1.addWidget(lab)
         self.wselby = QComboBox(self)
         lo1.addWidget(self.wselby, 0)
-        self.wselby.activated['QString'].connect(self._setup_selection_by)
+        self.wselby.activated[str].connect(self._setup_selection_by)
         # under/over
         self.wgele = QComboBox(self)
         lo1.addWidget(self.wgele, 0)
         self.wgele.addItems([">", ">=", "<=", "<", "sum<=", "sum>"])
-        self.wgele.activated['QString'].connect(self._select_threshold)
+        self.wgele.activated[str].connect(self._select_threshold)
         # threshold value
         self.wthreshold = QLineEdit(self)
         self.wthreshold.editingFinished.connect(self._select_threshold)
@@ -155,7 +155,7 @@ class SourceSelectorDialog(QDialog):
             try:
                 if hasattr(src, tag):
                     value = float(getattr(src, tag))
-                else:
+                elif tag in TagAccessors:
                     value = float(TagAccessors[tag](src))
             # skip source if failed to access this tag as a float
             except:
@@ -176,7 +176,7 @@ class SourceSelectorDialog(QDialog):
             for w in self.wgele, self.wthreshold, self.wpercent, self.wpercent_lbl:
                 w.setEnabled(True)
         # sort index by descending values
-        self._sort_index.sort(reverse=True)
+        self._sort_index.sort(reverse=True, key=operator.itemgetter(0))
         # generate cumulative sums
         cumsum = 0.
         for entry in self._sort_index:

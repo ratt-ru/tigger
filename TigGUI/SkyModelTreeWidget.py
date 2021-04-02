@@ -86,7 +86,6 @@ class SkyModelTreeWidget(TigGUI.kitties.widgets.ClickableTreeWidget):
         TigGUI.kitties.widgets.ClickableTreeWidget.__init__(self, *args)
         self._currier = PersistentCurrier()
         self.model = None
-        self._itemdict = None
         # insert columns
         self.setHeaderLabels(ViewColumns)
         self.headerItem().setText(ColumnIapp, "I(app)")
@@ -113,7 +112,6 @@ class SkyModelTreeWidget(TigGUI.kitties.widgets.ClickableTreeWidget):
         ## self.setShowToolTips(True)
         self._updating_selection = False
         self.setRootIsDecorated(False)
-
         # connect signals to track selected sources
         self.itemSelectionChanged.connect(self._selectionChanged)
         self.itemEntered[QTreeWidgetItem, int].connect(self._itemHighlighted)
@@ -290,6 +288,7 @@ class SkyModelTreeWidget(TigGUI.kitties.widgets.ClickableTreeWidget):
 
 class SkyModelTreeWidgetItem(QTreeWidgetItem):
     _fonts = None
+    _fontmetrics = None
 
     @staticmethod
     def _initFonts():
@@ -307,7 +306,7 @@ class SkyModelTreeWidgetItem(QTreeWidgetItem):
         # fonts
         self._initFonts()
         # array of actual (i.e. numeric) column values
-        self._values = [None] * NumColumns
+        self._values = [0] * NumColumns
         # set text alignment
         for icol in range(NumColumns):
             self.setTextAlignment(icol, Qt.AlignLeft)
@@ -439,16 +438,10 @@ class SkyModelTreeWidgetItem(QTreeWidgetItem):
 
     def __lt__(self, other):
         icol = self.treeWidget().sortColumn()
-        if icol is not None:
-            if isinstance(other, SkyModelTreeWidgetItem):
-                if self._values[icol] is not None and other._values[icol] is not None:
-                    return self._values[icol] < other._values[icol]
-                else:
-                    dprint(2, f"SkyModelTreeWidget def __it__ icol RETURN values are None")
-                    return False
-            else:
-                return self.text(icol) < other.text(icol)
-        dprint(2, f"SkyModelTreeWidget def __it__ icol is None!")
+        if isinstance(other, SkyModelTreeWidgetItem):
+            return self._values[icol] < other._values[icol]
+        else:
+            return self.text(icol) < other.text(icol)
 
     def __ge__(self, other):
         return other < self
