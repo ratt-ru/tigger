@@ -580,7 +580,7 @@ class LiveProfile(ToolDialog):
         self._profcurve.setRenderHint(QwtPlotItem.RenderAntialiased)
         self._ycs = TiggerPlotCurve()
         self._ycs.setRenderHint(QwtPlotItem.RenderAntialiased)
-        self._profcurve.setPen(QPen(QColor("black")))
+        self._profcurve.setPen(QPen(QColor("white")))
         self._profcurve.setStyle(QwtPlotCurve.Lines)
         self._profcurve.setOrientation(Qt.Horizontal)
         self._profcurve.attach(self._profplot)
