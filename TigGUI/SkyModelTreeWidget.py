@@ -306,7 +306,7 @@ class SkyModelTreeWidgetItem(QTreeWidgetItem):
         # fonts
         self._initFonts()
         # array of actual (i.e. numeric) column values
-        self._values = [None] * NumColumns
+        self._values = [0.0] * NumColumns
         # set text alignment
         for icol in range(NumColumns):
             self.setTextAlignment(icol, Qt.AlignLeft)
