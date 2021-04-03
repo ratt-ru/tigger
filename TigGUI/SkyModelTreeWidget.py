@@ -306,7 +306,7 @@ class SkyModelTreeWidgetItem(QTreeWidgetItem):
         # fonts
         self._initFonts()
         # array of actual (i.e. numeric) column values
-        self._values = [0] * NumColumns
+        self._values = [None] * NumColumns
         # set text alignment
         for icol in range(NumColumns):
             self.setTextAlignment(icol, Qt.AlignLeft)
@@ -438,10 +438,25 @@ class SkyModelTreeWidgetItem(QTreeWidgetItem):
 
     def __lt__(self, other):
         icol = self.treeWidget().sortColumn()
-        if isinstance(other, SkyModelTreeWidgetItem):
-            return self._values[icol] < other._values[icol]
+        if icol is not None:
+            if isinstance(other, SkyModelTreeWidgetItem):
+                if self._values[icol] is not None and other._values[icol] is not None:
+                    if isinstance(self._values[icol], type(other._values[icol])):
+                        return self._values[icol] < other._values[icol]
+                    else:
+                        return False
+                else:
+                    return False
+            else:
+                if self._text(icol) is not None and other.text(icol) is not None:
+                    if isinstance(self._text(icol), type(other.text(icol))):
+                        return self.text(icol) < other.text(icol)
+                    else:
+                        return False
+                else:
+                    return False
         else:
-            return self.text(icol) < other.text(icol)
+            return False
 
     def __ge__(self, other):
         return other < self

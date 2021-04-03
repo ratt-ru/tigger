@@ -50,9 +50,9 @@ TagAccessors = dict()
 for tag in "ra", "dec":
     TagAccessors[tag] = lambda src, t=tag: getattr(src.pos, t)
 for tag in list("IQUV") + ["rm"]:
-    TagAccessors[tag] = lambda src, t=tag: getattr(src.flux, t)
+    TagAccessors[tag] = lambda src, t=tag: getattr(src.flux, t, 0.0)
 for tag in ["spi"]:
-    TagAccessors[tag] = lambda src, t=tag: getattr(src.spectrum, t)
+    TagAccessors[tag] = lambda src, t=tag: getattr(src.spectrum, t, 0.0)
 
 # tags for which sorting is not available
 NonSortingTags = set(["name", "typecode"])
@@ -150,20 +150,28 @@ class SourceSelectorDialog(QDialog):
         # _sort_index will be an array of (value,src,cumsum) tuples, sorted by tag value (high to low),
         # where src is the source, and cumsum is the sum of all values in the list from 0 up to and including the current one
         self._sort_index = []
-        minval = maxval = None
+        minval = maxval = value = None
         for isrc, src in enumerate(self.model.sources):
             try:
                 if hasattr(src, tag):
-                    value = float(getattr(src, tag))
+                    # test if item can be cast to float
+                    try:
+                        float(getattr(src, tag))
+                    except:
+                        continue
+                    else:
+                        value = float(getattr(src, tag))
+
                 elif tag in TagAccessors:
                     value = float(TagAccessors[tag](src))
             # skip source if failed to access this tag as a float
             except:
                 traceback.print_exc()
                 continue
-            self._sort_index.append([value, src, 0])
-            minval = min(minval, value) if minval is not None else value
-            maxval = max(maxval, value) if maxval is not None else value
+            if value is not None:
+                self._sort_index.append([value, src, 0.])
+                minval = min(minval, value) if minval is not None else value
+                maxval = max(maxval, value) if maxval is not None else value
         # add label
         if minval is None:
             self._range = None
