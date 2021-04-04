@@ -59,7 +59,7 @@ from Tigger.Models import ModelClasses
 from Tigger import Coordinates
 from Tigger.Coordinates import Projection
 from Tigger.Models.SkyModel import SkyModel
-from TigGUI.Widgets import TiggerPlotCurve, TiggerPlotMarker
+from TigGUI.Widgets import TiggerPlotCurve, TiggerPlotMarker, TDockWidget
 from TigGUI.Plot import MouseModes
 
 # plot Z depths for various classes of objects
@@ -1197,7 +1197,7 @@ class SkyModelPlotter(QWidget):
         profile_title_layout.addWidget(close_button)
 
         # set up profiles as dockable
-        self._dockable_liveprofile = QDockWidget("Profiles", parent=mainwin)
+        self._dockable_liveprofile = TDockWidget("Profiles", parent=mainwin)
         self._dockable_liveprofile.setWidget(self._liveprofile)
         self._dockable_liveprofile.setFeatures(QDockWidget.AllDockWidgetFeatures)
         self._dockable_liveprofile.setTitleBarWidget(profile_title)
@@ -1256,7 +1256,7 @@ class SkyModelPlotter(QWidget):
         zoom_title_layout.addWidget(zoom_close_button)
 
         # set up livezoom as dockable
-        self._dockable_livezoom = QDockWidget("Zoom & Cross-sections", parent=mainwin)
+        self._dockable_livezoom = TDockWidget("Zoom & Cross-sections", parent=mainwin)
         self._dockable_livezoom.setWidget(self._livezoom)
         self._dockable_livezoom.setFeatures(QDockWidget.AllDockWidgetFeatures)
         self._dockable_livezoom.setTitleBarWidget(zoom_title)

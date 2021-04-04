@@ -43,7 +43,7 @@ dprint = _verbosity.dprint
 dprintf = _verbosity.dprintf
 
 from TigGUI.init import pixmaps
-from TigGUI.Widgets import FloatValidator
+from TigGUI.Widgets import FloatValidator, TDockWidget
 from TigGUI.Images.RenderControl import RenderControl
 from TigGUI.Images.ControlDialog import ImageControlDialog
 
@@ -392,7 +392,7 @@ class ImageController(QFrame):
             ctrl_title_layout.addWidget(close_button)
 
             # set up profiles as dockable
-            self._dockable_colour_ctrl = QDockWidget(f"{self._rc.image.name}", parent=self.parent().mainwin)
+            self._dockable_colour_ctrl = TDockWidget(f"{self._rc.image.name}", parent=self.parent().mainwin)
             self._dockable_colour_ctrl.setWidget(self._control_dialog)
             self._dockable_colour_ctrl.setFeatures(QDockWidget.AllDockWidgetFeatures)
             self._dockable_colour_ctrl.setTitleBarWidget(ctrl_title_bar)

@@ -29,8 +29,10 @@ import re
 from PyQt5.Qt import  QValidator, QWidget, QHBoxLayout, QFileDialog, QComboBox, QLabel, \
     QLineEdit, QDialog, QIntValidator, QDoubleValidator, QToolButton, QListWidget, QVBoxLayout, \
     QPushButton, QMessageBox
+from PyQt5.QtGui import QMouseEvent
+from PyQt5.QtWidgets import QDockWidget
 from PyQt5.Qwt import QwtPlotCurve, QwtPlotMarker
-from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtCore import pyqtSignal, Qt, QEvent
 
 QStringList = list
 
@@ -325,3 +327,24 @@ class SelectTagsDialog(QDialog):
 
     def getSelectedTags(self):
         return [tag for i, tag in enumerate(self._tagnames) if self.wtagsel.item(i).isSelected()]
+
+
+class TDockWidget(QDockWidget):
+
+    def __init__(self, *args, parent=None):
+        super(TDockWidget, self).__init__(parent)
+        self.installEventFilter(self)
+
+    # hack to stop QDockWidget responding to drag events for undocking - work around for Qt bug
+    def eventFilter(self, source, event):
+        # event seq 2, 5, 3 - mouse press, mouse move, mouse release
+        if event.type() == QEvent.MouseButtonPress:
+            label = self.childAt(event.pos())
+            if not label:
+                return super(TDockWidget, self).eventFilter(source, event)
+            if isinstance(label, QLabel):
+                if not self.isFloating():
+                    fake_mouse_event = QMouseEvent(QEvent.MouseButtonRelease, event.pos(), event.button(), event.buttons(), event.modifiers())
+                    super(TDockWidget, self).event(fake_mouse_event)
+                    return True
+        return super(TDockWidget, self).eventFilter(source, event)
