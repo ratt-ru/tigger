@@ -25,6 +25,8 @@ import traceback
 import numpy
 from PyQt5.Qt import QHBoxLayout, QFileDialog, QComboBox, QLabel, QLineEdit, QDialog, QToolButton, \
     Qt, QApplication, QColor, QPixmap, QPainter, QFrame, QMenu, QPen, QKeySequence, QCheckBox
+from PyQt5.QtGui import QFont
+from PyQt5.QtWidgets import QDockWidget, QSizePolicy, QWidget, QPushButton, QStyle
 from PyQt5.Qwt import QwtText, QwtPlotCurve, QwtPlotMarker, QwtScaleMap, QwtPlotItem
 from PyQt5.QtCore import pyqtSignal, QPointF, QSize
 
@@ -324,12 +326,115 @@ class ImageController(QFrame):
             self._control_dialog = ImageControlDialog(self, self._rc, self._imgman)
             # line below allows window to be resized by the user
             self._control_dialog.setSizeGripEnabled(True)
+
+            # setup dockable colour control dialog
+            """self._dockable_control_dialog.setWidget(self._control_dialog)
+            self._dockable_control_dialog.setFloating(True)
+            self.parent().mainwin.addDockWidget(Qt.RightDockWidgetArea, self._dockable_control_dialog)"""
+
+            self.colour_ctrl_size = self._control_dialog.sizeHint()
+            # create size policy for live zoom
+            colour_ctrl_policy = QSizePolicy()
+            colour_ctrl_policy.setHeightForWidth(True)
+            colour_ctrl_policy.setVerticalPolicy(QSizePolicy.MinimumExpanding)  # TODO - dockable size policy tweaking needed
+            colour_ctrl_policy.setHorizontalPolicy(QSizePolicy.Fixed)
+            self._control_dialog.setSizePolicy(colour_ctrl_policy)
+
+            # set default sizes for QDockWidgets
+            self.btn_w = 38
+            self.btn_h = 38
+            self.icon_size = QSize(20, 20)
+            self.font_size = 8
+
+            # start of live profile dockable setup
+            # setup custom title bar for profiles dockable
+            ctrl_title_bar = QWidget()
+            ctrl_title_layout = QHBoxLayout()
+            ctrl_title_bar.setLayout(ctrl_title_layout)
+
+            # custom close button
+            close_button = QPushButton()
+            close_button.setMaximumWidth(self.btn_w)
+            close_button.setMaximumHeight(self.btn_h)
+            close_icon = ctrl_title_bar.style().standardIcon(QStyle.SP_TitleBarCloseButton)
+            close_button.setIcon(close_icon)
+
+            # custom toggle button
+            toggle_button = QPushButton()
+            toggle_button.setMaximumWidth(self.btn_w)
+            toggle_button.setMaximumHeight(self.btn_h)
+            toggle_icon = ctrl_title_bar.style().standardIcon(QStyle.SP_TitleBarShadeButton)
+            toggle_button.setIcon(toggle_icon)
+
+            # tigger logo
+            image0 = pixmaps.tigger_logo.pm()
+            title_icon = QLabel()
+            title_icon.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+            title_icon.setScaledContents(True)
+            title_icon.setPixmap(image0)
+            title_icon.setAlignment(Qt.AlignCenter)
+            title_icon.setMaximumSize(self.icon_size)
+
+            # set dock widget title
+            title_font = QFont()
+            title_font.setBold(True)
+            title_font.setPointSize(self.font_size)
+            ctrl_dock_title = QLabel(f"{self._rc.image.name}: Colour Controls")
+            ctrl_dock_title.setFont(title_font)
+            ctrl_dock_title.setAlignment(Qt.AlignCenter)
+            ctrl_dock_title.setContentsMargins(0, 0, 0, 0)
+            ctrl_dock_title.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
+
+            # add dock widget title items to layout
+            ctrl_title_layout.addWidget(title_icon)
+            ctrl_title_layout.addWidget(ctrl_dock_title)
+            ctrl_title_layout.addWidget(toggle_button)
+            ctrl_title_layout.addWidget(close_button)
+
+            # set up profiles as dockable
+            self._dockable_colour_ctrl = QDockWidget(f"{self._rc.image.name}", parent=self.parent().mainwin)
+            self._dockable_colour_ctrl.setWidget(self._control_dialog)
+            self._dockable_colour_ctrl.setFeatures(QDockWidget.AllDockWidgetFeatures)
+            self._dockable_colour_ctrl.setTitleBarWidget(ctrl_title_bar)
+            self._dockable_colour_ctrl.setFloating(False)
+            self._dockable_colour_ctrl.setAllowedAreas(Qt.RightDockWidgetArea | Qt.LeftDockWidgetArea)
+            self._dockable_colour_ctrl.setBaseSize(self.colour_ctrl_size)
+            close_button.clicked.connect(self.colourctrl_dockwidget_closed)
+            toggle_button.clicked.connect(self.colourctrl_dockwidget_toggled)
+
+            # this needs to itterate through the widgets to find DockWidgets already in the right side area,
+            # then tabifydockwidget when adding, or add to the right area if none
+            widget_list = QApplication.allWidgets()
+            for widget in widget_list:
+                if isinstance(widget, QDockWidget):
+                    if self.parent().mainwin.dockWidgetArea(widget) == 2:  # if in right dock area
+                        if widget.isVisible() and not widget.isFloating():  # if widget active and not a window
+                            if self._dockable_colour_ctrl is not widget:  # check not itself
+                                # add dock widget in tab on top of current widget in right area
+                                self.parent().mainwin.tabifyDockWidget(widget, self._dockable_colour_ctrl)
+                    elif self.parent().mainwin.dockWidgetArea(widget) == 0:  # if not in any dock area assume we have new dock widget
+                        # no previous widget in this area then add
+                        self.parent().mainwin.addDockWidget(Qt.RightDockWidgetArea, self._dockable_colour_ctrl)
             dprint(1, "done")
-        if not self._control_dialog.isVisible():
+        if not self._control_dialog.isVisible():  # TODO - check hide button to toggle dockable instead
             dprint(1, "showing control dialog")
             self._control_dialog.show()
+            self._dockable_colour_ctrl.setVisible(True)
+            self._dockable_colour_ctrl.show()
+            self._dockable_colour_ctrl.raise_()
         else:
             self._control_dialog.hide()
+            self._dockable_colour_ctrl.setVisible(False)
+
+    def colourctrl_dockwidget_closed(self):
+        self._dockable_colour_ctrl.setVisible(False)
+
+    def colourctrl_dockwidget_toggled(self):
+        if self._dockable_colour_ctrl.isVisible():
+            if self._dockable_colour_ctrl.isWindow():
+                self._dockable_colour_ctrl.setFloating(False)
+            else:
+                self._dockable_colour_ctrl.setFloating(True)
 
     def _changeDisplayRangeToPercent(self, percent):
         if not self._control_dialog:

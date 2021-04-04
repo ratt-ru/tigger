@@ -113,6 +113,7 @@ class MainWindow(QMainWindow):
 
         # add image controls -- parentless for now (setLayout will reparent them anyway)
         self.imgman = ImageManager()
+        self.imgman.setMainWindow(self)
         self.imgman.setShowMessageSignal(self.signalShowMessage)
         self.imgman.setShowErrorMessageSignal(self.signalShowErrorMessage)
         self.skyplot.setImageManager(self.imgman)

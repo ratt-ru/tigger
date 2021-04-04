@@ -49,6 +49,7 @@ class ImageManager(QWidget):
 
     def __init__(self, *args):
         QWidget.__init__(self, *args)
+        self.mainwin = None
         # init layout
         self._lo = QVBoxLayout(self)
         self._lo.setContentsMargins(0, 0, 0, 0)
@@ -99,6 +100,9 @@ class ImageManager(QWidget):
 
     def setShowErrorMessageSignal(self, _signal):
         self.signalShowErrorMessage = _signal
+
+    def setMainWindow(self, _mainwin):
+        self.mainwin = _mainwin
 
     def loadImage(self, filename=None, duplicate=True, to_top=True, model=None):
         """Loads image. Returns ImageControlBar object.

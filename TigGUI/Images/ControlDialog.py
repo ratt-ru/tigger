@@ -26,6 +26,7 @@ import numpy
 from PyQt5.Qt import QWidget, QHBoxLayout, QComboBox, QLabel, QLineEdit, QDialog, QToolButton, QVBoxLayout, \
     Qt, QSize, QSizePolicy, QApplication, QColor, QBrush, QTimer, QFrame, QCheckBox, QStackedWidget, QIcon, QMenu, \
     QGridLayout, QPen, QRect
+from PyQt5.QtWidgets import QDockWidget
 from PyQt5.Qwt import QwtPlot, QwtText, QwtPlotItem, QwtPlotCurve, QwtSymbol, QwtLinearScaleEngine, QwtLogScaleEngine, \
     QwtPlotPicker, QwtPicker, QwtEventPattern, QwtWheel, QwtSlider,  QwtPickerMachine, QwtPickerClickPointMachine, QwtPickerClickRectMachine
 
@@ -450,6 +451,8 @@ class ImageControlDialog(QDialog):
     def hide(self):
         self._geometry = self.geometry()
         QDialog.hide(self)
+        if isinstance(self.parent(), QDockWidget):
+            self.parent().setVisible(False)
 
     def show(self):
         dprint(4, "show entrypoint")

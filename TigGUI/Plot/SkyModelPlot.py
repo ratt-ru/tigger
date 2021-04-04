@@ -38,7 +38,8 @@ from PyQt5.Qt import QWidget, QHBoxLayout, QFileDialog, QComboBox, QLabel, \
 from PyQt5.QtCore import *
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtGui import QPolygon
+from PyQt5.QtGui import QPolygon, QFont, QPalette
+from PyQt5.QtWidgets import QDockWidget, QPushButton, QStyle, QSpacerItem
 from PyQt5.Qwt import QwtPlot, QwtPlotPicker, QwtText, QwtPlotItem, QwtPlotCurve, QwtPicker, QwtEventPattern, \
     QwtSymbol, QwtPlotZoomer, QwtScaleEngine, QwtPickerMachine, QwtPickerClickRectMachine, QwtPickerClickPointMachine, \
     QwtPickerPolygonMachine, QwtPickerDragRectMachine
@@ -320,6 +321,16 @@ class ToolDialog(QDialog):
         if emit:
             self.signalIsVisible.emit(visible)
         QDialog.setVisible(self, visible)
+        # This section aligns the dockwidget with its subqwidget's visibility
+        if isinstance(self.parent(), QDockWidget):
+            # print(f"setVisible has {visible}")
+            if visible and not self.parent().isVisible():
+                # print(f"setVisible QDockWidget True for {visible}")
+                self.parent().setGeometry(self.geometry())
+                self.parent().setVisible(True)
+            elif not visible and self.parent().isVisible():
+                # print(f"setVisible QDockWidget False for {visible}")
+                self.parent().setVisible(False)
 
 
 class LiveImageZoom(ToolDialog):
@@ -1061,6 +1072,7 @@ class SkyModelPlotter(QWidget):
 
     def __init__(self, parent, mainwin, *args):
         QWidget.__init__(self, parent, *args)
+        self._mainwin = mainwin
         # plot update logic -- handle updates via the event loop
         self._updates_enabled = False  # updates ignored until this is True
         self._update_pending = 0  # serial number of most recently posted update event
@@ -1114,6 +1126,154 @@ class SkyModelPlotter(QWidget):
         # init live zoomers  # TODO - do zoomers need to be init'd inside PlotRuler?
         self._livezoom = LiveImageZoom(self)
         self._liveprofile = LiveProfile(self)
+        # get current sizeHints()
+        self.live_zoom_size = self._livezoom.sizeHint()
+        self.live_profile_size = self._liveprofile.sizeHint()
+
+        # create size policy for live zoom
+        livezoom_policy = QSizePolicy()
+        livezoom_policy.setVerticalPolicy(QSizePolicy.Fixed)  # TODO - dockable size policy tweaking needed, Preffered
+        livezoom_policy.setHorizontalPolicy(QSizePolicy.Fixed)
+        livezoom_policy.setHeightForWidth(True)
+        # livezoom_policy.setWidthForHeight(True)
+        self._livezoom.setSizePolicy(livezoom_policy)
+
+        # create size policy for live profile
+        liveprofile_policy = QSizePolicy()
+        liveprofile_policy.setWidthForHeight(True)  # TODO - investigate if this is desirable
+        liveprofile_policy.setVerticalPolicy(QSizePolicy.Fixed)
+        liveprofile_policy.setHorizontalPolicy(QSizePolicy.Expanding)
+        self._liveprofile.setSizePolicy(liveprofile_policy)
+
+        # set default sizes for QDockWidgets
+        self.btn_w = 38
+        self.btn_h = 38
+        self.icon_size = QSize(20, 20)
+        self.font_size = 8
+
+        # start of live profile dockable setup
+        # setup custom title bar for profiles dockable
+        profile_title = QWidget()
+        profile_title_layout = QHBoxLayout()
+        profile_title.setLayout(profile_title_layout)
+
+        # custom close button
+        close_button = QPushButton()
+        close_button.setMaximumWidth(self.btn_w)
+        close_button.setMaximumHeight(self.btn_h)
+        close_icon = profile_title.style().standardIcon(QStyle.SP_TitleBarCloseButton)
+        close_button.setIcon(close_icon)
+
+        # custom toggle button
+        toggle_button = QPushButton()
+        toggle_button.setMaximumWidth(self.btn_w)
+        toggle_button.setMaximumHeight(self.btn_h)
+        toggle_icon = profile_title.style().standardIcon(QStyle.SP_TitleBarShadeButton)
+        toggle_button.setIcon(toggle_icon)
+
+        # tigger logo
+        image0 = pixmaps.tigger_logo.pm()
+        title_icon = QLabel()
+        title_icon.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        title_icon.setScaledContents(True)
+        title_icon.setPixmap(image0)
+        title_icon.setAlignment(Qt.AlignCenter)
+        title_icon.setMaximumSize(self.icon_size)
+
+        # set dock widget title
+        title_font = QFont()
+        title_font.setBold(True)
+        title_font.setPointSize(self.font_size)
+        profiles_dock_title = QLabel("Profiles")
+        profiles_dock_title.setFont(title_font)
+        profiles_dock_title.setAlignment(Qt.AlignCenter)
+        profiles_dock_title.setContentsMargins(0, 0, 0, 0)
+        profiles_dock_title.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
+
+        # add dock widget title items to layout
+        profile_title_layout.addWidget(title_icon)
+        profile_title_layout.addWidget(profiles_dock_title)
+        profile_title_layout.addWidget(toggle_button)
+        profile_title_layout.addWidget(close_button)
+
+        # set up profiles as dockable
+        self._dockable_liveprofile = QDockWidget("Profiles", parent=mainwin)
+        self._dockable_liveprofile.setWidget(self._liveprofile)
+        self._dockable_liveprofile.setFeatures(QDockWidget.AllDockWidgetFeatures)
+        self._dockable_liveprofile.setTitleBarWidget(profile_title)
+        self._dockable_liveprofile.setFloating(False)
+        self._dockable_liveprofile.setAllowedAreas(Qt.AllDockWidgetAreas)
+        self._dockable_liveprofile.setBaseSize(self.live_profile_size)
+        close_button.clicked.connect(self.liveprofile_dockwidget_closed)
+        toggle_button.clicked.connect(self.liveprofile_dockwidget_toggled)
+        #self._dockable_liveprofile.setVisible(False)
+        # line below does not work for setting backgound colour of the dockwidget title
+        # self._dockable_liveprofile.setStyleSheet("QDockWidget::title {background: black;}")
+
+        # start of live zoom dockable setup
+        # setup custom title bar for profiles dockable
+        zoom_title = QWidget()
+        zoom_title_layout = QHBoxLayout()
+        zoom_title.setLayout(zoom_title_layout)
+
+        # custom close button
+        zoom_close_button = QPushButton()
+        zoom_close_button.setMaximumWidth(self.btn_w)
+        zoom_close_button.setMaximumHeight(self.btn_h)
+        zoom_close_icon = zoom_title.style().standardIcon(QStyle.SP_TitleBarCloseButton)
+        zoom_close_button.setIcon(zoom_close_icon)
+
+        # custom toggle button
+        zoom_toggle_button = QPushButton()
+        zoom_toggle_button.setMaximumWidth(self.btn_w)
+        zoom_toggle_button.setMaximumHeight(self.btn_h)
+        zoom_toggle_icon = zoom_title.style().standardIcon(QStyle.SP_TitleBarShadeButton)
+        zoom_toggle_button.setIcon(zoom_toggle_icon)
+
+        # tigger logo
+        image1 = pixmaps.tigger_logo.pm()
+        zoom_title_icon = QLabel()
+        zoom_title_icon.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        zoom_title_icon.setScaledContents(True)
+        zoom_title_icon.setPixmap(image0)
+        zoom_title_icon.setAlignment(Qt.AlignCenter)
+        zoom_title_icon.setMaximumSize(self.icon_size)
+
+        # set dock widget title
+        zoom_title_font = QFont()
+        zoom_title_font.setBold(True)
+        zoom_title_font.setPointSize(self.font_size)
+        zoom_dock_title = QLabel("Zoom & Cross-sections")
+        zoom_dock_title.setFont(zoom_title_font)
+        zoom_dock_title.setAlignment(Qt.AlignCenter)
+        zoom_dock_title.setContentsMargins(0, 0, 0, 0)
+        zoom_dock_title.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
+
+        # add dock widget title items to layout
+        zoom_title_layout.addWidget(zoom_title_icon)
+        zoom_title_layout.addWidget(zoom_dock_title)
+        zoom_title_layout.addWidget(zoom_toggle_button)
+        zoom_title_layout.addWidget(zoom_close_button)
+
+        # set up livezoom as dockable
+        self._dockable_livezoom = QDockWidget("Zoom & Cross-sections", parent=mainwin)
+        self._dockable_livezoom.setWidget(self._livezoom)
+        self._dockable_livezoom.setFeatures(QDockWidget.AllDockWidgetFeatures)
+        self._dockable_livezoom.setTitleBarWidget(zoom_title)
+        self._dockable_livezoom.setFloating(False)
+        self._dockable_livezoom.setAllowedAreas(Qt.AllDockWidgetAreas)
+        self._dockable_livezoom.setBaseSize(self.live_zoom_size)
+        zoom_close_button.clicked.connect(self.livezoom_dockwidget_closed)
+        zoom_toggle_button.clicked.connect(self.livezoom_dockwidget_toggled)
+
+        # add dock widgets to main window and set to hidden
+        self._mainwin.addDockWidget(Qt.LeftDockWidgetArea, self._dockable_livezoom)
+        self._mainwin.addDockWidget(Qt.LeftDockWidgetArea, self._dockable_liveprofile)
+        self._livezoom.setVisible(False)
+        self._liveprofile.setVisible(False)
+        self._dockable_livezoom.setVisible(False)
+        self._dockable_liveprofile.setVisible(False)
+
         # other internal init
         self.model = None
         self._zoomrect = None
@@ -1157,8 +1317,15 @@ class SkyModelPlotter(QWidget):
         self._qa_colorzoom.setVisible(False)
         self._menu.addAction(self._qa_colorzoom)
         # hide/show tools
-        self._menu.addAction(self._liveprofile.getShowQAction())
-        self._menu.addAction(self._livezoom.getShowQAction())
+        self._menu.addAction(self._dockable_liveprofile.widget().getShowQAction())
+        self._menu.addAction(self._dockable_livezoom.widget().getShowQAction())
+        # setup dockable state from config file  # TODO - add save to Config for dockable positions.
+        if Config.getbool('liveprofile-show'):  # TODO - update this not to load if opening model file
+            self._liveprofile.setVisible(True)
+            self._dockable_liveprofile.setVisible(True)
+        if Config.getbool('livezoom-show'):
+            self._livezoom.setVisible(True)
+            self._dockable_livezoom.setVisible(True)
         # fixed aspect
         qa = self._menu.addAction("Fix aspect ratio")
         qa.setCheckable(True)
@@ -1209,6 +1376,58 @@ class SkyModelPlotter(QWidget):
         self._wtoolbar.clear()
         self._livezoom.close()
         self._liveprofile.close()
+
+    def livezoom_dockwidget_closed(self):
+        list_of_actions = self._menu.actions()
+        for ea_action in list_of_actions:
+            if ea_action.text() == 'Show live zoom && cross-sections':
+                self._dockable_livezoom.setVisible(False)
+                ea_action.setChecked(False)
+
+    def liveprofile_dockwidget_closed(self):
+        list_of_actions = self._menu.actions()
+        for ea_action in list_of_actions:
+            if ea_action.text() == 'Show profiles':
+                self._dockable_liveprofile.setVisible(False)
+                ea_action.setChecked(False)
+
+    def liveprofile_dockwidget_toggled(self):
+        if self._dockable_liveprofile.isVisible():
+            if self._dockable_liveprofile.isWindow():
+                self._dockable_liveprofile.setFloating(False)
+            else:
+                self._dockable_liveprofile.setFloating(True)
+
+    def livezoom_dockwidget_toggled(self):
+        if self._dockable_livezoom.isVisible():
+            if self._dockable_livezoom.isWindow():
+                self._dockable_livezoom.setFloating(False)
+            else:
+                self._dockable_livezoom.setFloating(True)
+
+    def profiles_dockwidget_state_changed(self, visible):
+        list_of_actions = self._menu.actions()
+        for ea_action in list_of_actions:
+            if ea_action.text() == 'Show profiles':
+                if visible:
+                    ea_action.setChecked(True)
+                    self._mainwin.addDockWidget(Qt.LeftDockWidgetArea, self._dockable_liveprofile)
+                else:
+                    if self._dockable_liveprofile.isVisible():
+                        self._dockable_liveprofile.close()
+                        ea_action.setChecked(False)
+
+    def livezooom_dockwidget_state_changed(self, visible):
+        list_of_actions = self._menu.actions()
+        for ea_action in list_of_actions:
+            if ea_action.text() == 'Show live zoom && cross-sections':
+                if visible:
+                    ea_action.setChecked(True)
+                    self._mainwin.addDockWidget(Qt.LeftDockWidgetArea, self._dockable_livezoom)
+                else:
+                    if self._dockable_livezoom.isVisible():
+                        self._dockable_livezoom.close()
+                        ea_action.setChecked(False)
 
     def setupShowMessages(self, _signal):
         self.plotShowMessage = _signal
