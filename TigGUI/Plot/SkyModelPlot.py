@@ -1348,13 +1348,6 @@ class SkyModelPlotter(QWidget):
         # hide/show tools
         self._menu.addAction(self._dockable_liveprofile.widget().getShowQAction())
         self._menu.addAction(self._dockable_livezoom.widget().getShowQAction())
-        # setup dockable state from config file  # TODO - add save to Config for dockable positions.
-        if Config.getbool('liveprofile-show'):  # TODO - update this not to load if opening model file
-            self._liveprofile.setVisible(True)
-            self._dockable_liveprofile.setVisible(True)
-        if Config.getbool('livezoom-show'):
-            self._livezoom.setVisible(True)
-            self._dockable_livezoom.setVisible(True)
         # fixed aspect
         qa = self._menu.addAction("Fix aspect ratio")
         qa.setCheckable(True)
