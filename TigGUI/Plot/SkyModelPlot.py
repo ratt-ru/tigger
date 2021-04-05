@@ -1128,6 +1128,8 @@ class SkyModelPlotter(QWidget):
 
         # default stlyesheets for title bars
         title_stylesheet = "QWidget {background: rgb(68,68,68);}"
+        button_style = "QPushButton:hover:!pressed {background: grey;}"
+        tdock_style = "ToolDialog {border: 1.5px solid rgb(68,68,68);}"
         dockable_stylesheet = "QDockWidget::title {background: black;}"  # only works without custom title bar
         self._mainwin.setStyleSheet(dockable_stylesheet)
 
@@ -1165,6 +1167,7 @@ class SkyModelPlotter(QWidget):
 
         # custom close button
         close_button = QPushButton()
+        close_button.setStyleSheet(button_style)
         close_button.setMaximumWidth(self.btn_w)
         close_button.setMaximumHeight(self.btn_h)
         close_button.setContentsMargins(-1, -1, -1, -1)
@@ -1174,6 +1177,7 @@ class SkyModelPlotter(QWidget):
 
         # custom toggle button
         toggle_button = QPushButton()
+        toggle_button.setStyleSheet(button_style)
         toggle_button.setMaximumWidth(self.btn_w)
         toggle_button.setMaximumHeight(self.btn_h)
         toggle_button.setContentsMargins(-1, -1, -1, -1)
@@ -1211,6 +1215,7 @@ class SkyModelPlotter(QWidget):
 
         # set up profiles as dockable
         self._dockable_liveprofile = TDockWidget("Profiles", parent=mainwin)
+        self._dockable_liveprofile.setStyleSheet(tdock_style)
         self._dockable_liveprofile.setWidget(self._liveprofile)
         self._dockable_liveprofile.setFeatures(QDockWidget.AllDockWidgetFeatures)
         self._dockable_liveprofile.setTitleBarWidget(profile_title)
@@ -1235,6 +1240,7 @@ class SkyModelPlotter(QWidget):
 
         # custom close button
         zoom_close_button = QPushButton()
+        zoom_close_button.setStyleSheet(button_style)
         zoom_close_button.setMaximumWidth(self.btn_w)
         zoom_close_button.setMaximumHeight(self.btn_h)
         zoom_close_button.setContentsMargins(-1, -1, -1, -1)
@@ -1244,6 +1250,7 @@ class SkyModelPlotter(QWidget):
 
         # custom toggle button
         zoom_toggle_button = QPushButton()
+        zoom_toggle_button.setStyleSheet(button_style)
         zoom_toggle_button.setMaximumWidth(self.btn_w)
         zoom_toggle_button.setMaximumHeight(self.btn_h)
         zoom_toggle_button.setContentsMargins(-1, -1, -1, -1)
@@ -1281,6 +1288,7 @@ class SkyModelPlotter(QWidget):
 
         # set up livezoom as dockable
         self._dockable_livezoom = TDockWidget("Zoom & Cross-sections", parent=mainwin)
+        self._dockable_livezoom.setStyleSheet(tdock_style)
         self._dockable_livezoom.setWidget(self._livezoom)
         self._dockable_livezoom.setFeatures(QDockWidget.AllDockWidgetFeatures)
         self._dockable_livezoom.setTitleBarWidget(zoom_title)

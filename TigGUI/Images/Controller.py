@@ -329,6 +329,8 @@ class ImageController(QFrame):
 
             # default stlyesheets for title bars
             title_stylesheet = "QWidget {background: rgb(68,68,68);}"
+            button_style = "QPushButton:hover:!pressed {background: grey;}"
+            tdock_style = "ImageControlDialog {border: 1.5px solid rgb(68,68,68);}"
             # setup dockable colour control dialog
             self.colour_ctrl_size = self._control_dialog.sizeHint()
             # create size policy for live zoom
@@ -356,6 +358,7 @@ class ImageController(QFrame):
 
             # custom close button
             close_button = QPushButton()
+            close_button.setStyleSheet(button_style)
             close_button.setContentsMargins(-1, -1, -1, -1)
             close_button.setBaseSize(-1, -1)
             close_button.setMaximumWidth(self.btn_w)
@@ -365,6 +368,7 @@ class ImageController(QFrame):
 
             # custom toggle button
             toggle_button = QPushButton()
+            toggle_button.setStyleSheet(button_style)
             toggle_button.setContentsMargins(-1, -1, -1, -1)
             toggle_button.setBaseSize(-1, -1)
             toggle_button.setMaximumWidth(self.btn_w)
@@ -402,6 +406,7 @@ class ImageController(QFrame):
 
             # set up profiles as dockable
             self._dockable_colour_ctrl = TDockWidget(f"{self._rc.image.name}", parent=self.parent().mainwin)
+            self._dockable_colour_ctrl.setStyleSheet(tdock_style)
             self._dockable_colour_ctrl.setWidget(self._control_dialog)
             self._dockable_colour_ctrl.setFeatures(QDockWidget.AllDockWidgetFeatures)
             self._dockable_colour_ctrl.setTitleBarWidget(ctrl_title_bar)
