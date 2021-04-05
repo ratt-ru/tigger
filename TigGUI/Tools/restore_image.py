@@ -45,6 +45,7 @@ DEG = math.pi / 180
 class RestoreImageDialog(QDialog):
     def __init__(self, parent, modal=True, flags=Qt.WindowFlags()):
         QDialog.__init__(self, parent, flags)
+        self.model = None
         self.setModal(modal)
         self.setWindowTitle("Restore model into image")
         lo = QVBoxLayout(self)
@@ -203,7 +204,7 @@ class RestoreImageDialog(QDialog):
             return
         # save fits file
         try:
-            input_hdu.writeto(outfile, clobber=True)
+            input_hdu.writeto(outfile, overwrite=True)
         except Exception as err:
             busy.reset_cursor()
             self.qerrmsg.showMessage("Error writing FITS file %s: %s" % (outfile, str(err)))

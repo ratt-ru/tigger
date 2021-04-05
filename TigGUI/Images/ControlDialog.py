@@ -26,6 +26,7 @@ import numpy
 from PyQt5.Qt import QWidget, QHBoxLayout, QComboBox, QLabel, QLineEdit, QDialog, QToolButton, QVBoxLayout, \
     Qt, QSize, QSizePolicy, QApplication, QColor, QBrush, QTimer, QFrame, QCheckBox, QStackedWidget, QIcon, QMenu, \
     QGridLayout, QPen, QRect
+from PyQt5.QtWidgets import QDockWidget
 from PyQt5.Qwt import QwtPlot, QwtText, QwtPlotItem, QwtPlotCurve, QwtSymbol, QwtLinearScaleEngine, QwtLogScaleEngine, \
     QwtPlotPicker, QwtPicker, QwtEventPattern, QwtWheel, QwtSlider,  QwtPickerMachine, QwtPickerClickPointMachine, QwtPickerClickRectMachine
 
@@ -35,7 +36,7 @@ from TigGUI.kitties.utils import PersistentCurrier
 from TigGUI.kitties.widgets import BusyIndicator
 from .RenderControl import RenderControl, dprint
 from TigGUI.Images import Colormaps
-from TigGUI.Widgets import FloatValidator, TiggerPlotCurve, TiggerPlotMarker
+from TigGUI.Widgets import FloatValidator, TiggerPlotCurve, TiggerPlotMarker, TDockWidget
 from TigGUI.init import pixmaps
 
 DataValueFormat = "%.4g"
@@ -414,9 +415,7 @@ class ImageControlDialog(QDialog):
                 self._colmap_controls.append(self._wcolmap_control_blank)
 
         # connect updates from renderControl and image
-        #self.image.connect(pyqtSignal("slice"), self._updateImageSlice)
         self.image.signalSlice.connect(self._updateImageSlice)
-        #self.image.connect(self._updateImageSlice)
         self._rc.intensityMapChanged.connect(self._updateIntensityMap)
         self._rc.colorMapChanged.connect(self._updateColorMap)
         self._rc.dataSubsetChanged.connect(self._updateDataSubset)
@@ -452,6 +451,7 @@ class ImageControlDialog(QDialog):
     def hide(self):
         self._geometry = self.geometry()
         QDialog.hide(self)
+        self.parent().setVisible(False)
 
     def show(self):
         dprint(4, "show entrypoint")
@@ -485,13 +485,13 @@ class ImageControlDialog(QDialog):
             QwtPlotPicker.__init__(self, QwtPlot.xBottom, QwtPlot.yRight, rubber_band, tracker_mode,
                                    plot.canvas())
 
-            self.setStateMachine(mode)
+            self.setStateMachine(mode)  # TODO - check other pickers set this too
             self.plot = plot
             self.label = label
             self.track = track
             self.color = QColor(color)
             self.setRubberBandPen(QPen(self.color))
-            self.setRubberBand(rubber_band)
+            self.setRubberBand(rubber_band)  # TODO - check other pickers set this too
 
         def trackerText(self, pos):
             x, y = self.plot.invTransform(QwtPlot.xBottom, pos.x()), self.plot.invTransform(QwtPlot.yLeft, pos.y())
@@ -513,6 +513,9 @@ class ImageControlDialog(QDialog):
     class ColorBarPlotItem(QwtPlotItem):
         def __init__(self, y0, y1, *args):
             QwtPlotItem.__init__(self, *args)
+            self.RenderAntialiased
+            self.imap = None
+            self.cmap = None
             self._y0 = y1
             self._dy = y1 - y0
 
@@ -543,9 +546,11 @@ class ImageControlDialog(QDialog):
                      label="", zlabel=None, linewidth=1, spacing=2,
                      yaxis=QwtPlot.yRight):
             self.line = TiggerPlotCurve()
+            self.line.setRenderHint(QwtPlotItem.RenderAntialiased)
             self.color = color = color if isinstance(color, QColor) else QColor(color)
             self.line.setPen(QPen(color, linewidth, linestyle))
             self.marker = TiggerPlotMarker()
+            self.marker.setRenderHint(QwtPlotItem.RenderAntialiased)
             self.marker.setLabelAlignment(align)
             try:
                 self.marker.setSpacing(spacing)
@@ -580,7 +585,9 @@ class ImageControlDialog(QDialog):
         self._histplot.setAxisFont(QwtPlot.xBottom, QApplication.font())
         # add histogram curves
         self._histcurve1 = TiggerPlotCurve()
+        self._histcurve1.setRenderHint(QwtPlotItem.RenderAntialiased)
         self._histcurve2 = TiggerPlotCurve()
+        self._histcurve2.setRenderHint(QwtPlotItem.RenderAntialiased)
         self._histcurve1.setStyle(QwtPlotCurve.Steps)
         self._histcurve2.setStyle(QwtPlotCurve.Steps)
         self._histcurve1.setPen(QPen(Qt.NoPen))
@@ -613,6 +620,7 @@ class ImageControlDialog(QDialog):
                                                       label="half-max", yaxis=QwtPlot.yLeft)
         # add current range
         self._rangebox = TiggerPlotCurve()
+        self._rangebox.setRenderHint(QwtPlotItem.RenderAntialiased)
         self._rangebox.setStyle(QwtPlotCurve.Steps)
         self._rangebox.setYAxis(QwtPlot.yRight)
         self._rangebox.setPen(QPen(Qt.NoPen))
@@ -620,18 +628,21 @@ class ImageControlDialog(QDialog):
         self._rangebox.setZ(50)
         self._rangebox.attach(self._histplot)
         self._rangebox2 = TiggerPlotCurve()
+        self._rangebox2.setRenderHint(QwtPlotItem.RenderAntialiased)
         self._rangebox2.setStyle(QwtPlotCurve.Sticks)
         self._rangebox2.setYAxis(QwtPlot.yRight)
         self._rangebox2.setZ(60)
         #  self._rangebox2.attach(self._histplot)
         # add intensity transfer function
         self._itfcurve = TiggerPlotCurve()
+        self._itfcurve.setRenderHint(QwtPlotItem.RenderAntialiased)
         self._itfcurve.setStyle(QwtPlotCurve.Lines)
         self._itfcurve.setPen(QPen(QColor("blue")))
         self._itfcurve.setYAxis(QwtPlot.yRight)
         self._itfcurve.setZ(120)
         self._itfcurve.attach(self._histplot)
         self._itfmarker = TiggerPlotMarker()
+        self._itfmarker.setRenderHint(QwtPlotItem.RenderAntialiased)
         label = QwtText("ITF")
         label.setColor(QColor("blue"))
         self._itfmarker.setLabel(label)
@@ -885,9 +896,9 @@ class ImageControlDialog(QDialog):
     def _setHistDisplayRange(self):
         self._rc.setDisplayRange(*self._hist_range)
 
-    def _updateImageSlice(self, slice):
+    def _updateImageSlice(self, _slice):
         for i, (iextra, name, labels) in enumerate(self._rc.slicedAxes()):
-            self._wslicers[i].setCurrentIndex(slice[iextra])
+            self._wslicers[i].setCurrentIndex(_slice[iextra])
 
     def _changeDisplayRangeToPercent(self, percent):
         busy = BusyIndicator()

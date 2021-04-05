@@ -43,6 +43,8 @@ class IntensityMap:
     def __init__(self, dmin=None, dmax=None):
         """Constructor. An optional data range may be supplied."""
         self.range = None
+        self.subset = None
+        self.subset_minmax = None
         if dmin is not None:
             if dmax is None:
                 raise TypeError("both dmin and dmax must be specified, or neither.""")
@@ -114,11 +116,11 @@ class HistEqIntensityMap(IntensityMap):
 
     def setDataSubset(self, subset, minmax=None):
         IntensityMap.setDataSubset(self, subset, minmax)
-        self._bins = None;  # to recompute the CDF
+        self._bins = None  # to recompute the CDF
 
     def setDataRange(self, *range):
         IntensityMap.setDataRange(self, *range)
-        self._bins = None;  # to recompute the CDF
+        self._bins = None  # to recompute the CDF
 
     def _computeCDF(self, data):
         """Recomputes the CDF using the current data subset and range"""
@@ -130,22 +132,28 @@ class HistEqIntensityMap(IntensityMap):
             # make cumulative histogram, normalize to 0...1
             hist = measurements.histogram(self.subset if self.subset is not None else data, dmin, dmax, self._nbins)
             cdf = numpy.cumsum(hist)
-            cdf = cdf / float(cdf[-1])
-            # append 0 at beginning, as left side of bin
-            self._cdf = numpy.zeros(len(cdf) + 1, float)
-            self._cdf[1:] = cdf[...]
-            # make array of bin edges
-            self._bins = dmin + (dmax - dmin) * numpy.arange(self._nbins + 1) / float(self._nbins)
+            if not numpy.all(cdf == 0):
+                cdf = cdf / float(cdf[-1])
+                # append 0 at beginning, as left side of bin
+                self._cdf = numpy.zeros(len(cdf) + 1, float)
+                self._cdf[1:] = cdf[...]
+                # make array of bin edges
+                self._bins = dmin + (dmax - dmin) * numpy.arange(self._nbins + 1) / float(self._nbins)
 
     def remap(self, data):
+        values = None
         if self._bins is None:
             self._computeCDF(data)
         if self._cdf is None:
             return numpy.zeros(data.shape, float)
-        values = numpy.interp(data.ravel(), self._bins, self._cdf).reshape(data.shape)
-        if hasattr(data, 'mask'):
+        if self._bins is not None:
+            values = numpy.interp(data.ravel(), self._bins, self._cdf).reshape(data.shape)
+        if hasattr(data, 'mask') and values is not None:
             values = numpy.ma.masked_array(values, data.mask)
-        return values
+        if values is not None:
+            return values
+        else:
+            return numpy.zeros(data.shape, float)
 
 
 class Colormap(QObject):
@@ -260,6 +268,9 @@ class ColormapWithControls(Colormap):
                 name, value, minval, maxval, step, format
             self._default = value
             self._wlabel = None
+            self._wreset = None
+            self._wslider = None
+            self._wslider_timer = None
 
         def makeControlWidgets(self, parent, gridlayout, row, column):
             toprow = QWidget(parent)

@@ -112,7 +112,6 @@ class SkyModelTreeWidget(TigGUI.kitties.widgets.ClickableTreeWidget):
         ## self.setShowToolTips(True)
         self._updating_selection = False
         self.setRootIsDecorated(False)
-
         # connect signals to track selected sources
         self.itemSelectionChanged.connect(self._selectionChanged)
         self.itemEntered[QTreeWidgetItem, int].connect(self._itemHighlighted)
@@ -149,12 +148,14 @@ class SkyModelTreeWidget(TigGUI.kitties.widgets.ClickableTreeWidget):
         busy = BusyIndicator()
         self._column_enabled[column] = enable
         self._showColumn(column, enable and self._column_shown[column])
+        busy.reset_cursor()
 
     def _showColumnCategory(self, columns, show):
         busy = BusyIndicator()
         for col in columns:
             self._column_shown[col] = show
             self._showColumn(col, self._column_enabled[col] and show)
+        busy.reset_cursor()
 
     def _selectionChanged(self):
         if self._updating_selection:
@@ -287,6 +288,7 @@ class SkyModelTreeWidget(TigGUI.kitties.widgets.ClickableTreeWidget):
 
 class SkyModelTreeWidgetItem(QTreeWidgetItem):
     _fonts = None
+    _fontmetrics = None
 
     @staticmethod
     def _initFonts():
@@ -304,7 +306,7 @@ class SkyModelTreeWidgetItem(QTreeWidgetItem):
         # fonts
         self._initFonts()
         # array of actual (i.e. numeric) column values
-        self._values = [None] * NumColumns
+        self._values = [0.0] * NumColumns
         # set text alignment
         for icol in range(NumColumns):
             self.setTextAlignment(icol, Qt.AlignLeft)
@@ -345,7 +347,7 @@ class SkyModelTreeWidgetItem(QTreeWidgetItem):
         # name
         dprint(3, "setSource 1", src.name)
         self.setColumn(ColumnName, src.name)
-        self.setSizeHint(0, QSize(self._fontmetrics.width("x" + src.name), 0))
+        self.setSizeHint(0, QSize(self._fontmetrics.width("x" + src.name), 0))  # TODO - locate _fontmetrics
         # coordinates
         self.setColumn(ColumnRa, src.pos.ra, "%2dh%02dm%05.2fs" % src.pos.ra_hms())
         self.setColumn(ColumnDec, src.pos.dec, ("%s%2d" + chr(0xB0) + "%02d'%05.2f\"") %
@@ -378,22 +380,22 @@ class SkyModelTreeWidgetItem(QTreeWidgetItem):
             if not isinstance(spi, (list, tuple)):
                 spi = [spi]
             spi = ",".join(["%.2f" % x for x in spi])
-            self.setColumn(ColumnSpi, src.spectrum.spi, spi)
+            self.setColumn(ColumnSpi, src.spectrum.spi, spi)  # TODO - locate spectrum.spi
             spierr = getattr(src.spectrum, 'spi_err', None)
             if spierr is not None:
                 if not isinstance(spierr, (list, tuple)):
                     spierr = [spierr]
                 spierr = ",".join(["%.2f" % x for x in spierr])
-                self.setColumn(ColumnSpi_err, src.spectrum.spi_err, chr(0xB1) + spierr)
+                self.setColumn(ColumnSpi_err, src.spectrum.spi_err, chr(0xB1) + spierr)  # TODO - locate spectrum.spi_err
         # shape
         shape = getattr(src, 'shape', None)
         if isinstance(shape, ModelClasses.ModelItem):
-            shapeval = shape.getShape()
+            shapeval = shape.getShape()  # TODO - locate getShape()
             shapestr = shape.strDesc(delimiters=('"', chr(0xD7), chr(0x21BA), chr(0xB0)))
             self.setColumn(ColumnShape, shapeval, shapestr)
-            errval = shape.getShapeErr()
+            errval = shape.getShapeErr()  # TODO - locate getShapeErr()
             if errval:
-                errstr = shape.strDescErr(delimiters=('"', chr(0xD7), chr(0x21BA), chr(0xB0)))
+                errstr = shape.strDescErr(delimiters=('"', chr(0xD7), chr(0x21BA), chr(0xB0)))  # TODO - locate strDescErr
                 self.setColumn(ColumnShape_err, errval, chr(0xB1) + errstr)
         dprint(3, "setSource 3", src.name)
         # Tags. Tags are all extra attributes that do not have a dedicated column (i.e. not Iapp or r), and do not start
@@ -436,10 +438,25 @@ class SkyModelTreeWidgetItem(QTreeWidgetItem):
 
     def __lt__(self, other):
         icol = self.treeWidget().sortColumn()
-        if isinstance(other, SkyModelTreeWidgetItem):
-            return self._values[icol] < other._values[icol]
+        if icol is not None:
+            if isinstance(other, SkyModelTreeWidgetItem):
+                if self._values[icol] is not None and other._values[icol] is not None:
+                    if isinstance(self._values[icol], type(other._values[icol])):
+                        return self._values[icol] < other._values[icol]
+                    else:
+                        return False
+                else:
+                    return False
+            else:
+                if self._text(icol) is not None and other.text(icol) is not None:
+                    if isinstance(self._text(icol), type(other.text(icol))):
+                        return self.text(icol) < other.text(icol)
+                    else:
+                        return False
+                else:
+                    return False
         else:
-            return self.text(icol) < other.text(icol)
+            return False
 
     def __ge__(self, other):
         return other < self
@@ -517,7 +534,7 @@ class ModelGroupsTable(QWidget):
         if origin is self or not what & (SkyModel.UpdateTags | SkyModel.UpdateGroupStyle):
             return
         model = self.model
-        self._setting_model = True;  # to ignore cellChanged() signals (in valueChanged())
+        self._setting_model = True  # to ignore cellChanged() signals (in valueChanged())
         # _item_cb is a dict (with row,col keys) containing the widgets (CheckBoxes ComboBoxes) per each cell
         self._item_cb = {}
         # lists of "list" and "plot" checkboxes per each grouping (excepting the default grouping); each entry is an (row,col,item) tuple.
@@ -676,7 +693,7 @@ class ModelGroupsTable(QWidget):
             for j in list(self.AttrByCol.keys()):
                 item1 = self.table.item(row, j)
                 if item1:
-                    fl = item1.flags() & ~Qt.ItemIsEnabled
+                    fl = item1.flags() & ~Qt.ItemIsEnabled  # TODO - flags() and fl below need checking
                     if group.style.apply:
                         fl |= Qt.ItemIsEnabled
                     item1.setFlags(fl)
@@ -696,7 +713,7 @@ class ModelGroupsTable(QWidget):
         # in all cases emit a signal
         self.model.emitChangeGroupingStyle(group, origin=self)
 
-    def selectSources(self, predicate):
+    def selectSources(self, predicate, curry=False):
         """Selects sources according to predicate(src)"""
         busy = BusyIndicator()
         for src in self.model.sources:

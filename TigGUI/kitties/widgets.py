@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from PyQt5 import QtWidgets
 from PyQt5.Qt import QCursor, Qt, QWidgetAction, QLabel, QFrame, QTreeWidget, QObject, QApplication, \
     QTreeWidgetItemIterator, QListWidget
 from PyQt5.QtWidgets import *
@@ -36,6 +37,8 @@ class ClickableTreeWidget(QTreeWidget):
 
     def __init__(self, *args):
         QTreeWidget.__init__(self, *args)
+        self._expanded_item = None
+        self._mouse_press_pos = None
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested[QPoint].connect(self._request_context_menu)
         self.itemExpanded[QTreeWidgetItem].connect(self._item_expanded_collapsed)
@@ -48,23 +51,38 @@ class ClickableTreeWidget(QTreeWidget):
 
     def mouseReleaseEvent(self, ev):
         item = self.itemAt(self._mouse_press_pos)
+        col = None
         if item:
             col = self.header().logicalIndexAt(self._mouse_press_pos)
         # pass event to parent
         QTreeWidget.mouseReleaseEvent(self, ev)
         # now see if the item was expanded or collapsed because of the event. Only emit signal if this was
         # not the case (i.e. swallow the clicks that have to do with expansion/collapse of items)
-        if item and item is not self._expanded_item:
-            self.mouseButtonClicked.emit(ev.button(), item, self._mouse_press_pos, col)
+        if item and item is not self._expanded_item and col is not None:
+            self.itemClicked.emit(item, col)
 
     def _item_expanded_collapsed(self, item):
         self._expanded_item = item
 
     def _request_context_menu(self, pos):
+        index = self.indexAt(pos)
+        if not index.isValid():
+            return
+
         item = self.itemAt(pos)
         if item:
+            name = item.text(0)
             col = self.header().logicalIndexAt(pos)
-            self.itemContextMenuRequested.emit(item, pos, col)
+
+            menu = QtWidgets.QMenu()
+            menu.addSection("Menu")
+            action = menu.addAction(name)
+            action.setEnabled(False)
+            # action.triggered.connect(...)  # TODO - connect triggered to some function
+            menu.exec_(self.mapToGlobal(pos))
+
+            # old line below fails
+            # self.itemContextMenuRequested.emit(item, pos, col)
 
     class Iterator(QTreeWidgetItemIterator):
         def __init__(self, *args, **kw):
@@ -75,7 +93,7 @@ class ClickableTreeWidget(QTreeWidget):
                 if hasattr(QTreeWidget, 'invisibleRootItem'):
                     self._parent = parent.invisibleRootItem()
                 else:
-                    self._parent = None;  # Qt 4.1 item.parent() returns None for top-level items
+                    self._parent = None  # Qt 4.1 item.parent() returns None for top-level items
             else:
                 self._parent = parent
 

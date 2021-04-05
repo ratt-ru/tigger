@@ -20,14 +20,21 @@
 # or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 import faulthandler
+
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QPalette
+from PyQt5.QtWidgets import QStyleFactory
+
 faulthandler.enable()
 import sys
+import os
 import traceback
 from optparse import OptionParser
 
 from PyQt5.Qt import QApplication, QColor
 
 from TigGUI.kitties import utils
+
 
 def main():
     import TigGUI.init
@@ -48,7 +55,7 @@ def main():
 
     if options.timestamps:
         try:
-            utils.verbosity.enable_timestamps()
+            TigGUI.kitties.utils.verbosity.enable_timestamps()
         except:
             pass
     dprint(1, "starting up")
@@ -62,14 +69,52 @@ def main():
     TigGUI.startup_dprint = dprint
     TigGUI.startup_dprintf = dprintf
 
-    dprint(1, "imported Qt4")
+    dprint(1, "imported Qt5")
+    os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"  # enable auto scaling based on monitor's pixel density
+    os.environ["QT_SCALE_FACTOR"] = "1"  # set global scale factor for entire application
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)  # enable highdpi scaling
+    # QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)  # only for PyQt 5.15
+    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)  # enable highdpi icons
+    QApplication.setAttribute(Qt.AA_UseDesktopOpenGL, True)  # force the use of OpenGL
+    QApplication.setDesktopSettingsAware(True)  # App will use System fonts, colours etc...
     app = QApplication(sys.argv)
-    app.setDesktopSettingsAware(True)
+    app.setStyle(QStyleFactory.create("Fusion"))  # TODO - even after adding this it still causes a style warning from Qt
+    # setup Dark Mode QPalette - initial setup  # TODO - still needs tweaking.
+    palette = QPalette()
+    palette.setColor(QPalette.Window, QColor(53, 53, 53))
+    palette.setColor(QPalette.WindowText, Qt.white)
+    palette.setColor(QPalette.Light, QColor(68, 68, 68))
+    palette.setColor(QPalette.Base, QColor(25, 25, 25))
+    palette.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
+    palette.setColor(QPalette.ToolTipBase, Qt.white)
+    palette.setColor(QPalette.ToolTipText, Qt.black)
+    palette.setColor(QPalette.Text, Qt.white)
+    palette.setColor(QPalette.Button, QColor(53, 53, 53))
+    palette.setColor(QPalette.ButtonText, Qt.white)
+    palette.setColor(QPalette.BrightText, Qt.red)
+    palette.setColor(QPalette.Link, QColor(42, 130, 218))
+    palette.setColor(QPalette.Highlight, QColor(42, 130, 218, 192))
+    palette.setColor(QPalette.HighlightedText, Qt.white)
+
+    # setup Dark Mode disabled QPalette
+    palette.setColor(QPalette.Disabled, QPalette.Window, Qt.black)
+    palette.setColor(QPalette.Disabled, QPalette.WindowText, QColor(255, 255, 255, 128))
+    palette.setColor(QPalette.Disabled, QPalette.Base, QColor(68, 68, 68))
+    palette.setColor(QPalette.Disabled, QPalette.Text, QColor(255, 255, 255, 128))
+    palette.setColor(QPalette.Disabled, QPalette.Button, QColor(53, 53, 53, 128))
+    palette.setColor(QPalette.Disabled, QPalette.ButtonText, QColor(255, 255, 255, 128))
+    palette.setColor(QPalette.Disabled, QPalette.BrightText, Qt.black)
+    palette.setColor(QPalette.Disabled, QPalette.Link, Qt.black)
+    palette.setColor(QPalette.Disabled, QPalette.Highlight, Qt.black)
+    palette.setColor(QPalette.Disabled, QPalette.HighlightedText, Qt.black)
+
+    # add Dark Mode to Tigger
+    app.setPalette(palette)
     from TigGUI.init import pixmaps
     app.setWindowIcon(pixmaps.tigger_starface.icon())
     # Need for PlotStyles colors -- ignore error on non-X11 platforms like the Mac
     try:
-        QColor.setAllowX11ColorNames(True)
+        QColor.setAllowX11ColorNames(True)  # TODO - this seems to be a Qt4 call and needs updating.
     except AttributeError:
         pass
 
@@ -104,16 +149,15 @@ def main():
 
     # load images first
     for img in images:
-        print("Loading image" + img)
         # splash.showMessage("Loading image %s"%img,Qt.AlignHCenter|Qt.AlignBottom)
         mainwin.loadImage(img)
         dprint(1, "loaded image", img)
 
     # load model, if specified
     for mod in models:
-        print("Loading model" + mod)
+        dprint(2, "Loading model" + mod)
         try:
-            mainwin.openFile(mod, show=False)
+            mainwin.openFile(mod, _show=False)
         except:
             traceback.print_exc()
             print("Error loading model %s" % mod)
@@ -135,7 +179,7 @@ def main():
         mainwin.close()
 
     import signal
-    signal.signal(signal.SIGINT, sigint_handler)
+    signal.signal(signal.SIGINT, sigint_handler)  # TODO -check this is still valid
     dprint(1, "added signal handler")
 
     # splash.finish(mainwin)

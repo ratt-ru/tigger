@@ -24,6 +24,8 @@
 #
 
 import math
+import operator
+
 from PyQt5.QtWidgets import *
 import traceback
 
@@ -34,11 +36,7 @@ import TigGUI.kitties.utils
 from TigGUI.kitties.utils import curry
 from TigGUI.kitties.widgets import BusyIndicator
 
-try:
-    QString = unicode
-except NameError:
-    # Python 3
-    QString = str
+QString = str
 
 _verbosity = TigGUI.kitties.utils.verbosity(name="source_selector")
 dprint = _verbosity.dprint
@@ -52,9 +50,9 @@ TagAccessors = dict()
 for tag in "ra", "dec":
     TagAccessors[tag] = lambda src, t=tag: getattr(src.pos, t)
 for tag in list("IQUV") + ["rm"]:
-    TagAccessors[tag] = lambda src, t=tag: getattr(src.flux, t)
+    TagAccessors[tag] = lambda src, t=tag: getattr(src.flux, t, 0.0)
 for tag in ["spi"]:
-    TagAccessors[tag] = lambda src, t=tag: getattr(src.spectrum, t)
+    TagAccessors[tag] = lambda src, t=tag: getattr(src.spectrum, t, 0.0)
 
 # tags for which sorting is not available
 NonSortingTags = set(["name", "typecode"])
@@ -76,12 +74,12 @@ class SourceSelectorDialog(QDialog):
         #   lo1.addWidget(lab)
         self.wselby = QComboBox(self)
         lo1.addWidget(self.wselby, 0)
-        self.wselby.activated['QString'].connect(self._setup_selection_by)
+        self.wselby.activated[str].connect(self._setup_selection_by)
         # under/over
         self.wgele = QComboBox(self)
         lo1.addWidget(self.wgele, 0)
         self.wgele.addItems([">", ">=", "<=", "<", "sum<=", "sum>"])
-        self.wgele.activated['QString'].connect(self._select_threshold)
+        self.wgele.activated[str].connect(self._select_threshold)
         # threshold value
         self.wthreshold = QLineEdit(self)
         self.wthreshold.editingFinished.connect(self._select_threshold)
@@ -126,6 +124,7 @@ class SourceSelectorDialog(QDialog):
         alltags = set(self.model.tagnames)
         alltags -= NonSortingTags
         # make list of tags from StandardTags that are present in model
+        # TODO - check sorttags outside of init()
         self.sorttags = [tag for tag in StandardTags if tag in alltags or tag in TagAccessors]
         # append model tags that were not in StandardTags
         self.sorttags += list(alltags - set(self.sorttags))
@@ -144,27 +143,35 @@ class SourceSelectorDialog(QDialog):
         self.wpercent_lbl.setText("--%")
 
     def _setup_selection_by(self, tag):
-        tag = str(tag);  # may be QString
+        tag = str(tag)  # may be QString
         # clear threshold value and percentiles
         self._reset_percentile()
         # get min/max values, and sort indices
         # _sort_index will be an array of (value,src,cumsum) tuples, sorted by tag value (high to low),
         # where src is the source, and cumsum is the sum of all values in the list from 0 up to and including the current one
         self._sort_index = []
-        minval = maxval = None
+        minval = maxval = value = None
         for isrc, src in enumerate(self.model.sources):
             try:
                 if hasattr(src, tag):
-                    value = float(getattr(src, tag))
-                else:
+                    # test if item can be cast to float
+                    try:
+                        float(getattr(src, tag))
+                    except:
+                        continue
+                    else:
+                        value = float(getattr(src, tag))
+
+                elif tag in TagAccessors:
                     value = float(TagAccessors[tag](src))
             # skip source if failed to access this tag as a float
             except:
                 traceback.print_exc()
                 continue
-            self._sort_index.append([value, src, 0])
-            minval = min(minval, value) if minval is not None else value
-            maxval = max(maxval, value) if maxval is not None else value
+            if value is not None:
+                self._sort_index.append([value, src, 0.])
+                minval = min(minval, value) if minval is not None else value
+                maxval = max(maxval, value) if maxval is not None else value
         # add label
         if minval is None:
             self._range = None
@@ -177,7 +184,7 @@ class SourceSelectorDialog(QDialog):
             for w in self.wgele, self.wthreshold, self.wpercent, self.wpercent_lbl:
                 w.setEnabled(True)
         # sort index by descending values
-        self._sort_index.sort(reverse=True)
+        self._sort_index.sort(reverse=True, key=operator.itemgetter(0))
         # generate cumulative sums
         cumsum = 0.
         for entry in self._sort_index:

@@ -2,60 +2,58 @@
 Tigger
 ======
 
+N.B THIS README IS THE BETA TESTER VERSION
+==========================================
+
+.. image:: https://user-images.githubusercontent.com/7116312/113633100-4a288e80-9664-11eb-9533-0c8f34dadd47.png
+
 Installing Tigger
 =================
 
-Ubuntu package
---------------
-
-N/A
-
-from source with Ubuntu 19.10+
+from source with Ubuntu 20.04
 ------------------------------
+Python dependencies
+-------------------
+* Tigger-LSM v1.7.0 - please go here <https://github.com/razman786/tigger_lsm_pyqt5> and install this first.
 
-Requirements: PyQt5, PyQwt6. These are already present in most Linux distros.
+Automatically installed Python dependencies:
 
-To install on Ubuntu 19.10 to 20.04 you can run::
+* numpy >= v1.17
+* scipy == v1.5.2
+* astlib == v0.10.2
+* astropy == v4.1
+* configparser == v5.0.1
 
- $ sudo apt install python3-pyqt5.qwt python3-pyqt5.qtsvg
+System dependencies
+-------------------
+
+* PyQt 5.14.1 (or 5.15.x)
+* Qwt 6.1.4 (or 6.1.5)
+* PyQt-Qwt 1.02.00
+
+These are already present in most Linux distributions. Please note that, this package **does not** use the version of PyQt 5 that is installable from PyPI.
+
+To install the system dependencies on Ubuntu 20.04 you can run::
+
+    sudo apt install python3-pyqt5.qwt python3-pyqt5.qtsvg python3-pyqt5.qtopengl
 
 Then build the source::
 
-    $ git clone https://github.com/razman786/tigger_py5.git
-    $ cd tigger_py5
-    $ python3 setup.py install
-
-from source with Ubuntu 18.04
------------------------------
-
-Requirements: PyQt5, PyQwt6. These are already present in most Linux distros.
-
-To install on Ubuntu 18.04, first clone the repository::
-
-    $ git clone https://github.com/razman786/tigger_py5.git
-
-Install the Ubuntu 18.04 Qwt Pyhton 3 pacakge::
-
-    $ cd tigger_py5/ubuntu_bionic_deb_pkg
-    $ sudo dpkg -i python3-pyqt5.qwt_1.00.00-1_amd64.deb
-    $ sudo apt -f install
-    $ sudo apt install python3-pyqt5.qtsvg
-    $ cd ..
-    $ python3 setup.py install
+    git clone https://github.com/razman786/tigger_py5.git
+    cd tigger_py5
+    python3 setup.py install --user
 
 Running Tigger
 ==============
 
-Run the installed tigger binary.
+Run the installed ``tigger`` binary.
 
+Beta Tester Questions or problems
+=================================
 
-Questions or problems
-=====================
+Open an issue on this github:
 
-Open an issue on github
-
-https://github.com/ska-sa/tigger
-
+https://github.com/razman786/tigger_py5/issues
 
 Travis
 ======

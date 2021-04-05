@@ -32,6 +32,7 @@ from PyQt5.Qt import QObject, QHBoxLayout, QFileDialog, pyqtSignal, QLabel, \
     QPushButton, Qt, QCheckBox, QMessageBox, QErrorMessage, \
     QRadioButton
 
+# import TigGUI.kitties.utils
 
 from astropy.io import fits as pyfits
 
@@ -51,6 +52,8 @@ from astLib.astWCS import WCS
 class MakeBrickDialog(QDialog):
     def __init__(self, parent, modal=True, flags=Qt.WindowFlags()):
         QDialog.__init__(self, parent, flags)
+        self.model = None
+        self._model_dir = None
         self.setModal(modal)
         self.setWindowTitle("Convert sources to FITS brick")
         lo = QVBoxLayout(self)
@@ -310,7 +313,7 @@ class MakeBrickDialog(QDialog):
 def make_brick(mainwin, model):
     # check that something is selected
     if not [src for src in model.sources if src.selected]:
-        mainwin.showErrorMessage(
+        mainwin.signalshowErrorMessage.emit(
             "Cannot make FITS brick without a source selection. Please select some sources first.")
         return
     dialog = getattr(mainwin, '_make_brick_dialog', None)

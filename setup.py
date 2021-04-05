@@ -5,13 +5,14 @@ from setuptools import setup, find_packages
 
 __version__ = "1.5.0"
 
+# PyQt has not been added here are it needs to be installed via apt-get instead to support Qwt.
 requirements = [
     'numpy>=1.17',
-    'scipy>=1.5.2',
-    'astlib>=0.11.4',
+    'scipy==1.5.2',
+    'astlib==0.10.2',
     'astropy==4.1',
-    'astro_tigger_lsm==1.6.0',
-    'configparser>=5.0.1',
+    'astro_tigger_lsm==1.7.0',
+    'configparser==5.0.1',
 ]
 
 scripts = [
