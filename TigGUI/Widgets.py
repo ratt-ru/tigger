@@ -332,7 +332,7 @@ class SelectTagsDialog(QDialog):
 class TDockWidget(QDockWidget):
 
     def __init__(self, *args, parent=None):
-        super(TDockWidget, self).__init__(parent)
+        QDockWidget.__init__(self, *args, parent)
         self.installEventFilter(self)
 
     # hack to stop QDockWidget responding to drag events for undocking - work around for Qt bug
