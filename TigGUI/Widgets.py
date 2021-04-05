@@ -29,10 +29,12 @@ import re
 from PyQt5.Qt import  QValidator, QWidget, QHBoxLayout, QFileDialog, QComboBox, QLabel, \
     QLineEdit, QDialog, QIntValidator, QDoubleValidator, QToolButton, QListWidget, QVBoxLayout, \
     QPushButton, QMessageBox
-from PyQt5.QtGui import QMouseEvent
-from PyQt5.QtWidgets import QDockWidget
+from PyQt5.QtGui import QMouseEvent, QFont
+from PyQt5.QtWidgets import QDockWidget, QStyle, QSizePolicy
 from PyQt5.Qwt import QwtPlotCurve, QwtPlotMarker
-from PyQt5.QtCore import pyqtSignal, Qt, QEvent
+from PyQt5.QtCore import pyqtSignal, Qt, QEvent, QSize
+
+from TigGUI.init import pixmaps
 
 QStringList = list
 
@@ -331,9 +333,98 @@ class SelectTagsDialog(QDialog):
 
 class TDockWidget(QDockWidget):
 
-    def __init__(self, *args, parent=None):
-        QDockWidget.__init__(self, *args, parent)
+    def __init__(self, title="", parent=None, flags=Qt.WindowFlags(), bind_widget=None, close_slot=None, toggle_slot=None):
+        QDockWidget.__init__(self, title, parent, flags)
         self.installEventFilter(self)
+        # default stlyesheets for title bars
+        self.title_stylesheet = "QWidget {background: rgb(68,68,68);}"
+        self.button_style = "QPushButton:hover:!pressed {background: grey;}"
+        from TigGUI.Images.ControlDialog import ImageControlDialog
+        from TigGUI.Plot.SkyModelPlot import ToolDialog
+        if bind_widget is not None:
+            if isinstance(bind_widget, ToolDialog):
+                self.tdock_style = "ToolDialog {border: 1.5px solid rgb(68,68,68);}"
+            elif isinstance(bind_widget, ImageControlDialog):
+                self.tdock_style = "ImageControlDialog {border: 1.5px solid rgb(68,68,68);}"
+        # set default sizes for QDockWidgets
+        self.btn_w = 28
+        self.btn_h = 28
+        self.icon_size = QSize(20, 20)
+        self.font_size = 8
+        # setup custom title bar for profiles dockable
+        self.dock_title_bar = QWidget()
+        self.dock_title_bar.setContentsMargins(-1, -1, -1, -1)
+        self.dock_title_bar.setStyleSheet(self.title_stylesheet)
+        self.dock_title_bar.setBaseSize(-1, -1)
+        self.dock_title_layout = QHBoxLayout()
+        self.dock_title_layout.setContentsMargins(-1, -1, -1, -1)
+        self.dock_title_layout.setSpacing(-1)
+        self.dock_title_bar.setLayout(self.dock_title_layout)
+        # custom close button
+        self.close_button = QPushButton()
+        self.close_button.setStyleSheet(self.button_style)
+        self.close_button.setMaximumWidth(self.btn_w)
+        self.close_button.setMaximumHeight(self.btn_h)
+        self.close_button.setContentsMargins(-1, -1, -1, -1)
+        self.close_button.setBaseSize(-1, -1)
+        self.close_icon = self.dock_title_bar.style().standardIcon(QStyle.SP_TitleBarCloseButton)
+        self.close_button.setIcon(self.close_icon)
+        # custom toggle button
+        self.toggle_button = QPushButton()
+        self.toggle_button.setStyleSheet(self.button_style)
+        self.toggle_button.setMaximumWidth(self.btn_w)
+        self.toggle_button.setMaximumHeight(self.btn_h)
+        self.toggle_button.setContentsMargins(-1, -1, -1, -1)
+        self.toggle_button.setBaseSize(-1, -1)
+        self.toggle_icon = self.dock_title_bar.style().standardIcon(QStyle.SP_TitleBarShadeButton)
+        self.toggle_button.setIcon(self.toggle_icon)
+        # tigger logo
+        self.image0 = pixmaps.tigger_logo.pm()
+        self.title_icon = QLabel()
+        self.title_icon.setContentsMargins(-1, -1, -1, -1)
+        self.title_icon.setBaseSize(-1, -1)
+        self.title_icon.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.title_icon.setScaledContents(True)
+        self.title_icon.setPixmap(self.image0)
+        self.title_icon.setAlignment(Qt.AlignCenter)
+        self.title_icon.setMaximumSize(self.icon_size)
+        # set dock widget title
+        self.title_font = QFont()
+        self.title_font.setBold(True)
+        self.title_font.setPointSize(self.font_size)
+        if bind_widget is not None:
+            if isinstance(bind_widget, ImageControlDialog):
+                self.dock_title = QLabel(f"{title}: Control Dialog")
+            else:
+                self.dock_title = QLabel(title)
+        self.dock_title.setFont(self.title_font)
+        self.dock_title.setAlignment(Qt.AlignCenter)
+        self.dock_title.setContentsMargins(-1, -1, -1, -1)
+        self.dock_title.setBaseSize(-1, -1)
+        self.dock_title.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
+        # add dock widget title items to layout
+        self.dock_title_layout.addWidget(self.title_icon)
+        self.dock_title_layout.addWidget(self.dock_title)
+        self.dock_title_layout.addWidget(self.toggle_button)
+        self.dock_title_layout.addWidget(self.close_button)
+        # set up profiles as dockable
+        self.setStyleSheet(self.tdock_style)
+        self.setWidget(bind_widget)
+        self.setFeatures(QDockWidget.AllDockWidgetFeatures)
+        if bind_widget is not None:
+            if isinstance(bind_widget, ToolDialog):
+                self.setAllowedAreas(Qt.AllDockWidgetAreas)
+            elif isinstance(bind_widget, ImageControlDialog):
+                self.setAllowedAreas(Qt.RightDockWidgetArea | Qt.LeftDockWidgetArea)
+        self.setTitleBarWidget(self.dock_title_bar)
+        self.setFloating(False)
+        # get current sizeHints()
+        if bind_widget is not None:
+            self.setBaseSize(bind_widget.sizeHint())
+        if close_slot is not None:
+            self.close_button.clicked.connect(close_slot)
+        if toggle_slot is not None:
+            self.toggle_button.clicked.connect(toggle_slot)
 
     # hack to stop QDockWidget responding to drag events for undocking - work around for Qt bug
     def eventFilter(self, source, event):

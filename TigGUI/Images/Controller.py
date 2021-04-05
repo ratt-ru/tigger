@@ -326,97 +326,21 @@ class ImageController(QFrame):
             self._control_dialog = ImageControlDialog(self, self._rc, self._imgman)
             # line below allows window to be resized by the user
             self._control_dialog.setSizeGripEnabled(True)
-
-            # default stlyesheets for title bars
-            title_stylesheet = "QWidget {background: rgb(68,68,68);}"
-            button_style = "QPushButton:hover:!pressed {background: grey;}"
-            tdock_style = "ImageControlDialog {border: 1.5px solid rgb(68,68,68);}"
-            # setup dockable colour control dialog
-            self.colour_ctrl_size = self._control_dialog.sizeHint()
-            self._control_dialog.setMinimumSize(self.colour_ctrl_size)
-            # create size policy for live zoom
+            # get and set sizing
+            colour_ctrl_size = self._control_dialog.sizeHint()
+            self._control_dialog.setMinimumSize(colour_ctrl_size)
+            # create size policy for control dialog
             colour_ctrl_policy = QSizePolicy()
-            colour_ctrl_policy.setHorizontalPolicy(QSizePolicy.MinimumExpanding)
+            colour_ctrl_policy.setHorizontalPolicy(QSizePolicy.Minimum)
             self._control_dialog.setSizePolicy(colour_ctrl_policy)
-
-            # set default sizes for QDockWidgets
-            self.btn_w = 28
-            self.btn_h = 28
-            self.icon_size = QSize(20, 20)
-            self.font_size = 8
-
-            # start of live profile dockable setup
-            # setup custom title bar for profiles dockable
-            ctrl_title_bar = QWidget()
-            ctrl_title_bar.setContentsMargins(-1, -1, -1, -1)
-            ctrl_title_bar.setBaseSize(-1, -1)
-            ctrl_title_bar.setStyleSheet(title_stylesheet)
-            ctrl_title_layout = QHBoxLayout()
-            ctrl_title_layout.setSpacing(-1)
-            ctrl_title_bar.setLayout(ctrl_title_layout)
-
-            # custom close button
-            close_button = QPushButton()
-            close_button.setStyleSheet(button_style)
-            close_button.setContentsMargins(-1, -1, -1, -1)
-            close_button.setBaseSize(-1, -1)
-            close_button.setMaximumWidth(self.btn_w)
-            close_button.setMaximumHeight(self.btn_h)
-            close_icon = ctrl_title_bar.style().standardIcon(QStyle.SP_TitleBarCloseButton)
-            close_button.setIcon(close_icon)
-
-            # custom toggle button
-            toggle_button = QPushButton()
-            toggle_button.setStyleSheet(button_style)
-            toggle_button.setContentsMargins(-1, -1, -1, -1)
-            toggle_button.setBaseSize(-1, -1)
-            toggle_button.setMaximumWidth(self.btn_w)
-            toggle_button.setMaximumHeight(self.btn_h)
-            toggle_icon = ctrl_title_bar.style().standardIcon(QStyle.SP_TitleBarShadeButton)
-            toggle_button.setIcon(toggle_icon)
-
-            # tigger logo
-            image0 = pixmaps.tigger_logo.pm()
-            title_icon = QLabel()
-            title_icon.setContentsMargins(-1, -1, -1, -1)
-            title_icon.setBaseSize(-1, -1)
-            title_icon.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-            title_icon.setScaledContents(True)
-            title_icon.setPixmap(image0)
-            title_icon.setAlignment(Qt.AlignCenter)
-            title_icon.setMaximumSize(self.icon_size)
-
-            # set dock widget title
-            title_font = QFont()
-            title_font.setBold(True)
-            title_font.setPointSize(self.font_size)
-            ctrl_dock_title = QLabel(f"{self._rc.image.name}: Colour Controls")
-            ctrl_dock_title.setFont(title_font)
-            ctrl_dock_title.setAlignment(Qt.AlignCenter)
-            ctrl_dock_title.setContentsMargins(-1, -1, -1, -1)
-            ctrl_dock_title.setBaseSize(-1, -1)
-            ctrl_dock_title.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
-
-            # add dock widget title items to layout
-            ctrl_title_layout.addWidget(title_icon)
-            ctrl_title_layout.addWidget(ctrl_dock_title)
-            ctrl_title_layout.addWidget(toggle_button)
-            ctrl_title_layout.addWidget(close_button)
-
-            # set up profiles as dockable
-            self._dockable_colour_ctrl = TDockWidget(f"{self._rc.image.name}", parent=self.parent().mainwin)
-            self._dockable_colour_ctrl.setStyleSheet(tdock_style)
-            self._dockable_colour_ctrl.setWidget(self._control_dialog)
-            self._dockable_colour_ctrl.setFeatures(QDockWidget.AllDockWidgetFeatures)
-            self._dockable_colour_ctrl.setTitleBarWidget(ctrl_title_bar)
-            self._dockable_colour_ctrl.setFloating(False)
-            self._dockable_colour_ctrl.setAllowedAreas(Qt.RightDockWidgetArea | Qt.LeftDockWidgetArea)
-            self._dockable_colour_ctrl.setBaseSize(self.colour_ctrl_size)
-            close_button.clicked.connect(self.colourctrl_dockwidget_closed)
-            toggle_button.clicked.connect(self.colourctrl_dockwidget_toggled)
-
-            # this needs to itterate through the widgets to find DockWidgets already in the right side area,
-            # then tabifydockwidget when adding, or add to the right area if none
+            # setup dockable colour control dialog
+            self._dockable_colour_ctrl = TDockWidget(title=f"{self._rc.image.name}", parent=self.parent().mainwin,
+                                                     bind_widget=self._control_dialog,
+                                                     close_slot=self.colourctrl_dockwidget_closed,
+                                                     toggle_slot=self.colourctrl_dockwidget_toggled)
+            # Add dockable widget to main window.
+            # This needs to itterate through the widgets to find DockWidgets already in the right side area,
+            # then tabifydockwidget when adding, or add to the right area if empty
             widget_list = self.parent().mainwin.findChildren(QDockWidget)
             for widget in widget_list:
                 if self.parent().mainwin.dockWidgetArea(widget) == 2:  # if in right dock area
@@ -428,7 +352,8 @@ class ImageController(QFrame):
                     # no previous widget in this area then add
                     self.parent().mainwin.addDockWidget(Qt.RightDockWidgetArea, self._dockable_colour_ctrl)
             dprint(1, "done")
-        if not self._control_dialog.isVisible():  # TODO - check hide button to toggle dockable instead
+        # set dockable widget visibility in sync with control dialog
+        if not self._control_dialog.isVisible():
             dprint(1, "showing control dialog")
             self._control_dialog.show()
             self._dockable_colour_ctrl.setVisible(True)
