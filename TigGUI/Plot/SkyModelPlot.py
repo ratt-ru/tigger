@@ -1126,6 +1126,11 @@ class SkyModelPlotter(QWidget):
         self.live_zoom_size = self._livezoom.sizeHint()
         self.live_profile_size = self._liveprofile.sizeHint()
 
+        # default stlyesheets for title bars
+        title_stylesheet = "QWidget {background: rgb(68,68,68);}"
+        dockable_stylesheet = "QDockWidget::title {background: black;}"  # only works without custom title bar
+        self._mainwin.setStyleSheet(dockable_stylesheet)
+
         # create size policy for live zoom
         livezoom_policy = QSizePolicy()
         livezoom_policy.setVerticalPolicy(QSizePolicy.Fixed)  # TODO - dockable size policy tweaking needed, Preffered
@@ -1142,21 +1147,28 @@ class SkyModelPlotter(QWidget):
         self._liveprofile.setSizePolicy(liveprofile_policy)
 
         # set default sizes for QDockWidgets
-        self.btn_w = 38
-        self.btn_h = 38
+        self.btn_w = 28
+        self.btn_h = 28
         self.icon_size = QSize(20, 20)
         self.font_size = 8
 
         # start of live profile dockable setup
         # setup custom title bar for profiles dockable
         profile_title = QWidget()
+        profile_title.setContentsMargins(-1, -1, -1, -1)
+        profile_title.setStyleSheet(title_stylesheet)
+        profile_title.setBaseSize(-1, -1)
         profile_title_layout = QHBoxLayout()
+        profile_title_layout.setContentsMargins(-1, -1, -1, -1)
+        profile_title_layout.setSpacing(-1)
         profile_title.setLayout(profile_title_layout)
 
         # custom close button
         close_button = QPushButton()
         close_button.setMaximumWidth(self.btn_w)
         close_button.setMaximumHeight(self.btn_h)
+        close_button.setContentsMargins(-1, -1, -1, -1)
+        close_button.setBaseSize(-1, -1)
         close_icon = profile_title.style().standardIcon(QStyle.SP_TitleBarCloseButton)
         close_button.setIcon(close_icon)
 
@@ -1164,12 +1176,16 @@ class SkyModelPlotter(QWidget):
         toggle_button = QPushButton()
         toggle_button.setMaximumWidth(self.btn_w)
         toggle_button.setMaximumHeight(self.btn_h)
+        toggle_button.setContentsMargins(-1, -1, -1, -1)
+        toggle_button.setBaseSize(-1, -1)
         toggle_icon = profile_title.style().standardIcon(QStyle.SP_TitleBarShadeButton)
         toggle_button.setIcon(toggle_icon)
 
         # tigger logo
         image0 = pixmaps.tigger_logo.pm()
         title_icon = QLabel()
+        title_icon.setContentsMargins(-1, -1, -1, -1)
+        title_icon.setBaseSize(-1, -1)
         title_icon.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         title_icon.setScaledContents(True)
         title_icon.setPixmap(image0)
@@ -1183,7 +1199,8 @@ class SkyModelPlotter(QWidget):
         profiles_dock_title = QLabel("Profiles")
         profiles_dock_title.setFont(title_font)
         profiles_dock_title.setAlignment(Qt.AlignCenter)
-        profiles_dock_title.setContentsMargins(0, 0, 0, 0)
+        profiles_dock_title.setContentsMargins(-1, -1, -1, -1)
+        profiles_dock_title.setBaseSize(-1, -1)
         profiles_dock_title.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
 
         # add dock widget title items to layout
@@ -1209,13 +1226,19 @@ class SkyModelPlotter(QWidget):
         # start of live zoom dockable setup
         # setup custom title bar for profiles dockable
         zoom_title = QWidget()
+        zoom_title.setContentsMargins(-1, -1, -1, -1)
+        zoom_title.setBaseSize(-1, -1)
+        zoom_title.setStyleSheet(title_stylesheet)
         zoom_title_layout = QHBoxLayout()
+        zoom_title_layout.setSpacing(-1)
         zoom_title.setLayout(zoom_title_layout)
 
         # custom close button
         zoom_close_button = QPushButton()
         zoom_close_button.setMaximumWidth(self.btn_w)
         zoom_close_button.setMaximumHeight(self.btn_h)
+        zoom_close_button.setContentsMargins(-1, -1, -1, -1)
+        zoom_close_button.setBaseSize(-1, -1)
         zoom_close_icon = zoom_title.style().standardIcon(QStyle.SP_TitleBarCloseButton)
         zoom_close_button.setIcon(zoom_close_icon)
 
@@ -1223,12 +1246,16 @@ class SkyModelPlotter(QWidget):
         zoom_toggle_button = QPushButton()
         zoom_toggle_button.setMaximumWidth(self.btn_w)
         zoom_toggle_button.setMaximumHeight(self.btn_h)
+        zoom_toggle_button.setContentsMargins(-1, -1, -1, -1)
+        zoom_toggle_button.setBaseSize(-1, -1)
         zoom_toggle_icon = zoom_title.style().standardIcon(QStyle.SP_TitleBarShadeButton)
         zoom_toggle_button.setIcon(zoom_toggle_icon)
 
         # tigger logo
         image1 = pixmaps.tigger_logo.pm()
         zoom_title_icon = QLabel()
+        zoom_title_icon.setContentsMargins(-1, -1, -1, -1)
+        zoom_title_icon.setBaseSize(-1, -1)
         zoom_title_icon.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         zoom_title_icon.setScaledContents(True)
         zoom_title_icon.setPixmap(image0)
@@ -1242,7 +1269,8 @@ class SkyModelPlotter(QWidget):
         zoom_dock_title = QLabel("Zoom & Cross-sections")
         zoom_dock_title.setFont(zoom_title_font)
         zoom_dock_title.setAlignment(Qt.AlignCenter)
-        zoom_dock_title.setContentsMargins(0, 0, 0, 0)
+        zoom_dock_title.setContentsMargins(-1, -1, -1, -1)
+        zoom_dock_title.setBaseSize(-1, -1)
         zoom_dock_title.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
 
         # add dock widget title items to layout

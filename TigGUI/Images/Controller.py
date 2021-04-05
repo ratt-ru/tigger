@@ -327,29 +327,37 @@ class ImageController(QFrame):
             # line below allows window to be resized by the user
             self._control_dialog.setSizeGripEnabled(True)
 
+            # default stlyesheets for title bars
+            title_stylesheet = "QWidget {background: rgb(68,68,68);}"
             # setup dockable colour control dialog
             self.colour_ctrl_size = self._control_dialog.sizeHint()
             # create size policy for live zoom
             colour_ctrl_policy = QSizePolicy()
             colour_ctrl_policy.setHeightForWidth(True)
             colour_ctrl_policy.setVerticalPolicy(QSizePolicy.MinimumExpanding)  # TODO - dockable size policy tweaking needed
-            colour_ctrl_policy.setHorizontalPolicy(QSizePolicy.Fixed)
+            colour_ctrl_policy.setHorizontalPolicy(QSizePolicy.Minimum)
             self._control_dialog.setSizePolicy(colour_ctrl_policy)
 
             # set default sizes for QDockWidgets
-            self.btn_w = 38
-            self.btn_h = 38
+            self.btn_w = 28
+            self.btn_h = 28
             self.icon_size = QSize(20, 20)
             self.font_size = 8
 
             # start of live profile dockable setup
             # setup custom title bar for profiles dockable
             ctrl_title_bar = QWidget()
+            ctrl_title_bar.setContentsMargins(-1, -1, -1, -1)
+            ctrl_title_bar.setBaseSize(-1, -1)
+            ctrl_title_bar.setStyleSheet(title_stylesheet)
             ctrl_title_layout = QHBoxLayout()
+            ctrl_title_layout.setSpacing(-1)
             ctrl_title_bar.setLayout(ctrl_title_layout)
 
             # custom close button
             close_button = QPushButton()
+            close_button.setContentsMargins(-1, -1, -1, -1)
+            close_button.setBaseSize(-1, -1)
             close_button.setMaximumWidth(self.btn_w)
             close_button.setMaximumHeight(self.btn_h)
             close_icon = ctrl_title_bar.style().standardIcon(QStyle.SP_TitleBarCloseButton)
@@ -357,6 +365,8 @@ class ImageController(QFrame):
 
             # custom toggle button
             toggle_button = QPushButton()
+            toggle_button.setContentsMargins(-1, -1, -1, -1)
+            toggle_button.setBaseSize(-1, -1)
             toggle_button.setMaximumWidth(self.btn_w)
             toggle_button.setMaximumHeight(self.btn_h)
             toggle_icon = ctrl_title_bar.style().standardIcon(QStyle.SP_TitleBarShadeButton)
@@ -365,6 +375,8 @@ class ImageController(QFrame):
             # tigger logo
             image0 = pixmaps.tigger_logo.pm()
             title_icon = QLabel()
+            title_icon.setContentsMargins(-1, -1, -1, -1)
+            title_icon.setBaseSize(-1, -1)
             title_icon.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
             title_icon.setScaledContents(True)
             title_icon.setPixmap(image0)
@@ -378,7 +390,8 @@ class ImageController(QFrame):
             ctrl_dock_title = QLabel(f"{self._rc.image.name}: Colour Controls")
             ctrl_dock_title.setFont(title_font)
             ctrl_dock_title.setAlignment(Qt.AlignCenter)
-            ctrl_dock_title.setContentsMargins(0, 0, 0, 0)
+            ctrl_dock_title.setContentsMargins(-1, -1, -1, -1)
+            ctrl_dock_title.setBaseSize(-1, -1)
             ctrl_dock_title.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
 
             # add dock widget title items to layout
