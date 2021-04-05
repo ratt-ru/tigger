@@ -335,6 +335,11 @@ class LiveImageZoom(ToolDialog):
                             show_shortcut=Qt.Key_F2)
         self.setWindowTitle("Zoom & Cross-sections")
         radius = Config.getint("livezoom-radius", radius)
+        # create size polixy for livezoom
+        livezoom_policy = QSizePolicy()
+        livezoom_policy.setHeightForWidth(True)
+        livezoom_policy.setHorizontalPolicy(QSizePolicy.Preferred)
+        self.setSizePolicy(livezoom_policy)
         # add plots
         self._lo0 = lo0 = QVBoxLayout(self)
         lo1 = QHBoxLayout()
@@ -551,6 +556,11 @@ class LiveProfile(ToolDialog):
         self._xaxis = None
         self._selaxis = None
         self.setWindowTitle("Profiles")
+        # create size policy for live profile
+        liveprofile_policy = QSizePolicy()
+        liveprofile_policy.setHeightForWidth(True)
+        liveprofile_policy.setHorizontalPolicy(QSizePolicy.Expanding)
+        self.setSizePolicy(liveprofile_policy)
         # add plots
         lo0 = QVBoxLayout(self)
         lo0.setSpacing(0)
@@ -1121,7 +1131,9 @@ class SkyModelPlotter(QWidget):
         self._markup_b_label.setColor(self._markup_color)
         # init live zoomers  # TODO - do zoomers need to be init'd inside PlotRuler?
         self._livezoom = LiveImageZoom(self)
+        self._livezoom.setObjectName('livezoom')
         self._liveprofile = LiveProfile(self)
+        self._liveprofile.setObjectName('liveprofile')
         # get current sizeHints()
         self.live_zoom_size = self._livezoom.sizeHint()
         self.live_profile_size = self._liveprofile.sizeHint()
@@ -1132,21 +1144,6 @@ class SkyModelPlotter(QWidget):
         tdock_style = "ToolDialog {border: 1.5px solid rgb(68,68,68);}"
         dockable_stylesheet = "QDockWidget::title {background: black;}"  # only works without custom title bar
         self._mainwin.setStyleSheet(dockable_stylesheet)
-
-        # create size policy for live zoom
-        livezoom_policy = QSizePolicy()
-        livezoom_policy.setVerticalPolicy(QSizePolicy.Fixed)  # TODO - dockable size policy tweaking needed, Preffered
-        livezoom_policy.setHorizontalPolicy(QSizePolicy.Fixed)
-        livezoom_policy.setHeightForWidth(True)
-        # livezoom_policy.setWidthForHeight(True)
-        self._livezoom.setSizePolicy(livezoom_policy)
-
-        # create size policy for live profile
-        liveprofile_policy = QSizePolicy()
-        liveprofile_policy.setWidthForHeight(True)  # TODO - investigate if this is desirable
-        liveprofile_policy.setVerticalPolicy(QSizePolicy.Fixed)
-        liveprofile_policy.setHorizontalPolicy(QSizePolicy.Expanding)
-        self._liveprofile.setSizePolicy(liveprofile_policy)
 
         # set default sizes for QDockWidgets
         self.btn_w = 28

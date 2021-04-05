@@ -333,11 +333,10 @@ class ImageController(QFrame):
             tdock_style = "ImageControlDialog {border: 1.5px solid rgb(68,68,68);}"
             # setup dockable colour control dialog
             self.colour_ctrl_size = self._control_dialog.sizeHint()
+            self._control_dialog.setMinimumSize(self.colour_ctrl_size)
             # create size policy for live zoom
             colour_ctrl_policy = QSizePolicy()
-            colour_ctrl_policy.setHeightForWidth(True)
-            colour_ctrl_policy.setVerticalPolicy(QSizePolicy.MinimumExpanding)  # TODO - dockable size policy tweaking needed
-            colour_ctrl_policy.setHorizontalPolicy(QSizePolicy.Minimum)
+            colour_ctrl_policy.setHorizontalPolicy(QSizePolicy.MinimumExpanding)
             self._control_dialog.setSizePolicy(colour_ctrl_policy)
 
             # set default sizes for QDockWidgets
