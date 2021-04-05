@@ -328,10 +328,6 @@ class ImageController(QFrame):
             self._control_dialog.setSizeGripEnabled(True)
 
             # setup dockable colour control dialog
-            """self._dockable_control_dialog.setWidget(self._control_dialog)
-            self._dockable_control_dialog.setFloating(True)
-            self.parent().mainwin.addDockWidget(Qt.RightDockWidgetArea, self._dockable_control_dialog)"""
-
             self.colour_ctrl_size = self._control_dialog.sizeHint()
             # create size policy for live zoom
             colour_ctrl_policy = QSizePolicy()
@@ -404,17 +400,16 @@ class ImageController(QFrame):
 
             # this needs to itterate through the widgets to find DockWidgets already in the right side area,
             # then tabifydockwidget when adding, or add to the right area if none
-            widget_list = QApplication.allWidgets()
+            widget_list = self.parent().mainwin.findChildren(QDockWidget)
             for widget in widget_list:
-                if isinstance(widget, QDockWidget):
-                    if self.parent().mainwin.dockWidgetArea(widget) == 2:  # if in right dock area
-                        if widget.isVisible() and not widget.isFloating():  # if widget active and not a window
-                            if self._dockable_colour_ctrl is not widget:  # check not itself
-                                # add dock widget in tab on top of current widget in right area
-                                self.parent().mainwin.tabifyDockWidget(widget, self._dockable_colour_ctrl)
-                    elif self.parent().mainwin.dockWidgetArea(widget) == 0:  # if not in any dock area assume we have new dock widget
-                        # no previous widget in this area then add
-                        self.parent().mainwin.addDockWidget(Qt.RightDockWidgetArea, self._dockable_colour_ctrl)
+                if self.parent().mainwin.dockWidgetArea(widget) == 2:  # if in right dock area
+                    if widget.isVisible() and not widget.isFloating():  # if widget active and not a window
+                        if self._dockable_colour_ctrl is not widget:  # check not itself
+                            # add dock widget in tab on top of current widget in right area
+                            self.parent().mainwin.tabifyDockWidget(widget, self._dockable_colour_ctrl)
+                elif self.parent().mainwin.dockWidgetArea(widget) == 0:  # if not in any dock area assume we have new dock widget
+                    # no previous widget in this area then add
+                    self.parent().mainwin.addDockWidget(Qt.RightDockWidgetArea, self._dockable_colour_ctrl)
             dprint(1, "done")
         if not self._control_dialog.isVisible():  # TODO - check hide button to toggle dockable instead
             dprint(1, "showing control dialog")

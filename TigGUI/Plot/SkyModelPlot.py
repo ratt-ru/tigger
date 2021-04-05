@@ -322,15 +322,11 @@ class ToolDialog(QDialog):
             self.signalIsVisible.emit(visible)
         QDialog.setVisible(self, visible)
         # This section aligns the dockwidget with its subqwidget's visibility
-        if isinstance(self.parent(), QDockWidget):
-            # print(f"setVisible has {visible}")
-            if visible and not self.parent().isVisible():
-                # print(f"setVisible QDockWidget True for {visible}")
-                self.parent().setGeometry(self.geometry())
-                self.parent().setVisible(True)
-            elif not visible and self.parent().isVisible():
-                # print(f"setVisible QDockWidget False for {visible}")
-                self.parent().setVisible(False)
+        if visible and not self.parent().isVisible():
+            self.parent().setGeometry(self.geometry())
+            self.parent().setVisible(True)
+        elif not visible and self.parent().isVisible():
+            self.parent().setVisible(False)
 
 
 class LiveImageZoom(ToolDialog):

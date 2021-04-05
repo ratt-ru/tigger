@@ -36,7 +36,7 @@ from TigGUI.kitties.utils import PersistentCurrier
 from TigGUI.kitties.widgets import BusyIndicator
 from .RenderControl import RenderControl, dprint
 from TigGUI.Images import Colormaps
-from TigGUI.Widgets import FloatValidator, TiggerPlotCurve, TiggerPlotMarker
+from TigGUI.Widgets import FloatValidator, TiggerPlotCurve, TiggerPlotMarker, TDockWidget
 from TigGUI.init import pixmaps
 
 DataValueFormat = "%.4g"
@@ -451,8 +451,7 @@ class ImageControlDialog(QDialog):
     def hide(self):
         self._geometry = self.geometry()
         QDialog.hide(self)
-        if isinstance(self.parent(), QDockWidget):
-            self.parent().setVisible(False)
+        self.parent().setVisible(False)
 
     def show(self):
         dprint(4, "show entrypoint")
