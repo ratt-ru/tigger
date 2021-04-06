@@ -494,13 +494,15 @@ class ImageController(QFrame):
                 dialog.setAcceptMode(QFileDialog.AcceptSave)
                 dialog.setModal(True)
                 dialog.filesSelected['QStringList'].connect(self._exportImageToPNG)
+                # attempt to add limit 4K option - not available on Ubuntu Unity
                 layout = dialog.layout()
-                checkbox = QCheckBox("Limit to 4K image")
-                checkbox.setChecked(False)
-                checkbox.setToolTip("Limits the image output to 4K")
-                checkbox.toggled.connect(self._exportImageResolution)
-                layout.addWidget(checkbox)
-                dialog.setLayout(layout)
+                if layout is not None:
+                    checkbox = QCheckBox("Limit to 4K image")
+                    checkbox.setChecked(False)
+                    checkbox.setToolTip("Limits the image output to 4K")
+                    checkbox.toggled.connect(self._exportImageResolution)
+                    layout.addWidget(checkbox)
+                    dialog.setLayout(layout)
             return self._export_png_dialog.exec_() == QDialog.Accepted
         busy = BusyIndicator()
         if isinstance(filename, QStringList):
