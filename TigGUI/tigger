@@ -23,7 +23,7 @@ import faulthandler
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPalette
-from PyQt5.QtWidgets import QStyleFactory
+from PyQt5.QtWidgets import QStyleFactory, QSizePolicy
 
 faulthandler.enable()
 import sys
@@ -79,6 +79,13 @@ def main():
     QApplication.setDesktopSettingsAware(True)  # App will use System fonts, colours etc...
     app = QApplication(sys.argv)
     app.setStyle(QStyleFactory.create("Fusion"))  # TODO - even after adding this it still causes a style warning from Qt
+    # get screen size
+    screen = app.primaryScreen()
+    size = screen.size()
+    print(f"Detected screen size {size}")
+    usable_screen = screen.availableGeometry()
+    print(f"Detected useable screen {usable_screen}")
+
     # setup Dark Mode QPalette - initial setup  # TODO - still needs tweaking.
     palette = QPalette()
     palette.setColor(QPalette.Window, QColor(53, 53, 53))
@@ -133,6 +140,16 @@ def main():
     dprint(1, "imported TigGUI.Tools")
 
     mainwin = TigGUI.MainWindow.MainWindow(None)
+    # set main window size constraints and policy
+    max_w, max_h = int(usable_screen.width()), int(usable_screen.height())
+    mainwin.setMaximumSize(max_w, max_h)
+    mainwin.setBaseSize(max_w, max_h)
+    mainwin.setGeometry(usable_screen.x(),usable_screen.y(), max_w, max_h)
+    size_policy = QSizePolicy()
+    size_policy.setVerticalPolicy(QSizePolicy.Minimum)
+    size_policy.setHorizontalPolicy(QSizePolicy.Minimum)
+    mainwin.setSizePolicy(size_policy)
+
     dprint(1, "created main window")
 
     # add optional tools
