@@ -26,6 +26,7 @@ import numpy
 from PyQt5.Qt import QWidget, QHBoxLayout, QComboBox, QLabel, QLineEdit, QDialog, QToolButton, QVBoxLayout, \
     Qt, QSize, QSizePolicy, QApplication, QColor, QBrush, QTimer, QFrame, QCheckBox, QStackedWidget, QIcon, QMenu, \
     QGridLayout, QPen, QRect
+from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QDockWidget
 from PyQt5.Qwt import QwtPlot, QwtText, QwtPlotItem, QwtPlotCurve, QwtSymbol, QwtLinearScaleEngine, QwtLogScaleEngine, \
     QwtPlotPicker, QwtPicker, QwtEventPattern, QwtWheel, QwtSlider,  QwtPickerMachine, QwtPickerClickPointMachine, QwtPickerClickRectMachine
@@ -146,8 +147,11 @@ class ImageControlDialog(QDialog):
             w.setMinimumSize(width, width)
             w.setMaximumSize(width, width)
         self._whistzoom.setMinimumSize(80, width)
-        self._wlab_histpos_text = "(hover here for help)"
+        self._wlab_histpos_text = "(hover for help)"
         self._wlab_histpos = QLabel(self._wlab_histpos_text, self)
+        help_font = QFont()
+        help_font.setPointSize(8)
+        self._wlab_histpos.setFont(help_font)
         self._wlab_histpos.setToolTip("""
       <P>The plot shows a histogram of either the full image or its selected subset
       (as per the "Data subset" section below).</P>
@@ -249,6 +253,8 @@ class ImageControlDialog(QDialog):
         lo1.setContentsMargins(0, 0, 0, 0)
         lo0.addLayout(lo1, 0)
         self._wlab_stats = QLabel(self)
+        self._wlab_stats.setWordWrap(True)
+        self._wlab_stats.setMinimumWidth(384)
         lo1.addWidget(self._wlab_stats, 0)
         self._wmore_stats = self.makeButton("more...", self._showMeanStd)
         self._wlab_stats.setMinimumHeight(self._wmore_stats.height())
@@ -336,6 +342,7 @@ class ImageControlDialog(QDialog):
         lo0.addLayout(lo1, 0)
         #    lo1.addWidget(QLabel("Lock range accross",self))
         wlock = QCheckBox("Lock display range", self)
+        wlock.setMinimumWidth(192)
         wlock.setToolTip("""<P>If checked, then the intensity range will be locked. The ranges of all locked images
       change simultaneously.</P>""")
         lo1.addWidget(wlock)
@@ -795,7 +802,7 @@ class ImageControlDialog(QDialog):
         std = measurements.standard_deviation(subset, labels=mask, index=None if mask is None else False)
         dprint(5, "done")
         text = "  ".join([("%s: " + DataValueFormat) % (name, value) for name, value in
-                          (("min", dmin), ("max", dmax), ("mean", mean), ("std", std))] + ["np: %d" % self._subset.size])
+                          (("min", dmin), ("max", dmax), ("mean", mean), ("\n std", std))] + ["np: %d" % self._subset.size])
         self._wlab_stats.setText(text)
         self._wmore_stats.hide()
         # update markers

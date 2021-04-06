@@ -327,8 +327,7 @@ class ImageController(QFrame):
             # line below allows window to be resized by the user
             self._control_dialog.setSizeGripEnabled(True)
             # get and set sizing
-            colour_ctrl_size = self._control_dialog.sizeHint()
-            self._control_dialog.setMinimumSize(colour_ctrl_size)
+            self._control_dialog.setMinimumWidth(396)
             # create size policy for control dialog
             colour_ctrl_policy = QSizePolicy()
             colour_ctrl_policy.setHorizontalPolicy(QSizePolicy.Minimum)

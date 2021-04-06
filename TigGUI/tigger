@@ -141,7 +141,7 @@ def main():
 
     mainwin = TigGUI.MainWindow.MainWindow(None)
     # set main window size constraints and policy
-    max_w, max_h = int(usable_screen.width()), int(usable_screen.height())
+    max_w, max_h = int(usable_screen.width()*0.9), int(usable_screen.height()*0.9)
     mainwin.setMaximumSize(max_w, max_h)
     mainwin.setBaseSize(max_w, max_h)
     mainwin.setGeometry(usable_screen.x(),usable_screen.y(), max_w, max_h)
