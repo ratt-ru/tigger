@@ -287,6 +287,7 @@ class ColormapWithControls(Colormap):
             self._wreset.clicked.connect(self._resetValue)
             top_lo.addWidget(self._wreset)
             self._wslider = QwtSlider(parent)
+            self._wslider.setOrientation(Qt.Horizontal)
             # This works around a stupid bug in QwtSliders -- see comments on histogram zoom wheel above
             self._wslider_timer = QTimer(parent)
             self._wslider_timer.setSingleShot(True)
