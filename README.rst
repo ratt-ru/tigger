@@ -5,7 +5,7 @@ Tigger
 N.B THIS README IS THE BETA TESTER VERSION
 ==========================================
 
-.. image:: https://user-images.githubusercontent.com/7116312/113633100-4a288e80-9664-11eb-9533-0c8f34dadd47.png
+.. image:: https://user-images.githubusercontent.com/7116312/113705452-5ac51d00-96d5-11eb-8087-5d2a8ccad99a.png
 
 Installing Tigger
 =================

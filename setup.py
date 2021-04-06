@@ -2,6 +2,7 @@
 
 from __future__ import print_function
 from setuptools import setup, find_packages
+from pathlib import Path
 
 __version__ = "1.5.0"
 
@@ -39,5 +40,9 @@ setup(
     author_email="osmirnov@gmail.com",
     url="https://github.com/ska-sa/tigger",
     install_requires=requirements,
+    data_files=[
+        (f"{Path.home()}/.local/share/applications", ['desktop/tigger.desktop']),
+        (f"{Path.home()}/.local/share/icons", ['TigGUI/icons/tigger_logo.png']),
+    ],
 )
 

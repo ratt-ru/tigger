@@ -369,6 +369,7 @@ class TDockWidget(QDockWidget):
         self.close_button.setBaseSize(0, 0)
         self.close_icon = self.dock_title_bar.style().standardIcon(QStyle.SP_TitleBarCloseButton)
         self.close_button.setIcon(self.close_icon)
+        self.close_button.setToolTip("Close")
         # custom toggle button
         self.toggle_button = QPushButton()
         self.toggle_button.setStyleSheet(self.button_style)
@@ -378,6 +379,7 @@ class TDockWidget(QDockWidget):
         self.toggle_button.setBaseSize(0, 0)
         self.toggle_icon = self.dock_title_bar.style().standardIcon(QStyle.SP_TitleBarShadeButton)
         self.toggle_button.setIcon(self.toggle_icon)
+        self.toggle_button.setToolTip("Dock/float widget")
         # tigger logo
         self.image0 = pixmaps.tigger_logo.pm()
         self.title_icon = QLabel()
