@@ -558,8 +558,8 @@ class LiveProfile(ToolDialog):
         self.setWindowTitle("Profiles")
         # create size policy for live profile
         liveprofile_policy = QSizePolicy()
-        liveprofile_policy.setHeightForWidth(True)
-        liveprofile_policy.setHorizontalPolicy(QSizePolicy.Expanding)
+        liveprofile_policy.setHorizontalPolicy(QSizePolicy.MinimumExpanding)
+        liveprofile_policy.setVerticalPolicy(QSizePolicy.Fixed)
         self.setSizePolicy(liveprofile_policy)
         # add plots
         lo0 = QVBoxLayout(self)
@@ -589,9 +589,12 @@ class LiveProfile(ToolDialog):
         self._profplot.setAxisLabelAlignment(QwtPlot.yLeft, Qt.AlignVCenter)
         self._profplot.plotLayout().setAlignCanvasToScales(True)
         lo0.addWidget(self._profplot, 0)
-        self._profplot.setMinimumHeight(192)
-        self._profplot.setMinimumWidth(256)
-        self._profplot.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+        # TODO - investigate these size settings for dynamic adjustment
+        self._profplot.setMaximumHeight(256)
+        self._profplot.setMinimumHeight(56)
+        # self._profplot.setMinimumWidth(256)
+        # self._profplot.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+        self._profplot.setSizePolicy(liveprofile_policy)
         # and profile curve
         self._profcurve = TiggerPlotCurve()
         self._profcurve.setRenderHint(QwtPlotItem.RenderAntialiased)
