@@ -42,7 +42,7 @@ from PyQt5.QtGui import QPolygon, QFont, QPalette
 from PyQt5.QtWidgets import QDockWidget, QPushButton, QStyle, QSpacerItem
 from PyQt5.Qwt import QwtPlot, QwtPlotPicker, QwtText, QwtPlotItem, QwtPlotCurve, QwtPicker, QwtEventPattern, \
     QwtSymbol, QwtPlotZoomer, QwtScaleEngine, QwtPickerMachine, QwtPickerClickRectMachine, QwtPickerClickPointMachine, \
-    QwtPickerPolygonMachine, QwtPickerDragRectMachine, QwtPickerDragLineMachine, QwtPlotCanvas
+    QwtPickerPolygonMachine, QwtPickerDragRectMachine, QwtPickerDragLineMachine, QwtPlotCanvas, QwtPickerTrackerMachine
 
 import TigGUI.kitties.utils
 from TigGUI.kitties.utils import curry, PersistentCurrier
@@ -980,7 +980,7 @@ class SkyModelPlotter(QWidget):
                     self.appended.connect(self._track_callback)
                 elif track_callback.__name__ == "_trackCoordinates":
                     dprint(2, "PlotPicker adding _trackCoordinates")
-                    self.appended[QPointF].connect(self._track_callback)
+                    self.moved[QPointF].connect(self._track_callback)
             # setup select_callbacks
             if select_callback:
                 dprint(2, f"PlotPicker select_callback {select_callback.__name__}")
@@ -1327,12 +1327,14 @@ class SkyModelPlotter(QWidget):
     def _initPickers(self):
         """Called from __init__ to create the various plot pickers for support of mouse modes."""
         # this picker is invisible -- it is just there to make sure _trackCoordinates is always called
-        self._tracker = self.PlotPicker(self.plot.canvas(), "", mode=QwtPickerClickPointMachine(),
+        # it provides the live zoom and main mouse pointer
+        self._tracker = self.PlotPicker(self.plot.canvas(), "", mode=QwtPickerTrackerMachine(),
                                         track_callback=self._trackCoordinates)
         self._tracker.setTrackerMode(QwtPicker.AlwaysOn)
         self._tracker.setTrackerPen(QColor('white'))  # TODO - adjust the colour of the coordinate tracker according to image colour map.
-        # self._tracker.appended[QPointF].connect(self._trackCoordinates)
-        # self._tracker.appended.connect(self._trackCoordinates)  # TODO - check this call_back= next
+        # this pricker provides the profile on click
+        self._tracker_profile = self.PlotPicker(self.plot.canvas(), "", mode=QwtPickerClickPointMachine(),
+                                        select_callback=self._trackCoordinatesProfile)
         # zoom picker
         # TODO - check getUpdateSignal() - this is new
         self._zoomer = self.PlotZoomer(self.plot.canvas(), self.plot.getUpdateSignal(), label="zoom")
@@ -1763,9 +1765,33 @@ class SkyModelPlotter(QWidget):
         if image and x is not None:
             msgtext += "   x=%d y=%d value=blank" % (x, y) if flag else "   x=%d y=%d value=%g" % (x, y, val)
             self._livezoom.trackImage(image, x, y)
-            self._liveprofile.trackImage(image, x, y)
-        self.plotShowMessage[str, int].emit(msgtext, 60000)
+        self.plotShowMessage[str, int].emit(msgtext, 10000)
         return msgtext
+
+    def _trackCoordinatesProfile(self, pos):
+        if not self.projection:
+            return None
+        # disabled as it is enabled in _trackCoordinates above.
+        # if Ctrl is pushed, get nearest source and make it "current"
+        #if QApplication.keyboardModifiers() & (Qt.ControlModifier | Qt.ShiftModifier):
+        #    src = self.findNearestSource(pos, world=False, range=range)
+        #    if src:
+        #        self.model.setCurrentSource(src)
+        # get ra/dec coordinates of point
+        l, m, ra, dec, dist, pa, rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd, x, y, val, flag = self._convertCoordinates(
+            pos)
+        #    text = "<P align=\"right\">%2dh%02dm%05.2fs %+2d&deg;%02d'%05.2f\""%(rh,rm,rs,dd,dm,ds)
+        # emit message as well
+        # leaving commented out as _trackCoordinates already has this
+        msgtext = ""
+        #if self.projection.has_projection():
+        #    msgtext = "%02dh%02dm%05.2fs %s%02d\u00B0%02d'%05.2f\"  r=%d\u00B0%02d'%05.2f\"  PA=%.2f\u00B0" % (
+        #        rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd)
+        # if we have an image, add pixel coordinates
+        image = self._imgman and self._imgman.getTopImage()
+        if image and x is not None:
+            # msgtext += "   x=%d y=%d value=blank" % (x, y) if flag else "   x=%d y=%d value=%g" % (x, y, val)
+            self._liveprofile.trackImage(image, x, y)
 
     def _selectSources(self, sources, mode):
         """Helper function to select sources in list"""
