@@ -476,7 +476,8 @@ class TigToolTip(QLabel):
         self._qtimer.stop()
         self.close()
         # available on Ubuntu by default
-        os.system('notify-send "Tigger" "Information copied to clipboard"')
+        # disabling for now issue #163
+        # os.system('notify-send "Tigger" "Information copied to clipboard"')
 
     def eventFilter(self, source, event):
         # event.type() 25 == QEvent.WindowDeactivate.
