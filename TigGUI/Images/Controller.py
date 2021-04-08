@@ -235,6 +235,7 @@ class ImageController(QFrame):
         self._setting_lmrect = False
         self._all_markers = [self._image_border, self._image_label, self._subset_border, self._subset_label]
         self._exportMaxRes = False
+        self._dockable_colour_ctrl = None
 
     def close(self):
         if self._control_dialog:

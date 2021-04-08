@@ -320,6 +320,13 @@ class ImageManager(QWidget):
                 _prev.setText("Show previous slice along %s axis" % name)
         # emit signals
         self.imageRaised.emit(img)
+        # if dockable control dialog is docked and tabbed then raise to front
+        if imagecon._dockable_colour_ctrl is not None:
+            if imagecon._dockable_colour_ctrl.isVisible():
+                if not imagecon._dockable_colour_ctrl.isFloating():
+                    list_of_tabbed_widgets = self.mainwin.tabifiedDockWidgets(imagecon._dockable_colour_ctrl)
+                    if list_of_tabbed_widgets:
+                        imagecon._dockable_colour_ctrl.raise_()
         if busy is not None:
             busy.reset_cursor()
 
