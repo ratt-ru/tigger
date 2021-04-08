@@ -26,6 +26,7 @@
 
 import traceback
 import re
+import os
 from PyQt5.Qt import  QValidator, QWidget, QHBoxLayout, QFileDialog, QComboBox, QLabel, \
     QLineEdit, QDialog, QIntValidator, QDoubleValidator, QToolButton, QListWidget, QVBoxLayout, \
     QPushButton, QMessageBox
@@ -454,8 +455,9 @@ class TigToolTip(QLabel):
         self.setTextFormat(Qt.RichText)
         self.setWordWrap(True)
         self._qtimer = QTimer()
+        self._qtimer.timeout.connect(self.hideText)
 
-    def showText(self, location, text, timeout=20000):
+    def showText(self, location, text, timeout=7000):
         if self._qtimer.isActive():
             self._qtimer.start(timeout)
         self.setText(text)
@@ -468,10 +470,13 @@ class TigToolTip(QLabel):
             max_h = text_size.height()
         self.setGeometry(location.x(), location.y(), max_w, max_h)
         self.show()
-        self._qtimer.singleShot(timeout, self.hideText)
+        self._qtimer.start(timeout)
 
     def hideText(self):
+        self._qtimer.stop()
         self.close()
+        # available on Ubuntu by default
+        os.system('notify-send "Tigger" "Information copied to clipboard"')
 
     def eventFilter(self, source, event):
         # event.type() 25 == QEvent.WindowDeactivate.
