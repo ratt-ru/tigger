@@ -30,9 +30,9 @@ from PyQt5.Qt import  QValidator, QWidget, QHBoxLayout, QFileDialog, QComboBox, 
     QLineEdit, QDialog, QIntValidator, QDoubleValidator, QToolButton, QListWidget, QVBoxLayout, \
     QPushButton, QMessageBox
 from PyQt5.QtGui import QMouseEvent, QFont
-from PyQt5.QtWidgets import QDockWidget, QStyle, QSizePolicy
+from PyQt5.QtWidgets import QDockWidget, QStyle, QSizePolicy, QToolTip, QApplication
 from PyQt5.Qwt import QwtPlotCurve, QwtPlotMarker
-from PyQt5.QtCore import pyqtSignal, Qt, QEvent, QSize
+from PyQt5.QtCore import pyqtSignal, Qt, QEvent, QSize, QTimer
 
 from TigGUI.init import pixmaps
 
@@ -441,3 +441,44 @@ class TDockWidget(QDockWidget):
                     super(TDockWidget, self).event(fake_mouse_event)
                     return True
         return super(TDockWidget, self).eventFilter(source, event)
+
+
+class TigToolTip(QLabel):
+    """Custom QToolTip type widget based on a QLabel for plot information output."""
+    def __init__(self):
+        QLabel.__init__(self)
+        self.installEventFilter(self)
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+        self.setAttribute(Qt.WA_QuitOnClose)
+        self.setStyleSheet("QLabel {background-color: white; color: black;}")
+        self.setTextFormat(Qt.RichText)
+        self.setWordWrap(True)
+        self._qtimer = QTimer()
+
+    def showText(self, location, text, timeout=20000):
+        if self._qtimer.isActive():
+            self._qtimer.start(timeout)
+        self.setText(text)
+        text_size = self.fontMetrics().boundingRect(self.text())
+        if text_size.width() > 900:
+            max_w = 700
+            max_h = text_size.height() * 4
+        else:
+            max_w = 900
+            max_h = text_size.height()
+        self.setGeometry(location.x(), location.y(), max_w, max_h)
+        self.show()
+        self._qtimer.singleShot(timeout, self.hideText)
+
+    def hideText(self):
+        self.close()
+
+    def eventFilter(self, source, event):
+        # event.type() 25 == QEvent.WindowDeactivate.
+        # In this context, TigToolTip is the top most window and when application has been changed in terms of state,
+        # for example to another application, the TigToolTip needs to be closed, otherwise it will remain on the screen.
+        if event.type() == QEvent.WindowDeactivate:
+            if self._qtimer.isActive():
+                self._qtimer.stop()
+            self.close()
+        return super(TigToolTip, self).eventFilter(source, event)
