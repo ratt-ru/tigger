@@ -140,6 +140,8 @@ def main():
     # max width and height for main window
     max_w, max_h = int(usable_screen.width()*0.9), int(usable_screen.height()*0.88)
     mainwin = TigGUI.MainWindow.MainWindow(None, max_width=max_w, max_height=max_h)
+    # attempt to centre on screen
+    mainwin.setGeometry(int(max_w/3), int(max_h/3), mainwin.width(), mainwin.height())
     # set main window size constraints and policy
     dprint(1, "created main window")
 
