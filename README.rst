@@ -40,7 +40,7 @@ Download the Tigger repository::
 
     git clone https://github.com/razman786/tigger_py5.git
 
-Run the installation script and enter `sudo` password when prompted::
+Run the installation script and enter ``sudo`` password when prompted::
 
     ./install_tigger_ubuntu_20_04.sh
 
