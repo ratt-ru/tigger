@@ -23,7 +23,7 @@ import faulthandler
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPalette
-from PyQt5.QtWidgets import QStyleFactory, QSizePolicy
+from PyQt5.QtWidgets import QStyleFactory, QSizePolicy, QStyle
 
 faulthandler.enable()
 import sys
@@ -140,8 +140,9 @@ def main():
     # max width and height for main window
     max_w, max_h = int(usable_screen.width()*0.9), int(usable_screen.height()*0.88)
     mainwin = TigGUI.MainWindow.MainWindow(None, max_width=max_w, max_height=max_h)
-    # attempt to centre on screen
-    mainwin.setGeometry(int(max_w/3), int(max_h/3), mainwin.width(), mainwin.height())
+    # centre on screen
+    centre = QStyle.alignedRect(Qt.LeftToRight, Qt.AlignCenter, mainwin.size(), QApplication.desktop().availableGeometry())
+    mainwin.setGeometry(centre)
     # set main window size constraints and policy
     dprint(1, "created main window")
 
