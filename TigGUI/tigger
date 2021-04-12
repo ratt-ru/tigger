@@ -82,9 +82,8 @@ def main():
     # get screen size
     screen = app.primaryScreen()
     size = screen.size()
-    print(f"Detected screen size {size}")
     usable_screen = screen.availableGeometry()
-    print(f"Detected useable screen {usable_screen}")
+    print(f"Detected screen size {size.width()}x{size.height()}, usable area {usable_screen.width()}x{usable_screen.height()}")
 
     # setup Dark Mode QPalette - initial setup  # TODO - still needs tweaking.
     palette = QPalette()
