@@ -327,6 +327,8 @@ class ToolDialog(QDialog):
 
 
 class LiveImageZoom(ToolDialog):
+    livezoom_resize_signal = pyqtSignal(QSize)
+
     def __init__(self, parent, radius=10, factor=12):
         ToolDialog.__init__(self, parent, configname="livezoom", menuname="live zoom & cross-sections",
                             show_shortcut=Qt.Key_F2)
@@ -334,8 +336,8 @@ class LiveImageZoom(ToolDialog):
         radius = Config.getint("livezoom-radius", radius)
         # create size polixy for livezoom
         livezoom_policy = QSizePolicy()
+        livezoom_policy.setWidthForHeight(True)
         livezoom_policy.setHeightForWidth(True)
-        livezoom_policy.setHorizontalPolicy(QSizePolicy.Preferred)
         self.setSizePolicy(livezoom_policy)
         # add plots
         self._lo0 = lo0 = QVBoxLayout(self)
@@ -461,6 +463,8 @@ class LiveImageZoom(ToolDialog):
         # reset window size
         self._lo0.update()
         self.resize(self._lo0.minimumSize())
+        print(self._lo0.minimumSize())
+        self.livezoom_resize_signal.emit(self._lo0.minimumSize())
 
     def _getZoomSlice(self, ix, nx):
         ix0, ix1 = ix - self._radius, ix + self._radius + 1

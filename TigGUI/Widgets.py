@@ -343,6 +343,7 @@ class TDockWidget(QDockWidget):
         self.button_style = "QPushButton:hover:!pressed {background: grey;}"
         from TigGUI.Images.ControlDialog import ImageControlDialog
         from TigGUI.Plot.SkyModelPlot import ToolDialog
+        from TigGUI.Plot.SkyModelPlot import LiveImageZoom
         if bind_widget is not None:
             self.bind_widget = bind_widget
         if bind_widget is not None:
@@ -427,10 +428,18 @@ class TDockWidget(QDockWidget):
         # get current sizeHints()
         if bind_widget is not None:
             self.setBaseSize(bind_widget.sizeHint())
+            if isinstance(bind_widget, LiveImageZoom):
+                bind_widget.livezoom_resize_signal.connect(self._resizeDockWidget)
         if close_slot is not None:
             self.close_button.clicked.connect(close_slot)
         if toggle_slot is not None:
             self.toggle_button.clicked.connect(toggle_slot)
+
+    def _resizeDockWidget(self, qsize):
+        # live zoom signal slot to resize dockwidget and dock areas
+        self.setMinimumSize(qsize)
+        self.main_win.resizeDocks([self], [qsize.width()], Qt.Horizontal)
+        self.main_win.resizeDocks([self], [qsize.height()], Qt.Vertical)
 
     # hack to stop QDockWidget responding to drag events for undocking - work around for Qt bug
     def eventFilter(self, source, event):

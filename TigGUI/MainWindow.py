@@ -37,7 +37,7 @@ from TigGUI import Images
 from TigGUI import Widgets
 from TigGUI.Images.ControlDialog import ImageControlDialog
 from TigGUI.Images.Manager import ImageManager
-from TigGUI.Plot.SkyModelPlot import SkyModelPlotter, PersistentCurrier
+from TigGUI.Plot.SkyModelPlot import SkyModelPlotter, PersistentCurrier, LiveImageZoom
 from TigGUI.SkyModelTreeWidget import SkyModelTreeWidget, ModelGroupsTable
 from TigGUI.init import pixmaps, Config
 from TigGUI.kitties.widgets import BusyIndicator
@@ -335,6 +335,8 @@ class MainWindow(QMainWindow):
                     result.append(widget)
                     dprint(2, f"{widget} width {widget.width()}")
                     dprint(2, f"{widget} bind_widget width {widget.bind_widget.width()}")
+                    if isinstance(widget.bind_widget, LiveImageZoom):
+                        widget.bind_widget.setMinimumWidth(widget.width())
             widget_list = result
             # resize dock areas
             self.resizeDocks(widget_list, size_list, Qt.Horizontal)
