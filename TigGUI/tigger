@@ -141,7 +141,7 @@ def main():
     max_w, max_h = int(usable_screen.width()*0.9), int(usable_screen.height()*0.88)
     mainwin = TigGUI.MainWindow.MainWindow(None, max_width=max_w, max_height=max_h)
     # centre on screen
-    centre = QStyle.alignedRect(Qt.LeftToRight, Qt.AlignCenter, mainwin.size(), QApplication.desktop().availableGeometry())
+    centre = QStyle.alignedRect(Qt.LeftToRight, Qt.AlignHCenter, mainwin.size(), QApplication.desktop().availableGeometry())
     mainwin.setGeometry(centre)
     # set main window size constraints and policy
     dprint(1, "created main window")
