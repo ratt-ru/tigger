@@ -33,14 +33,15 @@ System dependencies
 
 These are already present in most Linux distributions. Please note that, this package **does not** use the version of PyQt 5 that is installable from PyPI.
 
-Install from source on Ubuntu 20.04
------------------------------------
-With installation script
-------------------------
-Download the Tigger repository:
+Install from source on Ubuntu 20.04 with installation script
+----------------------------------------------------------
+
+Download the Tigger repository::
+
     git clone https://github.com/razman786/tigger_py5.git
 
-Run the installation script and enter `sudo` password when prompted:
+Run the installation script and enter `sudo` password when prompted::
+
     ./install_tigger_ubuntu_20_04.sh
 
 Running Tigger
