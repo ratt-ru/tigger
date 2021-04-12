@@ -99,9 +99,6 @@ class SourceMarker:
                            hexagon=QwtSymbol.Hexagon)
 
     def __init__(self, src, l, m, size, model):
-        self.style = None
-        self.label = None
-        self._selected = None
         self.src = src
         self._lm, self._size = (l, m), size
         self.plotmarker = TiggerPlotMarker()
@@ -367,10 +364,6 @@ class LiveImageZoom(ToolDialog):
         lo1.addWidget(self._larger)
         self._has_zoom = self._has_xcs = self._has_ycs = False
         # setup zoom plot
-        self._npix = None
-        self._magfac = None
-        self._radius = None
-        self._data = None
         font = QApplication.font()
         self._zoomplot = QwtPlot(self)
         #    self._zoomplot.setSizePolicy(QSizePolicy.Fixed,QSizePolicy.Fixed)
@@ -552,9 +545,6 @@ class LiveImageZoom(ToolDialog):
 class LiveProfile(ToolDialog):
     def __init__(self, parent):
         ToolDialog.__init__(self, parent, configname="liveprofile", menuname="profiles", show_shortcut=Qt.Key_F3)
-        self._yaxis = None
-        self._xaxis = None
-        self._selaxis = None
         self.setWindowTitle("Profiles")
         # create size policy for live profile
         liveprofile_policy = QSizePolicy()
@@ -714,10 +704,6 @@ class SkyModelPlotter(QWidget):
 
         def __init__(self, mainwin, skymodelplotter, parent):
             QwtPlot.__init__(self, parent)
-            self.projection = None
-            self._coord_cache = None
-            self._draw_cache = None
-            self._label = None
             self._skymodelplotter = skymodelplotter
             self.setAcceptDrops(True)
             self.clearCaches()
@@ -836,8 +822,8 @@ class SkyModelPlotter(QWidget):
         def isFixedAspect(self):
             return self._fixed_aspect
 
-        def setFixedAspect(self, _fixed):
-            self._fixed_aspect = _fixed
+        def setFixedAspect(self, fixed):
+            self._fixed_aspect = fixed
             self._checkAspects()
 
         def setDoubleClickZoom(self, button, modifiers):
@@ -1121,6 +1107,7 @@ class SkyModelPlotter(QWidget):
         self._dockable_liveprofile.setVisible(False)
 
         # other internal init
+        self.projection = None
         self.model = None
         self._zoomrect = None
         self._text_no_source = QwtText("")
@@ -1557,6 +1544,7 @@ class SkyModelPlotter(QWidget):
                 QApplication.clipboard().setText(msgtext + "\n", QClipboard.Selection)
                 # output to terminal
                 print(msgtext)
+                return QwtText(msgtext)
 
     """def _trackRuler(self, pos):
         if not self.projection and self._ruler_start_point is None:
@@ -1701,28 +1689,25 @@ class SkyModelPlotter(QWidget):
     def _updatePsfMarker(self, rect=None, replot=False):
         # show PSF if asked to
         topimage = self._imgman and self._imgman.getTopImage()
-        if topimage:
-            pmaj, pmin, ppa = topimage.getPsfSize() if topimage else (0, 0, 0)
-            self._qa_show_psf.setVisible(bool(topimage and pmaj != 0))
-            self._psf_marker.setVisible(bool(topimage and pmaj != 0 and self._qa_show_psf.isChecked()))
-            if self._qa_show_psf.isVisible():
-                rect = rect or self._zoomer.zoomBase()
-                rect &= topimage.boundingRect()
-                dprint(1, "updating PSF for zoom rect", rect)
-                lm = rect.bottomLeft()
-                l00 = lm.x() + pmaj / 1.2
-                m00 = lm.y() - pmaj / 1.2
-                dprint(1, "drawing PSF at", l00, m00, "z", self._psf_marker.z())
-                arg = numpy.arange(0, 1.02, .02) * math.pi * 2
-                mp0, lp0 = pmaj * numpy.cos(arg) / 2, pmin * numpy.sin(arg) / 2  # angle 0 is m direction
-                c, s = numpy.cos(ppa), numpy.sin(ppa)
-                lp = lp0 * c + mp0 * s
-                mp = - lp0 * s + mp0 * c
-                self._psf_marker.setData(lp + l00, mp + m00)
-                if replot and self._psf_marker.isVisible():
-                    self._replot()
-        elif replot:
-            self._replot()
+        pmaj, pmin, ppa = topimage.getPsfSize() if topimage else (0, 0, 0)
+        self._qa_show_psf.setVisible(bool(topimage and pmaj != 0))
+        self._psf_marker.setVisible(bool(topimage and pmaj != 0 and self._qa_show_psf.isChecked()))
+        if self._qa_show_psf.isVisible():
+            rect = rect or self._zoomer.zoomBase()
+            rect &= topimage.boundingRect()
+            dprint(1, "updating PSF for zoom rect", rect)
+            lm = rect.bottomLeft()
+            l00 = lm.x() + pmaj / 1.2
+            m00 = lm.y() - pmaj / 1.2
+            dprint(1, "drawing PSF at", l00, m00, "z", self._psf_marker.z())
+            arg = numpy.arange(0, 1.02, .02) * math.pi * 2
+            mp0, lp0 = pmaj * numpy.cos(arg) / 2, pmin * numpy.sin(arg) / 2  # angle 0 is m direction
+            c, s = numpy.cos(ppa), numpy.sin(ppa)
+            lp = lp0 * c + mp0 * s
+            mp = - lp0 * s + mp0 * c
+            self._psf_marker.setData(lp + l00, mp + m00)
+            if replot and self._psf_marker.isVisible():
+                self._replot()
 
     def _replot(self):
         dprint(1, "replot")
@@ -2013,7 +1998,7 @@ class SkyModelPlotter(QWidget):
         self._plot_markup = []
         self._image_subset = None
         # clear plot, but do not delete items
-        # self.projection = None
+        self.projection = None
         self.plot.clear()
         self._psf_marker.attach(self.plot)
         self._zoomer_box.attach(self.plot)
@@ -2021,8 +2006,7 @@ class SkyModelPlotter(QWidget):
         self._zoomer_box.setVisible(False)
         self._zoomer_label.setVisible(False)
         # get current image (None if no images)
-        if self._imgman:
-            self._image = self._imgman.getCenterImage()
+        self._image = self._imgman and self._imgman.getCenterImage()
         # show/hide live zoomer with image
         if self._image:
             for tool in self._livezoom, self._liveprofile:
@@ -2038,7 +2022,7 @@ class SkyModelPlotter(QWidget):
         if self._image:
             self.projection = self._image.projection
             dprint(1, "using projection from image", self._image.name)
-            self.ra, self.dec = self.projection.radec(0, 0)
+            ra, dec = self.projection.radec(0, 0)
         else:
             self.projection = Projection.SinWCS(*self.model.fieldCenter())
             dprint(1, "using default Sin projection")
