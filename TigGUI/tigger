@@ -136,20 +136,12 @@ def main():
     import TigGUI.Tools
 
     # although this seems unused, it is actually registering these plugins
-
     dprint(1, "imported TigGUI.Tools")
 
-    mainwin = TigGUI.MainWindow.MainWindow(None)
+    # max width and height for main window
+    max_w, max_h = int(usable_screen.width()*0.9), int(usable_screen.height()*0.88)
+    mainwin = TigGUI.MainWindow.MainWindow(None, max_width=max_w, max_height=max_h)
     # set main window size constraints and policy
-    max_w, max_h = int(usable_screen.width()*0.9), int(usable_screen.height()*0.9)
-    mainwin.setMaximumSize(max_w, max_h)
-    mainwin.setBaseSize(max_w, max_h)
-    mainwin.setGeometry(usable_screen.x(),usable_screen.y(), max_w, max_h)
-    size_policy = QSizePolicy()
-    size_policy.setVerticalPolicy(QSizePolicy.Minimum)
-    size_policy.setHorizontalPolicy(QSizePolicy.Minimum)
-    mainwin.setSizePolicy(size_policy)
-
     dprint(1, "created main window")
 
     # add optional tools

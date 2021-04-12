@@ -812,8 +812,6 @@ class SkyModelPlotter(QWidget):
     class PlotZoomer(QwtPlotZoomer):
         provisionalZoom = pyqtSignal(float, float, int, int)
 
-        # TODO - check where updateLayoutEvent is being used here
-        # Not in original code
         def __init__(self, canvas, updateLayoutEvent, track_callback=None, label=None):
             QwtPlotZoomer.__init__(self, canvas)
             self.setMaxStackDepth(1000)
@@ -832,7 +830,6 @@ class SkyModelPlotter(QWidget):
             # we recompute the actual zoom rect based on the aspect ratio and the desired rect.
             self._zoomrects = []
             # watch plot for changes: if resized, aspect ratios need to be checked
-            # TODO - confirm this is working
             self._updateLayoutEvent = updateLayoutEvent
             self._updateLayoutEvent.connect(self._checkAspects)
 
@@ -860,18 +857,18 @@ class SkyModelPlotter(QWidget):
         def _resetZoomStack(self, index):
             stack = list(map(self.adjustRect, self._zoomrects))
             if stack:
+                dprint(2, f"index is {index} stack size is {len(stack)}")
                 zs = stack[index]
                 dprint(2, "resetting plot limits to", zs)
                 self.plot().setAxisScale(QwtPlot.yLeft, zs.top(), zs.bottom())
                 self.plot().setAxisScale(QwtPlot.xBottom, zs.right(), zs.left())
                 self.plot().axisScaleEngine(QwtPlot.xBottom).setAttribute(QwtScaleEngine.Inverted, True)
-                QwtPlotZoomer.setZoomBase(self, doReplot=True)
+                QwtPlotZoomer.setZoomBase(self)
                 dprint(2, "reset limits, zoom stack is now", self.zoomRectIndex())
             dprint(2, "setting zoom stack", stack, index)
-
-            # Original code, QwtPlotZoomer.setZoomStack(stack, index)
-            # Fix below for Qwt 6 - not ideal but seems to work.
-            QwtPlotZoomer.setZoomBase(self, doReplot=True)
+            # Fixed below using PyQt-Qwt repo-based install (issue #18 PR #19)
+            # Also available from https://github.com/razman786/PyQt-Qwt/tree/ubuntu_zoomstack
+            QwtPlotZoomer.setZoomStack(self, stack, index)
             dprint(2, "zoom stack is now", self.zoomRectIndex(), self.maxStackDepth())
 
         def adjustRect(self, rect):
@@ -1224,6 +1221,7 @@ class SkyModelPlotter(QWidget):
         for ea_action in list_of_actions:
             if ea_action.text() == 'Show live zoom && cross-sections':
                 self._dockable_livezoom.setVisible(False)
+                self._mainwin.setMaximumWidth(self._mainwin.width() - self._dockable_livezoom.width())
                 ea_action.setChecked(False)
 
     def liveprofile_dockwidget_closed(self):
@@ -1231,6 +1229,7 @@ class SkyModelPlotter(QWidget):
         for ea_action in list_of_actions:
             if ea_action.text() == 'Show profiles':
                 self._dockable_liveprofile.setVisible(False)
+                self._mainwin.setMaximumWidth(self._mainwin.width() - self._dockable_liveprofile.width())
                 ea_action.setChecked(False)
 
     def liveprofile_dockwidget_toggled(self):
@@ -1239,6 +1238,7 @@ class SkyModelPlotter(QWidget):
                 self._dockable_liveprofile.setFloating(False)
             else:
                 self._dockable_liveprofile.setFloating(True)
+                self._mainwin.setMaximumWidth(self._mainwin.width() - self._dockable_liveprofile.width())
 
     def livezoom_dockwidget_toggled(self):
         if self._dockable_livezoom.isVisible():
@@ -1246,7 +1246,9 @@ class SkyModelPlotter(QWidget):
                 self._dockable_livezoom.setFloating(False)
             else:
                 self._dockable_livezoom.setFloating(True)
+                self._mainwin.setMaximumWidth(self._mainwin.width() - self._dockable_livezoom.width())
 
+    # TODO - tidy - no longer used?
     def profiles_dockwidget_state_changed(self, visible):
         list_of_actions = self._menu.actions()
         for ea_action in list_of_actions:
@@ -1259,6 +1261,7 @@ class SkyModelPlotter(QWidget):
                         self._dockable_liveprofile.close()
                         ea_action.setChecked(False)
 
+    # TODO - tidy - no longer used?
     def livezooom_dockwidget_state_changed(self, visible):
         list_of_actions = self._menu.actions()
         for ea_action in list_of_actions:

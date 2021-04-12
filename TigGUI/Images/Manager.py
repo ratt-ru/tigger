@@ -28,6 +28,7 @@ import numpy
 from PyQt5.Qt import (QWidget, QFileDialog, QVBoxLayout, QApplication, QMenu, QClipboard, QInputDialog, QActionGroup)
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QDockWidget
 from astropy.io import fits as pyfits
 
 from TigGUI.Images import FITS_ExtensionList
@@ -261,6 +262,8 @@ class ImageManager(QWidget):
         self._imagecons.remove(imagecon)
         self._imagecon_loadorder.remove(imagecon)
         self._model_imagecons.discard(id(imagecon))
+        # remove dockable widget
+        imagecon.removeDockWidget()
         # reparent widget and release it
         imagecon.setParent(None)
         imagecon.close()
@@ -272,6 +275,16 @@ class ImageManager(QWidget):
         self.imagesChanged.emit()
         if self._imagecons:
             self.raiseImage(self._imagecons[0])
+        else:
+            # remove all dock widgets
+            widget_list = self.mainwin.findChildren(QDockWidget)
+            for widget in widget_list:
+                self.mainwin.removeDockWidget(widget)
+                widget.bind_widget.setVisible(False)
+                widget.close()
+            self.mainwin.skyplot.setVisible(False)
+            # reset size to be minus dockables - workaround for bug #164
+            # self.mainwin.setMaximumWidth(self.mainwin.width() - 700)
 
     def getCenterImage(self):
         return self._center_image

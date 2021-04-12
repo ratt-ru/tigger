@@ -35,32 +35,13 @@ These are already present in most Linux distributions. Please note that, this pa
 
 Install from source on Ubuntu 20.04
 -----------------------------------
-
-To install the system dependencies on Ubuntu 20.04 you can run::
-
-    sudo apt install python3-pyqt5.qwt python3-pyqt5.qtsvg python3-pyqt5.qtopengl
-
-Then build the source::
-
-    git clone https://github.com/razman786/tigger_py5.git
-    cd tigger_py5
-    python3 setup.py install --user
-
-Install from source on Ubuntu 18.04
------------------------------------
-
-To install on Ubuntu 18.04, first clone the repository::
-
+With installation script
+------------------------
+Download the Tigger repository:
     git clone https://github.com/razman786/tigger_py5.git
 
-Install the Ubuntu 18.04 Qwt Pyhton 3 pacakge::
-
-    cd tigger_py5/ubuntu_bionic_deb_pkg
-    sudo dpkg -i python3-pyqt5.qwt_1.00.00-1_amd64.deb
-    sudo apt -f install
-    sudo apt install python3-pyqt5.qtsvg python3-pyqt5.qtopengl
-    cd ..
-    python3 setup.py install --user
+Run the installation script and enter `sudo` password when prompted:
+    ./install_tigger_ubuntu_20_04.sh
 
 Running Tigger
 ==============

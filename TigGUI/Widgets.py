@@ -337,11 +337,14 @@ class TDockWidget(QDockWidget):
     def __init__(self, title="", parent=None, flags=Qt.WindowFlags(), bind_widget=None, close_slot=None, toggle_slot=None):
         QDockWidget.__init__(self, title, parent, flags)
         self.installEventFilter(self)
+        self.main_win = parent
         # default stlyesheets for title bars
         self.title_stylesheet = "QWidget {background: rgb(68,68,68);}"
         self.button_style = "QPushButton:hover:!pressed {background: grey;}"
         from TigGUI.Images.ControlDialog import ImageControlDialog
         from TigGUI.Plot.SkyModelPlot import ToolDialog
+        if bind_widget is not None:
+            self.bind_widget = bind_widget
         if bind_widget is not None:
             if isinstance(bind_widget, ToolDialog):
                 self.tdock_style = "ToolDialog {border: 1.5px solid rgb(68,68,68);}"
@@ -462,6 +465,7 @@ class TigToolTip(QLabel):
             self._qtimer.start(timeout)
         self.setText(text)
         text_size = self.fontMetrics().boundingRect(self.text())
+        # TODO - find a better way for the below sizes
         if text_size.width() > 900:
             max_w = 700
             max_h = text_size.height() * 4
