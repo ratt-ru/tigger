@@ -282,7 +282,8 @@ class ImageManager(QWidget):
                 self.mainwin.removeDockWidget(widget)
                 widget.bind_widget.setVisible(False)
                 widget.close()
-            self.mainwin.skyplot.setVisible(False)
+            if self.mainwin._current_layout is not self.mainwin.LayoutImageModel:
+                self.mainwin.skyplot.setVisible(False)
             # reset size to be minus dockables - workaround for bug #164
             # self.mainwin.setMaximumWidth(self.mainwin.width() - 700)
 
