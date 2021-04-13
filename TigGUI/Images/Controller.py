@@ -32,6 +32,7 @@ from PyQt5.QtCore import pyqtSignal, QPointF, QSize
 
 import TigGUI.kitties.utils
 from TigGUI.Images.SkyImage import FITSImagePlotItem
+from TigGUI.Plot.SkyModelPlot import LiveImageZoom
 from TigGUI.kitties.utils import PersistentCurrier
 from TigGUI.kitties.widgets import BusyIndicator
 
@@ -235,6 +236,7 @@ class ImageController(QFrame):
         self._setting_lmrect = False
         self._all_markers = [self._image_border, self._image_label, self._subset_border, self._subset_label]
         self._exportMaxRes = False
+        self._dockable_colour_ctrl = None
 
     def close(self):
         if self._control_dialog:
@@ -337,33 +339,59 @@ class ImageController(QFrame):
                                                      bind_widget=self._control_dialog,
                                                      close_slot=self.colourctrl_dockwidget_closed,
                                                      toggle_slot=self.colourctrl_dockwidget_toggled)
-            # Add dockable widget to main window.
-            # This needs to itterate through the widgets to find DockWidgets already in the right side area,
-            # then tabifydockwidget when adding, or add to the right area if empty
-            widget_list = self.parent().mainwin.findChildren(QDockWidget)
-            for widget in widget_list:
-                if self.parent().mainwin.dockWidgetArea(widget) == 2:  # if in right dock area
-                    if widget.isVisible() and not widget.isFloating():  # if widget active and not a window
-                        if self._dockable_colour_ctrl is not widget:  # check not itself
-                            # add dock widget in tab on top of current widget in right area
-                            self.parent().mainwin.tabifyDockWidget(widget, self._dockable_colour_ctrl)
-                elif self.parent().mainwin.dockWidgetArea(widget) == 0:  # if not in any dock area assume we have new dock widget
-                    # no previous widget in this area then add
-                    self.parent().mainwin.addDockWidget(Qt.RightDockWidgetArea, self._dockable_colour_ctrl)
+            self.addDockWidgetToTab()
             dprint(1, "done")
         # set dockable widget visibility in sync with control dialog
         if not self._control_dialog.isVisible():
             dprint(1, "showing control dialog")
             self._control_dialog.show()
             self._dockable_colour_ctrl.setVisible(True)
+            self.addDockWidgetToTab()
             self._dockable_colour_ctrl.show()
             self._dockable_colour_ctrl.raise_()
         else:
             self._control_dialog.hide()
             self._dockable_colour_ctrl.setVisible(False)
+            self.parent().mainwin.setMaximumWidth(self.parent().mainwin.width() - self._dockable_colour_ctrl.width())
+
+    def addDockWidgetToTab(self):
+        # Add dockable widget to main window.
+        # This needs to itterate through the widgets to find DockWidgets already in the right side area,
+        # then tabifydockwidget when adding, or add to the right area if empty
+        widget_list = self.parent().mainwin.findChildren(QDockWidget)
+        for widget in widget_list:
+            if self.parent().mainwin.dockWidgetArea(widget) == 2:  # if in right dock area
+                if widget.isVisible() and not widget.isFloating():  # if widget active and not a window
+                    if self._dockable_colour_ctrl is not widget:  # check not itself
+                        # add dock widget in tab on top of current widget in right area
+                        self.parent().mainwin.tabifyDockWidget(widget, self._dockable_colour_ctrl)
+            elif self.parent().mainwin.dockWidgetArea(
+                    widget) == 0:  # if not in any dock area assume we have new dock widget
+                # no previous widget in this area then add
+                self.parent().mainwin.addDockWidget(Qt.RightDockWidgetArea, self._dockable_colour_ctrl)
+
+    def removeDockWidget(self):
+        # remove image control dock widget
+        self.parent().mainwin.removeDockWidget(self._dockable_colour_ctrl)
+        # get widgets to resize
+        widget_list = self.parent().mainwin.findChildren(QDockWidget)
+        size_list = []
+        result = []
+        for widget in widget_list:
+            if not isinstance(widget.bind_widget, ImageControlDialog):
+                size_list.append(widget.bind_widget.width())
+                result.append(widget)
+                dprint(2, f"{widget} width {widget.width()}")
+                dprint(2, f"{widget} bind_widget width {widget.bind_widget.width()}")
+                if isinstance(widget.bind_widget, LiveImageZoom):
+                    widget.bind_widget.setMinimumWidth(widget.width())
+        widget_list = result
+        # resize dock areas
+        self.parent().mainwin.resizeDocks(widget_list, size_list, Qt.Horizontal)
 
     def colourctrl_dockwidget_closed(self):
         self._dockable_colour_ctrl.setVisible(False)
+        self.parent().mainwin.setMaximumWidth(self.parent().mainwin.width() - self._dockable_colour_ctrl.width())
 
     def colourctrl_dockwidget_toggled(self):
         if self._dockable_colour_ctrl.isVisible():
@@ -371,6 +399,7 @@ class ImageController(QFrame):
                 self._dockable_colour_ctrl.setFloating(False)
             else:
                 self._dockable_colour_ctrl.setFloating(True)
+                self.parent().mainwin.setMaximumWidth(self.parent().mainwin.width() - self._dockable_colour_ctrl.width())
 
     def _changeDisplayRangeToPercent(self, percent):
         if not self._control_dialog:

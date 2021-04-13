@@ -23,7 +23,7 @@ import faulthandler
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPalette
-from PyQt5.QtWidgets import QStyleFactory, QSizePolicy
+from PyQt5.QtWidgets import QStyleFactory, QSizePolicy, QStyle
 
 faulthandler.enable()
 import sys
@@ -82,9 +82,8 @@ def main():
     # get screen size
     screen = app.primaryScreen()
     size = screen.size()
-    print(f"Detected screen size {size}")
     usable_screen = screen.availableGeometry()
-    print(f"Detected useable screen {usable_screen}")
+    print(f"Detected screen size {size.width()}x{size.height()}, usable area {usable_screen.width()}x{usable_screen.height()}")
 
     # setup Dark Mode QPalette - initial setup  # TODO - still needs tweaking.
     palette = QPalette()
@@ -136,20 +135,15 @@ def main():
     import TigGUI.Tools
 
     # although this seems unused, it is actually registering these plugins
-
     dprint(1, "imported TigGUI.Tools")
 
-    mainwin = TigGUI.MainWindow.MainWindow(None)
+    # max width and height for main window
+    max_w, max_h = int(usable_screen.width()*0.9), int(usable_screen.height()*0.88)
+    mainwin = TigGUI.MainWindow.MainWindow(None, max_width=max_w, max_height=max_h)
+    # centre on screen
+    centre = QStyle.alignedRect(Qt.LeftToRight, Qt.AlignHCenter, mainwin.size(), QApplication.desktop().availableGeometry())
+    mainwin.setGeometry(centre)
     # set main window size constraints and policy
-    max_w, max_h = int(usable_screen.width()*0.9), int(usable_screen.height()*0.9)
-    mainwin.setMaximumSize(max_w, max_h)
-    mainwin.setBaseSize(max_w, max_h)
-    mainwin.setGeometry(usable_screen.x(),usable_screen.y(), max_w, max_h)
-    size_policy = QSizePolicy()
-    size_policy.setVerticalPolicy(QSizePolicy.Minimum)
-    size_policy.setHorizontalPolicy(QSizePolicy.Minimum)
-    mainwin.setSizePolicy(size_policy)
-
     dprint(1, "created main window")
 
     # add optional tools

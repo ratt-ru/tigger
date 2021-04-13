@@ -26,13 +26,14 @@
 
 import traceback
 import re
+import os
 from PyQt5.Qt import  QValidator, QWidget, QHBoxLayout, QFileDialog, QComboBox, QLabel, \
     QLineEdit, QDialog, QIntValidator, QDoubleValidator, QToolButton, QListWidget, QVBoxLayout, \
     QPushButton, QMessageBox
 from PyQt5.QtGui import QMouseEvent, QFont
-from PyQt5.QtWidgets import QDockWidget, QStyle, QSizePolicy
+from PyQt5.QtWidgets import QDockWidget, QStyle, QSizePolicy, QToolTip, QApplication
 from PyQt5.Qwt import QwtPlotCurve, QwtPlotMarker
-from PyQt5.QtCore import pyqtSignal, Qt, QEvent, QSize
+from PyQt5.QtCore import pyqtSignal, Qt, QEvent, QSize, QTimer
 
 from TigGUI.init import pixmaps
 
@@ -336,11 +337,15 @@ class TDockWidget(QDockWidget):
     def __init__(self, title="", parent=None, flags=Qt.WindowFlags(), bind_widget=None, close_slot=None, toggle_slot=None):
         QDockWidget.__init__(self, title, parent, flags)
         self.installEventFilter(self)
+        self.main_win = parent
         # default stlyesheets for title bars
         self.title_stylesheet = "QWidget {background: rgb(68,68,68);}"
         self.button_style = "QPushButton:hover:!pressed {background: grey;}"
         from TigGUI.Images.ControlDialog import ImageControlDialog
         from TigGUI.Plot.SkyModelPlot import ToolDialog
+        from TigGUI.Plot.SkyModelPlot import LiveImageZoom
+        if bind_widget is not None:
+            self.bind_widget = bind_widget
         if bind_widget is not None:
             if isinstance(bind_widget, ToolDialog):
                 self.tdock_style = "ToolDialog {border: 1.5px solid rgb(68,68,68);}"
@@ -423,10 +428,18 @@ class TDockWidget(QDockWidget):
         # get current sizeHints()
         if bind_widget is not None:
             self.setBaseSize(bind_widget.sizeHint())
+            if isinstance(bind_widget, LiveImageZoom):
+                bind_widget.livezoom_resize_signal.connect(self._resizeDockWidget)
         if close_slot is not None:
             self.close_button.clicked.connect(close_slot)
         if toggle_slot is not None:
             self.toggle_button.clicked.connect(toggle_slot)
+
+    def _resizeDockWidget(self, qsize):
+        # live zoom signal slot to resize dockwidget and dock areas
+        self.setMinimumSize(qsize)
+        self.main_win.resizeDocks([self], [qsize.width()], Qt.Horizontal)
+        self.main_win.resizeDocks([self], [qsize.height()], Qt.Vertical)
 
     # hack to stop QDockWidget responding to drag events for undocking - work around for Qt bug
     def eventFilter(self, source, event):
@@ -441,3 +454,50 @@ class TDockWidget(QDockWidget):
                     super(TDockWidget, self).event(fake_mouse_event)
                     return True
         return super(TDockWidget, self).eventFilter(source, event)
+
+
+class TigToolTip(QLabel):
+    """Custom QToolTip type widget based on a QLabel for plot information output."""
+    def __init__(self):
+        QLabel.__init__(self)
+        self.installEventFilter(self)
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+        self.setAttribute(Qt.WA_QuitOnClose)
+        self.setStyleSheet("QLabel {background-color: white; color: black;}")
+        self.setTextFormat(Qt.RichText)
+        self.setWordWrap(True)
+        self._qtimer = QTimer()
+        self._qtimer.timeout.connect(self.hideText)
+
+    def showText(self, location, text, timeout=7000):
+        if self._qtimer.isActive():
+            self._qtimer.start(timeout)
+        self.setText(text)
+        text_size = self.fontMetrics().boundingRect(self.text())
+        # TODO - find a better way for the below sizes
+        if text_size.width() > 900:
+            max_w = 700
+            max_h = text_size.height() * 4
+        else:
+            max_w = 900
+            max_h = text_size.height()
+        self.setGeometry(location.x(), location.y(), max_w, max_h)
+        self.show()
+        self._qtimer.start(timeout)
+
+    def hideText(self):
+        self._qtimer.stop()
+        self.close()
+        # available on Ubuntu by default
+        # disabling for now issue #163
+        # os.system('notify-send "Tigger" "Information copied to clipboard"')
+
+    def eventFilter(self, source, event):
+        # event.type() 25 == QEvent.WindowDeactivate.
+        # In this context, TigToolTip is the top most window and when application has been changed in terms of state,
+        # for example to another application, the TigToolTip needs to be closed, otherwise it will remain on the screen.
+        if event.type() == QEvent.WindowDeactivate:
+            if self._qtimer.isActive():
+                self._qtimer.stop()
+            self.close()
+        return super(TigToolTip, self).eventFilter(source, event)

@@ -26,6 +26,7 @@ import Tigger.Models.Formats
 from PyQt5.Qt import QWidget, QFileDialog, QDialog, QVBoxLayout, \
     Qt, QSize, QSizePolicy, QApplication, QMenu, QMessageBox, QErrorMessage, QMainWindow, QSplitter
 from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtWidgets import QDockWidget
 from Tigger.Models import SkyModel
 from Tigger.Models.Formats import ModelHTML
 
@@ -34,8 +35,9 @@ import TigGUI.kitties.utils
 from TigGUI import AboutDialog
 from TigGUI import Images
 from TigGUI import Widgets
+from TigGUI.Images.ControlDialog import ImageControlDialog
 from TigGUI.Images.Manager import ImageManager
-from TigGUI.Plot.SkyModelPlot import SkyModelPlotter, PersistentCurrier
+from TigGUI.Plot.SkyModelPlot import SkyModelPlotter, PersistentCurrier, LiveImageZoom
 from TigGUI.SkyModelTreeWidget import SkyModelTreeWidget, ModelGroupsTable
 from TigGUI.init import pixmaps, Config
 from TigGUI.kitties.widgets import BusyIndicator
@@ -58,7 +60,7 @@ class MainWindow(QMainWindow):
     signalShowErrorMessage = pyqtSignal([str], [str, int])
     ViewModelColumns = ["name", "RA", "Dec", "type", "Iapp", "I", "Q", "U", "V", "RM", "spi", "shape"]
 
-    def __init__(self, parent, hide_on_close=False):
+    def __init__(self, parent, max_width=None, max_height=None, hide_on_close=False):
         QMainWindow.__init__(self, parent)
         self.signalShowMessage.connect(self.showMessage, type=Qt.QueuedConnection)
         self.signalShowErrorMessage.connect(self.showErrorMessage, type=Qt.QueuedConnection)
@@ -71,12 +73,20 @@ class MainWindow(QMainWindow):
         # init GUI
         self.setWindowTitle("Tigger")
         # self.setIcon(pixmaps.purr_logo.pm())
-        cw = QWidget(self)
-        self.setCentralWidget(cw)
-        cwlo = QVBoxLayout(cw)
+        # central widget setup
+        self.cw = QWidget(self)
+        # control dialog min width ~396
+        self._ctrl_dialog_min_size = 400
+        # profile/zoom window min width ~256  # TODO - compare to zoom live
+        self._profile_and_zoom_widget_min_size = 300
+        # set usable screen space (90% of available)
+        self.max_width = max_width
+        self.max_height = max_height
+        self.setCentralWidget(self.cw)
+        cwlo = QVBoxLayout(self.cw)
         cwlo.setContentsMargins(5, 5, 5, 5)
         # make splitter
-        spl1 = self._splitter1 = QSplitter(Qt.Vertical, cw)
+        spl1 = self._splitter1 = QSplitter(Qt.Vertical, self.cw)
         spl1.setOpaqueResize(False)
         cwlo.addWidget(spl1)
         # Create listview of LSM entries
@@ -278,7 +288,19 @@ class MainWindow(QMainWindow):
             if lo.indexOf(self.imgman) >= 0:
                 lo.removeWidget(self.imgman)
         # assign it to appropriate parent and parent's layout
-        if layout is self.LayoutImage or layout is self.LayoutEmpty:
+        if layout is self.LayoutImage:
+            lo = self._skyplot_stack_lo
+            self.setMaximumSize(self.max_width, self.max_height)
+            self.setBaseSize(self.max_width, self.max_height)
+            size_policy = QSizePolicy()
+            size_policy.setVerticalPolicy(QSizePolicy.Minimum)
+            size_policy.setHorizontalPolicy(QSizePolicy.Expanding)
+            self.setSizePolicy(size_policy)
+            # set central widget size - workaround for bug #164
+            # self.cw.setFixedSize(self.max_width - self._ctrl_dialog_min_size - self._profile_and_zoom_widget_min_size, self.max_height)
+            # self.cw.setGeometry(0, self.max_width - self._ctrl_dialog_min_size - self._profile_and_zoom_widget_min_size / 2,
+                               # self.max_width - self._ctrl_dialog_min_size - self._profile_and_zoom_widget_min_size, self.max_height)
+        elif layout is self.LayoutEmpty:
             lo = self._skyplot_stack_lo
         else:
             lo = self._grouptab_stack_lo
@@ -288,18 +310,36 @@ class MainWindow(QMainWindow):
         if layout is self.LayoutEmpty:
             self.tw.hide()
             self.grouptab.hide()
-            self.skyplot.show()
+            # self.skyplot.show()
         elif layout is self.LayoutImage:
             self.tw.hide()
             self.grouptab.hide()
             self.skyplot.show()
             # setup dockable state from config file
-            if Config.getbool('liveprofile-show'):
-                self.skyplot._liveprofile.setVisible(True)
-                self.skyplot._dockable_liveprofile.setVisible(True)
             if Config.getbool('livezoom-show'):
                 self.skyplot._livezoom.setVisible(True)
                 self.skyplot._dockable_livezoom.setVisible(True)
+                self.addDockWidget(Qt.LeftDockWidgetArea, self.skyplot._dockable_livezoom)
+            if Config.getbool('liveprofile-show'):
+                self.skyplot._liveprofile.setVisible(True)
+                self.skyplot._dockable_liveprofile.setVisible(True)
+                self.addDockWidget(Qt.LeftDockWidgetArea, self.skyplot._dockable_liveprofile)
+
+            # resize dock areas
+            widget_list = self.findChildren(QDockWidget)
+            size_list = []
+            result = []
+            for widget in widget_list:
+                if not isinstance(widget.bind_widget, ImageControlDialog):
+                    size_list.append(widget.bind_widget.width())
+                    result.append(widget)
+                    dprint(2, f"{widget} width {widget.width()}")
+                    dprint(2, f"{widget} bind_widget width {widget.bind_widget.width()}")
+                    if isinstance(widget.bind_widget, LiveImageZoom):
+                        widget.bind_widget.setMinimumWidth(widget.width())
+            widget_list = result
+            # resize dock areas
+            self.resizeDocks(widget_list, size_list, Qt.Horizontal)
         elif layout is self.LayoutImageModel:
             self.tw.show()
             self.grouptab.show()

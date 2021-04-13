@@ -27,40 +27,22 @@ Automatically installed Python dependencies:
 System dependencies
 -------------------
 
-* PyQt 5.14.1 (or 5.15.x)
+* PyQt 5.14.1 (or 5.15.2)
 * Qwt 6.1.4 (or 6.1.5)
-* PyQt-Qwt 1.02.00
+* PyQt-Qwt 1.02.02
 
-These are already present in most Linux distributions. Please note that, this package **does not** use the version of PyQt 5 that is installable from PyPI.
+These are already present in most Linux distributions. Please note that, this package **does not** use the versions of PyQt 5 and PyQt-Qwt that are installable from PyPI.
 
-Install from source on Ubuntu 20.04
------------------------------------
+Install from source on Ubuntu 20.04 with installation script
+----------------------------------------------------------
 
-To install the system dependencies on Ubuntu 20.04 you can run::
-
-    sudo apt install python3-pyqt5.qwt python3-pyqt5.qtsvg python3-pyqt5.qtopengl
-
-Then build the source::
-
-    git clone https://github.com/razman786/tigger_py5.git
-    cd tigger_py5
-    python3 setup.py install --user
-
-Install from source on Ubuntu 18.04
------------------------------------
-
-To install on Ubuntu 18.04, first clone the repository::
+Download the Tigger repository::
 
     git clone https://github.com/razman786/tigger_py5.git
 
-Install the Ubuntu 18.04 Qwt Pyhton 3 pacakge::
+Run the installation script and enter ``sudo`` password when prompted::
 
-    cd tigger_py5/ubuntu_bionic_deb_pkg
-    sudo dpkg -i python3-pyqt5.qwt_1.00.00-1_amd64.deb
-    sudo apt -f install
-    sudo apt install python3-pyqt5.qtsvg python3-pyqt5.qtopengl
-    cd ..
-    python3 setup.py install --user
+    ./install_tigger_ubuntu_20_04.sh
 
 Running Tigger
 ==============
