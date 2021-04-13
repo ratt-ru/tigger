@@ -27,9 +27,9 @@ Automatically installed Python dependencies:
 System dependencies
 -------------------
 
-* PyQt 5.14.1 (or 5.15.x)
+* PyQt 5.14.1 (or 5.15.2)
 * Qwt 6.1.4 (or 6.1.5)
-* PyQt-Qwt 1.02.00
+* PyQt-Qwt 1.02.02
 
 These are already present in most Linux distributions. Please note that, this package **does not** use the version of PyQt 5 that is installable from PyPI.
 
