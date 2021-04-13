@@ -31,7 +31,7 @@ System dependencies
 * Qwt 6.1.4 (or 6.1.5)
 * PyQt-Qwt 1.02.02
 
-These are already present in most Linux distributions. Please note that, this package **does not** use the version of PyQt 5 that is installable from PyPI.
+These are already present in most Linux distributions. Please note that, this package **does not** use the versions of PyQt 5 and PyQt-Qwt that are installable from PyPI.
 
 Install from source on Ubuntu 20.04 with installation script
 ----------------------------------------------------------
