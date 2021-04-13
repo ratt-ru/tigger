@@ -365,10 +365,12 @@ class ImageController(QFrame):
                     if self._dockable_colour_ctrl is not widget:  # check not itself
                         # add dock widget in tab on top of current widget in right area
                         self.parent().mainwin.tabifyDockWidget(widget, self._dockable_colour_ctrl)
+                        self.parent().mainwin.resizeDocks([widget], [widget.bind_widget.width()], Qt.Horizontal)
             elif self.parent().mainwin.dockWidgetArea(
                     widget) == 0:  # if not in any dock area assume we have new dock widget
                 # no previous widget in this area then add
                 self.parent().mainwin.addDockWidget(Qt.RightDockWidgetArea, self._dockable_colour_ctrl)
+                self.parent().mainwin.resizeDocks([widget], [widget.bind_widget.width()], Qt.Horizontal)
 
     def removeDockWidget(self):
         # remove image control dock widget
