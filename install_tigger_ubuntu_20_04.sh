@@ -10,6 +10,7 @@ sudo apt -y install pyqt5-dev pyqt5-dev-tools python3-pyqt5 libqwt-qt5-dev libqw
 
 # compile PyQt-Qwt
 cd /tmp &&
+rm -rf PyQt-Qwt 
 git clone https://github.com/razman786/PyQt-Qwt.git &&
 cd PyQt-Qwt &&
 git checkout ubuntu_zoomstack &&
@@ -17,7 +18,6 @@ QT_SELECT=qt5 python3 configure.py --qwt-incdir=/usr/include/qwt --qwt-libdir=/u
 make -j4 && 
 sudo make install &&
 cd /tmp &&
-mv PyQt-Qwt old_PyQt-Qwt &&
 cd "${tigger_pwd}" &&
 
 # install Tigger
