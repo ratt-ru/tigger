@@ -13,7 +13,7 @@ cd /tmp &&
 rm -rf PyQt-Qwt 
 git clone https://github.com/razman786/PyQt-Qwt.git &&
 cd PyQt-Qwt &&
-git checkout ubuntu_zoomstack &&
+git checkout next_version &&
 QT_SELECT=qt5 python3 configure.py --qwt-incdir=/usr/include/qwt --qwt-libdir=/usr/lib --qwt-lib=qwt-qt5 && 
 make -j4 && 
 sudo make install &&
