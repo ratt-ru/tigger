@@ -2028,7 +2028,7 @@ class SkyModelPlotter(QWidget):
             dprint(1, "using projection from image", self._image.name)
             ra, dec = self.projection.radec(0, 0)
         else:
-            self.projection = Projection.SinWCS(*self.model.fieldCenter())
+            self.projection = Projection.FITSWCS_static(*self.model.fieldCenter())
             dprint(1, "using default Sin projection")
         # compute lm: dict from source ID to l,m tuple
         if self.model:
