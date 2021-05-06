@@ -26,7 +26,7 @@
 
 import TigGUI.kitties.utils
 
-__version__ = "1.5.0"
+__version__ = "1.6.0"
 
 release_string = __version__
 svn_revision_string = __version__

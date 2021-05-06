@@ -4,7 +4,7 @@ from __future__ import print_function
 from setuptools import setup, find_packages
 from pathlib import Path
 
-__version__ = "1.5.0"
+__version__ = "1.6.0"
 
 # PyQt has not been added here are it needs to be installed via apt-get instead to support Qwt.
 # Versions below are set to astLib 0.11.6 tested and compatible versions found
