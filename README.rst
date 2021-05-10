@@ -18,7 +18,7 @@ From source with Ubuntu 20.04
 Python dependencies
 ^^^^^^^^^^^^^^^^^^^
 
-* Tigger-LSM v1.7.0 - please go here <https://github.com/ska-sa/tigger_lsm> and install this first.
+* Tigger-LSM v1.7.0 - please go here <https://github.com/ska-sa/tigger-lsm> and install this first.
 
 Automatically installed Python dependencies:
 
