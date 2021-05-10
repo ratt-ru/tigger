@@ -1,4 +1,4 @@
-DOCKER_REPO=radioastro/tigger:1.5.0
+DOCKER_REPO=radioastro/tigger:1.6.0
 
 .PHONY: build clean
 

@@ -28,8 +28,6 @@ package_data = {'TigGUI': [
 }
 
 
-
-
 setup(
     name="astro-tigger",
     version=__version__,

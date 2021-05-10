@@ -2,6 +2,17 @@
 Tigger Changelog
 ================
 
+1.6.0
+=====
+
+* Version bump in preparation for release
+* Dependent on latest PyQt-Qwt from GitHub
+* Updates to tigger-lsm API calls
+* Fixes bug with window size and dockable widgets
+* Added Ubuntu 20.04 installation script
+* Various bug fixes
+* Various code tidying
+
 1.5.0 beta
 ==========
 
