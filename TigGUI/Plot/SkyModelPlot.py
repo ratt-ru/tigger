@@ -265,7 +265,7 @@ class ToolDialog(QDialog):
         self._closing = False
         self._write_config = curry(Config.set, "%s-show" % configname)
         qa.triggered[bool].connect(self._write_config)
-        self.signalIsVisible.connect(qa.setChecked)  # TODO - this needs checking
+        self.signalIsVisible.connect(qa.setChecked)
 
     def getShowQAction(self):
         return self._qa_show
@@ -383,7 +383,7 @@ class LiveImageZoom(ToolDialog):
             self._zoomplot.axisWidget(axis).show()
             text = QwtText(title)
             text.setFont(font)
-            self._zoomplot.axisWidget(axis).setTitle(text.text())  # TODO - check QwtText error
+            self._zoomplot.axisWidget(axis).setTitle(text.text())
         self._zoomplot.setAxisLabelRotation(QwtPlot.yLeft, -90)
         self._zoomplot.setAxisLabelAlignment(QwtPlot.yLeft, Qt.AlignVCenter)
         self._zoomplot.setAxisLabelRotation(QwtPlot.yRight, 90)
@@ -463,7 +463,6 @@ class LiveImageZoom(ToolDialog):
         # reset window size
         self._lo0.update()
         self.resize(self._lo0.minimumSize())
-        print(self._lo0.minimumSize())
         self.livezoom_resize_signal.emit(self._lo0.minimumSize())
 
     def _getZoomSlice(self, ix, nx):
@@ -499,9 +498,12 @@ class LiveImageZoom(ToolDialog):
         iy0, iy1, zy0, zy1 = self._getZoomSlice(iy, ny)
         if ix0 < nx and ix1 >= 0 and iy0 < ny and iy1 >= 0:
             if self._showzoom.isChecked():
+                # There was an error here when using zoom window zoom buttons
+                # (TypeError: slice indices must be integers or None or have an __index__ method).
+                # Therefore indexes have been cast as int()
                 self._data.mask[...] = False
                 self._data.mask[:int(zx0), ...] = True
-                self._data.mask[int(zx1):, ...] = True  # TODO - error here when using zoom window zoom buttons (TypeError: slice indices must be integers or None or have an __index__ method)
+                self._data.mask[int(zx1):, ...] = True
                 self._data.mask[..., :int(zy0)] = True
                 self._data.mask[..., int(zy1):] = True
                 # copy & colorize region
@@ -583,7 +585,6 @@ class LiveProfile(ToolDialog):
         self._profplot.setAxisLabelAlignment(QwtPlot.yLeft, Qt.AlignVCenter)
         self._profplot.plotLayout().setAlignCanvasToScales(True)
         lo0.addWidget(self._profplot, 0)
-        # TODO - investigate these size settings for dynamic adjustment
         self._profplot.setMaximumHeight(256)
         self._profplot.setMinimumHeight(56)
         # self._profplot.setMinimumWidth(256)
@@ -703,7 +704,7 @@ class SkyModelPlotter(QWidget):
         layout is updated of the plot is zoomed
         """
 
-        updateLayoutEvent = pyqtSignal()  # TODO - check where this connects and if working correctly
+        updateLayoutEvent = pyqtSignal()
         updateCurrentPlot = pyqtSignal()
 
         def __init__(self, mainwin, skymodelplotter, parent):
@@ -795,7 +796,6 @@ class SkyModelPlotter(QWidget):
         def clearDrawCache(self):
             self._draw_cache = {}
 
-        # TODO - this method is not in the original code
         def updatePlot(self):
             self.replot()
 
@@ -1016,7 +1016,7 @@ class SkyModelPlotter(QWidget):
             text = self._track_callback and self._track_callback(pos)
             if text is None:
                 self._text.setText(self._label)
-                return self._text  # if self.isActive() else self._text_inactive  #TODO - check this return
+                return self._text  # if self.isActive() else self._text_inactive
             else:
                 if not isinstance(text, QwtText):
                     if self._label:
@@ -1212,7 +1212,7 @@ class SkyModelPlotter(QWidget):
         for ea_action in list_of_actions:
             if ea_action.text() == 'Show live zoom && cross-sections':
                 self._dockable_livezoom.setVisible(False)
-                self._mainwin.setMaximumWidth(self._mainwin.width() - self._dockable_livezoom.width())
+                self._mainwin.setMaximumWidth(self._mainwin.width() + self._dockable_livezoom.width())
                 ea_action.setChecked(False)
 
     def liveprofile_dockwidget_closed(self):
@@ -1220,7 +1220,7 @@ class SkyModelPlotter(QWidget):
         for ea_action in list_of_actions:
             if ea_action.text() == 'Show profiles':
                 self._dockable_liveprofile.setVisible(False)
-                self._mainwin.setMaximumWidth(self._mainwin.width() - self._dockable_liveprofile.width())
+                self._mainwin.setMaximumWidth(self._mainwin.width() + self._dockable_liveprofile.width())
                 ea_action.setChecked(False)
 
     def liveprofile_dockwidget_toggled(self):
@@ -1229,7 +1229,7 @@ class SkyModelPlotter(QWidget):
                 self._dockable_liveprofile.setFloating(False)
             else:
                 self._dockable_liveprofile.setFloating(True)
-                self._mainwin.setMaximumWidth(self._mainwin.width() - self._dockable_liveprofile.width())
+                self._mainwin.setMaximumWidth(self._mainwin.width() + self._dockable_liveprofile.width())
 
     def livezoom_dockwidget_toggled(self):
         if self._dockable_livezoom.isVisible():
@@ -1237,33 +1237,7 @@ class SkyModelPlotter(QWidget):
                 self._dockable_livezoom.setFloating(False)
             else:
                 self._dockable_livezoom.setFloating(True)
-                self._mainwin.setMaximumWidth(self._mainwin.width() - self._dockable_livezoom.width())
-
-    # TODO - tidy - no longer used?
-    def profiles_dockwidget_state_changed(self, visible):
-        list_of_actions = self._menu.actions()
-        for ea_action in list_of_actions:
-            if ea_action.text() == 'Show profiles':
-                if visible:
-                    ea_action.setChecked(True)
-                    self._mainwin.addDockWidget(Qt.LeftDockWidgetArea, self._dockable_liveprofile)
-                else:
-                    if self._dockable_liveprofile.isVisible():
-                        self._dockable_liveprofile.close()
-                        ea_action.setChecked(False)
-
-    # TODO - tidy - no longer used?
-    def livezooom_dockwidget_state_changed(self, visible):
-        list_of_actions = self._menu.actions()
-        for ea_action in list_of_actions:
-            if ea_action.text() == 'Show live zoom && cross-sections':
-                if visible:
-                    ea_action.setChecked(True)
-                    self._mainwin.addDockWidget(Qt.LeftDockWidgetArea, self._dockable_livezoom)
-                else:
-                    if self._dockable_livezoom.isVisible():
-                        self._dockable_livezoom.close()
-                        ea_action.setChecked(False)
+                self._mainwin.setMaximumWidth(self._mainwin.width() + self._dockable_livezoom.width())
 
     def setupShowMessages(self, _signal):
         self.plotShowMessage = _signal
@@ -1330,7 +1304,6 @@ class SkyModelPlotter(QWidget):
         self._tracker_profile = self.PlotPicker(self.plot.canvas(), "", mode=QwtPickerClickPointMachine(),
                                         select_callback=self._trackCoordinatesProfile)
         # zoom picker
-        # TODO - check getUpdateSignal() - this is new
         self._zoomer = self.PlotZoomer(self.plot.canvas(), self.plot.getUpdateSignal(), label="zoom")
         self._zoomer_pen = makeDualColorPen("navy", "yellow")
         self._zoomer.setRubberBandPen(self._zoomer_pen)
@@ -1400,9 +1373,6 @@ class SkyModelPlotter(QWidget):
             picker.setEnabled(mpat[0] or kpat[0])
         elif mpat[0] or kpat[0]:
             picker.setEnabled(True)
-        # TODO - check below
-        # picker.setMousePattern(patt, *mpat)
-        # picker.setKeyPattern(patt, *kpat)
         mouse_button, mouse_mod = mpat
         picker.setMousePattern(patt, mouse_button, Qt.KeyboardModifier(mouse_mod))
         key_button, key_mod = kpat
@@ -2028,7 +1998,7 @@ class SkyModelPlotter(QWidget):
             dprint(1, "using projection from image", self._image.name)
             ra, dec = self.projection.radec(0, 0)
         else:
-            self.projection = Projection.SinWCS(*self.model.fieldCenter())
+            self.projection = Projection.FITSWCS_static(*self.model.fieldCenter())
             dprint(1, "using default Sin projection")
         # compute lm: dict from source ID to l,m tuple
         if self.model:
@@ -2046,7 +2016,6 @@ class SkyModelPlotter(QWidget):
                 extent[iext][1] += margin
                 dprint(2, "plot extents for model", extent)
         # account for bounding rects of images
-        # TODO: check that images are visible
         for img in ((self._imgman and self._imgman.getImages()) or []):
             ext = img.getExtents()
             dprint(2, "image extents", ext)

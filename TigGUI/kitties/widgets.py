@@ -78,7 +78,6 @@ class ClickableTreeWidget(QTreeWidget):
             menu.addSection("Menu")
             action = menu.addAction(name)
             action.setEnabled(False)
-            # action.triggered.connect(...)  # TODO - connect triggered to some function
             menu.exec_(self.mapToGlobal(pos))
 
             # old line below fails

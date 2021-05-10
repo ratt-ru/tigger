@@ -78,14 +78,15 @@ def main():
     QApplication.setAttribute(Qt.AA_UseDesktopOpenGL, True)  # force the use of OpenGL
     QApplication.setDesktopSettingsAware(True)  # App will use System fonts, colours etc...
     app = QApplication(sys.argv)
-    app.setStyle(QStyleFactory.create("Fusion"))  # TODO - even after adding this it still causes a style warning from Qt
+    # Even after setting style to Fusion, it still causes a style warning from Qt
+    app.setStyle(QStyleFactory.create("Fusion"))
     # get screen size
     screen = app.primaryScreen()
     size = screen.size()
     usable_screen = screen.availableGeometry()
     print(f"Detected screen size {size.width()}x{size.height()}, usable area {usable_screen.width()}x{usable_screen.height()}")
 
-    # setup Dark Mode QPalette - initial setup  # TODO - still needs tweaking.
+    # setup Dark Mode QPalette - initial setup
     palette = QPalette()
     palette.setColor(QPalette.Window, QColor(53, 53, 53))
     palette.setColor(QPalette.WindowText, Qt.white)
@@ -190,7 +191,7 @@ def main():
         mainwin.close()
 
     import signal
-    signal.signal(signal.SIGINT, sigint_handler)  # TODO -check this is still valid
+    signal.signal(signal.SIGINT, sigint_handler)  # TODO -check this is still valid/used
     dprint(1, "added signal handler")
 
     # splash.finish(mainwin)

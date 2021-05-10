@@ -124,7 +124,6 @@ class SourceSelectorDialog(QDialog):
         alltags = set(self.model.tagnames)
         alltags -= NonSortingTags
         # make list of tags from StandardTags that are present in model
-        # TODO - check sorttags outside of init()
         self.sorttags = [tag for tag in StandardTags if tag in alltags or tag in TagAccessors]
         # append model tags that were not in StandardTags
         self.sorttags += list(alltags - set(self.sorttags))
@@ -297,7 +296,7 @@ def show_source_selector(mainwin, model):
     dialog = getattr(mainwin, '_source_selector_dialog', None)
     if not dialog:
         dialog = mainwin._source_selector_dialog = SourceSelectorDialog(mainwin)
-        mainwin.modelChanged.connect(dialog.setModel)  # TODO - old signal conncets to mainwin model
+        mainwin.modelChanged.connect(dialog.setModel)
         mainwin.closing.connect(dialog.close)
     dialog.setModel(model)
     # show dialog

@@ -26,6 +26,7 @@ import Tigger.Models.Formats
 from PyQt5.Qt import QWidget, QFileDialog, QDialog, QVBoxLayout, \
     Qt, QSize, QSizePolicy, QApplication, QMenu, QMessageBox, QErrorMessage, QMainWindow, QSplitter
 from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QDockWidget
 from Tigger.Models import SkyModel
 from Tigger.Models.Formats import ModelHTML
@@ -71,14 +72,14 @@ class MainWindow(QMainWindow):
         for icol, col in enumerate(self.ViewModelColumns):
             setattr(self, "Column%s" % col.capitalize(), icol)
         # init GUI
-        self.setWindowTitle("Tigger")
-        # self.setIcon(pixmaps.purr_logo.pm())
+        self.setWindowTitle(f"Tigger v{TigGUI.__version__}")
+        self.setWindowIcon(QIcon(pixmaps.purr_logo.pm()))
         # central widget setup
         self.cw = QWidget(self)
-        # control dialog min width ~396
-        self._ctrl_dialog_min_size = 400
-        # profile/zoom window min width ~256  # TODO - compare to zoom live
-        self._profile_and_zoom_widget_min_size = 300
+        # The actual min width of the control dialog is ~396
+        self._ctrl_dialog_min_size = 400  # approx value
+        # The actual min width of the profile/zoom windows is ~256
+        self._profile_and_zoom_widget_min_size = 300  # approx value
         # set usable screen space (90% of available)
         self.max_width = max_width
         self.max_height = max_height
@@ -106,9 +107,9 @@ class MainWindow(QMainWindow):
         self.skyplot.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
         self._skyplot_stack_lo.addWidget(self.skyplot, 1000)
         self.skyplot.hide()
-        self.skyplot.imagesChanged.connect(self._imagesChanged)  # (raz) - checked
-        self.skyplot.setupShowMessages(self.signalShowMessage)  # (raz) - checked
-        self.skyplot.setupShowErrorMessages(self.signalShowErrorMessage)  # (raz) - checked
+        self.skyplot.imagesChanged.connect(self._imagesChanged)
+        self.skyplot.setupShowMessages(self.signalShowMessage)
+        self.skyplot.setupShowErrorMessages(self.signalShowErrorMessage)
 
         self._grouptab_stack = QWidget(spl2)
         self._grouptab_stack_lo = lo = QVBoxLayout(self._grouptab_stack)
@@ -116,7 +117,7 @@ class MainWindow(QMainWindow):
         # add groupings table
         self.grouptab = ModelGroupsTable(self._grouptab_stack)
         self.grouptab.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        self.hasSkyModel.connect(self.grouptab.setEnabled)  # (raz) - checked
+        self.hasSkyModel.connect(self.grouptab.setEnabled)
         lo.addWidget(self.grouptab, 1000)
         lo.addStretch(1)
         self.grouptab.hide()
@@ -127,7 +128,7 @@ class MainWindow(QMainWindow):
         self.imgman.setShowMessageSignal(self.signalShowMessage)
         self.imgman.setShowErrorMessageSignal(self.signalShowErrorMessage)
         self.skyplot.setImageManager(self.imgman)
-        self.imgman.imagesChanged.connect(self._imagesChanged)  # (raz) - checked
+        self.imgman.imagesChanged.connect(self._imagesChanged)
 
         # enable status line
         self.statusBar().show()
@@ -137,18 +138,18 @@ class MainWindow(QMainWindow):
         file_menu = menubar.addMenu("&File")
         qa_open = file_menu.addAction("&Open model...", self._openFileCallback, Qt.CTRL + Qt.Key_O)
         qa_merge = file_menu.addAction("&Merge in model...", self._mergeFileCallback, Qt.CTRL + Qt.SHIFT + Qt.Key_O)
-        self.hasSkyModel.connect(qa_merge.setEnabled)  # (raz) - checked
+        self.hasSkyModel.connect(qa_merge.setEnabled)
         file_menu.addSeparator()
         qa_save = file_menu.addAction("&Save model", self.saveFile, Qt.CTRL + Qt.Key_S)
-        self.isUpdated.connect(qa_save.setEnabled)  # (raz) - checked
+        self.isUpdated.connect(qa_save.setEnabled)
         qa_save_as = file_menu.addAction("Save model &as...", self.saveFileAs)
-        self.hasSkyModel.connect(qa_save_as.setEnabled)  # (raz) - checked
+        self.hasSkyModel.connect(qa_save_as.setEnabled)
         qa_save_selection_as = file_menu.addAction("Save selection as...", self.saveSelectionAs)
-        self.hasSelection.connect(qa_save_selection_as.setEnabled)  # (raz) - checked
+        self.hasSelection.connect(qa_save_selection_as.setEnabled)
         file_menu.addSeparator()
-        qa_close = file_menu.addAction("&Close model", self.closeFile, Qt.CTRL + Qt.Key_W)  # TODO - needs checking
-        self.hasSkyModel.connect(qa_close.setEnabled)  # (raz) - checked
-        qa_quit = file_menu.addAction("Quit", self.close, Qt.CTRL + Qt.Key_Q)  # TODO - needs checking
+        qa_close = file_menu.addAction("&Close model", self.closeFile, Qt.CTRL + Qt.Key_W)
+        self.hasSkyModel.connect(qa_close.setEnabled)
+        qa_quit = file_menu.addAction("Quit", self.close, Qt.CTRL + Qt.Key_Q)
 
         # Image menu
         menubar.addMenu(self.imgman.getMenu())
@@ -159,7 +160,7 @@ class MainWindow(QMainWindow):
         em = QMenu("&LSM", self)
         self._qa_em = menubar.addMenu(em)
         self._qa_em.setVisible(False)
-        self.hasSkyModel.connect(self._qa_em.setVisible)  # (raz) - checked
+        self.hasSkyModel.connect(self._qa_em.setVisible)
         self._column_view_menu = QMenu("&Show columns", self)
         self._qa_cv_menu = em.addMenu(self._column_view_menu)
         em.addSeparator()
@@ -168,17 +169,17 @@ class MainWindow(QMainWindow):
         em.addAction("Select b&y attribute...", self._showSourceSelector, Qt.CTRL + Qt.Key_Y)
         em.addSeparator()
         qa_add_tag = em.addAction("&Tag selection...", self.addTagToSelection, Qt.CTRL + Qt.Key_T)
-        self.hasSelection.connect(qa_add_tag.setEnabled)  # (raz) - checked
+        self.hasSelection.connect(qa_add_tag.setEnabled)
         qa_del_tag = em.addAction("&Untag selection...", self.removeTagsFromSelection, Qt.CTRL + Qt.Key_U)
-        self.hasSelection.connect(qa_del_tag.setEnabled)  # (raz) - checked
+        self.hasSelection.connect(qa_del_tag.setEnabled)
         qa_del_sel = em.addAction("&Delete selection", self._deleteSelection)
-        self.hasSelection.connect(qa_del_sel.setEnabled)  # (raz) - checked
+        self.hasSelection.connect(qa_del_sel.setEnabled)
 
         # Tools menu
         tm = self._tools_menu = QMenu("&Tools", self)
         self._qa_tm = menubar.addMenu(tm)
         self._qa_tm.setVisible(False)
-        self.hasSkyModel.connect(self._qa_tm.setVisible)  # (raz) - checked
+        self.hasSkyModel.connect(self._qa_tm.setVisible)
 
         # Help menu
         menubar.addSeparator()
@@ -453,8 +454,8 @@ class MainWindow(QMainWindow):
             self.hasSelection.emit(False)
             self.isUpdated.emit(False)
             self.model.enableSignals()
-            self.model.connect("updated", self._indicateModelUpdated)  # TODO - needs checking
-            self.model.connect("selected", self._updateModelSelection)  # TODO - needs checking
+            self.model.connect("updated", self._indicateModelUpdated)
+            self.model.connect("selected", self._updateModelSelection)
             # pass to children
             self.tw.setModel(self.model)
             self.grouptab.setModel(self.model)
@@ -476,7 +477,7 @@ class MainWindow(QMainWindow):
         if not self._open_file_dialog:
             filters = ";;".join(
                 ["%s (%s)" % (name, " ".join(patterns)) for name, patterns, func in self._load_file_types])
-            dialog = self._open_file_dialog = QFileDialog(self, "Open sky model", ".", filters)  # TODO - (raz) - parent=self here causes GTK warning.
+            dialog = self._open_file_dialog = QFileDialog(self, "Open sky model", ".", filters)
             dialog.setFileMode(QFileDialog.ExistingFile)
             dialog.setModal(True)
             dialog.filesSelected['QStringList'].connect(self.openFile)
@@ -718,7 +719,6 @@ class MainWindow(QMainWindow):
 
     def removeTagsFromSelection(self):
         if not hasattr(self, '_remove_tag_dialog'):
-            # TODO - check line below _remote_tag_dialog outside of init()
             self._remove_tag_dialog = Widgets.SelectTagsDialog(self, modal=True, caption="Remove Tags",
                                                                ok_button="Remove")
         # get set of all tags in selected sources
