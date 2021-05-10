@@ -71,7 +71,7 @@ class MainWindow(QMainWindow):
         for icol, col in enumerate(self.ViewModelColumns):
             setattr(self, "Column%s" % col.capitalize(), icol)
         # init GUI
-        self.setWindowTitle("Tigger")
+        self.setWindowTitle(f"Tigger v{TigGUI.__version__}")
         # self.setIcon(pixmaps.purr_logo.pm())
         # central widget setup
         self.cw = QWidget(self)
