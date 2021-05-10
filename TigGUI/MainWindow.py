@@ -107,9 +107,9 @@ class MainWindow(QMainWindow):
         self.skyplot.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
         self._skyplot_stack_lo.addWidget(self.skyplot, 1000)
         self.skyplot.hide()
-        self.skyplot.imagesChanged.connect(self._imagesChanged)  # (raz) - checked
-        self.skyplot.setupShowMessages(self.signalShowMessage)  # (raz) - checked
-        self.skyplot.setupShowErrorMessages(self.signalShowErrorMessage)  # (raz) - checked
+        self.skyplot.imagesChanged.connect(self._imagesChanged)
+        self.skyplot.setupShowMessages(self.signalShowMessage)
+        self.skyplot.setupShowErrorMessages(self.signalShowErrorMessage)
 
         self._grouptab_stack = QWidget(spl2)
         self._grouptab_stack_lo = lo = QVBoxLayout(self._grouptab_stack)
@@ -117,7 +117,7 @@ class MainWindow(QMainWindow):
         # add groupings table
         self.grouptab = ModelGroupsTable(self._grouptab_stack)
         self.grouptab.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        self.hasSkyModel.connect(self.grouptab.setEnabled)  # (raz) - checked
+        self.hasSkyModel.connect(self.grouptab.setEnabled)
         lo.addWidget(self.grouptab, 1000)
         lo.addStretch(1)
         self.grouptab.hide()
@@ -128,7 +128,7 @@ class MainWindow(QMainWindow):
         self.imgman.setShowMessageSignal(self.signalShowMessage)
         self.imgman.setShowErrorMessageSignal(self.signalShowErrorMessage)
         self.skyplot.setImageManager(self.imgman)
-        self.imgman.imagesChanged.connect(self._imagesChanged)  # (raz) - checked
+        self.imgman.imagesChanged.connect(self._imagesChanged)
 
         # enable status line
         self.statusBar().show()
@@ -138,17 +138,17 @@ class MainWindow(QMainWindow):
         file_menu = menubar.addMenu("&File")
         qa_open = file_menu.addAction("&Open model...", self._openFileCallback, Qt.CTRL + Qt.Key_O)
         qa_merge = file_menu.addAction("&Merge in model...", self._mergeFileCallback, Qt.CTRL + Qt.SHIFT + Qt.Key_O)
-        self.hasSkyModel.connect(qa_merge.setEnabled)  # (raz) - checked
+        self.hasSkyModel.connect(qa_merge.setEnabled)
         file_menu.addSeparator()
         qa_save = file_menu.addAction("&Save model", self.saveFile, Qt.CTRL + Qt.Key_S)
-        self.isUpdated.connect(qa_save.setEnabled)  # (raz) - checked
+        self.isUpdated.connect(qa_save.setEnabled)
         qa_save_as = file_menu.addAction("Save model &as...", self.saveFileAs)
-        self.hasSkyModel.connect(qa_save_as.setEnabled)  # (raz) - checked
+        self.hasSkyModel.connect(qa_save_as.setEnabled)
         qa_save_selection_as = file_menu.addAction("Save selection as...", self.saveSelectionAs)
-        self.hasSelection.connect(qa_save_selection_as.setEnabled)  # (raz) - checked
+        self.hasSelection.connect(qa_save_selection_as.setEnabled)
         file_menu.addSeparator()
         qa_close = file_menu.addAction("&Close model", self.closeFile, Qt.CTRL + Qt.Key_W)
-        self.hasSkyModel.connect(qa_close.setEnabled)  # (raz) - checked
+        self.hasSkyModel.connect(qa_close.setEnabled)
         qa_quit = file_menu.addAction("Quit", self.close, Qt.CTRL + Qt.Key_Q)
 
         # Image menu
@@ -160,7 +160,7 @@ class MainWindow(QMainWindow):
         em = QMenu("&LSM", self)
         self._qa_em = menubar.addMenu(em)
         self._qa_em.setVisible(False)
-        self.hasSkyModel.connect(self._qa_em.setVisible)  # (raz) - checked
+        self.hasSkyModel.connect(self._qa_em.setVisible)
         self._column_view_menu = QMenu("&Show columns", self)
         self._qa_cv_menu = em.addMenu(self._column_view_menu)
         em.addSeparator()
@@ -169,11 +169,11 @@ class MainWindow(QMainWindow):
         em.addAction("Select b&y attribute...", self._showSourceSelector, Qt.CTRL + Qt.Key_Y)
         em.addSeparator()
         qa_add_tag = em.addAction("&Tag selection...", self.addTagToSelection, Qt.CTRL + Qt.Key_T)
-        self.hasSelection.connect(qa_add_tag.setEnabled)  # (raz) - checked
+        self.hasSelection.connect(qa_add_tag.setEnabled)
         qa_del_tag = em.addAction("&Untag selection...", self.removeTagsFromSelection, Qt.CTRL + Qt.Key_U)
-        self.hasSelection.connect(qa_del_tag.setEnabled)  # (raz) - checked
+        self.hasSelection.connect(qa_del_tag.setEnabled)
         qa_del_sel = em.addAction("&Delete selection", self._deleteSelection)
-        self.hasSelection.connect(qa_del_sel.setEnabled)  # (raz) - checked
+        self.hasSelection.connect(qa_del_sel.setEnabled)
 
         # Tools menu
         tm = self._tools_menu = QMenu("&Tools", self)
