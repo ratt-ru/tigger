@@ -6,15 +6,15 @@ from pathlib import Path
 
 __version__ = "1.6.0"
 
-# PyQt has not been added here are it needs to be installed via apt-get instead to support Qwt.
-# Versions below are set to astLib 0.11.6 tested and compatible versions found
+# PyQt (5.15.x) has not been added here are it needs to be installed via apt-get instead to support Qwt.
+# requirements below do not have versions for upstream packaging processes, but tested and compatible versions are given
 requirements = [
-    'numpy',  # set to astLib recommended
-    'scipy',  # recommends 1.3.1, this fails, next available version
-    'astlib',  # latest version that uses astropy WCS at the backend
-    'astropy',  # recommends 3.2.1, this fails, next available version (last of 3.x)
+    'numpy',  # tested with version 1.19.4
+    'scipy',  # tested with versions 1.5.2 and 1.6.2
+    'astlib',  # tested with version 0.11.6
+    'astropy',  # tested with 4.2
     'astro_tigger_lsm==1.7.0',  # PyQt5 version of astro-tigger-lsm
-    'configparser',
+    'configparser',  # tested with version 5.0.1
 ]
 
 scripts = [
