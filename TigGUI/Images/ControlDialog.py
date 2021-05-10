@@ -492,13 +492,13 @@ class ImageControlDialog(QDialog):
             QwtPlotPicker.__init__(self, QwtPlot.xBottom, QwtPlot.yRight, rubber_band, tracker_mode,
                                    plot.canvas())
 
-            self.setStateMachine(mode)  # TODO - check other pickers set this too
+            self.setStateMachine(mode)
             self.plot = plot
             self.label = label
             self.track = track
             self.color = QColor(color)
             self.setRubberBandPen(QPen(self.color))
-            self.setRubberBand(rubber_band)  # TODO - check other pickers set this too
+            self.setRubberBand(rubber_band)
 
         def trackerText(self, pos):
             x, y = self.plot.invTransform(QwtPlot.xBottom, pos.x()), self.plot.invTransform(QwtPlot.yLeft, pos.y())

@@ -57,7 +57,7 @@ class TiggerPlotMarker(QwtPlotMarker):
         return QwtPlotMarker.setValue(self, float(x), float(y))
 
 
-class FloatValidator(QValidator):  # TODO - check validator is working
+class FloatValidator(QValidator):
     """QLineEdit validator for float items in standard or scientific notation"""
     re_intermediate = re.compile("^-?([0-9]*)\.?([0-9]*)([eE]([+-])?[0-9]*)?$")
 

@@ -46,7 +46,7 @@ class ImageManager(QWidget):
     showErrorMessage = pyqtSignal(str, int)
     imagesChanged = pyqtSignal()
     imageRaised = pyqtSignal(FITSImagePlotItem)
-    imagePlotRaised = pyqtSignal()  # TODO - Partially fixed needs testing.
+    imagePlotRaised = pyqtSignal()
 
     def __init__(self, *args):
         QWidget.__init__(self, *args)
@@ -314,7 +314,7 @@ class ImageManager(QWidget):
                 ic.setImageVisible(not j or bool(self._qa_plot_all.isChecked()))
             # issue replot signal fixed with assumption that this signal is now correct according to the old version
             # self.imageRaised.emit(self._imagecons[0])  # This was the old signal
-            self.imagePlotRaised.emit()  # TODO - this new signal needs checking
+            self.imagePlotRaised.emit()
             self.fastReplot()
         # else simply update labels
         else:
@@ -548,7 +548,7 @@ class ImageManager(QWidget):
         # attach appropriate signals
         ic.imageSignalRepaint.connect(self.replot)
         ic.imageSignalSlice.connect(self.fastReplot)
-        image.connectPlotRiased(self.imagePlotRaised)  # TODO - this signal needs checking
+        image.connectPlotRiased(self.imagePlotRaised)
         ic.imageSignalRaise.connect(self._currier.curry(self.raiseImage, ic))
         ic.imageSignalUnload.connect(self._currier.curry(self.unloadImage, ic))
         ic.imageSignalCenter.connect(self._currier.curry(self.centerImage, ic))

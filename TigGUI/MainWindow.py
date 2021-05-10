@@ -76,10 +76,10 @@ class MainWindow(QMainWindow):
         self.setWindowIcon(QIcon(pixmaps.purr_logo.pm()))
         # central widget setup
         self.cw = QWidget(self)
-        # control dialog min width ~396
-        self._ctrl_dialog_min_size = 400
-        # profile/zoom window min width ~256  # TODO - compare to zoom live
-        self._profile_and_zoom_widget_min_size = 300
+        # The actual min width of the control dialog is ~396
+        self._ctrl_dialog_min_size = 400  # approx value
+        # The actual min width of the profile/zoom windows is ~256
+        self._profile_and_zoom_widget_min_size = 300  # approx value
         # set usable screen space (90% of available)
         self.max_width = max_width
         self.max_height = max_height
@@ -147,9 +147,9 @@ class MainWindow(QMainWindow):
         qa_save_selection_as = file_menu.addAction("Save selection as...", self.saveSelectionAs)
         self.hasSelection.connect(qa_save_selection_as.setEnabled)  # (raz) - checked
         file_menu.addSeparator()
-        qa_close = file_menu.addAction("&Close model", self.closeFile, Qt.CTRL + Qt.Key_W)  # TODO - needs checking
+        qa_close = file_menu.addAction("&Close model", self.closeFile, Qt.CTRL + Qt.Key_W)
         self.hasSkyModel.connect(qa_close.setEnabled)  # (raz) - checked
-        qa_quit = file_menu.addAction("Quit", self.close, Qt.CTRL + Qt.Key_Q)  # TODO - needs checking
+        qa_quit = file_menu.addAction("Quit", self.close, Qt.CTRL + Qt.Key_Q)
 
         # Image menu
         menubar.addMenu(self.imgman.getMenu())
@@ -179,7 +179,7 @@ class MainWindow(QMainWindow):
         tm = self._tools_menu = QMenu("&Tools", self)
         self._qa_tm = menubar.addMenu(tm)
         self._qa_tm.setVisible(False)
-        self.hasSkyModel.connect(self._qa_tm.setVisible)  # (raz) - checked
+        self.hasSkyModel.connect(self._qa_tm.setVisible)
 
         # Help menu
         menubar.addSeparator()
@@ -454,8 +454,8 @@ class MainWindow(QMainWindow):
             self.hasSelection.emit(False)
             self.isUpdated.emit(False)
             self.model.enableSignals()
-            self.model.connect("updated", self._indicateModelUpdated)  # TODO - needs checking
-            self.model.connect("selected", self._updateModelSelection)  # TODO - needs checking
+            self.model.connect("updated", self._indicateModelUpdated)
+            self.model.connect("selected", self._updateModelSelection)
             # pass to children
             self.tw.setModel(self.model)
             self.grouptab.setModel(self.model)
@@ -477,7 +477,7 @@ class MainWindow(QMainWindow):
         if not self._open_file_dialog:
             filters = ";;".join(
                 ["%s (%s)" % (name, " ".join(patterns)) for name, patterns, func in self._load_file_types])
-            dialog = self._open_file_dialog = QFileDialog(self, "Open sky model", ".", filters)  # TODO - (raz) - parent=self here causes GTK warning.
+            dialog = self._open_file_dialog = QFileDialog(self, "Open sky model", ".", filters)
             dialog.setFileMode(QFileDialog.ExistingFile)
             dialog.setModal(True)
             dialog.filesSelected['QStringList'].connect(self.openFile)
@@ -719,7 +719,6 @@ class MainWindow(QMainWindow):
 
     def removeTagsFromSelection(self):
         if not hasattr(self, '_remove_tag_dialog'):
-            # TODO - check line below _remote_tag_dialog outside of init()
             self._remove_tag_dialog = Widgets.SelectTagsDialog(self, modal=True, caption="Remove Tags",
                                                                ok_button="Remove")
         # get set of all tags in selected sources
