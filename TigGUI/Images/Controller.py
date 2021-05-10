@@ -352,7 +352,7 @@ class ImageController(QFrame):
         else:
             self._control_dialog.hide()
             self._dockable_colour_ctrl.setVisible(False)
-            self.parent().mainwin.setMaximumWidth(self.parent().mainwin.width() - self._dockable_colour_ctrl.width())
+            self.parent().mainwin.setMaximumWidth(self.parent().mainwin.width() + self._dockable_colour_ctrl.width())
 
     def addDockWidgetToTab(self):
         # Add dockable widget to main window.
