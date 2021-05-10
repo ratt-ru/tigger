@@ -1,4 +1,4 @@
-echo "Tigger - Ubuntu 20.04 install script"
+echo "Tigger v1.6.0 - Ubuntu 20.04 install script"
 
 tigger_pwd="${PWD}"
 
