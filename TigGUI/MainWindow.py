@@ -26,6 +26,7 @@ import Tigger.Models.Formats
 from PyQt5.Qt import QWidget, QFileDialog, QDialog, QVBoxLayout, \
     Qt, QSize, QSizePolicy, QApplication, QMenu, QMessageBox, QErrorMessage, QMainWindow, QSplitter
 from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QDockWidget
 from Tigger.Models import SkyModel
 from Tigger.Models.Formats import ModelHTML
@@ -72,7 +73,7 @@ class MainWindow(QMainWindow):
             setattr(self, "Column%s" % col.capitalize(), icol)
         # init GUI
         self.setWindowTitle(f"Tigger v{TigGUI.__version__}")
-        # self.setIcon(pixmaps.purr_logo.pm())
+        self.setWindowIcon(QIcon(pixmaps.purr_logo.pm()))
         # central widget setup
         self.cw = QWidget(self)
         # control dialog min width ~396
