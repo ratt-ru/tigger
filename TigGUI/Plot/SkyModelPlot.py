@@ -463,7 +463,6 @@ class LiveImageZoom(ToolDialog):
         # reset window size
         self._lo0.update()
         self.resize(self._lo0.minimumSize())
-        print(self._lo0.minimumSize())
         self.livezoom_resize_signal.emit(self._lo0.minimumSize())
 
     def _getZoomSlice(self, ix, nx):
