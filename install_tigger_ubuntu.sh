@@ -46,7 +46,7 @@ echo "==== Installer has detected Linux distribution as $distro_name $distro_ver
 echo "==== Installing package dependencies... ===="
 
 # install Tigger deps
-sudo apt -y install python3-pyqt5.qtsvg python3-pyqt5.qtopengl &&
+sudo apt -y install python3-pyqt5.qtsvg python3-pyqt5.qtopengl python3-setuptools &&
 
 
 # compile PyQt-Qwt
@@ -106,7 +106,8 @@ then
 	elif [[ $distro_version == "18.04" ]]
 	then
 		echo "==== Installing PyQwt for $distro_name $distro_version... ===="
-		sudo dpkg -i ubuntu_18_04_deb_pkg/python3-pyqt5.qwt_2.00.00-1build1_amd64.deb
+		sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.7 2
+		sudo dpkg -i ubuntu_18_04_deb_pkg/python3-pyqt5.qwt_2.00.00_amd64.deb
 	else
 		echo "==== Error: No PyQt-Qwt package available for $distro_name $distro_version, please try: $0 --source ===="
 		exit 1
