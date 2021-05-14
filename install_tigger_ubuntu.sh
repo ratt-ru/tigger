@@ -48,12 +48,12 @@ echo "==== Installing package dependencies... ===="
 # install Tigger deps
 sudo apt -y install python3-pyqt5.qtsvg python3-pyqt5.qtopengl &&
 
-# install PyQt-Qwt deps
-sudo apt -y install pyqt5-dev pyqt5-dev-tools python3-pyqt5 libqwt-qt5-dev libqwt-headers libqt5opengl5-dev git &&
 
 # compile PyQt-Qwt
 if [[ $build_type == "source" ]]
 then
+    # install PyQt-Qwt deps
+    sudo apt -y install pyqt5-dev pyqt5-dev-tools python3-pyqt5 libqwt-qt5-dev libqwt-headers libqt5opengl5-dev libqt5svg5-dev g++ dpkg-dev git &&
 	if [[ $distro_version == "20.04" ]]
 	then
 		echo "==== Compiling PyQt-Qwt for $distro_name $distro_version... ===="
@@ -75,7 +75,9 @@ then
 		git clone https://github.com/razman786/PyQt-Qwt.git &&
 		cd PyQt-Qwt &&
 		git checkout ubuntu_18_04
-		QT_SELECT=qt5 python3 configure.py --qwt-incdir=/usr/include/qwt --qwt-libdir=/usr/lib --qwt-lib=qwt-qt5 &&
+        cp -a /usr/include/qwt header
+        cp header/qwt*.h header/qwt/
+		QT_SELECT=qt5 python3 configure.py --qwt-incdir=header/qwt --qwt-libdir=/usr/lib --qwt-lib=qwt-qt5 &&
 		make -j4 &&
 		sudo make install &&
 		cd /tmp &&
