@@ -81,7 +81,9 @@ then
 	cd tigger-lsm &&
 	if [[ $distro_version == "18.04" ]]
 	then
-		sudo apt -y install libboost-python-dev casacore* 
+		sudo apt -y install libboost-python-dev casacore* &&
+		pip3 install astropy==4.1
+		pip3 install scipy==1.5.2
 	fi
 	python3 setup.py install --user &&
 	cd /tmp &&
