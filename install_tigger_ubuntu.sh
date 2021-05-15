@@ -3,10 +3,14 @@ echo "==== Tigger v1.6.0 - Ubuntu 20.04 install script ===="
 
 # install via packages by default
 build_type="package"
+
+# install only Tigger GUI by default
 install_type="normal"
 
+# store the location of this dir
 tigger_pwd="${PWD}"
 
+# display help
 display_usage() {
 	echo -e "\nUsage: $0 [OPTION]\n"
 	echo -e "-s, --source     install PyQt-Qwt from source\n"
@@ -32,7 +36,7 @@ then
 
 	if [[ $distro_name == "Ubuntu" ]]
 	then
-		distro_version=$(lsb_release -rs)
+		distro_version=$(lsb_release -rs|sed -e 's/\.//g')
 	else
 		echo "==== Error: Ubuntu Linux not detected, stopping installation ===="
 		exit 1
@@ -44,7 +48,7 @@ fi
 
 echo "==== Installer has detected Linux distribution as $distro_name $distro_version ==== "
 
-# check and install pip3 if needed
+# check for pip3 and install if need be
 if command -v pip3 > /dev/null 
 then
 	echo "==== Installer found pip3... ===="
@@ -79,7 +83,7 @@ then
 	rm -rf tigger-lsm
 	git clone https://github.com/ska-sa/tigger-lsm.git &&
 	cd tigger-lsm &&
-	if [[ $distro_version == "18.04" ]]
+	if [[ $distro_version == "1804" ]]
 	then
 		sudo apt -y install libboost-python-dev casacore* &&
 		pip3 install astropy==4.1
@@ -100,7 +104,7 @@ if [[ $build_type == "source" ]]
 then
     # install PyQt-Qwt deps
     sudo apt -y install pyqt5-dev pyqt5-dev-tools python3-pyqt5 libqwt-qt5-dev libqwt-headers libqt5opengl5-dev libqt5svg5-dev g++ dpkg-dev git &&
-	if [[ $distro_version == "20.04" ]]
+	if [[ $distro_version == "2004" ]]
 	then
 		echo "==== Compiling PyQt-Qwt for $distro_name $distro_version... ===="
 		cd /tmp &&
@@ -113,7 +117,7 @@ then
 		cd /tmp &&
 		cd "${tigger_pwd}"
 
-	elif [[ $distro_version == "18.04" ]]
+	elif [[ $distro_version == "1804" ]]
 	then
 		echo "==== Compiling PyQt-Qwt for $distro_name $distro_version... ===="
 		cd /tmp &&
@@ -145,11 +149,11 @@ fi
 # install PyQt-Qwt package
 if [[ $build_type == "package" ]]
 then
-	if [[ $distro_version == "20.04" ]]
+	if [[ $distro_version == "2004" ]]
 	then
 		echo "==== Installing PyQwt for $distro_name $distro_version... ===="
 		sudo dpkg -i ubuntu_20_04_deb_pkg/python3-pyqt5.qwt_2.00.00-1build1_amd64.deb
-	elif [[ $distro_version == "18.04" ]]
+	elif [[ $distro_version == "1804" ]]
 	then
 		echo "==== Installing PyQwt for $distro_name $distro_version... ===="
 		sudo dpkg -i ubuntu_18_04_deb_pkg/python3-pyqt5.qwt_2.00.00_amd64.deb
@@ -159,15 +163,28 @@ then
 	fi
 fi
 
-# Astropy =< 4.1 and scipy =< 1.5.2 are needed for Ubuntu 18.04 and Python 3.6
-if [[ $distro_version == "18.04" ]]
+# Astropy =< 4.1 and scipy =< 1.5.2 are needed for Tigger on Ubuntu 18.04 and Python 3.6
+if [[ $distro_version == "1804" ]]
 then
+    # check if Python 3.6 in use
     python_version=`python3 -c "import sys; print(''.join(map(str, sys.version_info[:2])))"`
     if [[ $python_version == "36" ]]
     then
-        echo "==== Ubuntu 18.04 and Python 3.6 detected, adjusting package versions... ===="
-        pip3 install astropy==4.1
-        pip3 install scipy==1.5.2
+		echo "==== Ubuntu 18.04 and Python 3.6 detected, adjusting package versions... ===="
+
+		# check if Astropy version is already 4.1
+		astropy_verison=`pip3 list|grep astropy|awk '{print $2}'|sed -e 's/\.//g'`
+		if [[ "$astropy_version" -ne "41" ]]
+		then
+			pip3 install astropy==4.1
+		fi
+
+		# check if scipy version is already 1.5.2
+		scipy_verison=`pip3 list|grep scipy|awk '{print $2}'|sed -e 's/\.//g'`
+		if [[ "$scipy_version" -ne "152" ]]
+		then
+			pip3 install scipy==1.5.2
+		fi
     fi
 fi
 
