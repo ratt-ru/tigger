@@ -46,7 +46,7 @@ echo "==== Installer has detected Linux distribution as $distro_name $distro_ver
 echo "==== Installing package dependencies... ===="
 
 # install Tigger deps
-sudo apt -y install python3-pyqt5.qtsvg python3-pyqt5.qtopengl python3-setuptools &&
+sudo apt -y install python3-pyqt5.qtsvg python3-pyqt5.qtopengl python3-setuptools python3-pip &&
 
 
 # compile PyQt-Qwt
