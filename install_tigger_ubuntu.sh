@@ -46,7 +46,7 @@ echo "==== Installer has detected Linux distribution as $distro_name $distro_ver
 echo "==== Installing package dependencies... ===="
 
 # install Tigger deps
-sudo apt -y install python3-pyqt5.qtsvg python3-pyqt5.qtopengl python3-setuptools python3-pip &&
+sudo apt -y install python3-pyqt5.qtsvg python3-pyqt5.qtopengl libqwt-qt5-6 python3-setuptools python3-pip &&
 
 
 # compile PyQt-Qwt
@@ -113,11 +113,16 @@ then
 	fi
 fi
 
-# Astropy =< 4.1 is needed for Ubuntu 18.04
+# Astropy =< 4.1 and scipy =< 1.5.2 are needed for Ubuntu 18.04 and Python 3.6
 if [[ $distro_version == "18.04" ]]
 then
-	pip3 install astropy==4.1
-    export PATH=${PATH}:${HOME}/.local/bin
+    python_version=`python3 -c "import sys; print(''.join(map(str, sys.version_info[:2])))"`
+    if [[ $python_version == "36" ]]
+    then
+        echo "==== Ubuntu 18.04 and Python 3.6 detected, adjusting package versions... ===="
+        pip3 install astropy==4.1
+        pip3 install scipy==1.5.2
+    fi
 fi
 
 # install Tigger
