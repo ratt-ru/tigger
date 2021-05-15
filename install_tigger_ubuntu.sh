@@ -113,10 +113,11 @@ then
 	fi
 fi
 
-# Astropy <= 4.1 is needed for Ubuntu 18.04
+# Astropy =< 4.1 is needed for Ubuntu 18.04
 if [[ $distro_version == "18.04" ]]
 then
 	pip3 install astropy==4.1
+    export PATH=${PATH}:${HOME}/.local/bin
 fi
 
 # install Tigger
