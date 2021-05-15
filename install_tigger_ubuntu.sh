@@ -106,12 +106,17 @@ then
 	elif [[ $distro_version == "18.04" ]]
 	then
 		echo "==== Installing PyQwt for $distro_name $distro_version... ===="
-		sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.7 2
 		sudo dpkg -i ubuntu_18_04_deb_pkg/python3-pyqt5.qwt_2.00.00_amd64.deb
 	else
 		echo "==== Error: No PyQt-Qwt package available for $distro_name $distro_version, please try: $0 --source ===="
 		exit 1
 	fi
+fi
+
+# Astropy <= 4.1 is needed for Ubuntu 18.04
+if [[ $distro_version == "18.04" ]]
+then
+	pip3 install astropy==4.1
 fi
 
 # install Tigger
