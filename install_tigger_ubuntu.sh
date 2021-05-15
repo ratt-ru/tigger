@@ -3,6 +3,7 @@ echo "==== Tigger v1.6.0 - Ubuntu 20.04 install script ===="
 
 # install via packages by default
 build_type="package"
+install_type="normal"
 
 tigger_pwd="${PWD}"
 
@@ -43,11 +44,54 @@ fi
 
 echo "==== Installer has detected Linux distribution as $distro_name $distro_version ==== "
 
+# check and install pip3 if needed
+if command -v pip3 > /dev/null 
+then
+	echo "==== Installer found pip3... ===="
+else
+	echo "==== Installer did not find pip3... ===="
+	install_type="fullstack"
+	sudo apt -y install python3-setuptools python3-pip 
+fi
+
+# check for astro-tigger-lsm
+tigger_lsm=`pip3 list|grep astro-tigger-lsm|awk '{print $1}'`
+if [[ $tigger_lsm == "astro-tigger-lsm" ]]
+then
+	echo "==== Installer found astro-tigger-lsm dependency... ===="
+	tigger_lsm_verison=`pip3 list|grep astro-tigger-lsm|awk '{print $2}'|sed -e 's/\.//g'`
+	if [[ "$tigger_lsm_version" -lt "170" ]]
+	then
+		echo "==== Installer fullstack mode - astro-tigger-lsm version is less than 1.7.0... ===="
+		install_type="fullstack"
+	fi
+else
+	install_type="fullstack"
+	echo "==== Installer fullstack mode - astro-tigger-lsm not found... ===="
+fi	
+
+# install astro-tigger-lsm
+if [[ $install_type == "fullstack" ]]
+then
+	echo "==== Installing Tigger-LSM dependency from source... ===="
+	sudo apt -y install git &&	
+	cd /tmp &&
+	rm -rf tigger-lsm
+	git clone https://github.com/ska-sa/tigger-lsm.git &&
+	cd tigger-lsm &&
+	if [[ $distro_version == "18.04" ]]
+	then
+		sudo apt -y install libboost-python-dev casacore* 
+	fi
+	python3 setup.py install --user &&
+	cd /tmp &&
+	cd "${tigger_pwd}"
+fi
+
 echo "==== Installing package dependencies... ===="
 
 # install Tigger deps
-sudo apt -y install python3-pyqt5.qtsvg python3-pyqt5.qtopengl libqwt-qt5-6 python3-setuptools python3-pip &&
-
+sudo apt -y install python3-pyqt5.qtsvg python3-pyqt5.qtopengl libqwt-qt5-6 &&
 
 # compile PyQt-Qwt
 if [[ $build_type == "source" ]]
@@ -58,7 +102,7 @@ then
 	then
 		echo "==== Compiling PyQt-Qwt for $distro_name $distro_version... ===="
 		cd /tmp &&
-		rm -rf PyQt-Qwt &&
+		rm -rf PyQt-Qwt
 		git clone https://github.com/razman786/PyQt-Qwt.git &&
 		cd PyQt-Qwt &&
 		QT_SELECT=qt5 python3 configure.py --qwt-incdir=/usr/include/qwt --qwt-libdir=/usr/lib --qwt-lib=qwt-qt5 &&
@@ -71,7 +115,7 @@ then
 	then
 		echo "==== Compiling PyQt-Qwt for $distro_name $distro_version... ===="
 		cd /tmp &&
-		rm -rf PyQt-Qwt &&
+		rm -rf PyQt-Qwt
 		git clone https://github.com/razman786/PyQt-Qwt.git &&
 		cd PyQt-Qwt &&
 		git checkout ubuntu_18_04
@@ -85,7 +129,7 @@ then
 	else
 		echo "==== Compiling PyQt-Qwt for $distro_name $distro_version... ===="
 		cd /tmp &&
-		rm -rf PyQt-Qwt &&
+		rm -rf PyQt-Qwt
 		git clone https://github.com/razman786/PyQt-Qwt.git &&
 		cd PyQt-Qwt &&
 		QT_SELECT=qt5 python3 configure.py --qwt-incdir=/usr/include/qwt --qwt-libdir=/usr/lib --qwt-lib=qwt-qt5 &&
