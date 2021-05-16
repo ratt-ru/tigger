@@ -240,8 +240,3 @@ fi
 
 # install Tigger
 python3 setup.py install --user 1>>$log_file 2>>$error_file && echo "==== Tigger installation complete! \o/ ====" || exception
-
-# update PATH's and env for Tigger
-source ~/.profile
-update-desktop-database ~/.local/share/applications
-
