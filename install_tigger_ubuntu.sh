@@ -7,7 +7,7 @@ error_file=tigger_installer.err
 exec 3>&1
 
 # redirect stdout/stderr to a file
-exec >$log_file
+exec >$log_file 2> $error_file
 
 # function echo to show echo output on terminal
 echo() {
@@ -16,6 +16,8 @@ echo() {
 }
 
 echo "==== Tigger v1.6.0 - Ubuntu install script ===="
+echo "==== Log file: $log_file ===="
+echo "==== Error log: $error_file ===="
 printf "==== Tigger v1.6.0 - Ubuntu install script ====\n"
 
 # install via packages by default
@@ -26,6 +28,14 @@ install_type="normal"
 
 # store the location of this dir
 tigger_pwd="${PWD}"
+
+# exception handling
+exception() {
+	echo "==== Tigger installation script encountered an error ===="
+	echo "==== Please check the log files $log_file and $error_file ===="
+	echo "==== Ending Tigger installation script ¯\_(ツ)_/¯ ===="
+	exit 1
+	}
 
 # display help
 display_usage() {
@@ -77,7 +87,7 @@ else
 	echo "==== Installer did not find pip3... ===="
 	printf "==== Installer did not find pip3... ====\n"
 	install_type="fullstack"
-	sudo apt -y install python3-setuptools python3-pip 2>>$error_file
+	sudo apt -y install python3-setuptools python3-pip 2>>$error_file || exception
 fi
 
 # check for astro-tigger-lsm
@@ -92,7 +102,7 @@ then
 	then
 		echo "==== Installer fullstack mode - astro-tigger-lsm version is less than 1.7.0... ===="
 		printf "==== Installer fullstack mode - astro-tigger-lsm version is less than 1.7.0... ====\n"
-		pip3 uninstall -y astro_tigger_lsm 2>>$error_file
+		pip3 uninstall -y astro_tigger_lsm 2>>$error_file || exception
 		install_type="fullstack"
 	fi
 else
@@ -106,77 +116,77 @@ if [[ $install_type == "fullstack" ]]
 then
 	echo "==== Installing Tigger-LSM dependency from source... ===="
 	printf "==== Installing Tigger-LSM dependency from source... ====\n"
-	sudo apt -y install git 2>>$error_file &&
-	cd /tmp &&
+	sudo apt -y install git 2>>$error_file || exception
+	cd /tmp || exception
 	rm -rf tigger-lsm
-	git clone https://github.com/ska-sa/tigger-lsm.git 1>>$log_file 2>>$error_file &&
-	cd tigger-lsm &&
+	git clone https://github.com/ska-sa/tigger-lsm.git 1>>$log_file 2>>$error_file || exception
+	cd tigger-lsm || exception
 
 	if [[ $distro_version == "1804" ]]
 	then
-		sudo apt -y install libboost-python-dev casacore* 2>>$error_file &&
-		pip3 install -q astropy==4.1
-		pip3 install -q scipy==1.5.2
+		sudo apt -y install libboost-python-dev casacore* 2>>$error_file || exception
+		pip3 install -q astropy==4.1 || exception
+		pip3 install -q scipy==1.5.2 || exception
 	fi
 
-	python3 setup.py install --user 1>>$log_file 2>>$error_file &&
-	cd /tmp &&
-	cd "${tigger_pwd}"
+	python3 setup.py install --user 1>>$log_file 2>>$error_file || exception
+	cd /tmp || exception
+	cd "${tigger_pwd}" || exception
 fi
 
 echo "==== Installing package dependencies... ===="
 printf "==== Installing package dependencies... ====\n"
 
 # install Tigger deps
-sudo apt -y install python3-pyqt5.qtsvg python3-pyqt5.qtopengl libqwt-qt5-6 2>>$error_file &&
+sudo apt -y install python3-pyqt5.qtsvg python3-pyqt5.qtopengl libqwt-qt5-6 2>>$error_file || exception
 
 # compile PyQt-Qwt
 if [[ $build_type == "source" ]]
 then
     # install PyQt-Qwt deps
-    sudo apt -y install pyqt5-dev pyqt5-dev-tools python3-pyqt5 libqwt-qt5-dev libqwt-headers libqt5opengl5-dev libqt5svg5-dev g++ dpkg-dev git 2>>$error_file &&
+    sudo apt -y install pyqt5-dev pyqt5-dev-tools python3-pyqt5 libqwt-qt5-dev libqwt-headers libqt5opengl5-dev libqt5svg5-dev g++ dpkg-dev git 2>>$error_file || exception
 	if [[ $distro_version == "2004" ]]
 	then
 		echo "==== Compiling PyQt-Qwt for $distro_name $distro_version... ===="
 		printf "==== Compiling PyQt-Qwt for $distro_name $distro_version... ====\n"
-		cd /tmp &&
+		cd /tmp || exception
 		rm -rf PyQt-Qwt
-		git clone https://github.com/razman786/PyQt-Qwt.git 1>>$log_file 2>>$error_file &&
-		cd PyQt-Qwt &&
-		QT_SELECT=qt5 python3 configure.py --qwt-incdir=/usr/include/qwt --qwt-libdir=/usr/lib --qwt-lib=qwt-qt5 &&
-		make -j4 &&
-		sudo make install &&
-		cd /tmp &&
-		cd "${tigger_pwd}"
+		git clone https://github.com/razman786/PyQt-Qwt.git || exception
+		cd PyQt-Qwt || exception
+		QT_SELECT=qt5 python3 configure.py --qwt-incdir=/usr/include/qwt --qwt-libdir=/usr/lib --qwt-lib=qwt-qt5 || exception
+		make -j4 || exception
+		sudo make install || exception
+		cd /tmp || exception
+		cd "${tigger_pwd}" || exception
 
 	elif [[ $distro_version == "1804" ]]
 	then
 		echo "==== Compiling PyQt-Qwt for $distro_name $distro_version... ===="
 		printf "==== Compiling PyQt-Qwt for $distro_name $distro_version... ====\n"
-		cd /tmp &&
+		cd /tmp || exception
 		rm -rf PyQt-Qwt
-		git clone https://github.com/razman786/PyQt-Qwt.git 1>>$log_file 2>>$error_file &&
-		cd PyQt-Qwt &&
-		git checkout ubuntu_18_04
-        cp -a /usr/include/qwt header
-        cp header/qwt*.h header/qwt/
-		QT_SELECT=qt5 python3 configure.py --qwt-incdir=header/qwt --qwt-libdir=/usr/lib --qwt-lib=qwt-qt5 &&
-		make -j4 &&
-		sudo make install &&
-		cd /tmp &&
-		cd "${tigger_pwd}"
+		git clone https://github.com/razman786/PyQt-Qwt.git || exception
+		cd PyQt-Qwt || exception
+		git checkout ubuntu_18_04 || exception
+		cp -a /usr/include/qwt header || exception
+		cp header/qwt*.h header/qwt/ || exception
+		QT_SELECT=qt5 python3 configure.py --qwt-incdir=header/qwt --qwt-libdir=/usr/lib --qwt-lib=qwt-qt5 || exception
+		make -j4 || exception
+		sudo make install || exception
+		cd /tmp || exception
+		cd "${tigger_pwd}" || exception
 	else
 		echo "==== Compiling PyQt-Qwt for $distro_name $distro_version... ===="
 		printf "==== Compiling PyQt-Qwt for $distro_name $distro_version... ====\n"
-		cd /tmp &&
+		cd /tmp || exception
 		rm -rf PyQt-Qwt
-		git clone https://github.com/razman786/PyQt-Qwt.git 1>>$log_file 2>>$error_file &&
-		cd PyQt-Qwt &&
-		QT_SELECT=qt5 python3 configure.py --qwt-incdir=/usr/include/qwt --qwt-libdir=/usr/lib --qwt-lib=qwt-qt5 &&
-		make -j4 &&
-		sudo make install &&
-		cd /tmp &&
-		cd "${tigger_pwd}"
+		git clone https://github.com/razman786/PyQt-Qwt.git || exception
+		cd PyQt-Qwt || exception
+		QT_SELECT=qt5 python3 configure.py --qwt-incdir=/usr/include/qwt --qwt-libdir=/usr/lib --qwt-lib=qwt-qt5 || exception
+		make -j4 || exception
+		sudo make install || exception
+		cd /tmp || exception
+		cd "${tigger_pwd}" || exception
 	fi
 fi
 
@@ -187,12 +197,12 @@ then
 	then
 		echo "==== Installing PyQwt for $distro_name $distro_version... ===="
 		printf "==== Installing PyQwt for $distro_name $distro_version... ====\n"
-		sudo dpkg -i ubuntu_20_04_deb_pkg/python3-pyqt5.qwt_2.00.00-1build1_amd64.deb
+		sudo dpkg -i ubuntu_20_04_deb_pkg/python3-pyqt5.qwt_2.00.00-1build1_amd64.deb || exception
 	elif [[ $distro_version == "1804" ]]
 	then
 		echo "==== Installing PyQwt for $distro_name $distro_version... ===="
 		printf "==== Installing PyQwt for $distro_name $distro_version... ====\n"
-		sudo dpkg -i ubuntu_18_04_deb_pkg/python3-pyqt5.qwt_2.00.00_amd64.deb
+		sudo dpkg -i ubuntu_18_04_deb_pkg/python3-pyqt5.qwt_2.00.00_amd64.deb || exception
 	else
 		echo "==== Error: No PyQt-Qwt package available for $distro_name $distro_version, please try: $0 --source ===="
 		printf "==== Error: No PyQt-Qwt package available for $distro_name $distro_version, please try: $0 --source ====\n"
@@ -214,22 +224,19 @@ then
 		astropy_verison=`pip3 list|grep astropy|awk '{print $2}'|sed -e 's/\.//g'`
 		if [[ "$astropy_version" -ne "41" ]]
 		then
-			pip3 uninstall -y astropy
-			pip3 install -q astropy==4.1
+			pip3 uninstall -y astropy || exception
+			pip3 install -q astropy==4.1 || exception
 		fi
 
 		# check if scipy version is already 1.5.2
 		scipy_verison=`pip3 list|grep scipy|awk '{print $2}'|sed -e 's/\.//g'`
 		if [[ "$scipy_version" -ne "152" ]]
 		then
-			pip3 uninstall -y scipy
-			pip3 install -q scipy==1.5.2
+			pip3 uninstall -y scipy || exception
+			pip3 install -q scipy==1.5.2 || exception
 		fi
     fi
 fi
 
 # install Tigger
-python3 setup.py install --user 1>>$log_file 2>>$error_file
-
-echo "==== Tigger installation complete! \o/ ===="
-printf "==== Tigger installation complete! \o/ ====\n"
+python3 setup.py install --user 1>>$log_file 2>>$error_file && echo "==== Tigger installation complete! \o/ ====" || exception
