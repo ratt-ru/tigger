@@ -15,8 +15,8 @@ echo() {
    command echo "$@" >&3
 }
 
-echo "==== Tigger v1.6.0 - Ubuntu 20.04 install script ===="
-printf "==== Tigger v1.6.0 - Ubuntu 20.04 install script ====\n"
+echo "==== Tigger v1.6.0 - Ubuntu install script ===="
+printf "==== Tigger v1.6.0 - Ubuntu install script ====\n"
 
 # install via packages by default
 build_type="package"
