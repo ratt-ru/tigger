@@ -145,7 +145,21 @@ if [[ $build_type == "source" ]]
 then
     # install PyQt-Qwt deps
     sudo apt -y install pyqt5-dev pyqt5-dev-tools python3-pyqt5 libqwt-qt5-dev libqwt-headers libqt5opengl5-dev libqt5svg5-dev g++ dpkg-dev git 2>>$error_file || exception
-	if [[ $distro_version == "2004" ]]
+	if [[ $distro_version == "2104" ]]
+    then
+		echo "==== Compiling PyQt-Qwt for $distro_name $distro_version... ===="
+		printf "==== Compiling PyQt-Qwt for $distro_name $distro_version... ====\n"
+        sudo apt -y install sip5-tools 2>>$error_file || exception
+		cd /tmp || exception
+		rm -rf PyQt-Qwt
+		git clone https://github.com/razman786/PyQt-Qwt.git || exception
+		cd PyQt-Qwt || exception
+		QT_SELECT=qt5 python3 configure.py --qwt-incdir=/usr/include/qwt --qwt-libdir=/usr/lib --qwt-lib=qwt-qt5 || exception
+		make -j4 || exception
+		sudo make install || exception
+		cd /tmp || exception
+		cd "${tigger_pwd}" || exception
+	elif [[ $distro_version == "2004" ]]
 	then
 		echo "==== Compiling PyQt-Qwt for $distro_name $distro_version... ===="
 		printf "==== Compiling PyQt-Qwt for $distro_name $distro_version... ====\n"
@@ -175,7 +189,7 @@ then
 		sudo make install || exception
 		cd /tmp || exception
 		cd "${tigger_pwd}" || exception
-	else
+    else
 		echo "==== Compiling PyQt-Qwt for $distro_name $distro_version... ===="
 		printf "==== Compiling PyQt-Qwt for $distro_name $distro_version... ====\n"
 		cd /tmp || exception
@@ -193,7 +207,12 @@ fi
 # install PyQt-Qwt package
 if [[ $build_type == "package" ]]
 then
-	if [[ $distro_version == "2004" ]]
+	if [[ $distro_version == "2104" ]]
+	then
+		echo "==== Installing PyQwt for $distro_name $distro_version... ===="
+		printf "==== Installing PyQwt for $distro_name $distro_version... ====\n"
+		sudo dpkg -i ubuntu_21_04_deb_pkg/python3-pyqt5.qwt_2.00.00-1_amd64.deb || exception
+	elif [[ $distro_version == "2004" ]]
 	then
 		echo "==== Installing PyQwt for $distro_name $distro_version... ===="
 		printf "==== Installing PyQwt for $distro_name $distro_version... ====\n"
