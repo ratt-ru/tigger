@@ -141,7 +141,7 @@ then
 		printf "==== Compiling PyQt-Qwt for $distro_name $distro_version... ====\n"
 		cd /tmp &&
 		rm -rf PyQt-Qwt
-		git clone https://github.com/razman786/PyQt-Qwt.git &&
+		git clone https://github.com/razman786/PyQt-Qwt.git 1>>$log_file 2>>$error_file &&
 		cd PyQt-Qwt &&
 		QT_SELECT=qt5 python3 configure.py --qwt-incdir=/usr/include/qwt --qwt-libdir=/usr/lib --qwt-lib=qwt-qt5 &&
 		make -j4 &&
@@ -155,7 +155,7 @@ then
 		printf "==== Compiling PyQt-Qwt for $distro_name $distro_version... ====\n"
 		cd /tmp &&
 		rm -rf PyQt-Qwt
-		git clone https://github.com/razman786/PyQt-Qwt.git &&
+		git clone https://github.com/razman786/PyQt-Qwt.git 1>>$log_file 2>>$error_file &&
 		cd PyQt-Qwt &&
 		git checkout ubuntu_18_04
         cp -a /usr/include/qwt header
@@ -170,7 +170,7 @@ then
 		printf "==== Compiling PyQt-Qwt for $distro_name $distro_version... ====\n"
 		cd /tmp &&
 		rm -rf PyQt-Qwt
-		git clone https://github.com/razman786/PyQt-Qwt.git &&
+		git clone https://github.com/razman786/PyQt-Qwt.git 1>>$log_file 2>>$error_file &&
 		cd PyQt-Qwt &&
 		QT_SELECT=qt5 python3 configure.py --qwt-incdir=/usr/include/qwt --qwt-libdir=/usr/lib --qwt-lib=qwt-qt5 &&
 		make -j4 &&
