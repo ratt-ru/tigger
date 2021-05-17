@@ -4,4 +4,4 @@ Terminal=false
 Name=Tigger
 Exec=tigger
 Icon=tigger_logo.png
-StartupWMClass=Tigger
+StartupWMClass=tigger

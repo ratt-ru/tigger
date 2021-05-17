@@ -9,7 +9,8 @@ Tigger Changelog
 * Dependent on latest PyQt-Qwt from GitHub
 * Updates to tigger-lsm API calls
 * Fixes bug with window size and dockable widgets
-* Added Ubuntu 20.04 installation script
+* Added Ubuntu LTS installation script for 18.04, 20.04 and 21.04
+* Added Tigger application launcher with icon
 * Various bug fixes
 * Various code tidying
 
