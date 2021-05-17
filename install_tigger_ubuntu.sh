@@ -114,7 +114,7 @@ fi
 # install astro-tigger-lsm
 if [[ $install_type == "fullstack" ]]
 then
-  if [[ $build_type == "source" ]]
+  if [[ $build_type == "source" ]] || [[ $distro_verison == "1804" ]]
   then
     echo "==== Installing Tigger-LSM dependency from source... ===="
     printf "==== Installing Tigger-LSM dependency from source... ====\n"
