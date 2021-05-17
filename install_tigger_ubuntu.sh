@@ -114,24 +114,32 @@ fi
 # install astro-tigger-lsm
 if [[ $install_type == "fullstack" ]]
 then
-	echo "==== Installing Tigger-LSM dependency from source... ===="
-	printf "==== Installing Tigger-LSM dependency from source... ====\n"
-	sudo apt -y install git 2>>$error_file || exception
-	cd /tmp || exception
-	rm -rf tigger-lsm
-	git clone https://github.com/ska-sa/tigger-lsm.git 1>>$log_file 2>>$error_file || exception
-	cd tigger-lsm || exception
+  if [[ $build_type == "source" ]]
+  then
+    echo "==== Installing Tigger-LSM dependency from source... ===="
+    printf "==== Installing Tigger-LSM dependency from source... ====\n"
+    sudo apt -y install git 2>>$error_file || exception
+    cd /tmp || exception
+    rm -rf tigger-lsm
+    git clone https://github.com/ska-sa/tigger-lsm.git 1>>$log_file 2>>$error_file || exception
+    cd tigger-lsm || exception
 
-	if [[ $distro_version == "1804" ]]
-	then
-		sudo apt -y install libboost-python-dev casacore* 2>>$error_file || exception
-		pip3 install -q astropy==4.1 || exception
-		pip3 install -q scipy==1.5.2 || exception
-	fi
+    if [[ $distro_version == "1804" ]]
+    then
+      sudo apt -y install libboost-python-dev casacore* 2>>$error_file || exception
+      pip3 install -q astropy==4.1 || exception
+      pip3 install -q scipy==1.5.2 || exception
+    fi
 
-	python3 setup.py install --user 1>>$log_file 2>>$error_file || exception
-	cd /tmp || exception
-	cd "${tigger_pwd}" || exception
+    python3 setup.py install --user 1>>$log_file 2>>$error_file || exception
+    cd /tmp || exception
+    cd "${tigger_pwd}" || exception
+  elif [[ $build_type == "package" ]]
+  then
+    echo "==== Installing Tigger-LSM dependency from pip3... ===="
+    printf "==== Installing Tigger-LSM dependency from pip3... ====\n"
+    pip3 install -q astro_tigger_lsm>=1.7.0 || exception
+  fi
 fi
 
 echo "==== Installing package dependencies... ===="
@@ -172,7 +180,6 @@ then
 		sudo make install || exception
 		cd /tmp || exception
 		cd "${tigger_pwd}" || exception
-
 	elif [[ $distro_version == "1804" ]]
 	then
 		echo "==== Compiling PyQt-Qwt for $distro_name $distro_version... ===="
