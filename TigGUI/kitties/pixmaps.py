@@ -25,9 +25,8 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-from PyQt4.Qt import SIGNAL, QPixmap, QIcon
+from PyQt5.Qt import QPixmap, QIcon
 
-PYSIGNAL = SIGNAL
 
 from .utils import verbosity
 
@@ -71,7 +70,7 @@ _missing_icon_xpm = ["16 16 14 1",
                      "f#.#.jaaad.cccdj"]
 
 
-class QPixmapWrapper(object):
+class QPixmapWrapper:
     """QPixmapWrapper can defer initialization of a pixmap until the pixmap
     is actually retrieved with the pm() or iconset() method for the first time.
     This gets around the problem of not being able to create QPixmaps until a Qt
@@ -80,6 +79,9 @@ class QPixmapWrapper(object):
 
     def __init__(self, pm=_missing_icon_xpm):
         """Initialize wrapper with a pixmap or with an xpm string array"""
+        self._xpmstr = None
+        self._pm = None
+        self._icon = None
         self.assign(pm)
 
     def assign(self, pm):
@@ -3054,7 +3056,7 @@ def load_icons(appname, package=""):
 # if name is undefined, it will be inserted into globals 
 # as a default QPixmapWrapper containing the missing icon xpm. This may be overridden
 # later by load_icons() above. This allows apps to refer to icons before they're loaded.
-class __PixmapHook(object):
+class __PixmapHook:
     def __getattr__(self, name):
         _dprint(4, 'returning icon', name)
         return globals().setdefault(name, QPixmapWrapper())
@@ -3064,7 +3066,7 @@ pixmaps = __PixmapHook()
 
 
 # define a Pixmap cache
-class PixmapCache(object):
+class PixmapCache:
     def __init__(self, appname):
         self._appname = appname
         self._loaded = None
@@ -3106,7 +3108,7 @@ class PixmapCache(object):
                 # loop over all files
                 nicons = 0
                 for f in files:
-                    (name, ext) = os.path.splitext(f);  # check extension
+                    (name, ext) = os.path.splitext(f)  # check extension
                     if ext in ('.png', '.xpm', '.gif'):
                         f = os.path.join(trydir, f)
                         try:

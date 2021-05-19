@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-#
-# % $Id$
-#
-#
 # Copyright (C) 2002-2011
 # The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
@@ -24,41 +19,45 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
+import os.path
 import sys
+import time
 import traceback
 
 import numpy
-import os.path
-import time
-from PyQt4.Qt import QObject, QWidget, QFileDialog, SIGNAL, QStringList, QVBoxLayout, \
-    Qt, QApplication, QMenu, QClipboard, \
-    QInputDialog, QActionGroup
-
-import TigGUI.kitties.utils
-
+from PyQt5.Qt import (QWidget, QFileDialog, QVBoxLayout, QApplication, QMenu, QClipboard, QInputDialog, QActionGroup)
+from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QDockWidget
 from astropy.io import fits as pyfits
 
+from TigGUI.Images import FITS_ExtensionList
+from TigGUI.Images import SkyImage
+from TigGUI.Images.SkyImage import FITSImagePlotItem
+from TigGUI.Images.Controller import ImageController, dprint
 from TigGUI.kitties.utils import PersistentCurrier
 from TigGUI.kitties.widgets import BusyIndicator
 
-from TigGUI.Images.Controller import ImageController, dprint
-
-from TigGUI.Images import SkyImage
-from TigGUI.Images import FITS_ExtensionList
+QStringList = list
 
 
 class ImageManager(QWidget):
     """An ImageManager manages a stack of images (and associated ImageControllers)"""
+    showErrorMessage = pyqtSignal(str, int)
+    imagesChanged = pyqtSignal()
+    imageRaised = pyqtSignal(FITSImagePlotItem)
+    imagePlotRaised = pyqtSignal()
 
     def __init__(self, *args):
         QWidget.__init__(self, *args)
+        self.mainwin = None
         # init layout
         self._lo = QVBoxLayout(self)
         self._lo.setContentsMargins(0, 0, 0, 0)
         self._lo.setSpacing(0)
         # init internal state
         self._currier = PersistentCurrier()
-        self._z0 = 0;  # z-depth of first image, the rest count down from it
+        self._z0 = 0  # z-depth of first image, the rest count down from it
         self._updating_imap = False
         self._locked_display_range = False
         self._imagecons = []
@@ -68,6 +67,8 @@ class ImageManager(QWidget):
         self._border_pen = None
         self._drawing_key = None
         self._load_image_dialog = None
+        self._label_color = None
+        self._label_bg_brush = None
         self._model_imagecons = set()
         # init menu and standard actions
         self._menu = QMenu("&Image", self)
@@ -78,20 +79,31 @@ class ImageManager(QWidget):
         self._qa_plot_top.setCheckable(True)
         self._qa_plot_all.setCheckable(True)
         self._qa_plot_top.setChecked(True)
-        QObject.connect(self._qa_plot_all, SIGNAL("toggled(bool)"), self._displayAllImages)
+        self._qa_plot_all.toggled[bool].connect(self._displayAllImages)
         self._closing = False
 
         self._qa_load_clipboard = None
         self._clipboard_mode = QClipboard.Clipboard
-        QObject.connect(QApplication.clipboard(), SIGNAL("changed(QClipboard::Mode)"), self._checkClipboardPath)
+        QApplication.clipboard().changed[QClipboard.Mode].connect(self._checkClipboardPath)
         # populate the menu
         self._repopulateMenu()
+        self.signalShowMessage = None
+        self.signalShowErrorMessage = None
 
     def close(self):
         dprint(1, "closing Manager")
         self._closing = True
         for ic in self._imagecons:
             ic.close()
+
+    def setShowMessageSignal(self, _signal):
+        self.signalShowMessage = _signal
+
+    def setShowErrorMessageSignal(self, _signal):
+        self.signalShowErrorMessage = _signal
+
+    def setMainWindow(self, _mainwin):
+        self.mainwin = _mainwin
 
     def loadImage(self, filename=None, duplicate=True, to_top=True, model=None):
         """Loads image. Returns ImageControlBar object.
@@ -107,7 +119,7 @@ class ImageManager(QWidget):
                                                                    ["*" + ext for ext in FITS_ExtensionList])))
                 dialog.setFileMode(QFileDialog.ExistingFile)
                 dialog.setModal(True)
-                QObject.connect(dialog, SIGNAL("filesSelected(const QStringList &)"), self.loadImage)
+                dialog.filesSelected['QStringList'].connect(self.loadImage)
             self._load_image_dialog.exec_()
             return None
         if isinstance(filename, QStringList):
@@ -115,7 +127,7 @@ class ImageManager(QWidget):
         filename = str(filename)
         # report error if image does not exist
         if not os.path.exists(filename):
-            self.showErrorMessage("""FITS image %s does not exist.""" % filename)
+            self.signalShowErrorMessage.emit("""FITS image %s does not exist.""" % filename)
             return None
         # see if image is already loaded
         if not duplicate:
@@ -129,31 +141,29 @@ class ImageManager(QWidget):
         # load the FITS image
         busy = BusyIndicator()
         dprint(2, "reading FITS image", filename)
-        self.showMessage("""Reading FITS image %s""" % filename, 3000)
+        self.signalShowMessage.emit("""Reading FITS image %s""" % filename, 3000)
         QApplication.flush()
         try:
             image = SkyImage.FITSImagePlotItem(str(filename))
         except KeyboardInterrupt:
             raise
         except:
-            busy = None
+            busy.reset_cursor()
             traceback.print_exc()
-            self.showErrorMessage("""<P>Error loading FITS image %s: %s. This may be due to a bug in Tigger; if the FITS file loads fine in another viewer,
+            print("""Error loading FITS image %s: %s. This may be due to a bug in Tigger; if the FITS file loads fine in another viewer,
+          please send the FITS file, along with a copy of any error messages from the text console, to osmirnov@gmail.com.""" % (
+                filename, str(sys.exc_info()[1])))
+            self.signalShowErrorMessage.emit("""<P>Error loading FITS image %s: %s. This may be due to a bug in Tigger; if the FITS file loads fine in another viewer,
           please send the FITS file, along with a copy of any error messages from the text console, to osmirnov@gmail.com.</P>""" % (
-            filename, str(sys.exc_info()[1])))
+                filename, str(sys.exc_info()[1])))
             return None
         # create control bar, add to widget stack
         ic = self._createImageController(image, "model source '%s'" % model if model else filename, model or image.name,
                                          model=model)
-        self.showMessage("""Loaded FITS image %s""" % filename, 3000)
-        dprint(2, "image loaded")
+        print("""Loaded FITS image %s""" % filename)
+        self.signalShowMessage.emit("""Loaded FITS image %s""" % filename, 3000)
+        busy.reset_cursor()
         return ic
-
-    def showMessage(self, message, time=None):
-        self.emit(SIGNAL("showMessage"), message, time)
-
-    def showErrorMessage(self, message, time=None):
-        self.emit(SIGNAL("showErrorMessage"), message, time)
 
     def setZ0(self, z0):
         self._z0 = z0
@@ -164,7 +174,7 @@ class ImageManager(QWidget):
         self._border_pen, self._label_color, self._label_bg_brush = \
             border_pen, label_color, label_bg_brush
 
-    def lockAllDisplayRanges(self, rc0):
+    def lockAllDisplayRanges(self, rc0, curry=False):
         """Locks all display ranges, and sets the intensity from rc0"""
         if not self._updating_imap:
             self._updating_imap = True
@@ -247,7 +257,7 @@ class ImageManager(QWidget):
         for ic in [ic for ic in self._imagecons if id(ic) in self._model_imagecons]:
             self.unloadImage(ic)
 
-    def unloadImage(self, imagecon):
+    def unloadImage(self, imagecon, foo=None):
         """Unloads the given imagecon object."""
         if imagecon not in self._imagecons:
             return
@@ -255,6 +265,8 @@ class ImageManager(QWidget):
         self._imagecons.remove(imagecon)
         self._imagecon_loadorder.remove(imagecon)
         self._model_imagecons.discard(id(imagecon))
+        # remove dockable widget
+        imagecon.removeDockWidget()
         # reparent widget and release it
         imagecon.setParent(None)
         imagecon.close()
@@ -263,9 +275,20 @@ class ImageManager(QWidget):
             self.centerImage(self._imagecons[0] if self._imagecons else None, emit=False)
         # emit signal
         self._repopulateMenu()
-        self.emit(SIGNAL("imagesChanged"))
+        self.imagesChanged.emit()
         if self._imagecons:
             self.raiseImage(self._imagecons[0])
+        else:
+            # remove all dock widgets
+            widget_list = self.mainwin.findChildren(QDockWidget)
+            for widget in widget_list:
+                self.mainwin.removeDockWidget(widget)
+                widget.bind_widget.setVisible(False)
+                widget.close()
+            if self.mainwin._current_layout is not self.mainwin.LayoutImageModel:
+                self.mainwin.skyplot.setVisible(False)
+            # reset size to be minus dockables - workaround for bug #164
+            # self.mainwin.setMaximumWidth(self.mainwin.width() - 700)
 
     def getCenterImage(self):
         return self._center_image
@@ -274,10 +297,11 @@ class ImageManager(QWidget):
         self._center_image = imagecon and imagecon.image
         for ic in self._imagecons:
             ic.setPlotProjection(self._center_image.projection)
-        if emit:
-            self.emit(SIGNAL("imagesChanged"))
+        if emit or emit is None:  # added this check as curry() call to this method via signal can be emit=None.
+            self.imagesChanged.emit()
 
-    def raiseImage(self, imagecon):
+    def raiseImage(self, imagecon, foo=None):
+        busy = None
         # reshuffle image stack, if more than one image image
         if len(self._imagecons) > 1:
             busy = BusyIndicator()
@@ -291,8 +315,9 @@ class ImageManager(QWidget):
             # adjust visibility
             for j, ic in enumerate(self._imagecons):
                 ic.setImageVisible(not j or bool(self._qa_plot_all.isChecked()))
-            # issue replot signal
-            self.emit(SIGNAL("imageRaised"))
+            # issue replot signal fixed with assumption that this signal is now correct according to the old version
+            # self.imageRaised.emit(self._imagecons[0])  # This was the old signal
+            self.imagePlotRaised.emit()
             self.fastReplot()
         # else simply update labels
         else:
@@ -301,17 +326,26 @@ class ImageManager(QWidget):
         # update slice menus
         img = imagecon.image
         axes = imagecon.renderControl().slicedAxes()
-        for i, (next, prev) in enumerate(self._qa_slices):
-            next.setVisible(False)
-            prev.setVisible(False)
+        for i, (_next, _prev) in enumerate(self._qa_slices):
+            _next.setVisible(False)
+            _prev.setVisible(False)
             if i < len(axes):
                 iaxis, name, labels = axes[i]
-                next.setVisible(True)
-                prev.setVisible(True)
-                next.setText("Show next slice along %s axis" % name)
-                prev.setText("Show previous slice along %s axis" % name)
-        # emit signasl
-        self.emit(SIGNAL("imageRaised"), img)
+                _next.setVisible(True)
+                _prev.setVisible(True)
+                _next.setText("Show next slice along %s axis" % name)
+                _prev.setText("Show previous slice along %s axis" % name)
+        # emit signals
+        self.imageRaised.emit(img)
+        # if dockable control dialog is docked and tabbed then raise to front
+        if imagecon._dockable_colour_ctrl is not None:
+            if imagecon._dockable_colour_ctrl.isVisible():
+                if not imagecon._dockable_colour_ctrl.isFloating():
+                    list_of_tabbed_widgets = self.mainwin.tabifiedDockWidgets(imagecon._dockable_colour_ctrl)
+                    if list_of_tabbed_widgets:
+                        imagecon._dockable_colour_ctrl.raise_()
+        if busy is not None:
+            busy.reset_cursor()
 
     def resetDrawKey(self):
         """Makes and sets the current plot's drawing key"""
@@ -356,6 +390,7 @@ class ImageManager(QWidget):
             for ic in self._imagecons[1:]:
                 ic.setImageVisible(False)
         self.replot()
+        busy.reset_cursor()
 
     def _checkClipboardPath(self, mode=QClipboard.Clipboard):
         if self._qa_load_clipboard:
@@ -390,12 +425,14 @@ class ImageManager(QWidget):
                 self._menu.addAction("Cycle images", self.cycleImages, Qt.Key_F5)
                 self._menu.addAction("Blink images", self.blinkImages, Qt.Key_F6)
             self._qa_slices = (
-            (self._menu.addAction("Next slice along axis 1", self._currier.curry(self.incrementSlice, 0, 1), Qt.Key_F7),
-             self._menu.addAction("Previous slice along axis 1", self._currier.curry(self.incrementSlice, 0, -1),
-                                  Qt.SHIFT + Qt.Key_F7)),
-            (self._menu.addAction("Next slice along axis 2", self._currier.curry(self.incrementSlice, 1, 1), Qt.Key_F8),
-             self._menu.addAction("Previous slice along axis 2", self._currier.curry(self.incrementSlice, 1, -1),
-                                  Qt.SHIFT + Qt.Key_F8)))
+                (self._menu.addAction("Next slice along axis 1", self._currier.curry(self.incrementSlice, 0, 1),
+                                      Qt.Key_F7),
+                 self._menu.addAction("Previous slice along axis 1", self._currier.curry(self.incrementSlice, 0, -1),
+                                      Qt.SHIFT + Qt.Key_F7)),
+                (self._menu.addAction("Next slice along axis 2", self._currier.curry(self.incrementSlice, 1, 1),
+                                      Qt.Key_F8),
+                 self._menu.addAction("Previous slice along axis 2", self._currier.curry(self.incrementSlice, 1, -1),
+                                      Qt.SHIFT + Qt.Key_F8)))
             self._menu.addSeparator()
             self._menu.addAction(self._qa_plot_top)
             self._menu.addAction(self._qa_plot_all)
@@ -424,10 +461,10 @@ class ImageManager(QWidget):
             exprfunc = eval("lambda " + (",".join([x[0] for x in arglist])) + ":" + expression,
                             numpy.__dict__, {})
         except Exception as exc:
-            self.showErrorMessage("""Error parsing expression "%s": %s.""" % (expression, str(exc)))
+            self.signalShowErrorMessage.emit("""Error parsing expression "%s": %s.""" % (expression, str(exc)))
             return None
         # try to evaluate expression
-        self.showMessage("Computing expression \"%s\"" % expression, 10000)
+        self.signalShowMessage.emit("Computing expression \"%s\"" % expression, 10000)
         busy = BusyIndicator()
         QApplication.flush()
 
@@ -445,18 +482,18 @@ class ImageManager(QWidget):
         try:
             result = exprfunc(*[trimarray(x[1].data()) for x in arglist])
         except Exception as exc:
-            busy = None
+            busy.reset_cursor()
             traceback.print_exc()
-            self.showErrorMessage("""Error evaluating "%s": %s.""" % (expression, str(exc)))
+            self.signalShowErrorMessage.emit("""Error evaluating "%s": %s.""" % (expression, str(exc)))
             return None
-        busy = None
+        busy.reset_cursor()
         if type(result) != numpy.ma.masked_array and type(result) != numpy.ndarray:
-            self.showErrorMessage(
+            self.signalShowErrorMessage.emit(
                 """Result of "%s" is of invalid type "%s" (array expected).""" % (expression, type(result).__name__))
             return None
         # convert coomplex results to real
         if numpy.iscomplexobj(result):
-            self.showErrorMessage("""Result of "%s" is complex. Complex images are currently
+            self.signalShowErrorMessage.emit("""Result of "%s" is complex. Complex images are currently
       not fully supported, so we'll implicitly use the absolute value instead.""" % (expression))
             expression = "abs(%s)" % expression
             result = abs(result)
@@ -464,8 +501,8 @@ class ImageManager(QWidget):
         res_shape = trimshape(result.shape)
         arglist = [x for x in arglist if hasattr(x[1], 'fits_header') and trimshape(x[1].data().shape) == res_shape]
         if not arglist:
-            self.showErrorMessage("""Result of "%s" has shape %s, which does not match any loaded FITS image.""" % (
-            expression, "x".join(map(str, result.shape))))
+            self.signalShowErrorMessage.emit("""Result of "%s" has shape %s, which does not match any loaded FITS image.""" % (
+                expression, "x".join(map(str, result.shape))))
             return None
         # look for an image in the arglist with the same projection, and with a valid dirname
         # (for the where-to-save hint)
@@ -486,15 +523,15 @@ class ImageManager(QWidget):
         # create a FITS image
         busy = BusyIndicator()
         dprint(2, "creating FITS image", expression)
-        self.showMessage("""Creating image for %s""" % expression, 3000)
+        self.signalShowMessage.emit("""Creating image for %s""" % expression, 3000)
         QApplication.flush()
         try:
             hdu = pyfits.PrimaryHDU(result.transpose(), template.fits_header)
             skyimage = SkyImage.FITSImagePlotItem(name=expression, filename=None, hdu=hdu)
         except:
-            busy = None
+            busy.reset_cursor()
             traceback.print_exc()
-            self.showErrorMessage("""Error creating FITS image %s: %s""" % (expression, str(sys.exc_info()[1])))
+            self.signalShowErrorMessage.emit("""Error creating FITS image %s: %s""" % (expression, str(sys.exc_info()[1])))
             return None
         # get directory name for save-to hint
         dirname = getattr(template, 'filename', None)
@@ -504,12 +541,20 @@ class ImageManager(QWidget):
         # create control bar, add to widget stack
         self._createImageController(skyimage, expression, expression,
                                     save=((dirname and os.path.dirname(dirname)) or "."))
-        self.showMessage("Created new image for %s" % expression, 3000)
+        self.signalShowMessage.emit("Created new image for %s" % expression, 3000)
         dprint(2, "image created")
+        busy.reset_cursor()
 
     def _createImageController(self, image, name, basename, model=False, save=False):
         dprint(2, "creating ImageController for", name)
         ic = ImageController(image, self, self, name, save=save)
+        # attach appropriate signals
+        ic.imageSignalRepaint.connect(self.replot)
+        ic.imageSignalSlice.connect(self.fastReplot)
+        image.connectPlotRiased(self.imagePlotRaised)
+        ic.imageSignalRaise.connect(self._currier.curry(self.raiseImage, ic))
+        ic.imageSignalUnload.connect(self._currier.curry(self.unloadImage, ic))
+        ic.imageSignalCenter.connect(self._currier.curry(self.centerImage, ic))
         ic.setNumber(len(self._imagecons))
         self._imagecons.insert(0, ic)
         self._imagecon_loadorder.append(ic)
@@ -518,16 +563,9 @@ class ImageManager(QWidget):
         self._lo.addWidget(ic)
         if self._border_pen:
             ic.addPlotBorder(self._border_pen, basename, self._label_color, self._label_bg_brush)
-        # attach appropriate signals
-        image.connect(SIGNAL("slice"), self.fastReplot)
-        image.connect(SIGNAL("repaint"), self.replot)
-        image.connect(SIGNAL("raise"), self._currier.curry(self.raiseImage, ic))
-        image.connect(SIGNAL("unload"), self._currier.curry(self.unloadImage, ic))
-        image.connect(SIGNAL("center"), self._currier.curry(self.centerImage, ic))
-        QObject.connect(ic.renderControl(), SIGNAL("displayRangeChanged"),
-                        self._currier.curry(self._updateDisplayRange, ic.renderControl()))
-        QObject.connect(ic.renderControl(), SIGNAL("displayRangeLocked"),
-                        self._currier.curry(self._lockDisplayRange, ic.renderControl()))
+        ic.renderControl().displayRangeChanged.connect(
+            self._currier.curry(self._updateDisplayRange, ic.renderControl()))
+        ic.renderControl().displayRangeLocked.connect(self._currier.curry(self._lockDisplayRange, ic.renderControl()))
         self._plot = None
         # add to menus
         dprint(2, "repopulating menus")
@@ -539,5 +577,5 @@ class ImageManager(QWidget):
         else:
             ic.setPlotProjection(self._center_image.projection)
         # signal
-        self.emit(SIGNAL("imagesChanged"))
+        self.imagesChanged.emit()
         return ic

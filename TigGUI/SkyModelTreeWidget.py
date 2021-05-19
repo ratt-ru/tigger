@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-#
-# % $Id$
-#
-#
 # Copyright (C) 2002-2011
 # The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
@@ -24,14 +19,13 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-from builtins import chr
 import math
+from builtins import chr
 
-from PyQt4.Qt import QObject, QWidget, QHBoxLayout, QComboBox, SIGNAL, QLabel, QToolButton, QVBoxLayout, \
+from PyQt5.Qt import QWidget, QHBoxLayout, QComboBox, QLabel, QToolButton, QVBoxLayout, \
     QPushButton, Qt, QTreeWidgetItem, QAbstractItemView, QHeaderView, QTreeWidget, QAction, QEvent, QSize, \
-    QSizePolicy, QString, QTableWidget, QTableWidgetItem, QItemSelectionRange, QItemSelection, QFontMetrics, QFont, \
+    QSizePolicy, QTableWidget, QTableWidgetItem, QItemSelectionRange, QItemSelection, QFontMetrics, QFont, \
     QApplication, QItemSelectionModel
-
 from Tigger.Models import ModelClasses, PlotStyles
 from Tigger.Models.SkyModel import SkyModel
 
@@ -39,6 +33,8 @@ import TigGUI.kitties.utils
 import TigGUI.kitties.widgets
 from TigGUI.kitties.utils import PersistentCurrier
 from TigGUI.kitties.widgets import BusyIndicator
+
+QString = str
 
 _verbosity = TigGUI.kitties.utils.verbosity(name="tw")
 dprint = _verbosity.dprint
@@ -73,13 +69,12 @@ ColumnShape = 20
 ColumnShape_err = 21
 ColumnTags = 22
 
-
 NumColumns = len(ViewColumns)
 
 DEG = math.pi / 180
 
 # Qt-4.6 and up (PyQt 4.7 and up) has very slow QTreeWidgetItem updates, determine version here
-from PyQt4 import QtCore
+from PyQt5 import QtCore
 
 _SLOW_QTREEWIDGETITEM = QtCore.PYQT_VERSION_STR >= '4.7'
 
@@ -94,15 +89,15 @@ class SkyModelTreeWidget(TigGUI.kitties.widgets.ClickableTreeWidget):
         # insert columns
         self.setHeaderLabels(ViewColumns)
         self.headerItem().setText(ColumnIapp, "I(app)")
-        self.header().setMovable(False)
-        self.header().setClickable(True)
+        self.header().setSectionsMovable(False)
+        self.header().setSectionsClickable(True)
         self.setSortingEnabled(True)
         self.setRootIsDecorated(False)
         self.setEditTriggers(QAbstractItemView.AllEditTriggers)
         self.setMouseTracking(True)
         # set column width modes
         for icol in range(NumColumns - 1):
-            self.header().setResizeMode(icol, QHeaderView.ResizeToContents)
+            self.header().setSectionResizeMode(icol, QHeaderView.ResizeToContents)
         self.header().setStretchLastSection(True)
         ## self.setTextAlignment(ColumnR,Qt.AlignRight)
         ## self.setTextAlignment(ColumnType,Qt.AlignHCenter)
@@ -118,8 +113,8 @@ class SkyModelTreeWidget(TigGUI.kitties.widgets.ClickableTreeWidget):
         self._updating_selection = False
         self.setRootIsDecorated(False)
         # connect signals to track selected sources
-        QObject.connect(self, SIGNAL("itemSelectionChanged()"), self._selectionChanged)
-        QObject.connect(self, SIGNAL("itemEntered(QTreeWidgetItem*,int)"), self._itemHighlighted)
+        self.itemSelectionChanged.connect(self._selectionChanged)
+        self.itemEntered[QTreeWidgetItem, int].connect(self._itemHighlighted)
         # add "View" controls for different column categories
         self._column_views = []
         self._column_widths = {}
@@ -153,12 +148,14 @@ class SkyModelTreeWidget(TigGUI.kitties.widgets.ClickableTreeWidget):
         busy = BusyIndicator()
         self._column_enabled[column] = enable
         self._showColumn(column, enable and self._column_shown[column])
+        busy.reset_cursor()
 
     def _showColumnCategory(self, columns, show):
         busy = BusyIndicator()
         for col in columns:
             self._column_shown[col] = show
             self._showColumn(col, self._column_enabled[col] and show)
+        busy.reset_cursor()
 
     def _selectionChanged(self):
         if self._updating_selection:
@@ -182,7 +179,7 @@ class SkyModelTreeWidget(TigGUI.kitties.widgets.ClickableTreeWidget):
         qa.setChecked(visible)
         if not visible:
             self._showColumnCategory(columns, False)
-        QObject.connect(qa, SIGNAL("toggled(bool)"), self._currier.curry(self._showColumnCategory, columns))
+        qa.toggled[bool].connect(self._currier.curry(self._showColumnCategory, columns))
         self._column_views.append((name, qa, columns))
 
     def clear(self):
@@ -220,7 +217,7 @@ class SkyModelTreeWidget(TigGUI.kitties.widgets.ClickableTreeWidget):
         self._enableColumn(ColumnR, 'r' in self.model.tagnames)
         dprint(2, "re-sorting")
         self.sortItems(('Iapp' in self.model.tagnames and ColumnIapp) or ColumnI, Qt.DescendingOrder)
-        busy = None
+        busy.reset_cursor()
 
     def addColumnViewActionsTo(self, menu):
         for name, qa, columns in self._column_views:
@@ -265,7 +262,7 @@ class SkyModelTreeWidget(TigGUI.kitties.widgets.ClickableTreeWidget):
                 dprint(4, "resetting item", item._src.name)
                 item.setSource(item._src)
         dprint(3, "refreshing selected items done")
-        busy = None
+        busy.reset_cursor()
 
     def changeGroupingVisibility(self, group, origin=None):
         if origin is self:
@@ -291,6 +288,7 @@ class SkyModelTreeWidget(TigGUI.kitties.widgets.ClickableTreeWidget):
 
 class SkyModelTreeWidgetItem(QTreeWidgetItem):
     _fonts = None
+    _fontmetrics = None
 
     @staticmethod
     def _initFonts():
@@ -308,7 +306,7 @@ class SkyModelTreeWidgetItem(QTreeWidgetItem):
         # fonts
         self._initFonts()
         # array of actual (i.e. numeric) column values
-        self._values = [None] * NumColumns
+        self._values = [0.0] * NumColumns
         # set text alignment
         for icol in range(NumColumns):
             self.setTextAlignment(icol, Qt.AlignLeft)
@@ -440,10 +438,25 @@ class SkyModelTreeWidgetItem(QTreeWidgetItem):
 
     def __lt__(self, other):
         icol = self.treeWidget().sortColumn()
-        if isinstance(other, SkyModelTreeWidgetItem):
-            return self._values[icol] < other._values[icol]
+        if icol is not None:
+            if isinstance(other, SkyModelTreeWidgetItem):
+                if self._values[icol] is not None and other._values[icol] is not None:
+                    if isinstance(self._values[icol], type(other._values[icol])):
+                        return self._values[icol] < other._values[icol]
+                    else:
+                        return False
+                else:
+                    return False
+            else:
+                if self._text(icol) is not None and other.text(icol) is not None:
+                    if isinstance(self._text(icol), type(other.text(icol))):
+                        return self.text(icol) < other.text(icol)
+                    else:
+                        return False
+                else:
+                    return False
         else:
-            return self.text(icol) < other.text(icol)
+            return False
 
     def __ge__(self, other):
         return other < self
@@ -472,11 +485,11 @@ class ModelGroupsTable(QWidget):
         self._showattrbtn.setMinimumWidth(256)
         lo1.addWidget(self._showattrbtn, 0)
         lo1.addStretch()
-        QObject.connect(self._showattrbtn, SIGNAL("clicked()"), self._togglePlotControlsVisibility)
+        self._showattrbtn.clicked.connect(self._togglePlotControlsVisibility)
         # add table
         self.table = QTableWidget(self)
         lo.addWidget(self.table)
-        QObject.connect(self.table, SIGNAL("cellChanged(int,int)"), self._valueChanged)
+        self.table.cellChanged[int, int].connect(self._valueChanged)
         self.table.setSelectionMode(QTableWidget.NoSelection)
         # setup basic columns
         self.table.setColumnCount(6 + len(self.EditableAttrs))
@@ -521,7 +534,7 @@ class ModelGroupsTable(QWidget):
         if origin is self or not what & (SkyModel.UpdateTags | SkyModel.UpdateGroupStyle):
             return
         model = self.model
-        self._setting_model = True;  # to ignore cellChanged() signals (in valueChanged())
+        self._setting_model = True  # to ignore cellChanged() signals (in valueChanged())
         # _item_cb is a dict (with row,col keys) containing the widgets (CheckBoxes ComboBoxes) per each cell
         self._item_cb = {}
         # lists of "list" and "plot" checkboxes per each grouping (excepting the default grouping); each entry is an (row,col,item) tuple.
@@ -567,7 +580,7 @@ class ModelGroupsTable(QWidget):
                     btn.setToolTip(tooltip)
                     lo.addWidget(btn)
                     # add callback
-                    QObject.connect(btn, SIGNAL("clicked()"), self._currier.curry(self.selectSources, predicate))
+                    btn.clicked.connect(self._currier.curry(self.selectSources, predicate))
                 lo.addStretch(1)
                 self.table.setCellWidget(irow, 2, btns)
             # "list" checkbox (not for current and selected groupings: these are always listed)
@@ -609,8 +622,7 @@ class ModelGroupsTable(QWidget):
                 index = max(0, min(group.style.apply, 9))
                 #        dprint(0,group.name,"apply",index)
                 cb.setCurrentIndex(index)
-                QObject.connect(cb, SIGNAL("activated(int)"),
-                                self._currier.xcurry(self._valueChanged, (irow, self.ColApply)))
+                cb.activated[int].connect(self._currier.xcurry(self._valueChanged, (irow, self.ColApply)))
                 self.table.setCellWidget(irow, self.ColApply, cb)
                 cb.setToolTip("""<P>This controls whether sources within this group are plotted with a customized
             plot style. Customized styles have numeric priority; if a source belongs to multiple groups, then
@@ -634,8 +646,8 @@ class ModelGroupsTable(QWidget):
                 except ValueError:
                     cb.setEditText(str(getattr(group.style, attr)))
                 slot = self._currier.xcurry(self._valueChanged, (irow, icol))
-                QObject.connect(cb, SIGNAL("activated(int)"), slot)
-                QObject.connect(cb, SIGNAL("editTextChanged(const QString &)"), slot)
+                cb.activated[int].connect(slot)
+                cb.editTextChanged['QString'].connect(slot)
                 cb.setEnabled(group is model.defgroup or group.style.apply)
                 self.table.setCellWidget(irow, icol, cb)
                 label = attr
@@ -701,13 +713,13 @@ class ModelGroupsTable(QWidget):
         # in all cases emit a signal
         self.model.emitChangeGroupingStyle(group, origin=self)
 
-    def selectSources(self, predicate):
+    def selectSources(self, predicate, curry=False):
         """Selects sources according to predicate(src)"""
         busy = BusyIndicator()
         for src in self.model.sources:
             src.selected = predicate(src)
         self.model.emitSelection(origin=self)
-        busy = None
+        busy.reset_cursor()
 
     def updateModelSelection(self, nsel, origin=None):
         """This is called when some other widget changes the set of selected model sources"""

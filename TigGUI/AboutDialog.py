@@ -1,6 +1,3 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-#
 # Copyright (C) 2002-2011
 # The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
@@ -21,8 +18,9 @@
 # or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-from PyQt4.Qt import QWidget, QHBoxLayout, SIGNAL, QLabel, QDialog, QVBoxLayout, \
+from PyQt5.Qt import QWidget, QHBoxLayout, QLabel, QDialog, QVBoxLayout, \
     QPushButton, Qt, QSize, QSizePolicy, QSpacerItem
+from PyQt5.QtWidgets import *
 
 from TigGUI import release_string
 from TigGUI.init import pixmaps
@@ -85,13 +83,13 @@ class AboutDialog(QDialog):
         # self.resize(QSize(489,330).expandedTo(self.minimumSizeHint()))
         # self.clearWState(Qt.WState_Polished)
 
-        self.connect(self.btn_ok, SIGNAL("clicked()"), self.accept)
+        self.btn_ok.clicked.connect(self.accept)
 
     def languageChange(self):
         self.setWindowTitle(self.__tr("About Tigger"))
         self.title_label.setText(self.__tr( \
             """<h3>Tigger %s</h3>
-            <p>(C) 2010-2017 Oleg Smirnov & Rhodes University & SKA SA<br>
+            <p>\u00a92010-2021 Oleg Smirnov & Rhodes University & SKA SA<br>
             <br>Please direct feedback and bug reports at https://github.com/ska-sa/tigger</p>
             """ % (release_string) \
             ))
@@ -99,4 +97,4 @@ class AboutDialog(QDialog):
         self.btn_ok.setText(self.__tr("&OK"))
 
     def __tr(self, s, c=None):
-        return qApp.translate("About", s, c)
+        return QApplication.translate("About", s, c)

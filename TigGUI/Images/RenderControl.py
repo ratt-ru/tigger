@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-#
-# % $Id$
-#
-#
 # Copyright (C) 2002-2011
 # The MeqTree Foundation & 
 # ASTRON (Netherlands Foundation for Research in Astronomy)
@@ -28,10 +23,13 @@ import math
 
 import os.path
 import time
-from PyQt4.Qt import QObject, SIGNAL
+from PyQt5.Qt import QObject
+from PyQt5.QtCore import pyqtSignal
 from scipy.ndimage import measurements
+import numpy as np
 
 import TigGUI.kitties.utils
+from TigGUI.Images.Colormaps import HistEqIntensityMap, LogIntensityMap, CubeHelixColormap
 from TigGUI.kitties.widgets import BusyIndicator
 
 _verbosity = TigGUI.kitties.utils.verbosity(name="rc")
@@ -42,6 +40,7 @@ from TigGUI.Images import Colormaps
 
 import TigGUI.kitties.config
 
+
 ImageConfigFile = TigGUI.kitties.config.DualConfigParser("tigger.images.conf")
 
 
@@ -49,6 +48,11 @@ class RenderControl(QObject):
     """RenderControl represents all the options (slices, color and intensity policy data) associated with an image. This object is shared by various GUI elements
     that control the rendering of images.
     """
+    intensityMapChanged = pyqtSignal(object, float)
+    colorMapChanged = pyqtSignal(object)
+    dataSubsetChanged = pyqtSignal(np.ndarray, tuple, str, str)
+    displayRangeChanged = pyqtSignal([float, float], [np.float32, np.float32], [HistEqIntensityMap, float])  # on file save np.float32's become float's on reload?
+    displayRangeLocked = pyqtSignal(bool)
 
     SUBSET_FULL = "full"
     SUBSET_SLICE = "slice"
@@ -89,7 +93,7 @@ class RenderControl(QObject):
             if isinstance(cmap, Colormaps.ColormapWithControls):
                 if self._config:
                     cmap.loadConfig(self._config)
-                QObject.connect(cmap, SIGNAL("colormapChanged"), self.updateColorMapParameters)
+                cmap.colormapChanged.connect(self.updateColorMapParameters)
             if isinstance(cmap, Colormaps.CubeHelixColormap):
                 default_cmap = i
         # set the initial intensity map
@@ -194,6 +198,7 @@ class RenderControl(QObject):
         self.setSliceSubset(set_display_range=False)
         if write_config and self._config:
             self._config.set("slice", " ".join(map(str, indices)))
+        busy.reset_cursor()
 
     def displayRange(self):
         return self._displayrange
@@ -220,9 +225,10 @@ class RenderControl(QObject):
         imap.setDataSubset(self._displaydata, self._displaydata_minmax)
         imap.setDataRange(*self._displayrange)
         self.image.setIntensityMap(imap)
-        self.emit(SIGNAL("intensityMapChanged"), imap, index)
+        self.intensityMapChanged.emit(imap, index)
         if self._config and write_config:
             self._config.set("intensity-map-number", index)
+        busy.reset_cursor()
 
     def setIntensityMapLogCycles(self, cycles, notify_image=True, write_config=True):
         busy = BusyIndicator()
@@ -231,9 +237,10 @@ class RenderControl(QObject):
             imap.log_cycles = cycles
             if notify_image:
                 self.image.setIntensityMap()
-            self.emit(SIGNAL("intensityMapChanged"), imap, self._current_imap_index)
+            self.intensityMapChanged.emit(imap, self._current_imap_index)
         if self._config and write_config:
             self._config.set("intensity-log-cycles", cycles)
+        busy.reset_cursor()
 
     def lockDisplayRangeForAxis(self, iaxis, lock):
         pass
@@ -247,15 +254,17 @@ class RenderControl(QObject):
         self.image.updateCurrentColorMap()
         if self._config:
             self._cmap_list[self._current_cmap_index].saveConfig(self._config)
+        busy.reset_cursor()
 
     def setColorMapNumber(self, index, write_config=True):
         busy = BusyIndicator()
         self._current_cmap_index = index
         cmap = self._cmap_list[index]
         self.image.setColorMap(cmap)
-        self.emit(SIGNAL("colorMapChanged"), cmap)
+        self.colorMapChanged.emit(cmap)
         if self._config and write_config:
             self._config.set("colour-map-number", index)
+        busy.reset_cursor()
 
     def currentSubset(self):
         """Returns tuple of subset,(dmin,dmax),description for current data subset"""
@@ -271,7 +280,8 @@ class RenderControl(QObject):
         dprint(4, "range set")
         self.image.intensityMap().setDataSubset(self._displaydata, minmax=range)
         self.image.setIntensityMap(emit=False)
-        self.emit(SIGNAL("dataSubsetChanged"), subset, range, desc, subset_type)
+        dprint(2, f"dataSubsetChanged {type(subset)}, {type(range)}, {type(desc)}, {type(subset_type)}")
+        self.dataSubsetChanged.emit(subset, range, desc, subset_type)
         if set_display_range:
             self.setDisplayRange(write_config=write_config, *range)
 
@@ -373,7 +383,8 @@ class RenderControl(QObject):
             if notify_image:
                 busy = BusyIndicator()
                 self.image.setIntensityMap(emit=True)
-            self.emit(SIGNAL("displayRangeChanged"), dmin, dmax)
+                busy.reset_cursor()
+            self.displayRangeChanged.emit(dmin, dmax)
             if self._config and write_config:
                 self._config.set("range-min", dmin, save=False)
                 self._config.set("range-max", dmax)
@@ -383,6 +394,6 @@ class RenderControl(QObject):
 
     def lockDisplayRange(self, lock=True, write_config=True):
         self._lock_display_range = lock
-        self.emit(SIGNAL("displayRangeLocked"), lock)
+        self.displayRangeLocked.emit(lock)
         if self._config and write_config:
             self._config.set("lock-range", bool(lock))

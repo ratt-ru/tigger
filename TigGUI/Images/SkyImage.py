@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-#
-# % $Id$
-#
-#
 # Copyright (C) 2002-2011
 # The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
@@ -30,8 +25,11 @@ import numpy
 import numpy.ma
 import os.path
 import time
-from PyQt4.Qt import QObject, SIGNAL, QRect, QRectF, QPointF, QPoint, QSizeF
-from PyQt4.Qwt5 import QwtPlotItem
+
+from PyQt5 import QtCore
+from PyQt5.Qt import QObject, QRect, QRectF, QPointF, QPoint, QSizeF
+from PyQt5.Qwt import QwtPlotItem
+from PyQt5.QtCore import pyqtSignal
 from scipy.ndimage import interpolation, measurements
 
 import TigGUI.kitties.utils
@@ -41,6 +39,7 @@ from astropy.io import fits as pyfits
 from Tigger.Coordinates import Projection
 from TigGUI.Images import Colormaps
 from Tigger.Tools import FITSHeaders
+
 
 DEG = math.pi / 180
 
@@ -57,7 +56,9 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
         # name, if any
         self.name = self.filename = None
         # internal init
+        self.RenderAntialiased
         self._qo = QObject()
+        self.qimg = None
         self._image = self._imgminmax = None
         self._nvaluecalls = 0
         self._value_time = self._value_time0 = None
@@ -66,6 +67,19 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
         self._cache_qimage = {}
         self._cache_mapping = self._cache_imap = self._cache_interp = None
         self._psfsize = 0, 0, 0
+        #self.projection = None
+        self._nx, self._ny = 0, 0
+        self._l0, self._m0 = 0, 0
+        self._dl, self._dm = 0, 0
+        self._x0, self._y0 = 0, 0
+        self._lminmax = None
+        self._mminmax = None
+        self._bounding_rect = None
+        self._bounding_rect_pix = None
+        self._image_key = None
+        self._prefilter = None
+        self._current_rect = None
+        self._current_rect_pix = None
         # set image, if specified
         if image is not None:
             nx, ny = image.shape
@@ -76,12 +90,34 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
         # set default colormap and intensity map
         self.colormap = Colormaps.GreyscaleColormap
         self.imap = Colormaps.LinearIntensityMap()
+        self.signalRepaint = None
+        self.signalSlice = None
+        self.signalRaise = None
+        self.signalUnload = None
+        self.signalCenter = None
+        self.signalPlotRaised = None
 
-    def emit(self, *args):
-        self._qo.emit(*args)
+    # start of signal connection methods
 
-    def connect(self, *args):
-        QObject.connect(self._qo, *args)
+    def connectRepaint(self, sig):
+        self.signalRepaint = sig
+
+    def connectSlice(self, sig):
+        self.signalSlice = sig
+
+    def connectRaise(self, sig):
+        self.signalRaise = sig
+
+    def connectUnload(self, sig):
+        self.signalUnload = sig
+
+    def connectCenter(self, sig):
+        self.signalCenter = sig
+
+    def connectPlotRiased(self, sig):
+        self.signalPlotRaised = sig
+
+    # end  of signal connection methods
 
     def clearDisplayCache(self):
         """Clears all display caches."""
@@ -94,11 +130,11 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
         if cmap:
             self.colormap = cmap
         if emit:
-            self.emit(SIGNAL("repaint"))
+            self.signalRepaint.emit()
 
     def updateCurrentColorMap(self):
         self._cache_qimage = {}
-        self.emit(SIGNAL("repaint"))
+        self.signalRepaint.emit()
 
     def setIntensityMap(self, imap=None, emit=True):
         """Changes the intensity map. If called with no arguments, clears intensity map-dependent caches"""
@@ -107,7 +143,7 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
         if imap:
             self.imap = imap
         if emit:
-            self.emit(SIGNAL("repaint"))
+            self.signalRepaint.emit()
 
     def colorMap(self):
         return self.colormap
@@ -197,7 +233,7 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
             dprint(3, self._imgminmax)
         return self._imgminmax
 
-    def draw(self, painter, xmap, ymap, rect):
+    def draw(self, painter, xmap, ymap, rect, use_cache=True):
         """Implements QwtPlotItem.draw(), to render the image on the given painter."""
         xp1, xp2, xdp, xs1, xs2, xds = xinfo = xmap.p1(), xmap.p2(), xmap.pDist(), xmap.s1(), xmap.s2(), xmap.sDist()
         yp1, yp2, ydp, ys1, ys2, yds = yinfo = ymap.p1(), ymap.p2(), ymap.pDist(), ymap.s1(), ymap.s2(), ymap.sDist()
@@ -216,8 +252,8 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
             self._cache_mapping = mapping
         t0 = time.time()
         # check cached QImage for current image key.
-        qimg = self._cache_qimage.get(self._image_key)
-        if qimg:
+        self.qimg = self._cache_qimage.get(self._image_key)
+        if self.qimg:
             dprint(5, "QImage found in cache, reusing")
         # else regenerate image
         else:
@@ -294,18 +330,22 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
                 dprint(2, "intensity mapping took", time.time() - t0, "secs")
                 t0 = time.time()
             # ok, we have intensity-mapped data in _cache_imap
-            qimg = self.colormap.colorize(self._cache_imap)
+            self.qimg = self.colormap.colorize(self._cache_imap)
             dprint(2, "colorizing took", time.time() - t0, "secs")
             t0 = time.time()
-            # cache the qimage
-            self._cache_qimage[self._image_key] = qimg.copy()
+            if use_cache:
+                # cache the qimage
+                self._cache_qimage[self._image_key] = self.qimg.copy()
         # now draw the image
         t0 = time.time()
-        painter.drawImage(xp1, yp2, qimg)
+        painter.drawImage(xp1, yp2, self.qimg)
         dprint(2, "drawing took", time.time() - t0, "secs")
+        # when exporting images to PNG cache needs to be cleared
+        if not use_cache:
+            self.clearDisplayCache()
 
-    def setPsfSize(self, maj, min, pa):
-        self._psfsize = maj, min, pa
+    def setPsfSize(self, _maj, _min, _pa):
+        self._psfsize = _maj, _min, _pa
 
     def getPsfSize(self):
         return self._psfsize
@@ -333,7 +373,9 @@ class SkyCubePlotItem(SkyImagePlotItem):
 
     def __init__(self, data=None, ndim=None):
         SkyImagePlotItem.__init__(self)
+        self.RenderAntialiased
         # datacube (array of any rank)
+        self._data_fortran_order = None
         self._data = self._dataminmax = None
         # current image slice (a list of indices) applied to data to make an image
         self.imgslice = None
@@ -342,6 +384,8 @@ class SkyCubePlotItem(SkyImagePlotItem):
         # info about other axes
         self._extra_axes = []
         # set other info
+        self.ra0 = 0
+        self.dec0 = 0
         if data is not None:
             self.setData(data)
         elif ndim:
@@ -504,7 +548,8 @@ class SkyCubePlotItem(SkyImagePlotItem):
 
     def setDefaultProjection(self, projection=None):
         """Sets default image projection. If None is given, sets up default SinWCS projection."""
-        self.projection = projection or Projection.SinWCS(ra0, dec0)
+        # FITSWCS_static does not seem to be called often, if at all.
+        self.projection = projection or Projection.FITSWCS_static(self.ra0, self.dec0)
         self.setPlotProjection()
 
     def _setupSlice(self):
@@ -519,13 +564,14 @@ class SkyCubePlotItem(SkyImagePlotItem):
         for i, (iaxis, name, labels, values, units, scale) in enumerate(self._extra_axes):
             self.imgslice[iaxis] = indices[i]
         self._setupSlice()
-        self.emit(SIGNAL("slice"), indices)
+        self.signalSlice.emit(indices)
 
     def currentSlice(self):
         return list(self.imgslice)
 
 
 class FITSImagePlotItem(SkyCubePlotItem):
+    fits_header = None
 
     @staticmethod
     def hasComplexAxis(hdr):
@@ -561,6 +607,7 @@ class FITSImagePlotItem(SkyCubePlotItem):
 
     def __init__(self, filename=None, name=None, hdu=None):
         SkyCubePlotItem.__init__(self)
+        self.RenderAntialiased
         self.name = name
         if filename or hdu:
             self.read(filename, hdu)
@@ -582,7 +629,7 @@ class FITSImagePlotItem(SkyCubePlotItem):
         # NB: all-data operations (such as getting global min/max or computing of histograms) are much faster
         # (almost x2) when data is iterated
         # over in the proper order. After a transpose(), data is in fortran order. Tell this to setData().
-        data = numpy.transpose(data);  # .copy()
+        data = numpy.transpose(data)  # .copy()
         dprint(3, "setting data")
         self.setData(data, fortran_order=True)
         dprint(3, "reading header")
@@ -659,6 +706,6 @@ class FITSImagePlotItem(SkyCubePlotItem):
         hdu.verify('silentfix')
         if os.path.exists(filename):
             os.remove(filename)
-        hdu.writeto(filename, clobber=True)
+        hdu.writeto(filename, overwrite=True)
         self.filename = filename
         self.name = os.path.basename(filename)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Defines various useful functions and constants for parsing FITS headers"""
 
 # Table of Stokes parameters corresponding to Stokes axis indices

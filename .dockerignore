@@ -4,4 +4,6 @@
 .vagrant/
 .venv2/
 *.egg-info/
+Dockerfile
+Jenkinsfile.sh
 

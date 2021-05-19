@@ -1,8 +1,9 @@
-from PyQt4.Qt import QObject, SIGNAL, Qt, QActionGroup
+from PyQt5.Qt import QObject, Qt, QActionGroup
+from PyQt5.QtCore import pyqtSignal
 
 import TigGUI.kitties.utils
-from TigGUI.kitties.utils import PersistentCurrier
 from TigGUI.init import Config, ConfigFile, ConfigFileName, pixmaps
+from TigGUI.kitties.utils import PersistentCurrier
 
 _verbosity = TigGUI.kitties.utils.verbosity(name="mmod")
 dprint = _verbosity.dprint
@@ -45,7 +46,8 @@ _DefaultInitialMode = "Mouse3"
 
 
 class MouseModeManager(QObject):
-    class MouseMode(object):
+    class MouseMode:
+
         def __init__(self, mid):
             self.id = mid
             self.name = self.icon = self.tooltip = None
@@ -61,6 +63,8 @@ class MouseModeManager(QObject):
             self.qa.setCheckable(True)
             qag.addAction(self.qa)
             toolbar and toolbar.addAction(self.qa)
+
+    setMouseMode = pyqtSignal(MouseMode)
 
     def __init__(self, parent, menu, toolbar):
         QObject.__init__(self, parent)
@@ -134,7 +138,7 @@ class MouseModeManager(QObject):
         if mode.submodes:
             self._ensureValidSubmodes()
         else:
-            self.emit(SIGNAL("setMouseMode"), mode)
+            self.setMouseMode.emit(mode)
 
     def _setSubmode(self, mid):
         """Called when the mouse submode changes"""
@@ -149,7 +153,7 @@ class MouseModeManager(QObject):
                 if mm is mode:
                     self._valid_submodes[(i + 1) % len(self._valid_submodes)].qa.setShortcut(Qt.Key_F4)
                     break
-        self.emit(SIGNAL("setMouseMode"), mode)
+        self.setMouseMode.emit(mode)
 
     def _readModeConfig(self, section, main_tooltip=None):
         """Reads the given config section (and uses the supplied defaults dict)
@@ -169,7 +173,7 @@ class MouseModeManager(QObject):
                     mode.submodes.append(self._readModeConfig(mid, main_tooltip=mode.tooltip))
                 else:
                     print("ERROR: unknown submode '%s' in mode config section '%s', skipping/ Check your %s." % (
-                    mid, section, ConfigFileName))
+                        mid, section, ConfigFileName))
         else:
             if main_tooltip:
                 mode.tooltip = main_tooltip + """<P>In this scheme, available mouse functions depend on the selected mode.
@@ -193,20 +197,23 @@ class MouseModeManager(QObject):
                         try:
                             comps = [x if x in (WHEELUP, WHEELDOWN) else getattr(Qt, x) for x in scomps]
                         except AttributeError:
-                            print("WARNING: can't parse '%s' for function '%s' in mode config section '%s', disabling. Check your %s." % (
-                            pat, func, section, ConfigFileName))
+                            print(
+                                "WARNING: can't parse '%s' for function '%s' in mode config section '%s', disabling. Check your %s." % (
+                                    pat, func, section, ConfigFileName))
                             continue
                         # append key/button code and sum of modifiers to the key or keyboard pattern list
                         if scomps[-1].startswith("Key_"):
                             if key_pattern:
-                                print("WARNING: more than one key pattern for function '%s' in mode config section '%s', ignoring. Check your %s." % (
-                                func, section, ConfigFileName))
+                                print(
+                                    "WARNING: more than one key pattern for function '%s' in mode config section '%s', ignoring. Check your %s." % (
+                                        func, section, ConfigFileName))
                             else:
                                 key_pattern = comps[-1], sum(comps[:-1])
                         else:
                             if mouse_pattern:
-                                print("WARNING: more than one mouse pattern for function '%s' in mode config section '%s', ignoring. Check your %s." % (
-                                func, section, ConfigFileName))
+                                print(
+                                    "WARNING: more than one mouse pattern for function '%s' in mode config section '%s', ignoring. Check your %s." % (
+                                        func, section, ConfigFileName))
                             else:
                                 mouse_pattern = comps[-1], sum(comps[:-1])
                 mode.tooltip += "<TR><TD>%s:&nbsp;&nbsp;</TD><TD>%s</TD></TR>\n" % (pattern, FuncDoc[func])

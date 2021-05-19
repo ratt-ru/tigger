@@ -2,6 +2,35 @@
 Tigger Changelog
 ================
 
+1.6.0
+=====
+
+* Version bump in preparation for release
+* Dependent on latest PyQt-Qwt from GitHub
+* Updates to tigger-lsm API calls
+* Fixes bug with window size and dockable widgets
+* Added Ubuntu LTS installation script for 18.04, 20.04 and 21.04
+* Added Tigger application launcher with icon
+* Various bug fixes
+* Various code tidying
+
+1.5.0 beta
+==========
+
+* Ported from PyQt4 and Qwt 5, to PyQt 5 and Qwt 6
+* Now depends on Tigger-LSM v1.7.0
+* Dependent on OS installed PyQt 5 and Qwt 6 related packages
+* Supports Ubuntu 20.04 LTS
+* Support for High DPI displays and scaling
+* Anti-aliasing rendering
+* New dark mode theme
+* New customisable GUI interface
+* Custom QDockWidget (with Qt bug workaround)
+* Dockable, tabbed and floating windows
+* Exported PNG's now calculate maximum image resolution based on free memory resources
+* New option to limit exported PNG images to 4K resolution
+* Various bug fixes
+
 1.3.9
 =====
 
@@ -29,8 +58,6 @@ changes since 1.3.7:
  * PyQt4 is removed from install_requires, since it is not a PyPA-installable package.
    Instead, a check is added to fail setup if it is not already installed.
  * Added missing scipy and pyfits dependencies.
-
-
 
 1.3.3
 =====

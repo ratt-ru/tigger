@@ -24,14 +24,20 @@
 #
 
 import math
+import numpy as np
+import operator
+
+from PyQt5.QtWidgets import *
 import traceback
 
-from PyQt4.Qt import QObject, QHBoxLayout, QComboBox, SIGNAL, QLabel, \
-    QLineEdit, QDialog, QVBoxLayout, Qt, QErrorMessage, QSlider
+from PyQt5.Qt import QObject, QHBoxLayout, QComboBox, QLabel, QLineEdit, QDialog, QVBoxLayout, Qt, QErrorMessage,\
+    QSlider
 
 import TigGUI.kitties.utils
 from TigGUI.kitties.utils import curry
 from TigGUI.kitties.widgets import BusyIndicator
+
+QString = str
 
 _verbosity = TigGUI.kitties.utils.verbosity(name="source_selector")
 dprint = _verbosity.dprint
@@ -45,9 +51,9 @@ TagAccessors = dict()
 for tag in "ra", "dec":
     TagAccessors[tag] = lambda src, t=tag: getattr(src.pos, t)
 for tag in list("IQUV") + ["rm"]:
-    TagAccessors[tag] = lambda src, t=tag: getattr(src.flux, t)
+    TagAccessors[tag] = lambda src, t=tag: getattr(src.flux, t, 0.0)
 for tag in ["spi"]:
-    TagAccessors[tag] = lambda src, t=tag: getattr(src.spectrum, t)
+    TagAccessors[tag] = lambda src, t=tag: getattr(src.spectrum, t, 0.0)
 
 # tags for which sorting is not available
 NonSortingTags = set(["name", "typecode"])
@@ -59,7 +65,7 @@ class SourceSelectorDialog(QDialog):
         self.setModal(False)
         self.setWindowTitle("Select sources by...")
         lo = QVBoxLayout(self)
-        lo.setMargin(10)
+        lo.setContentsMargins(10, 10, 10, 10)
         lo.setSpacing(5)
         # select by
         lo1 = QHBoxLayout()
@@ -69,15 +75,15 @@ class SourceSelectorDialog(QDialog):
         #   lo1.addWidget(lab)
         self.wselby = QComboBox(self)
         lo1.addWidget(self.wselby, 0)
-        QObject.connect(self.wselby, SIGNAL("activated(const QString &)"), self._setup_selection_by)
+        self.wselby.activated[str].connect(self._setup_selection_by)
         # under/over
         self.wgele = QComboBox(self)
         lo1.addWidget(self.wgele, 0)
-        self.wgele.addItems([">", ">=", "<=", "<", "sum<=", "sum>"])
-        QObject.connect(self.wgele, SIGNAL("activated(const QString &)"), self._select_threshold)
+        self.wgele.addItems([">", ">=", "<=", "<", "sum<=", "sum>", "=="])
+        self.wgele.activated[str].connect(self._select_threshold)
         # threshold value
         self.wthreshold = QLineEdit(self)
-        QObject.connect(self.wthreshold, SIGNAL("editingFinished()"), self._select_threshold)
+        self.wthreshold.editingFinished.connect(self._select_threshold)
         lo1.addWidget(self.wthreshold, 1)
         # min and max label
         self.wminmax = QLabel(self)
@@ -87,8 +93,8 @@ class SourceSelectorDialog(QDialog):
         lo.addLayout(lo1)
         self.wpercent = QSlider(self)
         self.wpercent.setTracking(False)
-        QObject.connect(self.wpercent, SIGNAL("valueChanged(int)"), self._select_percentile)
-        QObject.connect(self.wpercent, SIGNAL("sliderMoved(int)"), self._select_percentile_threshold)
+        self.wpercent.valueChanged[int].connect(self._select_percentile)
+        self.wpercent.sliderMoved[int].connect(self._select_percentile_threshold)
         self.wpercent.setRange(0, 100)
         self.wpercent.setOrientation(Qt.Horizontal)
         lo1.addWidget(self.wpercent)
@@ -102,7 +108,7 @@ class SourceSelectorDialog(QDialog):
         #    lo2.setContentsMargins(0,0,0,0)
         #    hidebtn = QPushButton("Close",self)
         #    hidebtn.setMinimumWidth(128)
-        #    QObject.connect(hidebtn,SIGNAL("clicked()"),self.hide)
+        #    QObject.connect(hidebtn,pyqtSignal("clicked()"),self.hide)
         #    lo2.addStretch(1)
         #    lo2.addWidget(hidebtn)
         #    lo2.addStretch(1)
@@ -137,27 +143,37 @@ class SourceSelectorDialog(QDialog):
         self.wpercent_lbl.setText("--%")
 
     def _setup_selection_by(self, tag):
-        tag = str(tag);  # may be QString
+        tag = str(tag)  # may be QString
         # clear threshold value and percentiles
         self._reset_percentile()
         # get min/max values, and sort indices
         # _sort_index will be an array of (value,src,cumsum) tuples, sorted by tag value (high to low),
         # where src is the source, and cumsum is the sum of all values in the list from 0 up to and including the current one
         self._sort_index = []
-        minval = maxval = None
+        minval = maxval = value = None
         for isrc, src in enumerate(self.model.sources):
             try:
                 if hasattr(src, tag):
-                    value = float(getattr(src, tag))
-                else:
+                    # test if item can be cast to float
+                    try:
+                        float(getattr(src, tag))
+                    except:
+                        continue
+                    else:
+                        value = float(getattr(src, tag))
+
+                elif tag in TagAccessors:
                     value = float(TagAccessors[tag](src))
+                else: # not existant for this source (maybe a tag or something??)
+                    value = np.nan
             # skip source if failed to access this tag as a float
             except:
                 traceback.print_exc()
                 continue
-            self._sort_index.append([value, src, 0])
-            minval = min(minval, value) if minval is not None else value
-            maxval = max(maxval, value) if maxval is not None else value
+            if value is not None:
+                self._sort_index.append([value if not np.isnan(value) else -np.inf, src, 0.])
+                minval = min(minval, value if not np.isnan(value) else np.inf) if minval is not None else value
+                maxval = max(maxval, value if not np.isnan(value) else -np.inf) if maxval is not None else value
         # add label
         if minval is None:
             self._range = None
@@ -170,11 +186,12 @@ class SourceSelectorDialog(QDialog):
             for w in self.wgele, self.wthreshold, self.wpercent, self.wpercent_lbl:
                 w.setEnabled(True)
         # sort index by descending values
-        self._sort_index.sort(reverse=True)
+        self._sort_index.sort(reverse=True, key=operator.itemgetter(0))
         # generate cumulative sums
         cumsum = 0.
         for entry in self._sort_index:
-            cumsum += entry[0]
+            if not np.isneginf(entry[0]):
+                cumsum += entry[0]
             entry[2] = cumsum
 
     # Maps comparison operators to callables. Used in _select_threshold.
@@ -186,7 +203,8 @@ class SourceSelectorDialog(QDialog):
         ">": ((lambda e, x: e[0] > x), True),
         ">=": ((lambda e, x: e[0] >= x), True),
         "sum<=": ((lambda e, x: e[2] <= x), True),
-        "sum>": ((lambda e, x: e[2] <= x), False)
+        "sum>": ((lambda e, x: e[2] <= x), False),
+        "==": ((lambda e, x: np.abs(e[0] - x) < 1.0e-8), True),
     }
 
     def _select_threshold(self, *dum):
@@ -227,7 +245,7 @@ class SourceSelectorDialog(QDialog):
             self.model.emitSelection(self)
         finally:
             self._in_select_threshold = False
-            busy = None
+            busy.reset_cursor()
 
     def _select_percentile(self, percent):
         self._select_percentile_threshold(percent, do_select=True)
@@ -261,6 +279,7 @@ class SourceSelectorDialog(QDialog):
             self.model.emitSelection(self)
         self.wpercent_lbl.setText("%3d%%" % percent)
         self.wthreshold.setText("%g" % (thr[2] if opstr.startswith("sum") else thr[0]))
+        busy.reset_cursor()
         return nsel
 
     def setModel(self, model):
@@ -282,8 +301,8 @@ def show_source_selector(mainwin, model):
     dialog = getattr(mainwin, '_source_selector_dialog', None)
     if not dialog:
         dialog = mainwin._source_selector_dialog = SourceSelectorDialog(mainwin)
-        QObject.connect(mainwin, SIGNAL("modelChanged"), dialog.setModel)
-        QObject.connect(mainwin, SIGNAL("closing"), dialog.close)
+        mainwin.modelChanged.connect(dialog.setModel)
+        mainwin.closing.connect(dialog.close)
     dialog.setModel(model)
     # show dialog
     dialog.show()

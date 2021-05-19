@@ -25,13 +25,14 @@
 #
 
 import math
+from PyQt5.QtWidgets import *
 
-from PyQt4.Qt import QObject, QHBoxLayout, QFileDialog, SIGNAL, QLabel, \
+from PyQt5.Qt import QObject, QHBoxLayout, QFileDialog, pyqtSignal, QLabel, \
     QLineEdit, QDialog, QDoubleValidator, QVBoxLayout, \
     QPushButton, Qt, QCheckBox, QMessageBox, QErrorMessage, \
     QRadioButton
 
-import TigGUI.kitties.utils
+# import TigGUI.kitties.utils
 
 from astropy.io import fits as pyfits
 
@@ -51,10 +52,12 @@ from astLib.astWCS import WCS
 class MakeBrickDialog(QDialog):
     def __init__(self, parent, modal=True, flags=Qt.WindowFlags()):
         QDialog.__init__(self, parent, flags)
+        self.model = None
+        self._model_dir = None
         self.setModal(modal)
         self.setWindowTitle("Convert sources to FITS brick")
         lo = QVBoxLayout(self)
-        lo.setMargin(10)
+        lo.setContentsMargins(10, 10, 10, 10)
         lo.setSpacing(5)
         # file selector
         self.wfile = FileSelector(self, label="FITS filename:", dialog_label="Output FITS file", default_suffix="fits",
@@ -112,8 +115,8 @@ class MakeBrickDialog(QDialog):
       This increases memory use, so if you have no flux at the edges of the image anyway, then a pad factor of 1 is
       perfectly fine.</P>""")
         self.wpad.setToolTip(lab.toolTip())
-        QObject.connect(self.wadd, SIGNAL("toggled(bool)"), self.wpad.setEnabled)
-        QObject.connect(self.wadd, SIGNAL("toggled(bool)"), lab.setEnabled)
+        self.wadd.toggled[bool].connect(self.wpad.setEnabled)
+        self.wadd.toggled[bool].connect(lab.setEnabled)
         self.wpad.setEnabled(False)
         lab.setEnabled(False)
         lo1.addStretch(1)
@@ -125,21 +128,20 @@ class MakeBrickDialog(QDialog):
         lo.addSpacing(10)
         lo2 = QHBoxLayout()
         lo.addLayout(lo2)
-        lo2.setContentsMargins(0, 0, 0, 0)
-        lo2.setMargin(5)
+        lo2.setContentsMargins(5, 5, 5, 5)
         self.wokbtn = QPushButton("OK", self)
         self.wokbtn.setMinimumWidth(128)
-        QObject.connect(self.wokbtn, SIGNAL("clicked()"), self.accept)
+        self.wokbtn.clicked.connect(self.accept)
         self.wokbtn.setEnabled(False)
         cancelbtn = QPushButton("Cancel", self)
         cancelbtn.setMinimumWidth(128)
-        QObject.connect(cancelbtn, SIGNAL("clicked()"), self.reject)
+        cancelbtn.clicked.connect(self.reject)
         lo2.addWidget(self.wokbtn)
         lo2.addStretch(1)
         lo2.addWidget(cancelbtn)
         self.setMinimumWidth(384)
         # signals
-        QObject.connect(self.wfile, SIGNAL("filenameSelected"), self._fileSelected)
+        self.wfile.filenameSelected.connect(self._fileSelected)
         # internal state
         self.qerrmsg = QErrorMessage(self)
 
@@ -181,7 +183,7 @@ class MakeBrickDialog(QDialog):
                     self.wfreq.setText(str(hdr['CRVAL%d' % axis] / 1e+6))
                     break
         except Exception as err:
-            busy = None
+            busy.reset_cursor()
             self.wfile.setFilename('')
             if not quiet:
                 QMessageBox.warning(self, "Error reading FITS",
@@ -199,6 +201,7 @@ class MakeBrickDialog(QDialog):
                 break
         else:
             self.wadd.setText("add image to sky model")
+        busy.reset_cursor()
         return filename
 
     def accept(self):
@@ -228,7 +231,7 @@ class MakeBrickDialog(QDialog):
         try:
             input_hdu = pyfits.open(filename)[0]
         except Exception as err:
-            busy = None
+            busy.reset_cursor()
             QMessageBox.warning(self, "Error reading FITS", "Error reading FITS file %s: %s" % (filename, str(err)))
             return
         # reset data if asked to
@@ -246,7 +249,7 @@ class MakeBrickDialog(QDialog):
             input_hdu.writeto(filename)
         except Exception as err:
             traceback.print_exc()
-            busy = None
+            busy.reset_cursor()
             QMessageBox.warning(self, "Error writing FITS", "Error writing FITS file %s: %s" % (filename, str(err)))
             return
         changed = False
@@ -303,14 +306,14 @@ class MakeBrickDialog(QDialog):
             self.model.setSources(sources)
             self.model.emitUpdate(SkyModel.SkyModel.UpdateAll, origin=self)
         self.parent().showMessage("Wrote %d sources to FITS file %s" % (len(sources), filename))
-        busy = None
+        busy.reset_cursor()
         return QDialog.accept(self)
 
 
 def make_brick(mainwin, model):
     # check that something is selected
     if not [src for src in model.sources if src.selected]:
-        mainwin.showErrorMessage(
+        mainwin.signalshowErrorMessage.emit(
             "Cannot make FITS brick without a source selection. Please select some sources first.")
         return
     dialog = getattr(mainwin, '_make_brick_dialog', None)

@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Terminal=false
+Name=Tigger
+Exec=tigger
+Icon=tigger_logo.png
+StartupWMClass=tigger

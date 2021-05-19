@@ -2,40 +2,65 @@
 Tigger
 ======
 
+.. image:: https://user-images.githubusercontent.com/7116312/113705452-5ac51d00-96d5-11eb-8087-5d2a8ccad99a.png
+
 Installing Tigger
 =================
 
 Ubuntu package
 --------------
 
-Enable the KERN repository and install the tigger package.
+Enable the KERN repository <https://kernsuite.info> and install the ``tigger`` package.
 
+From source with Ubuntu LTS
+---------------------------
 
-from pypi or from source
-------------------------
+Python dependencies
+^^^^^^^^^^^^^^^^^^^
 
-Requirements: PyQt4, PyQwt5. These are already present in most Linux distros.
+* Tigger-LSM v1.7.0 - if you are not installing Tigger via the KERN repository or using the ``install_tigger_ubuntu.sh`` script provided, please go here <https://github.com/ska-sa/tigger-lsm> and install this first.
 
-To obtain on ubuntu you can run::
+Automatically installed Python dependencies:
 
- $ sudo apt-get install python-qt4 python-qwt5-qt4 libicu48
+* numpy
+* scipy
+* astlib
+* astropy
+* configparser
 
-now from pip::
+System dependencies
+^^^^^^^^^^^^^^^^^^^
 
-    $ pip install astro-tigger
+* PyQt 5.14.1 (or 5.15.2)
+* Qwt 6.1.4 (or 6.1.5)
+* PyQt-Qwt 1.9.0 (or greater)
 
-or from source::
+These are already present in most Linux distributions. Please note that, this package **does not** use the version of PyQt 5 that is installable from PyPI. Tigger also uses a version of PyQt-Qwt from GitHub.
 
-    $ git clone https://github.com/ska-sa/tigger
-    $ cd tigger
-    $ python setup.py install
+Install on Ubuntu LTS with the installation script
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Download the Tigger repository::
+
+    git clone https://github.com/ska-sa/tigger.git
+
+The installation script works on Ubuntu 18.04, 20.04 and 21.04.
+
+Run the installation script and enter ``sudo`` password when prompted::
+
+    ./install_tigger_ubuntu.sh
+
+Manual installation from source
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+After the Tigger repository has been downloaded with ``git clone https://github.com/ska-sa/tigger.git``, please run the following::
+
+    python3 setup.py install --user
 
 Running Tigger
 ==============
 
-Run the installed tigger binary.
-
+Run the installed ``tigger`` binary, or search for ``tigger`` from Ubuntu's 'Show Applications' icon in the dock (after logging off and on again).
 
 Questions or problems
 =====================

@@ -25,8 +25,9 @@
 #
 
 import math
+from PyQt5.QtWidgets import *
 
-from PyQt4.Qt import QObject, QHBoxLayout, QFileDialog, SIGNAL, QLabel, \
+from PyQt5.Qt import QObject, QHBoxLayout, QFileDialog, pyqtSignal, QLabel, \
     QLineEdit, QDialog, QDoubleValidator, QVBoxLayout, \
     QPushButton, Qt, QCheckBox, QMessageBox, QErrorMessage
 
@@ -44,10 +45,11 @@ DEG = math.pi / 180
 class RestoreImageDialog(QDialog):
     def __init__(self, parent, modal=True, flags=Qt.WindowFlags()):
         QDialog.__init__(self, parent, flags)
+        self.model = None
         self.setModal(modal)
         self.setWindowTitle("Restore model into image")
         lo = QVBoxLayout(self)
-        lo.setMargin(10)
+        lo.setContentsMargins(10, 10, 10, 10)
         lo.setSpacing(5)
         # file selector
         self.wfile_in = FileSelector(self, label="Input FITS file:", dialog_label="Input FITS file",
@@ -90,23 +92,23 @@ class RestoreImageDialog(QDialog):
         lo2 = QHBoxLayout()
         lo.addLayout(lo2)
         lo2.setContentsMargins(0, 0, 0, 0)
-        lo2.setMargin(5)
+        lo2.setContentsMargins(5, 5, 5, 5)
         self.wokbtn = QPushButton("OK", self)
         self.wokbtn.setMinimumWidth(128)
-        QObject.connect(self.wokbtn, SIGNAL("clicked()"), self.accept)
+        self.wokbtn.clicked.connect(self.accept)
         self.wokbtn.setEnabled(False)
         cancelbtn = QPushButton("Cancel", self)
         cancelbtn.setMinimumWidth(128)
-        QObject.connect(cancelbtn, SIGNAL("clicked()"), self.reject)
+        cancelbtn.clicked.connect(self.reject)
         lo2.addWidget(self.wokbtn)
         lo2.addStretch(1)
         lo2.addWidget(cancelbtn)
         self.setMinimumWidth(384)
         # signals
-        QObject.connect(self.wfile_in, SIGNAL("filenameSelected"), self._fileSelected)
-        QObject.connect(self.wfile_in, SIGNAL("filenameSelected"), self._inputFileSelected)
-        QObject.connect(self.wfile_out, SIGNAL("filenameSelected"), self._fileSelected)
-        QObject.connect(self.wfile_psf, SIGNAL("filenameSelected"), self._psfFileSelected)
+        self.wfile_in.filenameSelected.connect(self._fileSelected)
+        self.wfile_in.filenameSelected.connect(self._inputFileSelected)
+        self.wfile_out.filenameSelected.connect(self._fileSelected)
+        self.wfile_psf.filenameSelected.connect(self._psfFileSelected)
         # internal state
         self.qerrmsg = QErrorMessage(self)
 
@@ -148,7 +150,7 @@ class RestoreImageDialog(QDialog):
         try:
             bmaj, bmin, pa = [x / DEG for x in Imaging.fitPsf(filename)]
         except Exception as err:
-            busy = None
+            busy.reset_cursor()
             self.qerrmsg.showMessage("Error fitting PSF file %s: %s" % (filename, str(err)))
             return
         bmaj *= 3600 * Imaging.FWHM
@@ -156,6 +158,7 @@ class RestoreImageDialog(QDialog):
         self.wbmaj.setText(str(bmaj))
         self.wbmin.setText(str(bmin))
         self.wbpa.setText(str(pa))
+        busy.reset_cursor()
 
     def accept(self):
         """Tries to restore the image, and closes the dialog if successful."""
@@ -177,7 +180,7 @@ class RestoreImageDialog(QDialog):
         try:
             input_hdu = pyfits.open(infile)[0]
         except Exception as err:
-            busy = None
+            busy.reset_cursor()
             self.qerrmsg.showMessage("Error reading FITS file %s: %s" % (infile, str(err)))
             return
         # get beam sizes
@@ -186,7 +189,7 @@ class RestoreImageDialog(QDialog):
             bmin = float(str(self.wbmin.text()))
             pa = float(str(self.wbpa.text()) or "0")
         except Exception as err:
-            busy = None
+            busy.reset_cursor()
             self.qerrmsg.showMessage("Invalid beam size specified")
             return
         bmaj = bmaj / (Imaging.FWHM * 3600) * DEG
@@ -196,18 +199,18 @@ class RestoreImageDialog(QDialog):
         try:
             Imaging.restoreSources(input_hdu, sources, bmaj, bmin, pa)
         except Exception as err:
-            busy = None
+            busy.reset_cursor()
             self.qerrmsg.showMessage("Error restoring model into image: %s" % str(err))
             return
         # save fits file
         try:
-            input_hdu.writeto(outfile, clobber=True)
+            input_hdu.writeto(outfile, overwrite=True)
         except Exception as err:
-            busy = None
+            busy.reset_cursor()
             self.qerrmsg.showMessage("Error writing FITS file %s: %s" % (outfile, str(err)))
             return
         self.parent().loadImage(outfile)
-        busy = None
+        busy.reset_cursor()
         return QDialog.accept(self)
 
 

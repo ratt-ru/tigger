@@ -1,10 +1,5 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*-
 
-#
-# % $Id$
-#
-#
 # Copyright (C) 2002-2007
 # The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
@@ -98,7 +93,7 @@ def extract_stack(f=None, limit=None):
         lim += 1
     tb = traceback.extract_stack(None, lim)
     if tb:
-        return tb[:-1];  # skip current frame
+        return tb[:-1]  # skip current frame
     # else presumably running under psyco
     return nonportable_extract_stack(f, limit)
 
@@ -107,7 +102,7 @@ def nonportable_extract_stack(f=None, limit=None):
     if f is not None:
         raise RuntimeError("Timba.utils.nonportable_extract_stack: f has to be None, don't ask why")
     tb = []
-    fr = sys._getframe(1);  # caller's frame
+    fr = sys._getframe(1)  # caller's frame
     while fr and (limit is None or len(tb) < limit):
         tb.insert(0, (fr.f_code.co_filename, fr.f_lineno, fr.f_code.co_name, None))
         fr = fr.f_back
@@ -121,8 +116,8 @@ _scale = {'kB': 1024.0, 'mB': 1024.0 * 1024.0,
 
 
 def _VmB(VmKey):
-    '''Private.
-    '''
+    """Private.
+    """
     global _proc_status, _scale
     # get pseudo file  /proc/<pid>/status
     try:
@@ -141,20 +136,20 @@ def _VmB(VmKey):
 
 
 def _memory(since=0.0):
-    '''Return memory usage in bytes.
-    '''
+    """Return memory usage in bytes.
+    """
     return _VmB('VmSize:') - since
 
 
 def _resident(since=0.0):
-    '''Return resident memory usage in bytes.
-    '''
+    """Return resident memory usage in bytes.
+    """
     return _VmB('VmRSS:') - since
 
 
 def _stacksize(since=0.0):
-    '''Return stack size in bytes.
-    '''
+    """Return stack size in bytes.
+    """
     return _VmB('VmStk:') - since
 
 
@@ -234,7 +229,7 @@ class verbosity:
                     except:
                         pass
             if have_debug:
-                print("Registered verbosity context:" + name + "=" + self.verbose)
+                print("Registered verbosity context:" + name + "=" + str(self.verbose))
         # add name to map
         self._verbosities[name] = self
 
@@ -263,13 +258,13 @@ class verbosity:
             stream.write(self.dheader(-3))
             stream.write(string.join(list(map(str, args)), ' ') + '\n')
 
-    def dprintf(self, level, format, *args):
-        if level <= self.verbose:
+    def dprintf(self, _level, _format, *args):
+        if _level <= self.verbose:
             stream = self.stream or sys.stderr
             try:
-                s = format % args
+                s = _format % args
             except:
-                stream.write('dprintf format exception: ' + str(format) + '\n')
+                stream.write('dprintf format exception: ' + str(_format) + '\n')
             else:
                 stream.write(self.dheader(-3))
                 stream.write(s)
@@ -306,13 +301,18 @@ def curry(func, *args, **kwds):
         kw = kwds.copy()
         kw.update(kwds1)
         a = args + args1
+        # print(f"curry args {args}")
+        # print(f"curry args1 {args1}")
+        # print(f"curry args a {a}")
+        # print(f"curry kw {kw}")
         try:
             return func(*a, **kw)
-        except:
+        except Exception as e:
             print("======== curry: exception while calling a curried function")
-            print("  function:" + func)
-            print("  args:" + a)
-            print("  kwargs:" + kw)
+            print(f"  function:{func}")
+            print(f"  args: {a}")
+            print(f"  kwargs: {kw}")
+            print(f"  exception: {e}")
             _print_curry_exception()
             raise
 
@@ -346,7 +346,7 @@ def xcurry(func, _args=(), _argslice=slice(0), _kwds={}, **kwds):
     return callit
 
 
-class PersistentCurrier(object):
+class PersistentCurrier:
     """This class provides curry() and xcurry() instance methods that
     internally store the curries in a list. This is handy for currying
     callbacks to be passed to, e.g., PyQt slots: since PyQt holds the callbacks
@@ -362,6 +362,8 @@ class PersistentCurrier(object):
         return cr
 
     def curry(self, func, *args, **kwds):
+        # curry debug output
+        # print(f"curry: func {func} args {args} kwds {kwds}")
         return self._add_curry(curry(func, *args, **kwds))
 
     def xcurry(self, func, *args, **kwds):
@@ -371,7 +373,7 @@ class PersistentCurrier(object):
         self._curries = []
 
 
-class WeakInstanceMethod(object):
+class WeakInstanceMethod:
     # return value indicating call of a weakinstancemethod whose object
     # has gone
     DeadRef = object()
