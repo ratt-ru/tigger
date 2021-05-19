@@ -529,6 +529,7 @@ class MainWindow(QMainWindow):
                                  3000)
                 self.model.emitUpdate(SkyModel.SkyModel.UpdateAll)
             else:
+                print("""Loaded %d sources from '%s' file %s""" % (len(model.sources), filetype, _filename))
                 self.signalShowMessage.emit("""Loaded %d sources from '%s' file %s""" % (len(model.sources), filetype, _filename),
                                  3000)
                 self._display_filename = os.path.basename(_filename)

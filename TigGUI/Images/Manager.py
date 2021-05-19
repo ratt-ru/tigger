@@ -150,6 +150,9 @@ class ImageManager(QWidget):
         except:
             busy.reset_cursor()
             traceback.print_exc()
+            print("""Error loading FITS image %s: %s. This may be due to a bug in Tigger; if the FITS file loads fine in another viewer,
+          please send the FITS file, along with a copy of any error messages from the text console, to osmirnov@gmail.com.""" % (
+                filename, str(sys.exc_info()[1])))
             self.signalShowErrorMessage.emit("""<P>Error loading FITS image %s: %s. This may be due to a bug in Tigger; if the FITS file loads fine in another viewer,
           please send the FITS file, along with a copy of any error messages from the text console, to osmirnov@gmail.com.</P>""" % (
                 filename, str(sys.exc_info()[1])))
@@ -157,8 +160,8 @@ class ImageManager(QWidget):
         # create control bar, add to widget stack
         ic = self._createImageController(image, "model source '%s'" % model if model else filename, model or image.name,
                                          model=model)
+        print("""Loaded FITS image %s""" % filename)
         self.signalShowMessage.emit("""Loaded FITS image %s""" % filename, 3000)
-        dprint(2, "image loaded")
         busy.reset_cursor()
         return ic
 
