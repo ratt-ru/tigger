@@ -24,6 +24,7 @@
 #
 
 import math
+import numpy as np
 import operator
 
 from PyQt5.QtWidgets import *
@@ -78,7 +79,7 @@ class SourceSelectorDialog(QDialog):
         # under/over
         self.wgele = QComboBox(self)
         lo1.addWidget(self.wgele, 0)
-        self.wgele.addItems([">", ">=", "<=", "<", "sum<=", "sum>"])
+        self.wgele.addItems([">", ">=", "<=", "<", "sum<=", "sum>", "=="])
         self.wgele.activated[str].connect(self._select_threshold)
         # threshold value
         self.wthreshold = QLineEdit(self)
@@ -163,14 +164,16 @@ class SourceSelectorDialog(QDialog):
 
                 elif tag in TagAccessors:
                     value = float(TagAccessors[tag](src))
+                else: # not existant for this source (maybe a tag or something??)
+                    value = np.nan
             # skip source if failed to access this tag as a float
             except:
                 traceback.print_exc()
                 continue
             if value is not None:
-                self._sort_index.append([value, src, 0.])
-                minval = min(minval, value) if minval is not None else value
-                maxval = max(maxval, value) if maxval is not None else value
+                self._sort_index.append([value if not np.isnan(value) else -np.inf, src, 0.])
+                minval = min(minval, value if not np.isnan(value) else np.inf) if minval is not None else value
+                maxval = max(maxval, value if not np.isnan(value) else -np.inf) if maxval is not None else value
         # add label
         if minval is None:
             self._range = None
@@ -187,7 +190,8 @@ class SourceSelectorDialog(QDialog):
         # generate cumulative sums
         cumsum = 0.
         for entry in self._sort_index:
-            cumsum += entry[0]
+            if not np.isneginf(entry[0]):
+                cumsum += entry[0]
             entry[2] = cumsum
 
     # Maps comparison operators to callables. Used in _select_threshold.
@@ -199,7 +203,8 @@ class SourceSelectorDialog(QDialog):
         ">": ((lambda e, x: e[0] > x), True),
         ">=": ((lambda e, x: e[0] >= x), True),
         "sum<=": ((lambda e, x: e[2] <= x), True),
-        "sum>": ((lambda e, x: e[2] <= x), False)
+        "sum>": ((lambda e, x: e[2] <= x), False),
+        "==": ((lambda e, x: np.abs(e[0] - x) < 1.0e-8), True),
     }
 
     def _select_threshold(self, *dum):

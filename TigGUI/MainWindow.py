@@ -165,6 +165,7 @@ class MainWindow(QMainWindow):
         self._qa_cv_menu = em.addMenu(self._column_view_menu)
         em.addSeparator()
         em.addAction("Select &all", self._selectAll, Qt.CTRL + Qt.Key_A)
+        em.addAction("U&nselect all", self._unselectAll, Qt.CTRL + Qt.Key_N)
         em.addAction("&Invert selection", self._selectInvert, Qt.CTRL + Qt.Key_I)
         em.addAction("Select b&y attribute...", self._showSourceSelector, Qt.CTRL + Qt.Key_Y)
         em.addSeparator()
@@ -398,6 +399,15 @@ class MainWindow(QMainWindow):
         busy = BusyIndicator()
         for src in self.model.sources:
             src.selected = True
+        self.model.emitSelection(self)
+        busy.reset_cursor()
+
+    def _unselectAll(self):
+        if not self.model:
+            return
+        busy = BusyIndicator()
+        for src in self.model.sources:
+            src.selected = False
         self.model.emitSelection(self)
         busy.reset_cursor()
 
