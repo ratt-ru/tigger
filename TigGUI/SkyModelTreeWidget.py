@@ -98,7 +98,8 @@ class SkyModelTreeWidget(TigGUI.kitties.widgets.ClickableTreeWidget):
         # set column width modes
         for icol in range(NumColumns - 1):
             self.header().setSectionResizeMode(icol, QHeaderView.ResizeToContents)
-        self.header().setStretchLastSection(True)
+        self.header().setStretchLastSection(False)
+        self.header().setSectionResizeMode(QHeaderView.ResizeToContents)
         ## self.setTextAlignment(ColumnR,Qt.AlignRight)
         ## self.setTextAlignment(ColumnType,Qt.AlignHCenter)
         # _column_enabled[i] is True if column is available in the model.
