@@ -59,7 +59,7 @@ After the Tigger repository has been downloaded with ``git clone https://github.
     sudo dpkg -i ubuntu_20_04_deb_pkg/python3-pyqt5.qwt_2.00.00-1build1_amd64.deb
     python3 setup.py install --user
 
-Please note that the above commands are for installing on Ubuntu 20.04, Debian packages for 18.04 and 21.04 are located in the ``ubuntu_18_04_deb_pkg`` and ``ubuntu_20_04_deb_pkg`` directories respectively.
+Please note that the above commands are for installing on Ubuntu 20.04, Debian packages for 18.04 and 21.04 are located in the ``ubuntu_18_04_deb_pkg`` and ``ubuntu_21_04_deb_pkg`` directories respectively.
 
 Running Tigger
 ==============
