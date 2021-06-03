@@ -22,13 +22,9 @@ jobs:
       run: |
         pip install --upgrade mypy setuptools wheel pip
         pip install flake8 pytest
-    - name: Install ubuntu dependencies
+    - name: Installation script
       run: |
-        sudo apt-get install python3-pyqt5.qtsvg python3-pyqt5.qtopengl libqwt-qt5-6
-        sudo dpkg -i ubuntu_20_04_deb_pkg/python3-pyqt5.qwt_2.00.00-1build1_amd64.deb
-    - name: Install source
-      run: |
-        pip install .
+        sudo ./intall_tigger_ubuntu.sh
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
