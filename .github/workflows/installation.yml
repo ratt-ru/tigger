@@ -24,7 +24,7 @@ jobs:
         pip install flake8 pytest
     - name: Installation script
       run: |
-        sudo ./install_tigger_ubuntu.sh
+        ./install_tigger_ubuntu.sh
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
