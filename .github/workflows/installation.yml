@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v2
-    - name: Setup runner VM
+    - name: Set up runner VM
       run: |
         sudo apt update
         sudo apt install xvfb
@@ -42,7 +42,7 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v2
-    - name: Setup runner VM
+    - name: Set up runner VM
       run: |
         sudo apt update
         sudo apt install xvfb
