@@ -25,6 +25,7 @@ jobs:
     - name: Installation script
       run: |
         ./install_tigger_ubuntu.sh
+        sudo apt install python3-pyqt5
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
