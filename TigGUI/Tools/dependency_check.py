@@ -36,7 +36,7 @@ try:
 
     from PyQt5.Qwt import QwtPlotZoomer  # check Qwt is available
 
-    test_qwt = callable(getattr(QwtPlotZoomer, 'setZoomStack', None))  # check correct version of Qwt is installed
+    test_qwt = callable(getattr(QwtPlotZoomer, 'setZoomStack', False))  # check correct version of Qwt is installed
 
 except ImportError:
     deps_available = False
