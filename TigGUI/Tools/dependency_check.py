@@ -24,9 +24,9 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-"""Checks that Tigger-LSM, PyQt5 and Qwt are available for Tigger to operate."""
+"""Checks that Tigger-LSM, PyQt5 and PyQt-Qwt are available for Tigger to operate."""
 try:
-    from Tigger.Models import ModelClasses  # check tigger-lsm is available
+    from Tigger.Models import ModelClasses  # check Tigger-LSM is available
 
     from PyQt5.Qt import Qt  # check PyQt5 is available
 
@@ -34,9 +34,9 @@ try:
 
     from PyQt5.QtSvg import QSvgWidget  # check PyQt5 Qt SVG is available
 
-    from PyQt5.Qwt import QwtPlotZoomer  # check Qwt is available
+    from PyQt5.Qwt import QwtPlotZoomer  # check PyQt-Qwt is available
 
-    test_qwt = callable(getattr(QwtPlotZoomer, 'setZoomStack', False))  # check correct version of Qwt is installed
+    test_qwt = callable(getattr(QwtPlotZoomer, 'setZoomStack', False))  # check correct version of PyQt-Qwt is installed
 
 except ImportError:
     deps_available = False
