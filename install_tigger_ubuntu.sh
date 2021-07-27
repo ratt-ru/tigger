@@ -134,7 +134,7 @@ fi
 # install astro-tigger-lsm
 if [[ $install_type == "fullstack" ]]
 then
-  if [[ $build_type == "source" ]] || [[ $distro_verison == "1804" ]]
+  if [[ $build_type == "source" ]] || [[ $distro_version == "1804" ]]
   then
     echo "==== Installing Tigger-LSM dependency from source... ===="
     printf "==== Installing Tigger-LSM dependency from source... ====\n"
@@ -267,7 +267,9 @@ then
 		printf "==== Ubuntu 18.04 and Python 3.6 detected, adjusting package versions... ====\n"
 
 		# check if Astropy version is already 4.1
-		astropy_verison=`pip3 list|grep astropy|awk '{print $2}'|sed -e 's/\.//g'`
+		# shellcheck disable=SC2006
+		# shellcheck disable=SC2034
+		astropy_version=`pip3 list|grep astropy|awk '{print $2}'|sed -e 's/\.//g'`
 		if [[ "$astropy_version" -ne "41" ]]
 		then
 			pip3 uninstall -y astropy || exception
@@ -275,7 +277,8 @@ then
 		fi
 
 		# check if scipy version is already 1.5.2
-		scipy_verison=`pip3 list|grep scipy|awk '{print $2}'|sed -e 's/\.//g'`
+		# shellcheck disable=SC2034
+		scipy_version=`pip3 list|grep scipy|awk '{print $2}'|sed -e 's/\.//g'`
 		if [[ "$scipy_version" -ne "152" ]]
 		then
 			pip3 uninstall -y scipy || exception
