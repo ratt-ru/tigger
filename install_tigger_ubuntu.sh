@@ -91,12 +91,12 @@ then
 	else
 		echo "==== Error: Ubuntu Linux not detected, stopping installation ===="
 		printf "==== Error: Ubuntu Linux not detected, stopping installation ====\n"
-		exit 1
+		exception
 	fi
 else
 	echo "==== Error: Unable to detect Linux distribution, stopping installation ===="
 	printf "==== Error: Unable to detect Linux distribution, stopping installation ====\n"
-	exit 1
+	exception
 fi
 
 echo "==== Installer has detected Linux distribution as $distro_name $distro_version ===="
@@ -263,7 +263,7 @@ then
 	else
 		echo "==== Error: No PyQt-Qwt package available for $distro_name $distro_version, please try: $0 --source ===="
 		printf "==== Error: No PyQt-Qwt package available for $distro_name $distro_version, please try: $0 --source ====\n"
-		exit 1
+		exception
 	fi
 fi
 
