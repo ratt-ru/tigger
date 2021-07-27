@@ -52,7 +52,7 @@ display_usage() {
 	echo -e "\nUsage: $0 [OPTION]\n"
 	echo -e "-s, --source     install PyQt-Qwt from source\n"
 	echo -e "-ns, --no-sudo     install without sudo. You should be su\n"
-    echo -e "-dai, --docker-apt-installer     specify docker apt installer"
+  echo -e "-dai, --docker-apt-installer     specify docker apt installer"
 	}
 
 # check whether user had supplied -h or --help.
@@ -185,7 +185,7 @@ then
     # install PyQt-Qwt deps
     $sudo_runner $apt_runner pyqt5-dev pyqt5-dev-tools python3-pyqt5 libqwt-qt5-dev libqwt-headers libqt5opengl5-dev libqt5svg5-dev g++ dpkg-dev git 2>>$error_file || exception
 	if [[ $distro_version == "2104" ]]
-    then
+  then
 		echo "==== Compiling PyQt-Qwt for $distro_name $distro_version... ===="
 		printf "==== Compiling PyQt-Qwt for $distro_name $distro_version... ====\n"
         $sudo_runner $apt_runner sip5-tools 2>>$error_file || exception
@@ -270,32 +270,32 @@ fi
 # Astropy =< 4.1 and scipy =< 1.5.2 are needed for Tigger on Ubuntu 18.04 and Python 3.6
 if [[ $distro_version == "1804" ]]
 then
-    # check if Python 3.6 in use
-    python_version=`python3 -c "import sys; print(''.join(map(str, sys.version_info[:2])))"`
-    if [[ $python_version == "36" ]]
+  # check if Python 3.6 in use
+  python_version=`python3 -c "import sys; print(''.join(map(str, sys.version_info[:2])))"`
+  if [[ $python_version == "36" ]]
+  then
+    echo "==== Ubuntu 18.04 and Python 3.6 detected, adjusting package versions... ===="
+    printf "==== Ubuntu 18.04 and Python 3.6 detected, adjusting package versions... ====\n"
+
+    # check if Astropy version is already 4.1
+    # shellcheck disable=SC2006
+    # shellcheck disable=SC2034
+    astropy_version=`pip3 list|grep astropy|awk '{print $2}'|sed -e 's/\.//g'`
+    if [[ "$astropy_version" -ne "41" ]]
     then
-		echo "==== Ubuntu 18.04 and Python 3.6 detected, adjusting package versions... ===="
-		printf "==== Ubuntu 18.04 and Python 3.6 detected, adjusting package versions... ====\n"
-
-		# check if Astropy version is already 4.1
-		# shellcheck disable=SC2006
-		# shellcheck disable=SC2034
-		astropy_version=`pip3 list|grep astropy|awk '{print $2}'|sed -e 's/\.//g'`
-		if [[ "$astropy_version" -ne "41" ]]
-		then
-			pip3 uninstall -y astropy || exception
-			pip3 install -q astropy==4.1 || exception
-		fi
-
-		# check if scipy version is already 1.5.2
-		# shellcheck disable=SC2034
-		scipy_version=`pip3 list|grep scipy|awk '{print $2}'|sed -e 's/\.//g'`
-		if [[ "$scipy_version" -ne "152" ]]
-		then
-			pip3 uninstall -y scipy || exception
-			pip3 install -q scipy==1.5.2 || exception
-		fi
+      pip3 uninstall -y astropy || exception
+      pip3 install -q astropy==4.1 || exception
     fi
+
+    # check if scipy version is already 1.5.2
+    # shellcheck disable=SC2034
+    scipy_version=`pip3 list|grep scipy|awk '{print $2}'|sed -e 's/\.//g'`
+    if [[ "$scipy_version" -ne "152" ]]
+    then
+      pip3 uninstall -y scipy || exception
+      pip3 install -q scipy==1.5.2 || exception
+    fi
+  fi
 fi
 
 # install Tigger
