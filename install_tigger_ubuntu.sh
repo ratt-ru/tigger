@@ -101,8 +101,15 @@ printf "==== Installer has detected Linux distribution as $distro_name $distro_v
 # check for pip3 and install if need be
 if command -v pip3 > /dev/null 
 then
-	echo "==== Installer found pip3... ===="
-	printf "==== Installer found pip3... ====\n"
+  if [[ $VIRTUAL_ENV == "" ]]
+  then
+    echo "==== Installer found pip3... ===="
+    printf "==== Installer found pip3... ====\n"
+  else
+    echo "==== Installer did not find pip3... ===="
+    printf "==== Installer did not find pip3... ====\n"
+    $sudo_runner $apt_runner python3-setuptools python3-pip 2>>$error_file || exception
+  fi
 else
 	echo "==== Installer did not find pip3... ===="
 	printf "==== Installer did not find pip3... ====\n"
@@ -288,4 +295,10 @@ then
 fi
 
 # install Tigger
-python3 setup.py install --user 1>>$log_file 2>>$error_file && echo "==== Tigger installation complete! \o/ ====" || exception
+if [[ $VIRTUAL_ENV == "" ]]
+then
+  python3 setup.py install --user 1>>$log_file 2>>$error_file && echo "==== Tigger installation complete! \o/ ====" || exception
+else
+  pip3 install -y vext.pyqt5 || exception
+  pip3 install . 1>>$log_file 2>>$error_file && echo "==== Tigger installation complete! \o/ ====" || exception
+fi
