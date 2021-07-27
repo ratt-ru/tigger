@@ -37,9 +37,13 @@ tigger_pwd="${PWD}"
 
 # exception handling
 exception() {
-	echo "==== Tigger installation script encountered an error ===="
-	echo "==== Please check the log files $log_file and $error_file ===="
-	echo "==== Ending Tigger installation script ¯\_(ツ)_/¯ ===="
+  echo ""
+  echo "********************************* ERROR ****************************************"
+	echo "**** Tigger installation script encountered an error"
+	echo "**** Please check the log files $log_file and $error_file"
+	echo "**** Ending Tigger installation script ¯\_(ツ)_/¯"
+  echo "********************************************************************************"
+  echo ""
 	exit 1
 	}
 
