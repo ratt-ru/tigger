@@ -303,6 +303,6 @@ if [[ $VIRTUAL_ENV == "" ]]
 then
   python3 setup.py install --user 1>>$log_file 2>>$error_file && echo "==== Tigger installation complete! \o/ ====" || exception
 else
-  pip3 install -y vext.pyqt5 || exception
+  pip3 install -q vext.pyqt5 || exception
   pip3 install . 1>>$log_file 2>>$error_file && echo "==== Tigger installation complete! \o/ ====" || exception
 fi
