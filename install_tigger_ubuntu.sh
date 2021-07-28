@@ -158,7 +158,7 @@ then
   then
     echo "==== Installing Tigger-LSM dependency from pip3... ===="
     printf "==== Installing Tigger-LSM dependency from pip3... ====\n"
-    pip3 install -q astro_tigger_lsm>=1.7.0 || exception
+    pip3 install -q astro_tigger_lsm==1.7.0 || exception
   fi
 fi
 
@@ -234,21 +234,25 @@ fi
 # install PyQt-Qwt package
 if [[ $build_type == "package" ]]
 then
+	echo "==== Setting up debian_pkgs git submodule ===="
+	printf "==== Setting up debian_pkgs git submodule ====\n"
+	git submodule update --init --recursive || exception
+
 	if [[ $distro_version == "2104" ]]
 	then
 		echo "==== Installing PyQwt for $distro_name $distro_version... ===="
 		printf "==== Installing PyQwt for $distro_name $distro_version... ====\n"
-		$sudo_runner dpkg -i ubuntu_21_04_deb_pkg/python3-pyqt5.qwt_2.00.00-1_amd64.deb || exception
+		$sudo_runner dpkg -i debian_pkgs/ubuntu_21_04_deb_pkg/python3-pyqt5.qwt_2.00.00-1_amd64.deb || exception
 	elif [[ $distro_version == "2004" ]]
 	then
 		echo "==== Installing PyQwt for $distro_name $distro_version... ===="
 		printf "==== Installing PyQwt for $distro_name $distro_version... ====\n"
-		$sudo_runner dpkg -i ubuntu_20_04_deb_pkg/python3-pyqt5.qwt_2.00.00-1build1_amd64.deb || exception
+		$sudo_runner dpkg -i debian_pkgs/ubuntu_20_04_deb_pkg/python3-pyqt5.qwt_2.00.00-1build1_amd64.deb || exception
 	elif [[ $distro_version == "1804" ]]
 	then
 		echo "==== Installing PyQwt for $distro_name $distro_version... ===="
 		printf "==== Installing PyQwt for $distro_name $distro_version... ====\n"
-		$sudo_runner dpkg -i ubuntu_18_04_deb_pkg/python3-pyqt5.qwt_2.00.00_amd64.deb || exception
+		$sudo_runner dpkg -i debian_pkgs/ubuntu_18_04_deb_pkg/python3-pyqt5.qwt_2.00.00_amd64.deb || exception
 	else
 		echo "==== Error: No PyQt-Qwt package available for $distro_name $distro_version, please try: $0 --source ===="
 		printf "==== Error: No PyQt-Qwt package available for $distro_name $distro_version, please try: $0 --source ====\n"
