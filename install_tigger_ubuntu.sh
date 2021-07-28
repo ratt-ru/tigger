@@ -158,7 +158,7 @@ then
   then
     echo "==== Installing Tigger-LSM dependency from pip3... ===="
     printf "==== Installing Tigger-LSM dependency from pip3... ====\n"
-    pip3 install -q astro_tigger_lsm>=1.7.0 || exception
+    pip3 install -q astro_tigger_lsm==1.7.0 || exception
   fi
 fi
 
