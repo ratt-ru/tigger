@@ -393,7 +393,7 @@ class ImageController(QFrame):
 
     def colourctrl_dockwidget_closed(self):
         self._dockable_colour_ctrl.setVisible(False)
-        self.parent().mainwin.setMaximumWidth(self.parent().mainwin.width() - self._dockable_colour_ctrl.width())
+        self.parent().mainwin.setMaximumWidth(self.parent().mainwin.width() + self._dockable_colour_ctrl.width())
 
     def colourctrl_dockwidget_toggled(self):
         if self._dockable_colour_ctrl.isVisible():
