@@ -1212,7 +1212,8 @@ class SkyModelPlotter(QWidget):
         for ea_action in list_of_actions:
             if ea_action.text() == 'Show live zoom && cross-sections':
                 self._dockable_livezoom.setVisible(False)
-                self._mainwin.setMaximumWidth(self._mainwin.width() + self._dockable_livezoom.width())
+                if self._mainwin.windowState() != Qt.WindowMaximized:
+                    self._mainwin.setMaximumWidth(self._mainwin.width() + self._dockable_livezoom.width())
                 ea_action.setChecked(False)
 
     def liveprofile_dockwidget_closed(self):
@@ -1220,7 +1221,8 @@ class SkyModelPlotter(QWidget):
         for ea_action in list_of_actions:
             if ea_action.text() == 'Show profiles':
                 self._dockable_liveprofile.setVisible(False)
-                self._mainwin.setMaximumWidth(self._mainwin.width() + self._dockable_liveprofile.width())
+                if self._mainwin.windowState() != Qt.WindowMaximized:
+                    self._mainwin.setMaximumWidth(self._mainwin.width() + self._dockable_liveprofile.width())
                 ea_action.setChecked(False)
 
     def liveprofile_dockwidget_toggled(self):
@@ -1229,7 +1231,8 @@ class SkyModelPlotter(QWidget):
                 self._dockable_liveprofile.setFloating(False)
             else:
                 self._dockable_liveprofile.setFloating(True)
-                self._mainwin.setMaximumWidth(self._mainwin.width() + self._dockable_liveprofile.width())
+                if self._mainwin.windowState() != Qt.WindowMaximized:
+                    self._mainwin.setMaximumWidth(self._mainwin.width() + self._dockable_liveprofile.width())
 
     def livezoom_dockwidget_toggled(self):
         if self._dockable_livezoom.isVisible():
@@ -1237,7 +1240,8 @@ class SkyModelPlotter(QWidget):
                 self._dockable_livezoom.setFloating(False)
             else:
                 self._dockable_livezoom.setFloating(True)
-                self._mainwin.setMaximumWidth(self._mainwin.width() + self._dockable_livezoom.width())
+                if self._mainwin.windowState() != Qt.WindowMaximized:
+                    self._mainwin.setMaximumWidth(self._mainwin.width() + self._dockable_livezoom.width())
 
     def setupShowMessages(self, _signal):
         self.plotShowMessage = _signal
