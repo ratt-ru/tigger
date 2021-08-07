@@ -1838,6 +1838,7 @@ class SkyModelPlotter(QWidget):
             QTimer.singleShot(10, self._currier.curry(self._addPlotMarkup, markup_items))
             QApplication.clipboard().setText(msgtext + "\n")
             QApplication.clipboard().setText(msgtext + "\n", QClipboard.Selection)
+            print(msgtext)
 
     def _colourZoomIntoSubset(self):
         # zoom into current image subset (if any), and hide the zoom button
