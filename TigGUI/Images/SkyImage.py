@@ -623,6 +623,10 @@ class FITSImagePlotItem(SkyCubePlotItem):
             dprint(3, "opening", filename)
             hdu = pyfits.open(filename)[0]
             hdu.verify('silentfix')
+            if os.path.getsize(filename) < hdu._file.tell():
+                raise RuntimeError(
+                    f"FITS file may have been truncated: file length ({os.path.getsize(filename)}) "
+                    f"is smaller than expected ({hdu._file.tell()})")
         hdr = self.fits_header = hdu.header
         dprint(3, "reading data")
         data = hdu.data
