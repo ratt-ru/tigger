@@ -352,7 +352,9 @@ class ImageController(QFrame):
         else:
             self._control_dialog.hide()
             self._dockable_colour_ctrl.setVisible(False)
-            self.parent().mainwin.setMaximumWidth(self.parent().mainwin.width() + self._dockable_colour_ctrl.width())
+            if self.parent().mainwin.windowState() != Qt.WindowMaximized:
+                self.parent().mainwin.setMaximumWidth(
+                    self.parent().mainwin.width() + self._dockable_colour_ctrl.width())
 
     def addDockWidgetToTab(self):
         # Add dockable widget to main window.
@@ -393,7 +395,8 @@ class ImageController(QFrame):
 
     def colourctrl_dockwidget_closed(self):
         self._dockable_colour_ctrl.setVisible(False)
-        self.parent().mainwin.setMaximumWidth(self.parent().mainwin.width() - self._dockable_colour_ctrl.width())
+        if self.parent().mainwin.windowState() != Qt.WindowMaximized:
+            self.parent().mainwin.setMaximumWidth(self.parent().mainwin.width() + self._dockable_colour_ctrl.width())
 
     def colourctrl_dockwidget_toggled(self):
         if self._dockable_colour_ctrl.isVisible():
@@ -401,7 +404,9 @@ class ImageController(QFrame):
                 self._dockable_colour_ctrl.setFloating(False)
             else:
                 self._dockable_colour_ctrl.setFloating(True)
-                self.parent().mainwin.setMaximumWidth(self.parent().mainwin.width() + self._dockable_colour_ctrl.width())
+                if self.parent().mainwin.windowState() != Qt.WindowMaximized:
+                    self.parent().mainwin.setMaximumWidth(
+                        self.parent().mainwin.width() + self._dockable_colour_ctrl.width())
 
     def _changeDisplayRangeToPercent(self, percent):
         if not self._control_dialog:
