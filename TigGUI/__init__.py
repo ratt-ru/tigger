@@ -26,7 +26,11 @@
 
 import TigGUI.kitties.utils
 
-__version__ = "1.6.0"
+import pkg_resources
+try:
+    __version__ = pkg_resources.require("astro-tigger")[0].version
+except pkg_resources.DistributionNotFound:
+    __version__ = "dev"
 
 release_string = __version__
 svn_revision_string = __version__

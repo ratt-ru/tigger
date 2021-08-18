@@ -38,6 +38,7 @@ setup(
     author="Oleg Smirnov",
     author_email="osmirnov@gmail.com",
     url="https://github.com/ska-sa/tigger",
+    python_requires='>=3.6',
     install_requires=requirements,
     data_files=[
         (f"{Path.home()}/.local/share/applications", ['desktop/tigger.desktop']),
