@@ -26,7 +26,7 @@ if __name__ == "__main__":
     import TigGUI
     import Tigger
     import TigGUI.kitties.utils
-    from PyQt4.Qt import QApplication, QColor
+    from PyQt4.Qt import QApplication, QColor, QMessageBox
 
     import TigGUI.init
 
@@ -92,10 +92,28 @@ if __name__ == "__main__":
     from TigGUI.Tools import export_karma,add_brick,make_brick,restore_image
 
     dprint(1,"imported TigGUI.Tools")
-
-
     mainwin = TigGUI.MainWindow.MainWindow(None)
     dprint(1,"created main window")
+
+    import sys
+    if sys.version_info[0] < 3:  
+      sunset_notice = \
+        "This is the last major release for Python 2.x\n"\
+        "It is provided AS-IS. We recommend that you\n"\
+        "upgrade to Python 3.6+ and upgrade to Tigger\n"\
+        "1.6+"
+    else:
+      sunset_notice = \
+        "This major release targets Python 2.x\n"\
+        "We see you are running Python >= 3. We \n"\
+        "recommend that you upgrade to Python 3.6+ \n"\
+        "and upgrade to Tigger 1.6+\n"
+    print("-----------------------------------------------\n"\
+          "Sunset notice:\n"\
+          "-----------------------------------------------")
+    print(sunset_notice)
+    print("-----------------------------------------------")
+    QMessageBox.warning(mainwin, "Sunset notice", sunset_notice, QMessageBox.Ok)
     
   # add optional tools
     for name,callback in TigGUI.Tools.getRegisteredTools():

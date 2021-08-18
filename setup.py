@@ -29,6 +29,7 @@ setup(
     extras_require=extras_require,
     scripts=scripts,
     package_data=package_data,
+    python_requires='<3.0',
     description="yet another FITS image viewer",
     author="Oleg Smirnov",
     author_email="osmirnov@gmail.com",
