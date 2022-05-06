@@ -15,10 +15,10 @@ echo() {
    command echo "$@" >&3
 }
 
-echo "==== Tigger v1.6.0 - Ubuntu install script ===="
+echo "==== Tigger v1.6.1 - Ubuntu install script ===="
 echo "==== Log file: $log_file ===="
 echo "==== Error log: $error_file ===="
-printf "==== Tigger v1.6.0 - Ubuntu install script ====\n"
+printf "==== Tigger v1.6.1 - Ubuntu install script ====\n"
 
 # sudo runner by default
 sudo_runner="sudo"

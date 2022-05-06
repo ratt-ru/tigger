@@ -2,6 +2,13 @@
 Tigger Changelog
 ================
 
+1.6.1
+=====
+
+* Version nump in preparation for release
+* Dependent on the latest tigger-lsm (1.7.1)
+* Fixes venv pip3 bug
+
 1.6.0
 =====
 
