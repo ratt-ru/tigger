@@ -135,10 +135,10 @@ then
 	printf "==== Installer found astro-tigger-lsm dependency... ====\n"
 	tigger_lsm_version=`pip3 list|grep astro-tigger-lsm|awk '{print $2}'|sed -e 's/\.//g'`
 	
-	if [[ "$tigger_lsm_version" -lt "170" ]]
+	if [[ "$tigger_lsm_version" -lt "171" ]]
 	then
-		echo "==== Installer fullstack mode - astro-tigger-lsm version is less than 1.7.0... ===="
-		printf "==== Installer fullstack mode - astro-tigger-lsm version is less than 1.7.0... ====\n"
+		echo "==== Installer fullstack mode - astro-tigger-lsm version is less than 1.7.1... ===="
+		printf "==== Installer fullstack mode - astro-tigger-lsm version is less than 1.7.1... ====\n"
 		pip3 uninstall -y astro_tigger_lsm 2>>$error_file || exception
 		install_type="fullstack"
 	fi
@@ -175,7 +175,7 @@ then
   then
     echo "==== Installing Tigger-LSM dependency from pip3... ===="
     printf "==== Installing Tigger-LSM dependency from pip3... ====\n"
-    pip3 install -q astro_tigger_lsm==1.7.0 || exception
+    pip3 install -q astro_tigger_lsm==1.7.1 || exception
   fi
 fi
 
