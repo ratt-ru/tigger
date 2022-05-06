@@ -20,11 +20,13 @@
 # or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 import faulthandler
+import time
+
 from TigGUI.Tools import dependency_check  # checks dependencies are available
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPalette
-from PyQt5.QtWidgets import QStyleFactory, QSizePolicy, QStyle
+from PyQt5.QtWidgets import QStyleFactory, QSizePolicy, QStyle, QSplashScreen
 
 faulthandler.enable()
 import sys
@@ -127,9 +129,11 @@ def main():
         pass
 
     dprint(1, "created QApplication")
-    # splash = QSplashScreen(TigGUI.pixmaps.tigger_splash.pm())
-    # splash.showMessage("Welcome to TigGUI!",Qt.AlignHCenter|Qt.AlignBottom)
-    # splash.show()
+    splash = QSplashScreen(pixmaps.tigger_splash.pm(), Qt.WindowStaysOnTopHint)
+    splash.show()
+    splash.showMessage("Welcome to TigGUI!", Qt.AlignBottom)
+    time.sleep(2)
+    app.processEvents()
 
     import TigGUI.Images
     import TigGUI.MainWindow
@@ -162,9 +166,14 @@ def main():
 
     # load images first
     for img in images:
-        # splash.showMessage("Loading image %s"%img,Qt.AlignHCenter|Qt.AlignBottom)
+        file_loading = os.path.basename(img)
+        splash.showMessage(f"Loading image {file_loading}", Qt.AlignBottom)
+        app.processEvents()
         mainwin.loadImage(img)
         dprint(1, "loaded image", img)
+
+    splash.showMessage(f"Loaded images", Qt.AlignBottom)
+    app.processEvents()
 
     # load model, if specified
     for mod in models:
@@ -176,14 +185,20 @@ def main():
             print("Error loading model %s" % mod)
             exit(1)
 
-        # splash.showMessage("Loading model %s"%mod,Qt.AlignHCenter|Qt.AlignBottom)
+        model_loading = os.path.basename(mod)
+        splash.showMessage(f"Loading model {model_loading}", Qt.AlignBottom)
+        app.processEvents()
         dprint(1, "loaded model", mod)
+
+    splash.showMessage(f"Loaded model", Qt.AlignBottom)
+    app.processEvents()
 
     # start updating the plot
     mainwin.enableUpdates()
     dprint(1, "started plot updates")
 
     # flush app event queue, so windows get resized , etc.
+    splash.showMessage(f"Starting up", Qt.AlignBottom)
     app.processEvents()
 
     # handle SIGINT
@@ -195,7 +210,8 @@ def main():
     signal.signal(signal.SIGINT, sigint_handler)  # TODO -check this is still valid/used
     dprint(1, "added signal handler")
 
-    # splash.finish(mainwin)
+    splash.finish(mainwin)
+    mainwin.raise_()
 
     app.exec_()
 
