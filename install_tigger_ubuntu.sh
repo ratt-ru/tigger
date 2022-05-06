@@ -107,16 +107,22 @@ if command -v pip3 > /dev/null
 then
   if [[ $VIRTUAL_ENV == "" ]]
   then
-    echo "==== Installer found pip3... ===="
-    printf "==== Installer found pip3... ====\n"
+    echo "==== Installer found pip3 (no VENV)... ===="
+    printf "==== Installer found pip3 (no VENV)... ====\n"
   else
-    echo "==== Installer did not find pip3... ===="
-    printf "==== Installer did not find pip3... ====\n"
-    $sudo_runner $apt_runner python3-setuptools python3-pip 2>>$error_file || exception
+    if command -v $VIRTUAL_ENV/bin/pip3 > /dev/null
+    then
+      echo "==== Installer found pip3 (VENV)... ===="
+      printf "==== Installer found pip3 (VENV)... ====\n"
+    else
+      echo "==== Installer did not find pip3 (VENV)... ===="
+      printf "==== Installer did not find pip3 (VENV)... ====\n"
+      $sudo_runner $apt_runner python3-setuptools python3-pip 2>>$error_file || exception
+    fi
   fi
 else
-	echo "==== Installer did not find pip3... ===="
-	printf "==== Installer did not find pip3... ====\n"
+  echo "==== Installer did not find pip3 (no VENV)... ===="
+  printf "==== Installer did not find pip3 (no VENV)... ====\n"
 	install_type="fullstack"
 	$sudo_runner $apt_runner python3-setuptools python3-pip 2>>$error_file || exception
 fi
