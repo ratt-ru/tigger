@@ -7,6 +7,37 @@ on:
     branches: [ master ]
 
 jobs:
+  build-2204:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up runner VM
+      run: |
+        sudo apt update
+        sudo apt install xvfb
+    - name: Install Python dependencies
+      run: |
+        pip3 install --upgrade testresources mypy setuptools wheel pip
+        pip3 install flake8 pytest
+    - name: Installation script
+      run: |
+        ./install_tigger_ubuntu.sh
+    - name: Check installer log file
+      run: |
+        cat tigger_installer.log
+    - name: Check installer error log file
+      run: |
+        cat tigger_installer.err
+    - name: Lint with flake8
+      run: |
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82,F821 --show-source --statistics
+        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    - name: Test Tigger loads
+      run: |
+        xvfb-run -a $HOME/.local/bin/tigger & sleep 10
+        killall tigger
   build-2004:
     runs-on: ubuntu-20.04
     steps:
