@@ -267,19 +267,7 @@ then
     then
 		echo "==== Installing PyQwt for $distro_name $distro_version... ===="
 		printf "==== Installing PyQwt for $distro_name $distro_version... ====\n"
-        # Use source build for now
-        $sudo_runner $apt_runner sip-tools sip-dev 2>>$error_file || exception
-        # install PyQt-Qwt deps
-        $sudo_runner $apt_runner pyqt5-dev pyqt5-dev-tools python3-pyqt5 libqwt-qt5-dev libqwt-headers libqt5opengl5-dev libqt5svg5-dev g++ dpkg-dev git 2>>$error_file || exception
-        cd /tmp || exception
-		rm -rf PyQt-Qwt
-		git clone https://github.com/razman786/PyQt-Qwt.git || exception
-		cd PyQt-Qwt || exception
-		QT_SELECT=qt5 python3 configure.py --qwt-incdir=/usr/include/qwt --qwt-libdir=/usr/lib --qwt-lib=qwt-qt5 || exception
-		make -j4 || exception
-		$sudo_runner make install || exception
-		cd /tmp || exception
-		cd "${tigger_pwd}" || exception
+		$sudo_runner dpkg -i debian_pkgs/ubuntu_22_04_deb_pkg/python3-pyqt5.qwt_2.00.00-1build1_amd64.deb || exception
 	elif [[ $distro_version == "2104" ]]
 	then
 		echo "==== Installing PyQwt for $distro_name $distro_version... ===="
