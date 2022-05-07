@@ -160,7 +160,7 @@ class SourceMarker:
         if style.symbol == "dot":
             self._symbol.setSize(2)
         else:
-            self._symbol.setSize(self._size)
+            self._symbol.setSize(int(self._size))
         self._symbol.setPen(QPen(symbol_color, style.symbol_linewidth))
         self._symbol.setBrush(QBrush(Qt.NoBrush))
         lab_pen = QPen(Qt.NoPen)
@@ -726,7 +726,7 @@ class SkyModelPlotter(QWidget):
             return self._mainwin.dropEvent(event)
 
         def lmPosToScreen(self, fpos):
-            return QPoint(self.transform(QwtPlot.xBottom, fpos.x()), self.transform(QwtPlot.yLeft, fpos.y()))
+            return QPointF(self.transform(QwtPlot.xBottom, fpos.x()), self.transform(QwtPlot.yLeft, fpos.y()))
 
         def lmRectToScreen(self, frect):
             return QRect(self.lmPosToScreen(frect.topLeft()), self.lmPosToScreen(frect.bottomRight()))
