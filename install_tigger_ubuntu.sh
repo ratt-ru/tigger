@@ -155,19 +155,20 @@ then
   then
     echo "==== Installing Tigger-LSM dependency from source... ===="
     printf "==== Installing Tigger-LSM dependency from source... ====\n"
-    $sudo_runner $apt_runner git 2>>$error_file || exception
-    cd /tmp || exception
-    rm -rf tigger-lsm
-    git clone https://github.com/ska-sa/tigger-lsm.git 1>>$log_file 2>>$error_file || exception
-    cd tigger-lsm || exception
-
-    if [[ $distro_version == "1804" ]]
+    if [[ $distro_version == "2204" ]]
+    then
+      $sudo_runner $apt_runner libboost-python-dev python3-casacore casacore* libcfitsio-dev wcslib-dev 2>>$error_file || exception
+    elif [[ $distro_version == "1804" ]]
     then
       $sudo_runner $apt_runner libboost-python-dev casacore* 2>>$error_file || exception
       pip3 install -q astropy==4.1 || exception
       pip3 install -q scipy==1.5.2 || exception
     fi
-
+    $sudo_runner $apt_runner git 2>>$error_file || exception
+    cd /tmp || exception
+    rm -rf tigger-lsm
+    git clone https://github.com/ska-sa/tigger-lsm.git 1>>$log_file 2>>$error_file || exception
+    cd tigger-lsm || exception
     python3 setup.py install --user 1>>$log_file 2>>$error_file || exception
     cd /tmp || exception
     cd "${tigger_pwd}" || exception
