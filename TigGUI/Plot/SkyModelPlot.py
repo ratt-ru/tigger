@@ -455,8 +455,8 @@ class LiveImageZoom(ToolDialog):
         self._npix = radius * 2 + 1
         self._magfac = factor
         width = height = self._npix * self._magfac
-        self._zoomplot.setMinimumHeight(height + 80)
-        self._zoomplot.setMinimumWidth(width + 80)
+        self._zoomplot.setMinimumHeight(int(height) + 80)
+        self._zoomplot.setMinimumWidth(int(width) + 80)
         # set data array
         self._data = numpy.ma.masked_array(numpy.zeros((int(self._npix), int(self._npix)), float),
                                            numpy.zeros((int(self._npix), int(self._npix)), bool))
@@ -486,7 +486,7 @@ class LiveImageZoom(ToolDialog):
 
         def draw(self, painter, xmap, ymap, rect):
             """Implements QwtPlotItem.draw(), to render the image on the given painter."""
-            self._qimg and painter.drawImage(QRect(xmap.p1(), ymap.p2(), xmap.pDist(), ymap.pDist()), self._qimg)
+            self._qimg and painter.drawImage(QRectF(xmap.p1(), ymap.p2(), xmap.pDist(), ymap.pDist()), self._qimg)
 
     def trackImage(self, image, ix, iy):
         if not self.isVisible():

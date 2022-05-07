@@ -25,7 +25,7 @@ import math
 import numpy
 from PyQt5.Qt import QWidget, QHBoxLayout, QComboBox, QLabel, QLineEdit, QDialog, QToolButton, QVBoxLayout, \
     Qt, QSize, QSizePolicy, QApplication, QColor, QBrush, QTimer, QFrame, QCheckBox, QStackedWidget, QIcon, QMenu, \
-    QGridLayout, QPen, QRect
+    QGridLayout, QPen, QRectF
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QDockWidget
 from PyQt5.Qwt import QwtPlot, QwtText, QwtPlotItem, QwtPlotCurve, QwtSymbol, QwtLinearScaleEngine, QwtLogScaleEngine, \
@@ -544,7 +544,7 @@ class ImageControlDialog(QDialog):
             # remap into an Nx1 image
             qimg = self.cmap.colorize(self.imap.remap(xp.reshape((len(xp), 1))))
             # plot image
-            painter.drawImage(QRect(xp1, y0, xdp, dy), qimg)
+            painter.drawImage(QRectF(xp1, y0, xdp, dy), qimg)
 
     class HistogramLineMarker:
         """Helper class implementing a line marker for a histogram plot"""
@@ -861,7 +861,7 @@ class ImageControlDialog(QDialog):
             self._cb_item.setIntensityMap(imap)
             self._updateITF()
             self._histplot.replot()
-            self._wimap.setCurrentIndex(index)
+            self._wimap.setCurrentIndex(int(index))
             if isinstance(imap, Colormaps.LogIntensityMap):
                 self._wlogcycles.setValue(imap.log_cycles)
                 self._setIntensityLogCyclesLabel(imap.log_cycles)
