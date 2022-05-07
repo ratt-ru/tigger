@@ -167,7 +167,7 @@ then
     $sudo_runner $apt_runner git 2>>$error_file || exception
     cd /tmp || exception
     rm -rf tigger-lsm
-    git clone https://github.com/ska-sa/tigger-lsm.git 1>>$log_file 2>>$error_file || exception
+    git clone https://github.com/ratt-ru/tigger-lsm.git 1>>$log_file 2>>$error_file || exception
     cd tigger-lsm || exception
     python3 setup.py install --user 1>>$log_file 2>>$error_file || exception
     cd /tmp || exception
