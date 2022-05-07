@@ -264,13 +264,14 @@ fi
 if [[ $build_type == "package" ]]
 then
 	if [[ $distro_version == "2204" ]]
-  then
+    then
 		echo "==== Installing PyQwt for $distro_name $distro_version... ===="
 		printf "==== Installing PyQwt for $distro_name $distro_version... ====\n"
-    # $sudo_runner $apt_runner python3-pyqt5.qwt || exception  # default package is not suitable
-    # Use source build for now
-    $sudo_runner $apt_runner sip-tools sip-dev 2>>$error_file || exception
-    cd /tmp || exception
+        # Use source build for now
+        $sudo_runner $apt_runner sip-tools sip-dev 2>>$error_file || exception
+        # install PyQt-Qwt deps
+        $sudo_runner $apt_runner pyqt5-dev pyqt5-dev-tools python3-pyqt5 libqwt-qt5-dev libqwt-headers libqt5opengl5-dev libqt5svg5-dev g++ dpkg-dev git 2>>$error_file || exception
+        cd /tmp || exception
 		rm -rf PyQt-Qwt
 		git clone https://github.com/razman786/PyQt-Qwt.git || exception
 		cd PyQt-Qwt || exception
