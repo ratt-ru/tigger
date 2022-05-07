@@ -1,4 +1,6 @@
 #!/bin/bash
+# add .local to $PATH 
+export PATH=$PATH:~/.local/bin
 
 log_file=tigger_installer.log
 error_file=tigger_installer.err
