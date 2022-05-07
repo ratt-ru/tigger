@@ -90,7 +90,7 @@ class AboutDialog(QDialog):
         self.title_label.setText(self.__tr( \
             """<h3>Tigger %s</h3>
             <p>\u00a92010-2021 Oleg Smirnov & Rhodes University & SKA SA<br>
-            <br>Please direct feedback and bug reports at https://github.com/ska-sa/tigger</p>
+            <br>Please direct feedback and bug reports at https://github.com/ratt-ru/tigger</p>
             """ % (release_string) \
             ))
 
