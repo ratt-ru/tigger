@@ -175,6 +175,12 @@ then
   then
     echo "==== Installing Tigger-LSM dependency from pip3... ===="
     printf "==== Installing Tigger-LSM dependency from pip3... ====\n"
+    if [[ $distro_version == "2204" ]]
+    then
+      echo "==== Installing Tigger-LSM dependencies libboost-python and python3-casacore... ===="
+      printf "==== Installing Tigger-LSM dependencies libboost-python and python3-casacore... ====\n"
+      $sudo_runner $apt_runner libboost-python-dev python3-casacore 2>>$error_file || exception
+    fi
     pip3 install -q astro_tigger_lsm==1.7.1 || exception
   fi
 fi
@@ -190,12 +196,18 @@ if [[ $build_type == "source" ]]
 then
     # install PyQt-Qwt deps
     $sudo_runner $apt_runner pyqt5-dev pyqt5-dev-tools python3-pyqt5 libqwt-qt5-dev libqwt-headers libqt5opengl5-dev libqt5svg5-dev g++ dpkg-dev git 2>>$error_file || exception
-	if [[ $distro_version == "2104" ]]
+	if [[ $distro_version == "2104" ]] || [[ $distro_version == "2204" ]]
   then
 		echo "==== Compiling PyQt-Qwt for $distro_name $distro_version... ===="
 		printf "==== Compiling PyQt-Qwt for $distro_name $distro_version... ====\n"
-        $sudo_runner $apt_runner sip5-tools 2>>$error_file || exception
-		cd /tmp || exception
+    if [[ $distro_version == "2104" ]]
+    then
+      $sudo_runner $apt_runner sip5-tools 2>>$error_file || exception
+    elif [[ $distro_version == "2204" ]]
+    then
+      $sudo_runner $apt_runner sip-tools sip-dev 2>>$error_file || exception
+    fi
+    cd /tmp || exception
 		rm -rf PyQt-Qwt
 		git clone https://github.com/razman786/PyQt-Qwt.git || exception
 		cd PyQt-Qwt || exception
@@ -251,7 +263,23 @@ fi
 # install PyQt-Qwt package
 if [[ $build_type == "package" ]]
 then
-	if [[ $distro_version == "2104" ]]
+	if [[ $distro_version == "2204" ]]
+  then
+		echo "==== Installing PyQwt for $distro_name $distro_version... ===="
+		printf "==== Installing PyQwt for $distro_name $distro_version... ====\n"
+    # $sudo_runner $apt_runner python3-pyqt5.qwt || exception  # default package is not suitable
+    # Use source build for now
+    $sudo_runner $apt_runner sip-tools sip-dev 2>>$error_file || exception
+    cd /tmp || exception
+		rm -rf PyQt-Qwt
+		git clone https://github.com/razman786/PyQt-Qwt.git || exception
+		cd PyQt-Qwt || exception
+		QT_SELECT=qt5 python3 configure.py --qwt-incdir=/usr/include/qwt --qwt-libdir=/usr/lib --qwt-lib=qwt-qt5 || exception
+		make -j4 || exception
+		$sudo_runner make install || exception
+		cd /tmp || exception
+		cd "${tigger_pwd}" || exception
+	elif [[ $distro_version == "2104" ]]
 	then
 		echo "==== Installing PyQwt for $distro_name $distro_version... ===="
 		printf "==== Installing PyQwt for $distro_name $distro_version... ====\n"
