@@ -173,13 +173,20 @@ then
     cd "${tigger_pwd}" || exception
   elif [[ $build_type == "package" ]]
   then
-    echo "==== Installing Tigger-LSM dependency from pip3... ===="
-    printf "==== Installing Tigger-LSM dependency from pip3... ====\n"
+    echo "==== Installing Tigger-LSM dependencies... ===="
+    printf "==== Installing Tigger-LSM dependencies... ====\n"
     if [[ $distro_version == "2204" ]]
     then
-      echo "==== Installing Tigger-LSM dependencies libboost-python and python3-casacore... ===="
-      printf "==== Installing Tigger-LSM dependencies libboost-python and python3-casacore... ====\n"
-      $sudo_runner $apt_runner libboost-python-dev python3-casacore 2>>$error_file || exception
+      if [[ $VIRTUAL_ENV == "" ]]
+      then
+        echo "==== Installing Tigger-LSM dependencies libboost-python and python3-casacore... ===="
+        printf "==== Installing Tigger-LSM dependencies libboost-python and python3-casacore... ====\n"
+        $sudo_runner $apt_runner libboost-python-dev python3-casacore 2>>$error_file || exception
+      else
+        echo "==== Installing Tigger-LSM dependencies libboost-python, casacore, python3-casacore, libcfitsio and wcslib... ===="
+        printf "==== Installing Tigger-LSM dependencies libboost-python casacore, python3-casacore, libcfitsio and wcslib... ====\n"
+        $sudo_runner $apt_runner libboost-python-dev python3-casacore casacore* libcfitsio-dev wcslib-dev 2>>$error_file || exception
+      fi
     fi
     pip3 install -q astro_tigger_lsm==1.7.1 || exception
   fi
