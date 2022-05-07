@@ -201,6 +201,14 @@ printf "==== Installing package dependencies... ====\n"
 # install Tigger deps
 $sudo_runner $apt_runner python3-pyqt5.qtsvg python3-pyqt5.qtopengl libqwt-qt5-6 2>>$error_file || exception
 
+# VENV and PyQt-Qwt source based installation not supported (Please compile manually) 
+if [[ $VIRTUAL_ENV != "" &&  $build_type == "source" ]]
+then
+  echo "==== PyQt-Qwt source based installation with VENV is not supported. Please install manually, attempting package based installation instead ===="
+  printf "==== PyQt-Qwt source based installation with VENV is not supported. Please install manually, attempting package based installation instead ====\n"
+  $sudo_runner $apt_runner sip-tools sip-dev 2>>$error_file || exception
+  build_type="package"
+fi
 # compile PyQt-Qwt
 if [[ $build_type == "source" ]]
 then
@@ -336,6 +344,9 @@ if [[ $VIRTUAL_ENV == "" ]]
 then
   python3 setup.py install --user 1>>$log_file 2>>$error_file && echo "==== Tigger installation complete! \o/ ====" || exception
 else
+  echo "==== Installing Tigger (VENV)... ===="
+  printf "==== Installing Tigger(VENV)... ====\n"
+  pip3 install -q wheel || exception
   pip3 install -q vext.pyqt5 || exception
   pip3 install . 1>>$log_file 2>>$error_file && echo "==== Tigger installation complete! \o/ ====" || exception
 fi
