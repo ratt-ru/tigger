@@ -212,11 +212,11 @@ fi
 # compile PyQt-Qwt
 if [[ $build_type == "source" ]]
 then
-    # install PyQt-Qwt deps
-    $sudo_runner $apt_runner pyqt5-dev pyqt5-dev-tools python3-pyqt5 libqwt-qt5-dev libqwt-headers libqt5opengl5-dev libqt5svg5-dev g++ dpkg-dev git 2>>$error_file || exception
+  # install PyQt-Qwt deps
+  $sudo_runner $apt_runner pyqt5-dev pyqt5-dev-tools python3-pyqt5 libqwt-qt5-dev libqwt-headers libqt5opengl5-dev libqt5svg5-dev g++ dpkg-dev git 2>>$error_file || exception
 	if [[ $distro_version == "2104" ]] || [[ $distro_version == "2204" ]]
   then
-		echo "==== Compiling PyQt-Qwt for $distro_name $distro_version... ===="
+    echo "==== Compiling PyQt-Qwt for $distro_name $distro_version... ===="
 		printf "==== Compiling PyQt-Qwt for $distro_name $distro_version... ====\n"
     if [[ $distro_version == "2104" ]]
     then
@@ -342,6 +342,8 @@ fi
 # install Tigger
 if [[ $VIRTUAL_ENV == "" ]]
 then
+  echo "==== Installing Tigger... ===="
+  printf "==== Installing Tigger... ====\n"
   python3 setup.py install --user 1>>$log_file 2>>$error_file && echo "==== Tigger installation complete! \o/ ====" || exception
 else
   echo "==== Installing Tigger (VENV)... ===="
