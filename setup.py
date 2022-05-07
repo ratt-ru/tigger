@@ -37,7 +37,7 @@ setup(
     description="yet another FITS image viewer",
     author="Oleg Smirnov",
     author_email="osmirnov@gmail.com",
-    url="https://github.com/ska-sa/tigger",
+    url="https://github.com/ratt-ru/tigger",
     python_requires='>=3.6',
     install_requires=requirements,
     setup_requires=['wheel'],
