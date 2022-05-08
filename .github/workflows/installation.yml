@@ -12,91 +12,140 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Set up runner VM
+      # setup compatible with 'act'
       run: |
-        sudo apt update
-        sudo apt install xvfb
+        sudo apt update -qq > /dev/null 2>&1
+        sudo apt -qqy upgrade > /dev/null 2>&1
+        sudo apt -qqy install xvfb > /dev/null 2>&1
+        sudo apt -qqy install python3-pip > /dev/null 2>&1
+        sudo apt -qqy install psmisc > /dev/null 2>&1
+        sudo apt -qqy install python3.10-venv > /dev/null 2>&1
     - name: Install Python dependencies
       run: |
-        pip3 install --upgrade testresources mypy setuptools wheel pip
-        pip3 install flake8 pytest
-    - name: Installation script
-      run: |
-        ./install_tigger_ubuntu.sh
-    - name: Check installer log file
-      run: |
-        cat tigger_installer.log
-    - name: Check installer error log file
-      run: |
-        cat tigger_installer.err
+        pip3 install -q --upgrade testresources mypy setuptools wheel pip > /dev/null 2>&1
+        pip3 install -q flake8 pytest > /dev/null 2>&1
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82,F821 --show-source --statistics
+        flake8 . -q --count --select=E9,F63,F7,F82,F821 --show-source --statistics
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-    - name: Test Tigger loads
+        flake8 . -q --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    - name: Installation script
       run: |
-        xvfb-run -a $HOME/.local/bin/tigger & sleep 10
-        killall tigger
+        ./install_tigger_ubuntu.sh
+    - name: Check installation successful
+      run: |
+        grep -q 'Tigger installation complete' tigger_installer.log || exit 2
+    - name: Test Tigger loads FITS file
+      run: |
+        /usr/bin/script -qfc "xvfb-run -a $HOME/.local/bin/tigger test-files/star_model_image.fits & sleep 10" /tmp/result-file.txt
+        grep -q "Loaded FITS image test-files/star_model_image.fits" /tmp/result-file.txt || exit 2
+    - name: Test Tigger loads model file
+      run: |
+        /usr/bin/script -qfc "xvfb-run -a $HOME/.local/bin/tigger test-files/cat.gaul & sleep 10" /tmp/result-file.txt
+        grep -q "Loaded 17 sources from 'Gaul' file test-files/cat.gaul" /tmp/result-file.txt || exit 2
+    - name: VENV installation script
+      run: |
+        python3 -m venv ~/venv > /dev/null 2>&1
+        source ~/venv/bin/activate
+        ./install_tigger_ubuntu.sh
+    - name: Check VENV installation successful
+      run: |
+        grep -q 'Tigger installation complete' tigger_installer.log || cat tigger_installer.log tigger_installer.err && exit 2
+    - name: Test VENV Tigger loads FITS file
+      run: |
+        /usr/bin/script -qfc "xvfb-run -a $HOME/venv/bin/tigger test-files/star_model_image.fits & sleep 10" /tmp/result-file.txt
+        grep -q "Loaded FITS image test-files/star_model_image.fits" /tmp/result-file.txt || exit 2
+    - name: Test VENV Tigger loads model file
+      run: |
+        /usr/bin/script -qfc "xvfb-run -a $HOME/venv/bin/tigger test-files/cat.gaul & sleep 10" /tmp/result-file.txt
+        grep -q "Loaded 17 sources from 'Gaul' file test-files/cat.gaul" /tmp/result-file.txt || exit 2
   build-2004:
     runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v2
     - name: Set up runner VM
+      # setup compatible with 'act'
       run: |
-        sudo apt update
-        sudo apt install xvfb
+        sudo apt update -qq > /dev/null 2>&1
+        sudo apt -qqy upgrade > /dev/null 2>&1
+        sudo apt -qqy install xvfb > /dev/null 2>&1
+        sudo apt -qqy install python3-pip > /dev/null 2>&1
+        sudo apt -qqy install psmisc > /dev/null 2>&1
+        sudo apt -qqy install python3.8-venv > /dev/null 2>&1
     - name: Install Python dependencies
       run: |
-        pip3 install --upgrade testresources mypy setuptools wheel pip
-        pip3 install flake8 pytest
-    - name: Installation script
-      run: |
-        ./install_tigger_ubuntu.sh
-    - name: Check installer log file
-      run: |
-        cat tigger_installer.log
-    - name: Check installer error log file
-      run: |
-        cat tigger_installer.err
+        pip3 install -q --upgrade testresources mypy setuptools wheel pip > /dev/null 2>&1
+        pip3 install -q flake8 pytest > /dev/null 2>&1
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82,F821 --show-source --statistics
+        flake8 . -q --count --select=E9,F63,F7,F82,F821 --show-source --statistics
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-    - name: Test Tigger loads
+        flake8 . -q --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    - name: Installation script
       run: |
-        xvfb-run -a $HOME/.local/bin/tigger & sleep 10
-        killall tigger
+        ./install_tigger_ubuntu.sh
+    - name: Check installation successful
+      run: |
+        grep -q 'Tigger installation complete' tigger_installer.log || cat tigger_installer.log tigger_installer.err && exit 2
+    - name: Test Tigger loads FITS file
+      run: |
+        /usr/bin/script -qfc "xvfb-run -a $HOME/.local/bin/tigger test-files/star_model_image.fits & sleep 10" /tmp/result-file.txt
+        grep -q "Loaded FITS image test-files/star_model_image.fits" /tmp/result-file.txt || exit 2
+    - name: Test Tigger loads model file
+      run: |
+        /usr/bin/script -qfc "xvfb-run -a $HOME/.local/bin/tigger test-files/cat.gaul & sleep 10" /tmp/result-file.txt
+        grep -q "Loaded 17 sources from 'Gaul' file test-files/cat.gaul" /tmp/result-file.txt || exit 2
+    - name: VENV installation script
+      run: |
+        python3 -m venv ~/venv > /dev/null 2>&1
+        source ~/venv/bin/activate
+        ./install_tigger_ubuntu.sh
+    - name: Check VENV installation successful
+      run: |
+        grep -q 'Tigger installation complete' tigger_installer.log || exit 2
+    - name: Test VENV Tigger loads FITS file
+      run: |
+        /usr/bin/script -qfc "xvfb-run -a $HOME/venv/bin/tigger test-files/star_model_image.fits & sleep 10" /tmp/result-file.txt
+        grep -q "Loaded FITS image test-files/star_model_image.fits" /tmp/result-file.txt || exit 2
+    - name: Test VENV Tigger loads model file
+      run: |
+        /usr/bin/script -qfc "xvfb-run -a $HOME/venv/bin/tigger test-files/cat.gaul & sleep 10" /tmp/result-file.txt
+        grep -q "Loaded 17 sources from 'Gaul' file test-files/cat.gaul" /tmp/result-file.txt || exit 2
   build-1804:
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v2
     - name: Set up runner VM
+      # setup compatible with 'act'
       run: |
-        sudo apt update
-        sudo apt install xvfb
+        sudo apt update -qq > /dev/null 2>&1
+        sudo apt -qqy upgrade > /dev/null 2>&1
+        sudo apt -qqy install xvfb > /dev/null 2>&1
+        sudo apt -qqy install python3-pip > /dev/null 2>&1
+        sudo apt -qqy install psmisc > /dev/null 2>&1
     - name: Install Python dependencies
       run: |
-        pip3 install --upgrade testresources mypy setuptools wheel pip
-        pip3 install flake8 pytest
-    - name: Installation script
-      run: |
-        ./install_tigger_ubuntu.sh
-    - name: Check installer log file
-      run: |
-        cat tigger_installer.log
-    - name: Check installer error log file
-      run: |
-        cat tigger_installer.err
+        pip3 install -q --upgrade testresources mypy setuptools wheel pip > /dev/null 2>&1
+        pip3 install -q flake8 pytest > /dev/null 2>&1
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82,F821 --show-source --statistics
+        flake8 . -q --count --select=E9,F63,F7,F82,F821 --show-source --statistics
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-    - name: Test Tigger loads
+        flake8 . -q --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    - name: Installation script
       run: |
-        xvfb-run -a $HOME/.local/bin/tigger & sleep 10
-        killall tigger
+        ./install_tigger_ubuntu.sh
+    - name: Check installation successful
+      run: |
+        grep -q 'Tigger installation complete' tigger_installer.log || cat tigger_installer.log tigger_installer.err && exit 2
+    - name: Test Tigger loads FITS file
+      run: |
+        /usr/bin/script -qfc "xvfb-run -a $HOME/.local/bin/tigger test-files/star_model_image.fits & sleep 10" /tmp/result-file.txt
+        grep -q "Loaded FITS image test-files/star_model_image.fits" /tmp/result-file.txt || exit 2
+    - name: Test Tigger loads model file
+      run: |
+        /usr/bin/script -qfc "xvfb-run -a $HOME/.local/bin/tigger test-files/cat.gaul & sleep 10" /tmp/result-file.txt
+        grep -q "Loaded 17 sources from 'Gaul' file test-files/cat.gaul" /tmp/result-file.txt || exit 2
