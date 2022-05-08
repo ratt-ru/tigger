@@ -35,7 +35,7 @@ jobs:
         ./install_tigger_ubuntu.sh
     - name: Check installation successful
       run: |
-        grep -q 'Tigger installation complete' tigger_installer.log || exit 2
+        grep -q 'Tigger installation complete' tigger_installer.log || cat tigger_installer.log tigger_installer.err && exit 2
     - name: Test Tigger loads FITS file
       run: |
         /usr/bin/script -qfc "xvfb-run -a $HOME/.local/bin/tigger test-files/star_model_image.fits & sleep 10" /tmp/result-file.txt
@@ -104,7 +104,7 @@ jobs:
         ./install_tigger_ubuntu.sh
     - name: Check VENV installation successful
       run: |
-        grep -q 'Tigger installation complete' tigger_installer.log || exit 2
+        grep -q 'Tigger installation complete' tigger_installer.log || cat tigger_installer.log tigger_installer.err && exit 2
     - name: Test VENV Tigger loads FITS file
       run: |
         /usr/bin/script -qfc "xvfb-run -a $HOME/venv/bin/tigger test-files/star_model_image.fits & sleep 10" /tmp/result-file.txt
