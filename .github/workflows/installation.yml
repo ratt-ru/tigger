@@ -11,141 +11,301 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v2
+    - name: Set up Logging
+      # create log files
+      run: |
+        touch ${{ runner.temp }}/log
+        touch tigger_installer.log
+        touch tigger_installer.err
+        touch /tmp/result-file.txt
     - name: Set up runner VM
+      id: setup-runner
       # setup compatible with 'act'
       run: |
-        sudo apt update -qq > /dev/null 2>&1
-        sudo apt -qqy upgrade > /dev/null 2>&1
-        sudo apt -qqy install xvfb > /dev/null 2>&1
-        sudo apt -qqy install python3-pip > /dev/null 2>&1
-        sudo apt -qqy install psmisc > /dev/null 2>&1
-        sudo apt -qqy install python3.10-venv > /dev/null 2>&1
+        sudo apt update > ${{ runner.temp }}/log 2>&1
+        sudo apt -y upgrade > ${{ runner.temp }}/log 2>&1
+        sudo apt -y install xvfb > ${{ runner.temp }}/log 2>&1
+        sudo apt -y install python3-pip > ${{ runner.temp }}/log 2>&1
+        sudo apt -y install psmisc > ${{ runner.temp }}/log 2>&1
+        sudo apt -y install python3.10-venv > ${{ runner.temp }}/log 2>&1
     - name: Install Python dependencies
+      id: install-deps
       run: |
-        pip3 install -q --upgrade testresources mypy setuptools wheel pip > /dev/null 2>&1
-        pip3 install -q flake8 pytest > /dev/null 2>&1
+        pip3 install -q --upgrade testresources mypy setuptools wheel pip > ${{ runner.temp }}/log 2>&1
+        pip3 install -q flake8 pytest > ${{ runner.temp }}/log 2>&1
     - name: Lint with flake8
+      id: lint
       run: |
         # stop the build if there are Python syntax errors or undefined names
         flake8 . -q --count --select=E9,F63,F7,F82,F821 --show-source --statistics
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . -q --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Installation script
+      id: install
       run: |
         ./install_tigger_ubuntu.sh
     - name: Check installation successful
+      id: check-install
       run: |
-        grep -q 'Tigger installation complete' tigger_installer.log || cat tigger_installer.log tigger_installer.err && exit 2
+        grep -q 'Tigger installation complete' tigger_installer.log || exit 2
     - name: Test Tigger loads FITS file
+      id: test-fits
       run: |
         /usr/bin/script -qfc "xvfb-run -a $HOME/.local/bin/tigger test-files/star_model_image.fits & sleep 10" /tmp/result-file.txt
         grep -q "Loaded FITS image test-files/star_model_image.fits" /tmp/result-file.txt || exit 2
     - name: Test Tigger loads model file
+      id: test-model
       run: |
         /usr/bin/script -qfc "xvfb-run -a $HOME/.local/bin/tigger test-files/cat.gaul & sleep 10" /tmp/result-file.txt
         grep -q "Loaded 17 sources from 'Gaul' file test-files/cat.gaul" /tmp/result-file.txt || exit 2
     - name: VENV installation script
+      id: venv-install
       run: |
-        python3 -m venv ~/venv > /dev/null 2>&1
+        python3 -m venv ~/venv > ${{ runner.temp }}/log 2>&1
         source ~/venv/bin/activate
         ./install_tigger_ubuntu.sh
     - name: Check VENV installation successful
+      id: venv-check-install
       run: |
-        grep -q 'Tigger installation complete' tigger_installer.log || cat tigger_installer.log tigger_installer.err && exit 2
+        grep -q 'Tigger installation complete' tigger_installer.log || exit 2
     - name: Test VENV Tigger loads FITS file
+      id: venv-test-fits
       run: |
         /usr/bin/script -qfc "xvfb-run -a $HOME/venv/bin/tigger test-files/star_model_image.fits & sleep 10" /tmp/result-file.txt
         grep -q "Loaded FITS image test-files/star_model_image.fits" /tmp/result-file.txt || exit 2
     - name: Test VENV Tigger loads model file
+      id: venv-test-model
       run: |
         /usr/bin/script -qfc "xvfb-run -a $HOME/venv/bin/tigger test-files/cat.gaul & sleep 10" /tmp/result-file.txt
         grep -q "Loaded 17 sources from 'Gaul' file test-files/cat.gaul" /tmp/result-file.txt || exit 2
+    - name: Actions Failed
+      # ouput log files upon failure
+      if: failure()
+      run: |
+        if [[ ${{ steps.setup-runner.outcome }} == 'failure' ]] || [[ ${{ steps.install-deps.outcome }} == 'failure' ]]
+        then
+          echo "==== System log output ===="
+          cat ${{ runner.temp }}/log
+          echo "==== End system log output ===="
+          echo ""
+        elif [[ ${{ steps.install.outcome }} == 'failure' ]] || [[ ${{ steps.check-install.outcome }} == 'failure' ]] || [[ ${{ steps.venv-install.outcome }} == 'failure' ]] || [[ ${{ steps.venv-check-install.outcome }} == 'failure' ]]
+        then
+          echo "==== Installer log output ===="
+          cat tigger_installer.log
+          cat tigger_installer.err
+          echo "==== End installer log output ===="
+          echo ""
+        elif [[ ${{ steps.test-fits.outcome }} == 'failure' ]] || [[ ${{ steps.test-model.outcome }} == 'failure' ]] || [[ ${{ steps.venv-test-fits.outcome }} == 'failure' ]] || [[ ${{ steps.venv-test-model.outcome }} == 'failure' ]]
+        then 
+          echo "==== Test log output ===="
+          cat /tmp/result-file.txt
+          echo "==== End test log output ===="
+          echo ""
+        fi
+        echo "==== Step Outcomes ===="
+        echo "setup-runner:       ${{ steps.setup-runner.outcome }}"
+        echo "install-deps:       ${{ steps.install-deps.outcome }}"
+        echo "lint:               ${{ steps.lint.outcome }}"
+        echo "install:            ${{ steps.install.outcome }}"
+        echo "check-install:      ${{ steps.check-install.outcome }}"
+        echo "test-fits:          ${{ steps.test-fits.outcome }}"
+        echo "test-model:         ${{ steps.test-model.outcome }}"
+        echo "venv-install:       ${{ steps.venv-install.outcome }}"
+        echo "venv-check-install: ${{ steps.venv-check-install.outcome }}"
+        echo "venv-test-fits:     ${{ steps.venv-test-fits.outcome }}"
+        echo "venv-test-model:    ${{ steps.venv-test-model.outcome }}"
+        echo ""
+        exit 2
   build-2004:
     runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v2
+    - name: Set up Logging
+      # create log files
+      run: |
+        touch ${{ runner.temp }}/log
+        touch tigger_installer.log
+        touch tigger_installer.err
+        touch /tmp/result-file.txt
     - name: Set up runner VM
       # setup compatible with 'act'
+      id: setup-runner
       run: |
-        sudo apt update -qq > /dev/null 2>&1
-        sudo apt -qqy upgrade > /dev/null 2>&1
-        sudo apt -qqy install xvfb > /dev/null 2>&1
-        sudo apt -qqy install python3-pip > /dev/null 2>&1
-        sudo apt -qqy install psmisc > /dev/null 2>&1
-        sudo apt -qqy install python3.8-venv > /dev/null 2>&1
+        sudo apt update > ${{ runner.temp }}/log 2>&1
+        sudo apt -y upgrade > ${{ runner.temp }}/log 2>&1
+        sudo apt -y install xvfb > ${{ runner.temp }}/log 2>&1
+        sudo apt -y install python3-pip > ${{ runner.temp }}/log 2>&1
+        sudo apt -y install psmisc > ${{ runner.temp }}/log 2>&1
+        sudo apt -y install python3.8-venv > ${{ runner.temp }}/log 2>&1
     - name: Install Python dependencies
+      id: install-deps
       run: |
-        pip3 install -q --upgrade testresources mypy setuptools wheel pip > /dev/null 2>&1
-        pip3 install -q flake8 pytest > /dev/null 2>&1
+        pip3 install -q --upgrade testresources mypy setuptools wheel pip > ${{ runner.temp }}/log 2>&1
+        pip3 install -q flake8 pytest > ${{ runner.temp }}/log 2>&1
     - name: Lint with flake8
+      id: lint
       run: |
         # stop the build if there are Python syntax errors or undefined names
         flake8 . -q --count --select=E9,F63,F7,F82,F821 --show-source --statistics
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . -q --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Installation script
+      id: install
       run: |
         ./install_tigger_ubuntu.sh
     - name: Check installation successful
+      id: check-install
       run: |
-        grep -q 'Tigger installation complete' tigger_installer.log || cat tigger_installer.log tigger_installer.err && exit 2
+        grep -q 'Tigger installation complete' tigger_installer.log || exit 2
     - name: Test Tigger loads FITS file
+      id: test-fits
       run: |
         /usr/bin/script -qfc "xvfb-run -a $HOME/.local/bin/tigger test-files/star_model_image.fits & sleep 10" /tmp/result-file.txt
         grep -q "Loaded FITS image test-files/star_model_image.fits" /tmp/result-file.txt || exit 2
     - name: Test Tigger loads model file
+      id: test-model
       run: |
         /usr/bin/script -qfc "xvfb-run -a $HOME/.local/bin/tigger test-files/cat.gaul & sleep 10" /tmp/result-file.txt
         grep -q "Loaded 17 sources from 'Gaul' file test-files/cat.gaul" /tmp/result-file.txt || exit 2
     - name: VENV installation script
+      id: venv-install
       run: |
-        python3 -m venv ~/venv > /dev/null 2>&1
+        python3 -m venv ~/venv > ${{ runner.temp }}/log 2>&1
         source ~/venv/bin/activate
         ./install_tigger_ubuntu.sh
     - name: Check VENV installation successful
+      id: venv-check-install
       run: |
-        grep -q 'Tigger installation complete' tigger_installer.log || cat tigger_installer.log tigger_installer.err && exit 2
+        grep -q 'Tigger installation complete' tigger_installer.log || exit 2
     - name: Test VENV Tigger loads FITS file
+      id: venv-test-fits
       run: |
         /usr/bin/script -qfc "xvfb-run -a $HOME/venv/bin/tigger test-files/star_model_image.fits & sleep 10" /tmp/result-file.txt
         grep -q "Loaded FITS image test-files/star_model_image.fits" /tmp/result-file.txt || exit 2
     - name: Test VENV Tigger loads model file
+      id: venv-test-model
       run: |
         /usr/bin/script -qfc "xvfb-run -a $HOME/venv/bin/tigger test-files/cat.gaul & sleep 10" /tmp/result-file.txt
         grep -q "Loaded 17 sources from 'Gaul' file test-files/cat.gaul" /tmp/result-file.txt || exit 2
+    - name: Actions Failed
+      # ouput log files upon failure
+      if: failure()
+      run: |
+        if [[ ${{ steps.setup-runner.outcome }} == 'failure' ]] || [[ ${{ steps.install-deps.outcome }} == 'failure' ]]
+        then
+          echo "==== System log output ===="
+          cat ${{ runner.temp }}/log
+          echo "==== End system log output ===="
+          echo ""
+        elif [[ ${{ steps.install.outcome }} == 'failure' ]] || [[ ${{ steps.check-install.outcome }} == 'failure' ]] || [[ ${{ steps.venv-install.outcome }} == 'failure' ]] || [[ ${{ steps.venv-check-install.outcome }} == 'failure' ]]
+        then
+          echo "==== Installer log output ===="
+          cat tigger_installer.log
+          cat tigger_installer.err
+          echo "==== End installer log output ===="
+          echo ""
+        elif [[ ${{ steps.test-fits.outcome }} == 'failure' ]] || [[ ${{ steps.test-model.outcome }} == 'failure' ]] || [[ ${{ steps.venv-test-fits.outcome }} == 'failure' ]] || [[ ${{ steps.venv-test-model.outcome }} == 'failure' ]]
+        then 
+          echo "==== Test log output ===="
+          cat /tmp/result-file.txt
+          echo "==== End test log output ===="
+          echo ""
+        fi
+        echo "==== Step Outcomes ===="
+        echo "setup-runner:       ${{ steps.setup-runner.outcome }}"
+        echo "install-deps:       ${{ steps.install-deps.outcome }}"
+        echo "lint:               ${{ steps.lint.outcome }}"
+        echo "install:            ${{ steps.install.outcome }}"
+        echo "check-install:      ${{ steps.check-install.outcome }}"
+        echo "test-fits:          ${{ steps.test-fits.outcome }}"
+        echo "test-model:         ${{ steps.test-model.outcome }}"
+        echo "venv-install:       ${{ steps.venv-install.outcome }}"
+        echo "venv-check-install: ${{ steps.venv-check-install.outcome }}"
+        echo "venv-test-fits:     ${{ steps.venv-test-fits.outcome }}"
+        echo "venv-test-model:    ${{ steps.venv-test-model.outcome }}"
+        echo ""
+        exit 2
   build-1804:
     runs-on: ubuntu-18.04
     steps:
     - uses: actions/checkout@v2
+    - name: Set up Logging
+      # create log files
+      run: |
+        touch ${{ runner.temp }}/log
+        touch tigger_installer.log
+        touch tigger_installer.err
+        touch /tmp/result-file.txt
     - name: Set up runner VM
       # setup compatible with 'act'
+      id: setup-runner
       run: |
-        sudo apt update -qq > /dev/null 2>&1
-        sudo apt -qqy upgrade > /dev/null 2>&1
-        sudo apt -qqy install xvfb > /dev/null 2>&1
-        sudo apt -qqy install python3-pip > /dev/null 2>&1
-        sudo apt -qqy install psmisc > /dev/null 2>&1
+        sudo apt update > ${{ runner.temp }}/log 2>&1
+        sudo apt -y upgrade > ${{ runner.temp }}/log 2>&1
+        sudo apt -y install xvfb > ${{ runner.temp }}/log 2>&1
+        sudo apt -y install python3-pip > ${{ runner.temp }}/log 2>&1
+        sudo apt -y install psmisc > ${{ runner.temp }}/log 2>&1
     - name: Install Python dependencies
+      id: install-deps
       run: |
-        pip3 install -q --upgrade testresources mypy setuptools wheel pip > /dev/null 2>&1
-        pip3 install -q flake8 pytest > /dev/null 2>&1
+        pip3 install -q --upgrade testresources mypy setuptools wheel pip > ${{ runner.temp }}/log 2>&1
+        pip3 install -q flake8 pytest > ${{ runner.temp }}/log 2>&1
     - name: Lint with flake8
+      id: lint
       run: |
         # stop the build if there are Python syntax errors or undefined names
         flake8 . -q --count --select=E9,F63,F7,F82,F821 --show-source --statistics
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . -q --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Installation script
+      id: install
       run: |
         ./install_tigger_ubuntu.sh
     - name: Check installation successful
+      id: check-install
       run: |
-        grep -q 'Tigger installation complete' tigger_installer.log || cat tigger_installer.log tigger_installer.err && exit 2
+        grep -q 'Tigger installation complete' tigger_installer.log || exit 2
     - name: Test Tigger loads FITS file
+      id: test-fits
       run: |
         /usr/bin/script -qfc "xvfb-run -a $HOME/.local/bin/tigger test-files/star_model_image.fits & sleep 10" /tmp/result-file.txt
         grep -q "Loaded FITS image test-files/star_model_image.fits" /tmp/result-file.txt || exit 2
     - name: Test Tigger loads model file
+      id: test-model
       run: |
         /usr/bin/script -qfc "xvfb-run -a $HOME/.local/bin/tigger test-files/cat.gaul & sleep 10" /tmp/result-file.txt
         grep -q "Loaded 17 sources from 'Gaul' file test-files/cat.gaul" /tmp/result-file.txt || exit 2
+    - name: Actions Failed
+      # ouput log files upon failure
+      if: failure()
+      run: |
+        if [[ ${{ steps.setup-runner.outcome }} == 'failure' ]] || [[ ${{ steps.install-deps.outcome }} == 'failure' ]]
+        then
+          echo "==== System log output ===="
+          cat ${{ runner.temp }}/log
+          echo "==== End system log output ===="
+          echo ""
+        elif [[ ${{ steps.install.outcome }} == 'failure' ]] || [[ ${{ steps.check-install.outcome }} == 'failure' ]]
+        then
+          echo "==== Installer log output ===="
+          cat tigger_installer.log
+          cat tigger_installer.err
+          echo "==== End installer log output ===="
+          echo ""
+        elif [[ ${{ steps.test-fits.outcome }} == 'failure' ]] || [[ ${{ steps.test-model.outcome }} == 'failure' ]]
+        then 
+          echo "==== Test log output ===="
+          cat /tmp/result-file.txt
+          echo "==== End test log output ===="
+          echo ""
+        fi
+        echo "==== Step Outcomes ===="
+        echo "setup-runner:       ${{ steps.setup-runner.outcome }}"
+        echo "install-deps:       ${{ steps.install-deps.outcome }}"
+        echo "lint:               ${{ steps.lint.outcome }}"
+        echo "install:            ${{ steps.install.outcome }}"
+        echo "check-install:      ${{ steps.check-install.outcome }}"
+        echo "test-fits:          ${{ steps.test-fits.outcome }}"
+        echo "test-model:         ${{ steps.test-model.outcome }}"
+        echo ""
+        exit 2
