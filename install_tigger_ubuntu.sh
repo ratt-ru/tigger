@@ -344,11 +344,11 @@ if [[ $VIRTUAL_ENV == "" ]]
 then
   echo "==== Installing Tigger... ===="
   printf "==== Installing Tigger... ====\n"
-  python3 setup.py install --user 1>>$log_file 2>>$error_file && echo "==== Tigger installation complete! \o/ ====" || exception
+  python3 setup.py install --user 1>>$log_file 2>>$error_file && echo "==== Tigger installation complete! \o/ ====" && printf "==== Tigger installation complete! \o/ ====\n" || exception
 else
   echo "==== Installing Tigger (VENV)... ===="
   printf "==== Installing Tigger(VENV)... ====\n"
   pip3 install -q wheel || exception
   pip3 install -q vext.pyqt5 || exception
-  pip3 install . 1>>$log_file 2>>$error_file && echo "==== Tigger installation complete! \o/ ====" || exception
+  pip3 install . 1>>$log_file 2>>$error_file && echo "==== Tigger installation complete! \o/ ===="  && printf "==== Tigger installation complete! \o/ ====\n"|| exception
 fi
