@@ -5,9 +5,16 @@ Tigger Changelog
 1.6.1
 =====
 
-* Version nump in preparation for release
+* Version bump in preparation for release
+* Supports Ubuntu 22.04
 * Dependent on the latest tigger-lsm (1.7.1)
+* Fixed float errors with updated library API's
+* Re-enabled splash screen
 * Fixes venv pip3 bug
+* Updated URL's
+* GitHub Actions are now compatible with 'act'
+* Actions now test VENV installations on Ubuntu 20.04 and 22.04
+* Improved Action tests and logging
 
 1.6.0
 =====
