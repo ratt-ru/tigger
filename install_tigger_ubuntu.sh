@@ -348,6 +348,10 @@ then
 else
   echo "==== Installing Tigger (VENV)... ===="
   printf "==== Installing Tigger(VENV)... ====\n"
+  if [[ $distro_version == "2204" ]]
+  then
+    $sudo_runner $apt_runner python3-sip-dev 2>>$error_file || exception
+  fi
   pip3 install -q wheel || exception
   pip3 install -q vext.pyqt5 || exception
   pip3 install . 1>>$log_file 2>>$error_file && echo "==== Tigger installation complete! \o/ ===="  && printf "==== Tigger installation complete! \o/ ====\n"|| exception
