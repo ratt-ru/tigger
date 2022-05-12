@@ -116,10 +116,12 @@ then
     then
       echo "==== Installer found pip3 (VENV)... ===="
       printf "==== Installer found pip3 (VENV)... ====\n"
+      $VIRTUAL_ENV/bin/pip3 install -U pip setuptools wheel
     else
       echo "==== Installer did not find pip3 (VENV)... ===="
       printf "==== Installer did not find pip3 (VENV)... ====\n"
       $sudo_runner $apt_runner python3-setuptools python3-pip 2>>$error_file || exception
+      pip3 install -U pip setuptools wheel --user
     fi
   fi
 else
@@ -127,6 +129,7 @@ else
   printf "==== Installer did not find pip3 (no VENV)... ====\n"
 	install_type="fullstack"
 	$sudo_runner $apt_runner python3-setuptools python3-pip 2>>$error_file || exception
+  pip3 install -U pip setuptools wheel --user
 fi
 
 # check for astro-tigger-lsm
@@ -171,7 +174,7 @@ then
     rm -rf tigger-lsm
     git clone https://github.com/ratt-ru/tigger-lsm.git 1>>$log_file 2>>$error_file || exception
     cd tigger-lsm || exception
-    python3 setup.py install --user 1>>$log_file 2>>$error_file || exception
+    pip3 install . 1>>$log_file 2>>$error_file || exception
     cd /tmp || exception
     cd "${tigger_pwd}" || exception
   elif [[ $build_type == "package" ]]
@@ -344,7 +347,7 @@ if [[ $VIRTUAL_ENV == "" ]]
 then
   echo "==== Installing Tigger... ===="
   printf "==== Installing Tigger... ====\n"
-  python3 setup.py install --user 1>>$log_file 2>>$error_file && echo "==== Tigger installation complete! \o/ ====" && printf "==== Tigger installation complete! \o/ ====\n" || exception
+  pip3 install . --user 1>>$log_file 2>>$error_file && echo "==== Tigger installation complete! \o/ ====" && printf "==== Tigger installation complete! \o/ ====\n" || exception
 else
   echo "==== Installing Tigger (VENV)... ===="
   printf "==== Installing Tigger(VENV)... ====\n"
