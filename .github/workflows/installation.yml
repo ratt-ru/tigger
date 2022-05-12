@@ -96,18 +96,22 @@ jobs:
     - name: Actions Failed
       if: failure()
       run: |
+        if [[ -f "tigger_installer.log" ]]
+        then
+          echo "==== Installer log output ===="
+          cat tigger_installer.log
+          echo "==== End installer log output ===="
+          echo ""
+          echo "==== Installer error log output ===="
+          cat tigger_installer.err
+          echo "==== End installer error log output ===="
+          echo ""
+        fi
         if [[ ${{ steps.setup-runner.outcome }} == 'failure' ]] || [[ ${{ steps.install-deps.outcome }} == 'failure' ]]
         then
           echo "==== System log output ===="
           cat ${{ runner.temp }}/log
           echo "==== End system log output ===="
-          echo ""
-        elif [[ ${{ steps.install.outcome }} == 'failure' ]] || [[ ${{ steps.check-install.outcome }} == 'failure' ]] || [[ ${{ steps.venv-install.outcome }} == 'failure' ]] || [[ ${{ steps.venv-check-install.outcome }} == 'failure' ]]
-        then
-          echo "==== Installer log output ===="
-          cat tigger_installer.log
-          cat tigger_installer.err
-          echo "==== End installer log output ===="
           echo ""
         elif [[ ${{ steps.test-fits.outcome }} == 'failure' ]] || [[ ${{ steps.test-model.outcome }} == 'failure' ]] || [[ ${{ steps.venv-test-fits.outcome }} == 'failure' ]] || [[ ${{ steps.venv-test-model.outcome }} == 'failure' ]]
         then 
@@ -220,6 +224,17 @@ jobs:
     - name: Actions Failed
       if: failure()
       run: |
+        if [[ -f "tigger_installer.log" ]]
+        then
+          echo "==== Installer log output ===="
+          cat tigger_installer.log
+          echo "==== End installer log output ===="
+          echo ""
+          echo "==== Installer error log output ===="
+          cat tigger_installer.err
+          echo "==== End installer error log output ===="
+          echo ""
+        fi
         if [[ ${{ steps.setup-runner.outcome }} == 'failure' ]] || [[ ${{ steps.install-deps.outcome }} == 'failure' ]]
         then
           echo "==== System log output ===="
@@ -231,14 +246,6 @@ jobs:
           echo "==== Test log output ===="
           cat /tmp/result-file.txt
           echo "==== End test log output ===="
-          echo ""
-        fi
-        if [[ -f "tigger_installer.log" ]]
-        then
-          echo "==== Installer log output ===="
-          cat tigger_installer.log
-          cat tigger_installer.err
-          echo "==== End installer log output ===="
           echo ""
         fi
         echo "==== Step Outcomes ===="
@@ -320,18 +327,22 @@ jobs:
     - name: Actions Failed
       if: failure()
       run: |
+        if [[ -f "tigger_installer.log" ]]
+        then
+          echo "==== Installer log output ===="
+          cat tigger_installer.log
+          echo "==== End installer log output ===="
+          echo ""
+          echo "==== Installer error log output ===="
+          cat tigger_installer.err
+          echo "==== End installer error log output ===="
+          echo ""
+        fi
         if [[ ${{ steps.setup-runner.outcome }} == 'failure' ]] || [[ ${{ steps.install-deps.outcome }} == 'failure' ]]
         then
           echo "==== System log output ===="
           cat ${{ runner.temp }}/log
           echo "==== End system log output ===="
-          echo ""
-        elif [[ ${{ steps.install.outcome }} == 'failure' ]] || [[ ${{ steps.check-install.outcome }} == 'failure' ]]
-        then
-          echo "==== Installer log output ===="
-          cat tigger_installer.log
-          cat tigger_installer.err
-          echo "==== End installer log output ===="
           echo ""
         elif [[ ${{ steps.test-fits.outcome }} == 'failure' ]] || [[ ${{ steps.test-model.outcome }} == 'failure' ]]
         then 
