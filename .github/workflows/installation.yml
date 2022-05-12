@@ -226,18 +226,19 @@ jobs:
           cat ${{ runner.temp }}/log
           echo "==== End system log output ===="
           echo ""
-        elif [[ ${{ steps.install.outcome }} == 'failure' ]] || [[ ${{ steps.check-install.outcome }} == 'failure' ]] || [[ ${{ steps.venv-install.outcome }} == 'failure' ]] || [[ ${{ steps.venv-check-install.outcome }} == 'failure' ]]
-        then
-          echo "==== Installer log output ===="
-          cat tigger_installer.log
-          cat tigger_installer.err
-          echo "==== End installer log output ===="
-          echo ""
         elif [[ ${{ steps.test-fits.outcome }} == 'failure' ]] || [[ ${{ steps.test-model.outcome }} == 'failure' ]] || [[ ${{ steps.venv-test-fits.outcome }} == 'failure' ]] || [[ ${{ steps.venv-test-model.outcome }} == 'failure' ]]
         then 
           echo "==== Test log output ===="
           cat /tmp/result-file.txt
           echo "==== End test log output ===="
+          echo ""
+        fi
+        if [[ -f "tigger_installer.log" ]]
+        then
+          echo "==== Installer log output ===="
+          cat tigger_installer.log
+          cat tigger_installer.err
+          echo "==== End installer log output ===="
           echo ""
         fi
         echo "==== Step Outcomes ===="
