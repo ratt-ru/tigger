@@ -57,7 +57,7 @@ After the Tigger repository has been downloaded with ``git clone https://github.
 
     sudo apt -y install python3-pyqt5.qtsvg python3-pyqt5.qtopengl libqwt-qt5-6
     sudo dpkg -i debian_pkgs/ubuntu_22_04_deb_pkg/python3-pyqt5.qwt_2.00.00-1build1_amd64.deb
-    python3 setup.py install --user
+    pip3 install . --user
 
 Please note that the above commands are for installing on Ubuntu 22.04, Debian packages for 18.04 and 20.04 are located in the ``ubuntu_18_04_deb_pkg`` and ``ubuntu_20_04_deb_pkg`` directories respectively.
 
