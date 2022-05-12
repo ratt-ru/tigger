@@ -100,6 +100,12 @@ then
 	then
 		# lookup for aarch64
 		arch=$(arch)
+    if [[ $arch == "aarch64" ]] && [[ $distro_version != "2204" ]]
+    then
+      echo "==== Error: ARM64 installation requires Ubuntu 22.04. Installer has detected Linux distribution as $distro_name $distro_version ===="
+      printf "==== Error: ARM64 installation requires Ubuntu 22.04. Installer has detected Linux distribution as $distro_name $distro_version ====\n"
+      exception
+    fi
 	fi
 else
 	echo "==== Error: Unable to detect Linux distribution, stopping installation ===="
