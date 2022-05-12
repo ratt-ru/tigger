@@ -95,6 +95,12 @@ then
 		printf "==== Error: Ubuntu Linux not detected, stopping installation ====\n"
 		exception
 	fi
+
+	if [[ -n "$(command -v arch)" ]]
+	then
+		# lookup for aarch64
+		arch=$(arch)
+	fi
 else
 	echo "==== Error: Unable to detect Linux distribution, stopping installation ===="
 	printf "==== Error: Unable to detect Linux distribution, stopping installation ====\n"
@@ -288,7 +294,12 @@ then
     then
 		echo "==== Installing PyQwt for $distro_name $distro_version... ===="
 		printf "==== Installing PyQwt for $distro_name $distro_version... ====\n"
-		$sudo_runner dpkg -i debian_pkgs/ubuntu_22_04_deb_pkg/python3-pyqt5.qwt_2.00.00-1build1_amd64.deb || exception
+		if [[ $arch == "aarch64" ]]
+		then
+			$sudo_runner dpkg -i debian_pkgs/ubuntu_22_04_arm64_deb_pkg/python3-pyqt5.qwt_2.00.00-1build1_arm64.deb || exception
+		else
+			$sudo_runner dpkg -i debian_pkgs/ubuntu_22_04_deb_pkg/python3-pyqt5.qwt_2.00.00-1build1_amd64.deb || exception
+		fi
 	elif [[ $distro_version == "2104" ]]
 	then
 		echo "==== Installing PyQwt for $distro_name $distro_version... ===="
