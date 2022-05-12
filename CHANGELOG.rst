@@ -7,10 +7,12 @@ Tigger Changelog
 
 * Version bump in preparation for release
 * Supports Ubuntu 22.04
+* Beta support for Ubuntu 22.04 ARM64
 * Dependent on the latest tigger-lsm (1.7.1)
 * Fixed float errors with updated library API's
 * Re-enabled splash screen
 * Fixes venv pip3 bug
+* Install script 'setup.py install' has been replaced by pip
 * Updated URL's
 * GitHub Actions are now compatible with 'act'
 * Actions now test VENV installations on Ubuntu 20.04 and 22.04
