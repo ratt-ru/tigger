@@ -432,6 +432,8 @@ class TDockWidget(QDockWidget):
                 bind_widget.livezoom_resize_signal.connect(self._resizeDockWidget)
         if close_slot is not None:
             self.close_button.clicked.connect(close_slot)
+            if isinstance(bind_widget, ImageControlDialog):
+                bind_widget.whide.clicked.connect(close_slot)
         if toggle_slot is not None:
             self.toggle_button.clicked.connect(toggle_slot)
 

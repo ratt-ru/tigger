@@ -327,12 +327,16 @@ class ToolDialog(QDialog):
                 if not self.get_docked_widget_size(self.parent()):
                     geo = self.parent().main_win.geometry()
                     geo.setWidth(self.parent().main_win.width() + self.width())
+                    center = geo.center()
+                    geo.moveCenter(QPoint(center.x() - self.width(), geo.y()))
                     self.parent().main_win.setGeometry(geo)
         elif not visible and self.parent().isVisible():
             if self.parent().main_win.windowState() != Qt.WindowMaximized:
                 if not self.get_docked_widget_size(self.parent()):
                     geo = self.parent().main_win.geometry()
                     geo.setWidth(self.parent().main_win.width() - self.width())
+                    center = geo.center()
+                    geo.moveCenter(QPoint(center.x() + self.width(), geo.y()))
                     self.parent().main_win.setGeometry(geo)
             self.parent().setVisible(False)
 
@@ -1227,6 +1231,8 @@ class SkyModelPlotter(QWidget):
                     if not self.get_docked_widget_size(self._dockable_livezoom):
                         geo = self._mainwin.geometry()
                         geo.setWidth(self._mainwin.width() - self._dockable_livezoom.width())
+                        center = geo.center()
+                        geo.moveCenter(QPoint(center.x() + self._dockable_livezoom.width(), geo.y()))
                         self._mainwin.setGeometry(geo)
                 ea_action.setChecked(False)
 
@@ -1239,6 +1245,8 @@ class SkyModelPlotter(QWidget):
                     if not self.get_docked_widget_size(self._dockable_liveprofile):
                         geo = self._mainwin.geometry()
                         geo.setWidth(self._mainwin.width() - self._dockable_liveprofile.width())
+                        center = geo.center()
+                        geo.moveCenter(QPoint(center.x() + self._dockable_liveprofile.width(), geo.y()))
                         self._mainwin.setGeometry(geo)
                 ea_action.setChecked(False)
 
@@ -1250,6 +1258,8 @@ class SkyModelPlotter(QWidget):
                     if not self.get_docked_widget_size(self._dockable_liveprofile):
                         geo = self._mainwin.geometry()
                         geo.setWidth(self._mainwin.width() + self._dockable_liveprofile.width())
+                        center = geo.center()
+                        geo.moveCenter(QPoint(center.x() - self._dockable_liveprofile.width(), geo.y()))
                         self._mainwin.setGeometry(geo)
             else:
                 self._dockable_liveprofile.setFloating(True)
@@ -1257,6 +1267,8 @@ class SkyModelPlotter(QWidget):
                     if not self.get_docked_widget_size(self._dockable_liveprofile):
                         geo = self._mainwin.geometry()
                         geo.setWidth(self._mainwin.width() - self._dockable_liveprofile.width())
+                        center = geo.center()
+                        geo.moveCenter(QPoint(center.x() + self._dockable_liveprofile.width(), geo.y()))
                         self._mainwin.setGeometry(geo)
 
     def livezoom_dockwidget_toggled(self):
@@ -1267,6 +1279,8 @@ class SkyModelPlotter(QWidget):
                     if not self.get_docked_widget_size(self._dockable_livezoom):
                         geo = self._mainwin.geometry()
                         geo.setWidth(self._mainwin.width() + self._dockable_livezoom.width())
+                        center = geo.center()
+                        geo.moveCenter(QPoint(center.x() - self._dockable_livezoom.width(), geo.y()))
                         self._mainwin.setGeometry(geo)
             else:
                 self._dockable_livezoom.setFloating(True)
@@ -1274,6 +1288,8 @@ class SkyModelPlotter(QWidget):
                     if not self.get_docked_widget_size(self._dockable_livezoom):
                         geo = self._mainwin.geometry()
                         geo.setWidth(self._mainwin.width() - self._dockable_livezoom.width())
+                        center = geo.center()
+                        geo.moveCenter(QPoint(center.x() + self._dockable_livezoom.width(), geo.y()))
                         self._mainwin.setGeometry(geo)
 
     def get_docked_widget_size(self, _dockable):

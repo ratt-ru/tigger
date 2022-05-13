@@ -86,9 +86,9 @@ class ImageControlDialog(QDialog):
         #    lo0.setContentsMargins(0,0,0,0)
 
         # histogram plot
-        whide = self.makeButton("Hide", self.hide, width=128)
-        whide.setShortcut(Qt.Key_F9)
-        lo0.addWidget(Separator(self, "Histogram and ITF", extra_widgets=[whide]))
+        self.whide = self.makeButton("Hide", self.hide, width=128)
+        self.whide.setShortcut(Qt.Key_F9)
+        lo0.addWidget(Separator(self, "Histogram and ITF", extra_widgets=[self.whide]))
         lo1 = QHBoxLayout()
         lo1.setContentsMargins(0, 0, 0, 0)
         self._histplot = QwtPlot(self)
