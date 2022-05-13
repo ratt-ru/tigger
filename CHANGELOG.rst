@@ -10,8 +10,10 @@ Tigger Changelog
 * Beta support for Ubuntu 22.04 ARM64
 * Dependent on the latest tigger-lsm (1.7.1)
 * Fixed float errors with updated library API's
+* Fixed dockable widgets and window sizing
 * Re-enabled splash screen
 * Fixes venv pip3 bug
+* Fixes issue #131
 * Install script 'setup.py install' has been replaced by pip
 * Updated URL's
 * GitHub Actions are now compatible with 'act'
