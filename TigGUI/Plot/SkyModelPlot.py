@@ -61,6 +61,7 @@ from Tigger.Coordinates import Projection
 from Tigger.Models.SkyModel import SkyModel
 from TigGUI.Widgets import TiggerPlotCurve, TiggerPlotMarker, TDockWidget, TigToolTip
 from TigGUI.Plot import MouseModes
+from TigGUI.Images.ControlDialog import ImageControlDialog
 
 # plot Z depths for various classes of objects
 Z_Image = 1000
@@ -322,9 +323,32 @@ class ToolDialog(QDialog):
         if visible and not self.parent().isVisible():
             self.parent().setGeometry(self.geometry())
             self.parent().setVisible(True)
+            if self.parent().main_win.windowState() != Qt.WindowMaximized:
+                if not self.get_docked_widget_size(self.parent()):
+                    geo = self.parent().main_win.geometry()
+                    geo.setWidth(self.parent().main_win.width() + self.width())
+                    self.parent().main_win.setGeometry(geo)
         elif not visible and self.parent().isVisible():
+            if self.parent().main_win.windowState() != Qt.WindowMaximized:
+                if not self.get_docked_widget_size(self.parent()):
+                    geo = self.parent().main_win.geometry()
+                    geo.setWidth(self.parent().main_win.width() - self.width())
+                    self.parent().main_win.setGeometry(geo)
             self.parent().setVisible(False)
 
+    def get_docked_widget_size(self, _dockable):
+        widget_list = self.parent().main_win.findChildren(QDockWidget)
+        size_list = []
+        if _dockable:
+            for widget in widget_list:
+                if not isinstance(widget.bind_widget, ImageControlDialog):
+                    if widget.bind_widget != _dockable.bind_widget:
+                        if not widget.isWindow() and not widget.isFloating() and widget.isVisible():
+                            size_list.append(widget.bind_widget.width())
+        if size_list:
+            return max(size_list)
+        else:
+            return size_list
 
 class LiveImageZoom(ToolDialog):
     livezoom_resize_signal = pyqtSignal(QSize)
@@ -1200,7 +1224,10 @@ class SkyModelPlotter(QWidget):
             if ea_action.text() == 'Show live zoom && cross-sections':
                 self._dockable_livezoom.setVisible(False)
                 if self._mainwin.windowState() != Qt.WindowMaximized:
-                    self._mainwin.setMaximumWidth(self._mainwin.width() + self._dockable_livezoom.width())
+                    if not self.get_docked_widget_size(self._dockable_livezoom):
+                        geo = self._mainwin.geometry()
+                        geo.setWidth(self._mainwin.width() - self._dockable_livezoom.width())
+                        self._mainwin.setGeometry(geo)
                 ea_action.setChecked(False)
 
     def liveprofile_dockwidget_closed(self):
@@ -1209,26 +1236,59 @@ class SkyModelPlotter(QWidget):
             if ea_action.text() == 'Show profiles':
                 self._dockable_liveprofile.setVisible(False)
                 if self._mainwin.windowState() != Qt.WindowMaximized:
-                    self._mainwin.setMaximumWidth(self._mainwin.width() + self._dockable_liveprofile.width())
+                    if not self.get_docked_widget_size(self._dockable_liveprofile):
+                        geo = self._mainwin.geometry()
+                        geo.setWidth(self._mainwin.width() - self._dockable_liveprofile.width())
+                        self._mainwin.setGeometry(geo)
                 ea_action.setChecked(False)
 
     def liveprofile_dockwidget_toggled(self):
         if self._dockable_liveprofile.isVisible():
             if self._dockable_liveprofile.isWindow():
                 self._dockable_liveprofile.setFloating(False)
+                if self._mainwin.windowState() != Qt.WindowMaximized:
+                    if not self.get_docked_widget_size(self._dockable_liveprofile):
+                        geo = self._mainwin.geometry()
+                        geo.setWidth(self._mainwin.width() + self._dockable_liveprofile.width())
+                        self._mainwin.setGeometry(geo)
             else:
                 self._dockable_liveprofile.setFloating(True)
                 if self._mainwin.windowState() != Qt.WindowMaximized:
-                    self._mainwin.setMaximumWidth(self._mainwin.width() + self._dockable_liveprofile.width())
+                    if not self.get_docked_widget_size(self._dockable_liveprofile):
+                        geo = self._mainwin.geometry()
+                        geo.setWidth(self._mainwin.width() - self._dockable_liveprofile.width())
+                        self._mainwin.setGeometry(geo)
 
     def livezoom_dockwidget_toggled(self):
         if self._dockable_livezoom.isVisible():
             if self._dockable_livezoom.isWindow():
                 self._dockable_livezoom.setFloating(False)
+                if self._mainwin.windowState() != Qt.WindowMaximized:
+                    if not self.get_docked_widget_size(self._dockable_livezoom):
+                        geo = self._mainwin.geometry()
+                        geo.setWidth(self._mainwin.width() + self._dockable_livezoom.width())
+                        self._mainwin.setGeometry(geo)
             else:
                 self._dockable_livezoom.setFloating(True)
                 if self._mainwin.windowState() != Qt.WindowMaximized:
-                    self._mainwin.setMaximumWidth(self._mainwin.width() + self._dockable_livezoom.width())
+                    if not self.get_docked_widget_size(self._dockable_livezoom):
+                        geo = self._mainwin.geometry()
+                        geo.setWidth(self._mainwin.width() - self._dockable_livezoom.width())
+                        self._mainwin.setGeometry(geo)
+
+    def get_docked_widget_size(self, _dockable):
+        widget_list = self._mainwin.findChildren(QDockWidget)
+        size_list = []
+        if _dockable:
+            for widget in widget_list:
+                if not isinstance(widget.bind_widget, ImageControlDialog):
+                    if widget.bind_widget != _dockable.bind_widget:
+                        if not widget.isWindow() and not widget.isFloating() and widget.isVisible():
+                            size_list.append(widget.bind_widget.width())
+        if size_list:
+            return max(size_list)
+        else:
+            return size_list
 
     def setupShowMessages(self, _signal):
         self.plotShowMessage = _signal

@@ -326,7 +326,6 @@ class MainWindow(QMainWindow):
                 self.skyplot._liveprofile.setVisible(True)
                 self.skyplot._dockable_liveprofile.setVisible(True)
                 self.addDockWidget(Qt.LeftDockWidgetArea, self.skyplot._dockable_liveprofile)
-
             # resize dock areas
             widget_list = self.findChildren(QDockWidget)
             size_list = []
@@ -342,6 +341,9 @@ class MainWindow(QMainWindow):
             widget_list = result
             # resize dock areas
             self.resizeDocks(widget_list, size_list, Qt.Horizontal)
+            geo = self.geometry()
+            geo.setWidth(self.width() + max(size_list))
+            self.setGeometry(geo)
         elif layout is self.LayoutImageModel:
             self.tw.show()
             self.grouptab.show()

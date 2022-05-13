@@ -349,12 +349,16 @@ class ImageController(QFrame):
             self.addDockWidgetToTab()
             self._dockable_colour_ctrl.show()
             self._dockable_colour_ctrl.raise_()
+            geo = self.parent().mainwin.geometry()
+            geo.setWidth(self.parent().mainwin.width() + self._dockable_colour_ctrl.width())
         else:
             self._control_dialog.hide()
             self._dockable_colour_ctrl.setVisible(False)
-            if self.parent().mainwin.windowState() != Qt.WindowMaximized:
-                self.parent().mainwin.setMaximumWidth(
-                    self.parent().mainwin.width() + self._dockable_colour_ctrl.width())
+
+            geo = self.parent().mainwin.geometry()
+            geo.setWidth(self.parent().mainwin.width() - self._dockable_colour_ctrl.width())
+
+        self.parent().mainwin.setGeometry(geo)
 
     def addDockWidgetToTab(self):
         # Add dockable widget to main window.
@@ -396,17 +400,25 @@ class ImageController(QFrame):
     def colourctrl_dockwidget_closed(self):
         self._dockable_colour_ctrl.setVisible(False)
         if self.parent().mainwin.windowState() != Qt.WindowMaximized:
-            self.parent().mainwin.setMaximumWidth(self.parent().mainwin.width() + self._dockable_colour_ctrl.width())
+            geo = self.parent().mainwin.geometry()
+            geo.setWidth(self.parent().mainwin.width() - self._dockable_colour_ctrl.width())
+            self.parent().mainwin.setGeometry(geo)
 
     def colourctrl_dockwidget_toggled(self):
-        if self._dockable_colour_ctrl.isVisible():
-            if self._dockable_colour_ctrl.isWindow():
-                self._dockable_colour_ctrl.setFloating(False)
-            else:
-                self._dockable_colour_ctrl.setFloating(True)
-                if self.parent().mainwin.windowState() != Qt.WindowMaximized:
-                    self.parent().mainwin.setMaximumWidth(
-                        self.parent().mainwin.width() + self._dockable_colour_ctrl.width())
+        if not self._dockable_colour_ctrl.isVisible():
+            return
+        if self._dockable_colour_ctrl.isWindow():
+            self._dockable_colour_ctrl.setFloating(False)
+            if self.parent().mainwin.windowState() != Qt.WindowMaximized:
+                geo = self.parent().mainwin.geometry()
+                geo.setWidth(self.parent().mainwin.width() + self._dockable_colour_ctrl.width())
+                self.parent().mainwin.setGeometry(geo)
+        else:
+            self._dockable_colour_ctrl.setFloating(True)
+            if self.parent().mainwin.windowState() != Qt.WindowMaximized:
+                geo = self.parent().mainwin.geometry()
+                geo.setWidth(self.parent().mainwin.width() - self._dockable_colour_ctrl.width())
+                self.parent().mainwin.setGeometry(geo)
 
     def _changeDisplayRangeToPercent(self, percent):
         if not self._control_dialog:
