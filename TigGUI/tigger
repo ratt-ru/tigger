@@ -149,9 +149,10 @@ def main():
     # centre on screen
     centre = QStyle.alignedRect(Qt.LeftToRight, Qt.AlignHCenter, mainwin.size(), QApplication.desktop().availableGeometry())
     mainwin.setGeometry(centre)
-    # set minimum size to height of image control dialog
-    mainwin.setMinimumHeight(895)
-    mainwin.setMinimumWidth(895)
+    # set minimum size as the height of image control dialog
+    if usable_screen.width() >= 895 <= usable_screen.height():
+        mainwin.setMinimumHeight(895)
+        mainwin.setMinimumWidth(895)
     # set main window size constraints and policy
     dprint(1, "created main window")
 
