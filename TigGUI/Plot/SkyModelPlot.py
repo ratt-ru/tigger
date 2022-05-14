@@ -828,7 +828,10 @@ class SkyModelPlotter(QWidget):
             self.replot()
 
     class PlotZoomer(QwtPlotZoomer):
-        provisionalZoom = pyqtSignal(float, float, int, int)
+        # draws the zoom box overlay and selects zoom area
+        provisionalZoom = pyqtSignal(float, float, int)
+        # renders the zoom overlay box
+        replotProvisionalZoom = pyqtSignal()
 
         def __init__(self, canvas, updateLayoutEvent, track_callback=None, label=None):
             QwtPlotZoomer.__init__(self, canvas)
@@ -850,6 +853,7 @@ class SkyModelPlotter(QWidget):
             # watch plot for changes: if resized, aspect ratios need to be checked
             self._updateLayoutEvent = updateLayoutEvent
             self._updateLayoutEvent.connect(self._checkAspects)
+            self._zoom_in_process = False  # zoom wheel lock
 
         def isFixedAspect(self):
             return self._fixed_aspect
@@ -931,6 +935,7 @@ class SkyModelPlotter(QWidget):
                 dprint(2, "zoom stack is now", self.zoomRectIndex())
             else:
                 dprint(2, "invalid zoom selected, ignoring", rect)
+            self._zoom_in_process = False  # zoom wheel lock
 
         def trackerText(self, pos):
             return (self._track_callback and self._track_callback(pos)) or (
@@ -943,13 +948,21 @@ class SkyModelPlotter(QWidget):
             x = self.plot().invTransform(self.xAxis(), ev.x())
             y = self.plot().invTransform(self.yAxis(), ev.y())
             if int(ev.button()) == self._dczoom_button and int(ev.modifiers()) == self._dczoom_modifiers:
-                self.provisionalZoom.emit(x, y, 1, 10)
+                self.provisionalZoom.emit(x, y, 1)
 
         def widgetWheelEvent(self, ev):
             x = self.plot().invTransform(self.xAxis(), ev.x())
             y = self.plot().invTransform(self.yAxis(), ev.y())
-            if self._use_wheel:
-                self.provisionalZoom.emit(x, y, (1 if ev.angleDelta().y() > 0 else -1), 200)
+            if self._use_wheel and not self._zoom_in_process:
+                # angleDelta is the relative amount the wheel was rotated,
+                # in eighths of a degree
+                n_deg = ev.angleDelta().y() / 8
+                if n_deg > 1:
+                    self._zoom_in_process = True  # zoom wheel lock
+                    self.provisionalZoom.emit(x, y, 1)
+                elif n_deg < -1:
+                    self._zoom_in_process = True  # zoom wheel lock
+                    self.provisionalZoom.emit(x, y, -1)
             QwtPlotPicker.widgetWheelEvent(self, ev)
 
     class PlotPicker(QwtPlotPicker):
@@ -1388,10 +1401,11 @@ class SkyModelPlotter(QWidget):
         self._zoomer_label.setLabelAlignment(Qt.AlignBottom | Qt.AlignRight)
         for item in self._zoomer_label, self._zoomer_box:
             item.setZ(Z_Markup)
-        self._provisional_zoom_timer = QTimer(self)
+        self._provisional_zoom_timer = QTimer(self)  # does the zooming
         self._provisional_zoom_timer.setSingleShot(True)
         self._provisional_zoom_timer.timeout.connect(self._finalizeProvisionalZoom)
         self._provisional_zoom = None
+        self._zoomer.replotProvisionalZoom.connect(self._replot)
 
         # previous version of Qwt had Rect or Drag selection modes.
         # self._zoomer.setSelectionFlags(QwtPicker.RectSelection | QwtPicker.DragSelection)
@@ -1753,7 +1767,11 @@ class SkyModelPlotter(QWidget):
     def _replot(self):
         dprint(1, "replot")
         self.plot.clearDrawCache()
-        self.plot.replot()
+        # render the zoom box overlay
+        self.plot.updateCurrentPlot.emit()
+        # delay the processing of the actual zooming
+        # to allow the zoom box overlay to be rendered
+        self._provisional_zoom_timer.start(200)
 
     def _addPlotMarkup(self, items):
         """Adds a list of QwtPlotItems to the markup"""
@@ -1940,8 +1958,10 @@ class SkyModelPlotter(QWidget):
     def _finalizeProvisionalZoom(self):
         if self._provisional_zoom is not None:
             self._zoomer.zoom(self._provisional_zoom)
-
-    def _plotProvisionalZoom(self, x, y, level, timeout=200):
+        else:
+            self._zoomer._zoom_in_process = False  # zoom wheel lock
+            
+    def _plotProvisionalZoom(self, x, y, level):
         """Called when mouse wheel is used to zoom in our out"""
         self._provisional_zoom_level += level
         self._zoomer_box.setVisible(False)
@@ -1959,7 +1979,7 @@ class SkyModelPlotter(QWidget):
             self._zoomer_label.setLabel(self._zoomer_label_text)
             self._zoomer_box.setVisible(True)
             self._zoomer_label.setVisible(True)
-        else:
+        elif self._provisional_zoom_level < 0:
             maxout = -self._zoomer.zoomRectIndex()
             self._provisional_zoom_level = level = max(self._provisional_zoom_level, maxout)
             if self._provisional_zoom_level < 0:
@@ -1970,8 +1990,8 @@ class SkyModelPlotter(QWidget):
                 self._provisional_zoom = int(self._provisional_zoom_level)
             else:
                 self._provisional_zoom = None
-        QTimer.singleShot(5, self._replot)
-        self._provisional_zoom_timer.start(timeout)
+        # signal the rendering of the zoom overlay box
+        self._zoomer.replotProvisionalZoom.emit()
 
     def _plotZoomed(self, rect):
         dprint(2, "zoomed to", rect)
