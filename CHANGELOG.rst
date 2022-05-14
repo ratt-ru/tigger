@@ -11,6 +11,7 @@ Tigger Changelog
 * Dependent on the latest tigger-lsm (1.7.1)
 * Fixed float errors with updated library API's
 * Fixed dockable widgets and window sizing
+* Refactored plot zooming
 * Re-enabled splash screen
 * Fixes venv pip3 bug
 * Fixes issue #131
