@@ -854,6 +854,7 @@ class SkyModelPlotter(QWidget):
             self._updateLayoutEvent = updateLayoutEvent
             self._updateLayoutEvent.connect(self._checkAspects)
             self._zoom_in_process = False  # zoom wheel lock
+            self._zoom_wheel_threshold = 0  # zoom wheel 1/8th rotaions
 
         def isFixedAspect(self):
             return self._fixed_aspect
@@ -955,12 +956,27 @@ class SkyModelPlotter(QWidget):
             y = self.plot().invTransform(self.yAxis(), ev.y())
             if self._use_wheel and not self._zoom_in_process:
                 # angleDelta is the relative amount the wheel was rotated,
-                # in eighths of a degree
+                # in eighths of a degree. Therefore,
+                # 120 / 8 = 15 which is 1 wheel increment.
                 n_deg = ev.angleDelta().y() / 8
-                if n_deg > 2:
+                self._zoom_wheel_threshold += n_deg  # collect 1/8th rotaions
+                # process trackpad or mouse wheel
+                if abs(self._zoom_wheel_threshold / 15) < 1:
+                    # process trackpad scroll
+                    n_deg = (self._zoom_wheel_threshold / 15) * 10
+                    if n_deg > 7.5:
+                        self.provisionalZoom.emit(x, y, 1)
+                        self._zoom_wheel_threshold = 0
+                    elif n_deg < -7.5:
+                        self.provisionalZoom.emit(x, y, -1)
+                        self._zoom_wheel_threshold = 0
+                # process mouse wheel
+                elif self._zoom_wheel_threshold >= 15:
                     self.provisionalZoom.emit(x, y, 1)
-                elif n_deg < -2:
+                    self._zoom_wheel_threshold = 0
+                elif self._zoom_wheel_threshold <= -15:
                     self.provisionalZoom.emit(x, y, -1)
+                    self._zoom_wheel_threshold = 0
             QwtPlotPicker.widgetWheelEvent(self, ev)
 
     class PlotPicker(QwtPlotPicker):
