@@ -923,7 +923,8 @@ class SkyModelPlotter(QWidget):
                 x2 = self.plot().transform(self.xAxis(), x2)
                 y2 = self.plot().transform(self.yAxis(), y2)
                 dprint(2, "zoom by", abs(x1 - x2), abs(y1 - y2))
-                if abs(x1 - x2) <= 20 and abs(y1 - y2) <= 20:
+                if abs(x1 - x2) <= 40 and abs(y1 - y2) <= 40:
+                    self._zoom_in_process = False  # zoom wheel lock
                     return
             if isinstance(rect, int) or rect.isValid():
                 dprint(2, "zoom", rect)
@@ -935,7 +936,6 @@ class SkyModelPlotter(QWidget):
                 dprint(2, "zoom stack is now", self.zoomRectIndex())
             else:
                 dprint(2, "invalid zoom selected, ignoring", rect)
-            self._zoom_in_process = False  # zoom wheel lock
 
         def trackerText(self, pos):
             return (self._track_callback and self._track_callback(pos)) or (
@@ -957,11 +957,9 @@ class SkyModelPlotter(QWidget):
                 # angleDelta is the relative amount the wheel was rotated,
                 # in eighths of a degree
                 n_deg = ev.angleDelta().y() / 8
-                if n_deg > 1:
-                    self._zoom_in_process = True  # zoom wheel lock
+                if n_deg > 2:
                     self.provisionalZoom.emit(x, y, 1)
-                elif n_deg < -1:
-                    self._zoom_in_process = True  # zoom wheel lock
+                elif n_deg < -2:
                     self.provisionalZoom.emit(x, y, -1)
             QwtPlotPicker.widgetWheelEvent(self, ev)
 
@@ -1957,6 +1955,7 @@ class SkyModelPlotter(QWidget):
 
     def _finalizeProvisionalZoom(self):
         if self._provisional_zoom is not None:
+            self._zoomer._zoom_in_process = True  # zoom wheel lock
             self._zoomer.zoom(self._provisional_zoom)
         else:
             self._zoomer._zoom_in_process = False  # zoom wheel lock
@@ -1971,7 +1970,17 @@ class SkyModelPlotter(QWidget):
             x1, y1, x2, y2 = self._zoomer.zoomRect().getCoords()
             w = (x2 - x1) / 2 ** self._provisional_zoom_level
             h = (y2 - y1) / 2 ** self._provisional_zoom_level
-            self._provisional_zoom = QRectF(x - w / 2, y - h / 2, w, h)
+            # check that it's not too small, ignore if it is
+            new_zoom = QRectF(x - w / 2, y - h / 2, w, h)
+            x1, y1, x2, y2 = new_zoom.getCoords()
+            x1 = self.plot.transform(self._zoomer.xAxis(), x1)
+            y1 = self.plot.transform(self._zoomer.yAxis(), y1)
+            x2 = self.plot.transform(self._zoomer.xAxis(), x2)
+            y2 = self.plot.transform(self._zoomer.yAxis(), y2)
+            if abs(x1 - x2) <= 40 and abs(y1 - y2) <= 40:
+                self._zoom_in_process = False  # zoom wheel lock
+                return
+            self._provisional_zoom = new_zoom
             x1, y1, x2, y2 = self._provisional_zoom.getCoords()
             self._zoomer_box.setData([x1, x2, x2, x1, x1], [y1, y1, y2, y2, y1])
             self._zoomer_label.setValue(max(x1, x2), max(y1, y2))
@@ -2002,6 +2011,7 @@ class SkyModelPlotter(QWidget):
         self._zoomrect = QRectF(rect)  # make copy
         self._qa_unzoom.setEnabled(rect != self._zoomer.zoomBase())
         self._updatePsfMarker(rect, replot=True)
+        self._zoom_in_process = False  # zoom wheel lock
 
     def _setGridCircleStepping(self, arcsec=DefaultGridStep_ArcSec):
         """Changes the visible grid circles. None to disable."""
