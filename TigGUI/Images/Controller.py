@@ -345,14 +345,15 @@ class ImageController(QFrame):
         if not self._control_dialog.isVisible():
             dprint(1, "showing control dialog")
             self._control_dialog.show()
-            self._dockable_colour_ctrl.setVisible(True)
-            self.addDockWidgetToTab()
-            self._dockable_colour_ctrl.show()
-            self._dockable_colour_ctrl.raise_()
-            if not self.get_docked_widget_size(self._dockable_colour_ctrl):
-                geo = self.parent().mainwin.geometry()
-                geo.setWidth(self.parent().mainwin.width() + self._dockable_colour_ctrl.width())
-                self.parent().mainwin.setGeometry(geo)
+            if self._dockable_colour_ctrl is not None:
+                self._dockable_colour_ctrl.setVisible(True)
+                self.addDockWidgetToTab()
+                self._dockable_colour_ctrl.show()
+                self._dockable_colour_ctrl.raise_()
+                if not self.get_docked_widget_size(self._dockable_colour_ctrl):
+                    geo = self.parent().mainwin.geometry()
+                    geo.setWidth(self.parent().mainwin.width() + self._dockable_colour_ctrl.width())
+                    self.parent().mainwin.setGeometry(geo)
         else:
             self._control_dialog.hide()
             self._dockable_colour_ctrl.setVisible(False)
