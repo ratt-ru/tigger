@@ -8,6 +8,7 @@ Tigger Changelog
 * Version bump in preparation for release
 * Supports Ubuntu 22.04
 * Beta support for Ubuntu 22.04 ARM64
+* Added FITS header preview pane to file dialog
 * Dependent on the latest tigger-lsm (1.7.1)
 * Fixed float errors with updated library API's
 * Fixed dockable widgets and window sizing
