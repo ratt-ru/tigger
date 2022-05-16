@@ -20,15 +20,16 @@
 #
 
 import os.path
+from re import split
 import sys
 import time
 import traceback
 
 import numpy
-from PyQt5.Qt import (QWidget, QFileDialog, QVBoxLayout, QApplication, QMenu, QClipboard, QInputDialog, QActionGroup)
+from PyQt5.Qt import (QWidget, QFileDialog, QVBoxLayout, QApplication, QMenu, QClipboard, QInputDialog, QActionGroup, QTextOption, QFont)
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QDockWidget
+from PyQt5.QtWidgets import QDockWidget, QLabel, QPlainTextEdit
 from astropy.io import fits as pyfits
 
 from TigGUI.Images import FITS_ExtensionList
@@ -89,6 +90,8 @@ class ImageManager(QWidget):
         self._repopulateMenu()
         self.signalShowMessage = None
         self.signalShowErrorMessage = None
+        # FITS header preview pane
+        self.fits_info = QPlainTextEdit()
 
     def close(self):
         dprint(1, "closing Manager")
@@ -105,6 +108,25 @@ class ImageManager(QWidget):
     def setMainWindow(self, _mainwin):
         self.mainwin = _mainwin
 
+    def FITSHeaderPreview(self, fname):
+        """Loads information for the FITS header preview pane.
+        Connected via the QFileDialog currentChanged signal.
+        """
+        if os.path.isfile(fname):
+            name = os.path.basename(fname)
+            split_name = os.path.splitext(name)
+            if split_name[1].startswith(tuple(FITS_ExtensionList)):
+                try:
+                    with pyfits.open(fname) as hdu:
+                        hdu.verify('silentfix')
+                        hdr = hdu[0].header
+                        self.fits_info.setPlainText(
+                            "[File size: " + str(round(hdu._file.tell()/1024/1024, 2)) + " MiB]\n" + hdr.tostring(sep='\n', padding=True))
+                except:
+                    self.fits_info.setPlainText("Error Reading FITS file")
+        else:
+            self.fits_info.clear()
+
     def loadImage(self, filename=None, duplicate=True, to_top=True, model=None):
         """Loads image. Returns ImageControlBar object.
         If image is already loaded: returns old ICB if duplicate=False (raises to top if to_top=True),
@@ -120,6 +142,25 @@ class ImageManager(QWidget):
                 dialog.setFileMode(QFileDialog.ExistingFile)
                 dialog.setModal(True)
                 dialog.filesSelected['QStringList'].connect(self.loadImage)
+                # FITS header preview pane
+                dialog.currentChanged.connect(self.FITSHeaderPreview)
+                self.fits_info.setMinimumWidth(263)
+                dialog.setMinimumWidth(dialog.width() + self.fits_info.minimumWidth())
+                self.fits_info.setWordWrapMode(QTextOption.NoWrap)
+                self.fits_info.setLineWrapMode(QPlainTextEdit.NoWrap)
+                self.fits_info.setTabStopWidth(40)
+                f = QFont()
+                f.setFamily("Monospace")
+                f.setPointSize(10)
+                f.setFixedPitch(True)
+                self.fits_info.setFont(f)
+                self.fits_info.setReadOnly(True)
+                _flabel = QLabel("FITS File Information")
+                _flabel.setAlignment(Qt.AlignHCenter)
+                layout = dialog.layout()
+                layout.addWidget(_flabel, 0, 3)
+                layout.addWidget(self.fits_info, 1, 3, 3, 1)
+                dialog.setLayout(layout)
             self._load_image_dialog.exec_()
             return None
         if isinstance(filename, QStringList):
