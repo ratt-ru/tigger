@@ -1,10 +1,5 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
-#
-# % $Id$
-#
-#
 # Copyright (C) 2002-2007
 # The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
