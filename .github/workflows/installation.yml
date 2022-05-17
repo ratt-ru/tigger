@@ -26,7 +26,7 @@ jobs:
       id: setup-runner
       run: |
         sudo apt update > ${{ runner.temp }}/log 2>&1
-        sudo apt -y upgrade > ${{ runner.temp }}/log 2>&1
+        # sudo apt -y upgrade > ${{ runner.temp }}/log 2>&1
         sudo apt -y install xvfb > ${{ runner.temp }}/log 2>&1
         sudo apt -y install python3-pip > ${{ runner.temp }}/log 2>&1
         sudo apt -y install psmisc > ${{ runner.temp }}/log 2>&1
@@ -154,7 +154,7 @@ jobs:
       id: setup-runner
       run: |
         sudo apt update > ${{ runner.temp }}/log 2>&1
-        sudo apt -y upgrade > ${{ runner.temp }}/log 2>&1
+        # sudo apt -y upgrade > ${{ runner.temp }}/log 2>&1
         sudo apt -y install xvfb > ${{ runner.temp }}/log 2>&1
         sudo apt -y install python3-pip > ${{ runner.temp }}/log 2>&1
         sudo apt -y install psmisc > ${{ runner.temp }}/log 2>&1
@@ -282,7 +282,7 @@ jobs:
       id: setup-runner
       run: |
         sudo apt update > ${{ runner.temp }}/log 2>&1
-        sudo apt -y upgrade > ${{ runner.temp }}/log 2>&1
+        # sudo apt -y upgrade > ${{ runner.temp }}/log 2>&1
         sudo apt -y install xvfb > ${{ runner.temp }}/log 2>&1
         sudo apt -y install python3-pip > ${{ runner.temp }}/log 2>&1
         sudo apt -y install psmisc > ${{ runner.temp }}/log 2>&1
