@@ -480,7 +480,7 @@ class ImageManager(QWidget):
             return array.reshape(trimshape(array.shape))
 
         try:
-            result = exprfunc(*[trimarray(x[1].data()) for x in arglist])
+            result = exprfunc(*[x[1].data() for x in arglist])
         except Exception as exc:
             busy.reset_cursor()
             traceback.print_exc()
