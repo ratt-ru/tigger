@@ -861,7 +861,7 @@ class ImageControlDialog(QDialog):
             self._cb_item.setIntensityMap(imap)
             self._updateITF()
             self._histplot.replot()
-            self._wimap.setCurrentIndex(int(index))
+            self._wimap.setCurrentIndex(index)
             if isinstance(imap, Colormaps.LogIntensityMap):
                 self._wlogcycles.setValue(imap.log_cycles)
                 self._setIntensityLogCyclesLabel(imap.log_cycles)

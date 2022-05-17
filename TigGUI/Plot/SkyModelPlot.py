@@ -483,11 +483,11 @@ class LiveImageZoom(ToolDialog):
         self._npix = radius * 2 + 1
         self._magfac = factor
         width = height = self._npix * self._magfac
-        self._zoomplot.setMinimumHeight(int(height) + 80)
-        self._zoomplot.setMinimumWidth(int(width) + 80)
+        self._zoomplot.setMinimumHeight(height + 80)
+        self._zoomplot.setMinimumWidth(width + 80)
         # set data array
-        self._data = numpy.ma.masked_array(numpy.zeros((int(self._npix), int(self._npix)), float),
-                                           numpy.zeros((int(self._npix), int(self._npix)), bool))
+        self._data = numpy.ma.masked_array(numpy.zeros((self._npix, self._npix), float),
+                                           numpy.zeros((self._npix, self._npix), bool))
         # reset window size
         self._lo0.update()
         self.resize(self._lo0.minimumSize())
@@ -514,6 +514,7 @@ class LiveImageZoom(ToolDialog):
 
         def draw(self, painter, xmap, ymap, rect):
             """Implements QwtPlotItem.draw(), to render the image on the given painter."""
+            # drawImage expects QRectF
             self._qimg and painter.drawImage(QRectF(xmap.p1(), ymap.p2(), xmap.pDist(), ymap.pDist()), self._qimg)
 
     def trackImage(self, image, ix, iy):
@@ -529,13 +530,14 @@ class LiveImageZoom(ToolDialog):
                 # There was an error here when using zoom window zoom buttons
                 # (TypeError: slice indices must be integers or None or have an __index__ method).
                 # Therefore indexes have been cast as int()
+                # 16/05/2022: the error no longer occurs, therefore code has been reverted.
                 self._data.mask[...] = False
-                self._data.mask[:int(zx0), ...] = True
-                self._data.mask[int(zx1):, ...] = True
-                self._data.mask[..., :int(zy0)] = True
-                self._data.mask[..., int(zy1):] = True
+                self._data.mask[:zx0, ...] = True
+                self._data.mask[zx1:, ...] = True
+                self._data.mask[..., :zy0] = True
+                self._data.mask[..., zy1:] = True
                 # copy & colorize region
-                self._data[int(zx0):int(zx1), int(zy0):int(zy1)] = image.image()[int(ix0):int(ix1), int(iy0):int(iy1)]
+                self._data[zx0:zx1, zy0:zy1] = image.image()[ix0:ix1, iy0:iy1]
                 intensity = image.intensityMap().remap(self._data)
                 self._zi.setImage(
                     image.colorMap().colorize(image.intensityMap().remap(self._data)).transformed(self._xform))
@@ -543,7 +545,7 @@ class LiveImageZoom(ToolDialog):
             # set cross-sections
             if self._showcs.isChecked():
                 if iy >= 0 and iy < ny and ix1 > ix0:
-                    xcs = [float(x) for x in image.image()[int(ix0):int(ix1), int(iy)]]
+                    xcs = [float(x) for x in image.image()[ix0:ix1, iy]]
                     self._xcs.setData(numpy.arange(ix0 - 1, ix1) + .5, [xcs[0]] + xcs)
                     self._xcs.setVisible(True)
                     self._zoomplot.setAxisAutoScale(QwtPlot.yRight)
@@ -552,8 +554,7 @@ class LiveImageZoom(ToolDialog):
                     self._xcs.setVisible(False)
                     self._zoomplot.setAxisScale(QwtPlot.yRight, 0, 1)
                 if ix >= 0 and ix < nx and iy1 > iy0:
-                    ycs = [float(y) for y in image.image()[int(ix), int(iy0):int(iy1)]]
-                    # self._ycs.setData([ycs[0]] + ycs, numpy.arange(iy0 - 1, iy1) + .5)
+                    ycs = [float(y) for y in image.image()[ix, iy0:iy1]]
                     self._ycs.setData([ycs[0]] + ycs, numpy.arange(iy0 - 1, iy1) + .5)
                     self._ycs.setVisible(True)
                     self._zoomplot.setAxisAutoScale(QwtPlot.xTop)
@@ -754,19 +755,23 @@ class SkyModelPlotter(QWidget):
             return self._mainwin.dropEvent(event)
 
         def lmPosToScreen(self, fpos):
+            # transform -> float
             return QPointF(self.transform(QwtPlot.xBottom, fpos.x()), self.transform(QwtPlot.yLeft, fpos.y()))
 
-        def lmRectToScreen(self, frect):
-            return QRect(self.lmPosToScreen(frect.topLeft()), self.lmPosToScreen(frect.bottomRight()))
+        def lmRectToScreen(self, frect):  # seemingly unused
+            # lmPosToScreen -> float
+            return QRectF(self.lmPosToScreen(frect.topLeft()), self.lmPosToScreen(frect.bottomRight()))
 
         def screenPosToLm(self, pos):
+            # invtransform -> float
             return QPointF(self.invTransform(QwtPlot.xBottom, pos.x()), self.invTransform(QwtPlot.yLeft, pos.y()))
 
         def screenRectToLm(self, rect):
+            # screenPosToLm -> float
             return QRectF(self.screenPosToLm(rect.topLeft()), self.screenPosToLm(rect.bottomRight()))
 
         def getMarkerPosition(self, marker):
-            """Returns QPoint associated with the given marker. Caches coordinate conversion by marker ID."""
+            """Returns QPointF associated with the given marker. Caches coordinate conversion by marker ID."""
             mid = id(marker)
             pos = self._coord_cache.get(mid)
             if pos is None:
