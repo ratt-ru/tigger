@@ -89,7 +89,7 @@ class AboutDialog(QDialog):
         self.setWindowTitle(self.__tr("About Tigger"))
         self.title_label.setText(self.__tr( \
             """<h3>Tigger %s</h3>
-            <p>\u00a92010-2021 Oleg Smirnov & Rhodes University & SKA SA<br>
+            <p>\u00a92010-2022 Oleg Smirnov & Rhodes University & SKA SA<br>
             <br>Please direct feedback and bug reports at https://github.com/ratt-ru/tigger</p>
             """ % (release_string) \
             ))
