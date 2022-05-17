@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (C) 2002-2007
+# Copyright (C) 2002-2022
 # The MeqTree Foundation & 
 # ASTRON (Netherlands Foundation for Research in Astronomy)
 # P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
