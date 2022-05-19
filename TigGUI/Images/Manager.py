@@ -539,7 +539,7 @@ class ImageManager(QWidget):
 
                 # sub() WCS to new NAXIS
                 _wcs = WCS(template.fits_header)
-                new_wcs = _wcs.wcs.sub(2)
+                new_wcs = _wcs.wcs.sub(_diff)
 
                 # create new header
                 new_header = new_wcs.to_header()
