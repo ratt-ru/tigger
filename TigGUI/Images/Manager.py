@@ -539,11 +539,11 @@ class ImageManager(QWidget):
 
                 # sub() WCS to new NAXIS
                 _wcs = WCS(template.fits_header)
-                new_wcs = _wcs.wcs.sub(_diff)
+                _new_wcs = _wcs.wcs.sub(_diff)
 
                 # create new header
-                new_header = new_wcs.to_header()
-                _header = Header.fromstring(new_header)
+                _new_header = _new_wcs.to_header()
+                _header = Header.fromstring(_new_header)
 
                 # create keyword ignore list
                 ignore_list = []
@@ -558,14 +558,15 @@ class ImageManager(QWidget):
                 ignore_list.append('COMMENT')
 
                 # diff the two headers
-                d_header = pyfits.HeaderDiff(template.fits_header, _header,
+                d_header = pyfits.HeaderDiff(template.fits_header,
+                                             _header,
                                              ignore_keywords=ignore_list,
                                              ignore_comments='*')
 
                 # update new header with missing cards
                 for key in d_header.diff_keywords[0]:
                     _header[key] = template.fits_header[key]
-                
+
                 # check for PC and remove
                 # a brute force approach for now
                 if template.fits_header.get('PC01_01'):
@@ -608,23 +609,30 @@ class ImageManager(QWidget):
                             except:
                                 continue
 
-                # try to add history and comments
-                # non-ascii chars causes issues here
-                try:
-                    if template.fits_header.get('COMMENT'):
-                        _header['COMMENT'] = f"{template.fits_header['COMMENTS']}"
-                    if template.fits_header.get('HISTORY'):
-                        _header['HISTORY'] = f"{template.fits_header['HISTORY']}"
-                except:
-                    print("Error: COMMENTS or HISTORY contained non-ascii characters.")
+                # add comments
+                _comms = template.fits_header.get('COMMENT')
+                if _comms:
+                    for card in _comms:
+                        _header.append(('COMMENT', card))
 
-                # set the fixed header
+                # add history
+                _hist = template.fits_header.get('HISTORY')
+                if _hist:
+                    for card in _hist:
+                        _header.append(('HISTORY', card))
+
+                # restore card comments
+                for card in template.fits_header.keys():
+                    if card in _header:
+                        if com := template.fits_header.comments[card]:
+                            _header.set(keyword=card, comment=com)
+
+                # set new header
                 template.fits_header = _header
 
             # create new FITS file
             hdu = pyfits.PrimaryHDU(result.transpose(), template.fits_header)
             hdu.verify('fix')
-            print(f"AFTER HDU {repr(hdu.header)}")
             skyimage = SkyImage.FITSImagePlotItem(name=expression,
                                                   filename=None,
                                                   hdu=hdu)
