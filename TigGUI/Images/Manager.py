@@ -624,7 +624,8 @@ class ImageManager(QWidget):
                 # restore card comments
                 for card in template.fits_header.keys():
                     if card in _header:
-                        if com := template.fits_header.comments[card]:
+                        com = template.fits_header.comments[card]
+                        if com:
                             _header.set(keyword=card, comment=com)
 
                 # set new header
