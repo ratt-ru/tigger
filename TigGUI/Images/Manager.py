@@ -30,6 +30,8 @@ from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QDockWidget
 from astropy.io import fits as pyfits
+from astropy.wcs import WCS
+from astropy.io.fits import Header
 
 from TigGUI.Images import FITS_ExtensionList
 from TigGUI.Images import SkyImage
@@ -480,7 +482,7 @@ class ImageManager(QWidget):
             return array.reshape(trimshape(array.shape))
 
         try:
-            result = exprfunc(*[x[1].data() for x in arglist])
+            result = exprfunc(*[trimarray(x[1].data()) for x in arglist])
         except Exception as exc:
             busy.reset_cursor()
             traceback.print_exc()
@@ -526,8 +528,106 @@ class ImageManager(QWidget):
         self.signalShowMessage.emit("""Creating image for %s""" % expression, 3000)
         QApplication.flush()
         try:
+            # check and fix header
+            if numpy.ndim(result) < template.fits_header.get('NAXIS'):
+                dprint(2, "Fixing image header", expression)
+                self.signalShowMessage.emit(f"Fixing image header for {expression}", 3000)
+
+                # get NAXIS diff
+                _max = template.fits_header.get('NAXIS')
+                _diff = numpy.ndim(result)
+
+                # sub() WCS to new NAXIS
+                _wcs = WCS(template.fits_header)
+                new_wcs = _wcs.wcs.sub(2)
+
+                # create new header
+                new_header = new_wcs.to_header()
+                _header = Header.fromstring(new_header)
+
+                # create keyword ignore list
+                ignore_list = []
+                for i in range(_diff):
+                    ignore_list.append(f'NAXIS{i + 1 + _diff}')
+                    ignore_list.append(f'CTYPE{i + 1 + _diff}')
+                    ignore_list.append(f'CRVAL{i + 1 + _diff}')
+                    ignore_list.append(f'CDELT{i + 1 + _diff}')
+                    ignore_list.append(f'CUNIT{i + 1 + _diff}')
+                    ignore_list.append(f'CRPIX{i + 1 + _diff}')
+                ignore_list.append('HISTORY')
+                ignore_list.append('COMMENT')
+
+                # diff the two headers
+                d_header = pyfits.HeaderDiff(template.fits_header, _header,
+                                             ignore_keywords=ignore_list,
+                                             ignore_comments='*')
+
+                # update new header with missing cards
+                for key in d_header.diff_keywords[0]:
+                    _header[key] = template.fits_header[key]
+                
+                # check for PC and remove
+                # a brute force approach for now
+                if template.fits_header.get('PC01_01'):
+                    for i in range(_max):
+                        for n in range(_max):
+                            try:
+                                _header.remove(f'PC0{i+1+_diff}_0{n + 1}')
+                            except:
+                                continue
+                    for i in range(_max):
+                        for n in range(_max):
+                            try:
+                                _header.remove(f'PC0{i+1}_0{n + 1+_diff}')
+                            except:
+                                continue
+                elif template.fits_header.get('PC1_1'):
+                    for i in range(_max):
+                        for n in range(_max):
+                            try:
+                                _header.remove(f'PC{i+1+_diff}_{n + 1}')
+                            except:
+                                continue
+                    for i in range(_max):
+                        for n in range(_max):
+                            try:
+                                _header.remove(f'PC{i+1}_{n + 1+_diff}')
+                            except:
+                                continue
+                elif template.fits_header.get('PC001001'):
+                    for i in range(_max):
+                        for n in range(_max):
+                            try:
+                                _header.remove(f'PC00{i+1+_diff}00{n + 1}')
+                            except:
+                                continue
+                    for i in range(_max):
+                        for n in range(_max):
+                            try:
+                                _header.remove(f'PC00{i+1}00{n + 1+_diff}')
+                            except:
+                                continue
+
+                # try to add history and comments
+                # non-ascii chars causes issues here
+                try:
+                    if template.fits_header.get('COMMENT'):
+                        _header['COMMENT'] = f"{template.fits_header['COMMENTS']}"
+                    if template.fits_header.get('HISTORY'):
+                        _header['HISTORY'] = f"{template.fits_header['HISTORY']}"
+                except:
+                    print("Error: COMMENTS or HISTORY contained non-ascii characters.")
+
+                # set the fixed header
+                template.fits_header = _header
+
+            # create new FITS file
             hdu = pyfits.PrimaryHDU(result.transpose(), template.fits_header)
-            skyimage = SkyImage.FITSImagePlotItem(name=expression, filename=None, hdu=hdu)
+            hdu.verify('fix')
+            print(f"AFTER HDU {repr(hdu.header)}")
+            skyimage = SkyImage.FITSImagePlotItem(name=expression,
+                                                  filename=None,
+                                                  hdu=hdu)
         except:
             busy.reset_cursor()
             traceback.print_exc()
