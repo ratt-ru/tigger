@@ -534,12 +534,12 @@ class ImageManager(QWidget):
                 self.signalShowMessage.emit(f"Fixing image header for {expression}", 3000)
 
                 # get NAXIS diff
-                _max = template.fits_header.get('NAXIS')
-                _diff = numpy.ndim(result)
+                _naxis = template.fits_header.get('NAXIS')
+                _ndims = numpy.ndim(result)
 
                 # sub() WCS to new NAXIS
                 _wcs = WCS(template.fits_header)
-                _new_wcs = _wcs.wcs.sub(_diff)
+                _new_wcs = _wcs.wcs.sub(_ndims)
 
                 # create new header
                 _new_header = _new_wcs.to_header()
@@ -547,65 +547,65 @@ class ImageManager(QWidget):
 
                 # create keyword ignore list
                 ignore_list = []
-                for i in range(_diff):
-                    ignore_list.append(f'NAXIS{i + 1 + _diff}')
-                    ignore_list.append(f'CTYPE{i + 1 + _diff}')
-                    ignore_list.append(f'CRVAL{i + 1 + _diff}')
-                    ignore_list.append(f'CDELT{i + 1 + _diff}')
-                    ignore_list.append(f'CUNIT{i + 1 + _diff}')
-                    ignore_list.append(f'CRPIX{i + 1 + _diff}')
+                for i in range(_ndims):
+                    ignore_list.append(f'NAXIS{i + 1 + _ndims}')
+                    ignore_list.append(f'CTYPE{i + 1 + _ndims}')
+                    ignore_list.append(f'CRVAL{i + 1 + _ndims}')
+                    ignore_list.append(f'CDELT{i + 1 + _ndims}')
+                    ignore_list.append(f'CUNIT{i + 1 + _ndims}')
+                    ignore_list.append(f'CRPIX{i + 1 + _ndims}')
                 ignore_list.append('HISTORY')
                 ignore_list.append('COMMENT')
 
                 # diff the two headers
-                d_header = pyfits.HeaderDiff(template.fits_header,
-                                             _header,
-                                             ignore_keywords=ignore_list,
-                                             ignore_comments='*')
+                _diff_header = pyfits.HeaderDiff(template.fits_header,
+                                                 _header,
+                                                 ignore_keywords=ignore_list,
+                                                 ignore_comments='*')
 
                 # update new header with missing cards
-                for key in d_header.diff_keywords[0]:
+                for key in _diff_header.diff_keywords[0]:
                     _header[key] = template.fits_header[key]
 
                 # check for PC and remove
                 # a brute force approach for now
                 if template.fits_header.get('PC01_01'):
-                    for i in range(_max):
-                        for n in range(_max):
+                    for i in range(_naxis):
+                        for n in range(_naxis):
                             try:
-                                _header.remove(f'PC0{i+1+_diff}_0{n + 1}')
+                                _header.remove(f'PC0{i+1+_ndims}_0{n + 1}')
                             except:
                                 continue
-                    for i in range(_max):
-                        for n in range(_max):
+                    for i in range(_naxis):
+                        for n in range(_naxis):
                             try:
-                                _header.remove(f'PC0{i+1}_0{n + 1+_diff}')
+                                _header.remove(f'PC0{i+1}_0{n + 1+_ndims}')
                             except:
                                 continue
                 elif template.fits_header.get('PC1_1'):
-                    for i in range(_max):
-                        for n in range(_max):
+                    for i in range(_naxis):
+                        for n in range(_naxis):
                             try:
-                                _header.remove(f'PC{i+1+_diff}_{n + 1}')
+                                _header.remove(f'PC{i+1+_ndims}_{n + 1}')
                             except:
                                 continue
-                    for i in range(_max):
-                        for n in range(_max):
+                    for i in range(_naxis):
+                        for n in range(_naxis):
                             try:
-                                _header.remove(f'PC{i+1}_{n + 1+_diff}')
+                                _header.remove(f'PC{i+1}_{n + 1+_ndims}')
                             except:
                                 continue
                 elif template.fits_header.get('PC001001'):
-                    for i in range(_max):
-                        for n in range(_max):
+                    for i in range(_naxis):
+                        for n in range(_naxis):
                             try:
-                                _header.remove(f'PC00{i+1+_diff}00{n + 1}')
+                                _header.remove(f'PC00{i+1+_ndims}00{n + 1}')
                             except:
                                 continue
-                    for i in range(_max):
-                        for n in range(_max):
+                    for i in range(_naxis):
+                        for n in range(_naxis):
                             try:
-                                _header.remove(f'PC00{i+1}00{n + 1+_diff}')
+                                _header.remove(f'PC00{i+1}00{n + 1+_ndims}')
                             except:
                                 continue
 
@@ -624,9 +624,9 @@ class ImageManager(QWidget):
                 # restore card comments
                 for card in template.fits_header.keys():
                     if card in _header:
-                        com = template.fits_header.comments[card]
-                        if com:
-                            _header.set(keyword=card, comment=com)
+                        _comm = template.fits_header.comments[card]
+                        if _comm:
+                            _header.set(keyword=card, comment=_comm)
 
                 # set new header
                 template.fits_header = _header
