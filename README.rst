@@ -44,7 +44,7 @@ Download the Tigger repository::
 
     git clone https://github.com/ratt-ru/tigger.git
 
-The installation script works on Ubuntu 18.04, 20.04 and 22.04.
+The installation script works on Ubuntu 18.04, 20.04 and 22.04 (including ARM64).
 
 Run the installation script and enter ``sudo`` password when prompted::
 
@@ -59,7 +59,7 @@ After the Tigger repository has been downloaded with ``git clone https://github.
     sudo dpkg -i debian_pkgs/ubuntu_22_04_deb_pkg/python3-pyqt5.qwt_2.00.00-1build1_amd64.deb
     pip3 install . --user
 
-Please note that the above commands are for installing on Ubuntu 22.04, Debian packages for 18.04 and 20.04 are located in the ``ubuntu_18_04_deb_pkg`` and ``ubuntu_20_04_deb_pkg`` directories respectively.
+Please note that the above commands are for installing on Ubuntu 22.04, Debian packages for 18.04, 20.04 and 22.04 ARM64 are located in the ``ubuntu_18_04_deb_pkg``, ``ubuntu_20_04_deb_pkg`` and ``ubuntu_20_04__arm64_deb_pkg`` directories respectively.
 
 Running Tigger
 ==============
