@@ -540,7 +540,8 @@ class LiveImageZoom(ToolDialog):
             # set cross-sections
             if self._showcs.isChecked():
                 if iy >= 0 and iy < ny and ix1 > ix0:
-                    xcs = [float(x) for x in image.image()[ix0:ix1, iy]]
+                    # added fix for masked arrays and mosaic images
+                    xcs = [float(x) for x in numpy.ma.filled(image.image()[ix0:ix1, iy], fill_value=0.0)]
                     self._xcs.setData(numpy.arange(ix0 - 1, ix1) + .5, [xcs[0]] + xcs)
                     self._xcs.setVisible(True)
                     self._zoomplot.setAxisAutoScale(QwtPlot.yRight)
@@ -549,7 +550,8 @@ class LiveImageZoom(ToolDialog):
                     self._xcs.setVisible(False)
                     self._zoomplot.setAxisScale(QwtPlot.yRight, 0, 1)
                 if ix >= 0 and ix < nx and iy1 > iy0:
-                    ycs = [float(y) for y in image.image()[ix, iy0:iy1]]
+                    # added fix for masked arrays and mosaic images
+                    ycs = [float(y) for y in numpy.ma.filled(image.image()[ix, iy0:iy1], fill_value=0.0)]
                     self._ycs.setData([ycs[0]] + ycs, numpy.arange(iy0 - 1, iy1) + .5)
                     self._ycs.setVisible(True)
                     self._zoomplot.setAxisAutoScale(QwtPlot.xTop)
@@ -699,7 +701,10 @@ class LiveProfile(ToolDialog):
                 i0 = rect.topLeft().y()
                 i1 = i0 + rect.height()
                 self._profplot.setAxisScale(QwtPlot.xBottom, xval[i0], xval[i1 - 1])
-            self._profcurve.setData(xval[i0:i1], yval[i0:i1])
+            # added fix for masked arrays and mosaic images
+            yval = numpy.ma.filled(yval[i0:i1], fill_value=0.0)
+            xval = numpy.ma.filled(xval[i0:i1], fill_value=0.0)
+            self._profcurve.setData(xval, yval)
         self._profcurve.setVisible(inrange)
         # update plots
         self._profplot.replot()
