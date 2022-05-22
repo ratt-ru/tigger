@@ -2,6 +2,14 @@
 Tigger
 ======
 
+|actionsbadge| |versionbadge|
+
+.. |actionsbadge| image:: https://github.com/ratt-ru/tigger/workflows/Tigger%20Ubuntu%20CI/badge.svg
+    :target: https://github.com/ratt-ru/tigger/actions
+.. |versionbadge| image:: https://img.shields.io/github/v/release/ratt-ru/tigger
+    :target: https://github.com/ratt-ru/tigger/releases
+    :alt: GitHub release (latest by date)
+
 .. image:: https://user-images.githubusercontent.com/7116312/113705452-5ac51d00-96d5-11eb-8087-5d2a8ccad99a.png
 
 Installing Tigger
@@ -71,11 +79,13 @@ Questions or problems
 
 Open an issue on github
 
-https://github.com/ratt-ru/tigger
+https://github.com/ratt-ru/tigger/issues
 
+Contributors
+============
 
-Travis
-======
+Thank you to the people who have contributed to this project.
 
-.. image:: https://travis-ci.org/ska-sa/tigger.svg?branch=master
-    :target: https://travis-ci.org/ska-sa/tigger
+.. image:: https://contrib.rocks/image?repo=ratt-ru/tigger
+    :target: https://github.com/ratt-ru/tigger/graphs/contributors
+
