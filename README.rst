@@ -2,9 +2,11 @@
 Tigger
 ======
 
-|actionsbadge| |versionbadge|
+|actionsbadge| |actionspypibadge| |versionbadge|
 
 .. |actionsbadge| image:: https://github.com/ratt-ru/tigger/workflows/Tigger%20Ubuntu%20CI/badge.svg
+    :target: https://github.com/ratt-ru/tigger/actions
+.. |actionspypibadge| image:: https://github.com/ratt-ru/tigger/workflows/Deploy%20Python%20Package/badge.svg
     :target: https://github.com/ratt-ru/tigger/actions
 .. |versionbadge| image:: https://img.shields.io/github/v/release/ratt-ru/tigger
     :target: https://github.com/ratt-ru/tigger/releases
