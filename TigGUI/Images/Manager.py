@@ -138,29 +138,31 @@ class ImageManager(QWidget):
             if not self._load_image_dialog:
                 dialog = self._load_image_dialog = QFileDialog(self, "Load FITS image", ".",
                                                                "FITS images (%s);;All files (*)" % (" ".join(
-                                                                   ["*" + ext for ext in FITS_ExtensionList])))
+                                                                   ["*" + ext for ext in FITS_ExtensionList])),
+                                                               options=QFileDialog.DontUseNativeDialog)
                 dialog.setFileMode(QFileDialog.ExistingFile)
                 dialog.setModal(True)
                 dialog.filesSelected['QStringList'].connect(self.loadImage)
-                # FITS header preview pane
-                dialog.currentChanged.connect(self.FITSHeaderPreview)
-                self.fits_info.setMinimumWidth(263)
-                dialog.setMinimumWidth(dialog.width() + self.fits_info.minimumWidth())
-                self.fits_info.setWordWrapMode(QTextOption.NoWrap)
-                self.fits_info.setLineWrapMode(QPlainTextEdit.NoWrap)
-                self.fits_info.setTabStopWidth(40)
-                f = QFont()
-                f.setFamily("Monospace")
-                f.setPointSize(10)
-                f.setFixedPitch(True)
-                self.fits_info.setFont(f)
-                self.fits_info.setReadOnly(True)
-                _flabel = QLabel("FITS File Information")
-                _flabel.setAlignment(Qt.AlignHCenter)
                 layout = dialog.layout()
-                layout.addWidget(_flabel, 0, 3)
-                layout.addWidget(self.fits_info, 1, 3, 3, 1)
-                dialog.setLayout(layout)
+                if layout:
+                    # FITS header preview pane
+                    dialog.currentChanged.connect(self.FITSHeaderPreview)
+                    self.fits_info.setMinimumWidth(263)
+                    dialog.setMinimumWidth(dialog.width() + self.fits_info.minimumWidth())
+                    self.fits_info.setWordWrapMode(QTextOption.NoWrap)
+                    self.fits_info.setLineWrapMode(QPlainTextEdit.NoWrap)
+                    self.fits_info.setTabStopWidth(40)
+                    f = QFont()
+                    f.setFamily("Monospace")
+                    f.setPointSize(10)
+                    f.setFixedPitch(True)
+                    self.fits_info.setFont(f)
+                    self.fits_info.setReadOnly(True)
+                    _flabel = QLabel("FITS File Information")
+                    _flabel.setAlignment(Qt.AlignHCenter)
+                    layout.addWidget(_flabel, 0, 3)
+                    layout.addWidget(self.fits_info, 1, 3, 3, 1)
+                    dialog.setLayout(layout)
             self._load_image_dialog.exec_()
             return None
         if isinstance(filename, QStringList):
