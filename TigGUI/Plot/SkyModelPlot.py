@@ -1261,11 +1261,12 @@ class SkyModelPlotter(QWidget):
                 self._dockable_livezoom.setVisible(False)
                 if self._mainwin.windowState() != Qt.WindowMaximized:
                     if not self.get_docked_widget_size(self._dockable_livezoom):
-                        geo = self._mainwin.geometry()
-                        geo.setWidth(self._mainwin.width() - self._dockable_livezoom.width())
-                        center = geo.center()
-                        geo.moveCenter(QPoint(center.x() + self._dockable_livezoom.width(), geo.y()))
-                        self._mainwin.setGeometry(geo)
+                        if not self._dockable_livezoom.isFloating():
+                            geo = self._mainwin.geometry()
+                            geo.setWidth(self._mainwin.width() - self._dockable_livezoom.width())
+                            center = geo.center()
+                            geo.moveCenter(QPoint(center.x() + self._dockable_livezoom.width(), geo.y()))
+                            self._mainwin.setGeometry(geo)
                 ea_action.setChecked(False)
 
     def liveprofile_dockwidget_closed(self):
@@ -1275,11 +1276,12 @@ class SkyModelPlotter(QWidget):
                 self._dockable_liveprofile.setVisible(False)
                 if self._mainwin.windowState() != Qt.WindowMaximized:
                     if not self.get_docked_widget_size(self._dockable_liveprofile):
-                        geo = self._mainwin.geometry()
-                        geo.setWidth(self._mainwin.width() - self._dockable_liveprofile.width())
-                        center = geo.center()
-                        geo.moveCenter(QPoint(center.x() + self._dockable_liveprofile.width(), geo.y()))
-                        self._mainwin.setGeometry(geo)
+                        if not self._dockable_liveprofile.isFloating():
+                            geo = self._mainwin.geometry()
+                            geo.setWidth(self._mainwin.width() - self._dockable_liveprofile.width())
+                            center = geo.center()
+                            geo.moveCenter(QPoint(center.x() + self._dockable_liveprofile.width(), geo.y()))
+                            self._mainwin.setGeometry(geo)
                 ea_action.setChecked(False)
 
     def liveprofile_dockwidget_toggled(self):

@@ -403,9 +403,10 @@ class ImageController(QFrame):
         self._dockable_colour_ctrl.setVisible(False)
         if self.parent().mainwin.windowState() != Qt.WindowMaximized:
             if not self.get_docked_widget_size(self._dockable_colour_ctrl):
-                geo = self.parent().mainwin.geometry()
-                geo.setWidth(self.parent().mainwin.width() - self._dockable_colour_ctrl.width())
-                self.parent().mainwin.setGeometry(geo)
+                if not self._dockable_colour_ctrl.isFloating():
+                    geo = self.parent().mainwin.geometry()
+                    geo.setWidth(self.parent().mainwin.width() - self._dockable_colour_ctrl.width())
+                    self.parent().mainwin.setGeometry(geo)
 
     def colourctrl_dockwidget_toggled(self):
         if not self._dockable_colour_ctrl.isVisible():
