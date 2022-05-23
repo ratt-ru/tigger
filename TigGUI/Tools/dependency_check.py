@@ -1,9 +1,4 @@
-# -*- coding: utf-8 -*-
-#
-# % $Id$
-#
-#
-# Copyright (C) 2002-2021
+# Copyright (C) 2002-2022
 # The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
 # P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
@@ -83,7 +78,7 @@ if not deps_available:
     import sys
 
     error_msg = f"Error: Dependencies have not been met {missing}, please check your installation. \n" \
-                "See https://github.com/ska-sa/tigger for further information."
+                "See https://github.com/ratt-ru/tigger for further information."
 
     # load GUI error message if possible
     if 'PyQt5' not in missing:
@@ -119,7 +114,7 @@ if not deps_available:
         msg_box.setWindowTitle("Tigger")
         msg_box.setText(f"<b>Error</b><br/><br/>Dependencies have not been met: <br/><br/>{missing}<br/><br/>"
                         f"Please check your installation. "
-                        f"<br/><br/>See <a href='https://github.com/ska-sa/tigger'>https://github.com/ska-sa/tigger</a>"
+                        f"<br/><br/>See <a href='https://github.com/ratt-ru/tigger'>https://github.com/ratt-ru/tigger</a>"
                         f" for further information.")
         msg_box.setStandardButtons(QMessageBox.Close)
         msg_box.buttonClicked.connect(close_btn)

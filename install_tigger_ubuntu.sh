@@ -1,4 +1,6 @@
 #!/bin/bash
+# add .local to $PATH 
+export PATH=$PATH:~/.local/bin
 
 log_file=tigger_installer.log
 error_file=tigger_installer.err
@@ -15,10 +17,10 @@ echo() {
    command echo "$@" >&3
 }
 
-echo "==== Tigger v1.6.0 - Ubuntu install script ===="
+echo "==== Tigger v1.6.1 - Ubuntu install script ===="
 echo "==== Log file: $log_file ===="
 echo "==== Error log: $error_file ===="
-printf "==== Tigger v1.6.0 - Ubuntu install script ====\n"
+printf "==== Tigger v1.6.1 - Ubuntu install script ====\n"
 
 # sudo runner by default
 sudo_runner="sudo"
@@ -93,6 +95,18 @@ then
 		printf "==== Error: Ubuntu Linux not detected, stopping installation ====\n"
 		exception
 	fi
+
+	if [[ -n "$(command -v arch)" ]]
+	then
+		# lookup for aarch64
+		arch=$(arch)
+    if [[ $arch == "aarch64" ]] && [[ $distro_version != "2204" ]]
+    then
+      echo "==== Error: ARM64 installation requires Ubuntu 22.04. Installer has detected Linux distribution as $distro_name $distro_version ===="
+      printf "==== Error: ARM64 installation requires Ubuntu 22.04. Installer has detected Linux distribution as $distro_name $distro_version ====\n"
+      exception
+    fi
+	fi
 else
 	echo "==== Error: Unable to detect Linux distribution, stopping installation ===="
 	printf "==== Error: Unable to detect Linux distribution, stopping installation ====\n"
@@ -107,18 +121,27 @@ if command -v pip3 > /dev/null
 then
   if [[ $VIRTUAL_ENV == "" ]]
   then
-    echo "==== Installer found pip3... ===="
-    printf "==== Installer found pip3... ====\n"
+    echo "==== Installer found pip3 (no VENV)... ===="
+    printf "==== Installer found pip3 (no VENV)... ====\n"
   else
-    echo "==== Installer did not find pip3... ===="
-    printf "==== Installer did not find pip3... ====\n"
-    $sudo_runner $apt_runner python3-setuptools python3-pip 2>>$error_file || exception
+    if command -v $VIRTUAL_ENV/bin/pip3 > /dev/null
+    then
+      echo "==== Installer found pip3 (VENV)... ===="
+      printf "==== Installer found pip3 (VENV)... ====\n"
+      $VIRTUAL_ENV/bin/pip3 install -U pip setuptools wheel
+    else
+      echo "==== Installer did not find pip3 (VENV)... ===="
+      printf "==== Installer did not find pip3 (VENV)... ====\n"
+      $sudo_runner $apt_runner python3-setuptools python3-pip 2>>$error_file || exception
+      pip3 install -U pip setuptools wheel --user
+    fi
   fi
 else
-	echo "==== Installer did not find pip3... ===="
-	printf "==== Installer did not find pip3... ====\n"
+  echo "==== Installer did not find pip3 (no VENV)... ===="
+  printf "==== Installer did not find pip3 (no VENV)... ====\n"
 	install_type="fullstack"
 	$sudo_runner $apt_runner python3-setuptools python3-pip 2>>$error_file || exception
+  pip3 install -U pip setuptools wheel --user
 fi
 
 # check for astro-tigger-lsm
@@ -129,10 +152,10 @@ then
 	printf "==== Installer found astro-tigger-lsm dependency... ====\n"
 	tigger_lsm_version=`pip3 list|grep astro-tigger-lsm|awk '{print $2}'|sed -e 's/\.//g'`
 	
-	if [[ "$tigger_lsm_version" -lt "170" ]]
+	if [[ "$tigger_lsm_version" -lt "171" ]]
 	then
-		echo "==== Installer fullstack mode - astro-tigger-lsm version is less than 1.7.0... ===="
-		printf "==== Installer fullstack mode - astro-tigger-lsm version is less than 1.7.0... ====\n"
+		echo "==== Installer fullstack mode - astro-tigger-lsm version is less than 1.7.1... ===="
+		printf "==== Installer fullstack mode - astro-tigger-lsm version is less than 1.7.1... ====\n"
 		pip3 uninstall -y astro_tigger_lsm 2>>$error_file || exception
 		install_type="fullstack"
 	fi
@@ -149,27 +172,41 @@ then
   then
     echo "==== Installing Tigger-LSM dependency from source... ===="
     printf "==== Installing Tigger-LSM dependency from source... ====\n"
-    $sudo_runner $apt_runner git 2>>$error_file || exception
-    cd /tmp || exception
-    rm -rf tigger-lsm
-    git clone https://github.com/ska-sa/tigger-lsm.git 1>>$log_file 2>>$error_file || exception
-    cd tigger-lsm || exception
-
-    if [[ $distro_version == "1804" ]]
+    if [[ $distro_version == "2204" ]]
+    then
+      $sudo_runner $apt_runner libboost-python-dev python3-casacore casacore* libcfitsio-dev wcslib-dev 2>>$error_file || exception
+    elif [[ $distro_version == "1804" ]]
     then
       $sudo_runner $apt_runner libboost-python-dev casacore* 2>>$error_file || exception
       pip3 install -q astropy==4.1 || exception
       pip3 install -q scipy==1.5.2 || exception
     fi
-
-    python3 setup.py install --user 1>>$log_file 2>>$error_file || exception
+    $sudo_runner $apt_runner git 2>>$error_file || exception
+    cd /tmp || exception
+    rm -rf tigger-lsm
+    git clone https://github.com/ratt-ru/tigger-lsm.git 1>>$log_file 2>>$error_file || exception
+    cd tigger-lsm || exception
+    pip3 install . 1>>$log_file 2>>$error_file || exception
     cd /tmp || exception
     cd "${tigger_pwd}" || exception
   elif [[ $build_type == "package" ]]
   then
-    echo "==== Installing Tigger-LSM dependency from pip3... ===="
-    printf "==== Installing Tigger-LSM dependency from pip3... ====\n"
-    pip3 install -q astro_tigger_lsm==1.7.0 || exception
+    echo "==== Installing Tigger-LSM dependencies... ===="
+    printf "==== Installing Tigger-LSM dependencies... ====\n"
+    if [[ $distro_version == "2204" ]]
+    then
+      if [[ $VIRTUAL_ENV == "" ]]
+      then
+        echo "==== Installing Tigger-LSM dependencies libboost-python and python3-casacore... ===="
+        printf "==== Installing Tigger-LSM dependencies libboost-python and python3-casacore... ====\n"
+        $sudo_runner $apt_runner libboost-python-dev python3-casacore 2>>$error_file || exception
+      else
+        echo "==== Installing Tigger-LSM dependencies libboost-python, casacore, python3-casacore, libcfitsio and wcslib... ===="
+        printf "==== Installing Tigger-LSM dependencies libboost-python casacore, python3-casacore, libcfitsio and wcslib... ====\n"
+        $sudo_runner $apt_runner libboost-python-dev python3-casacore casacore* libcfitsio-dev wcslib-dev 2>>$error_file || exception
+      fi
+    fi
+    pip3 install -q astro_tigger_lsm==1.7.1 || exception
   fi
 fi
 
@@ -179,17 +216,31 @@ printf "==== Installing package dependencies... ====\n"
 # install Tigger deps
 $sudo_runner $apt_runner python3-pyqt5.qtsvg python3-pyqt5.qtopengl libqwt-qt5-6 2>>$error_file || exception
 
+# VENV and PyQt-Qwt source based installation not supported (Please compile manually) 
+if [[ $VIRTUAL_ENV != "" &&  $build_type == "source" ]]
+then
+  echo "==== PyQt-Qwt source based installation with VENV is not supported. Please install manually, attempting package based installation instead ===="
+  printf "==== PyQt-Qwt source based installation with VENV is not supported. Please install manually, attempting package based installation instead ====\n"
+  $sudo_runner $apt_runner sip-tools sip-dev 2>>$error_file || exception
+  build_type="package"
+fi
 # compile PyQt-Qwt
 if [[ $build_type == "source" ]]
 then
-    # install PyQt-Qwt deps
-    $sudo_runner $apt_runner pyqt5-dev pyqt5-dev-tools python3-pyqt5 libqwt-qt5-dev libqwt-headers libqt5opengl5-dev libqt5svg5-dev g++ dpkg-dev git 2>>$error_file || exception
-	if [[ $distro_version == "2104" ]]
+  # install PyQt-Qwt deps
+  $sudo_runner $apt_runner pyqt5-dev pyqt5-dev-tools python3-pyqt5 libqwt-qt5-dev libqwt-headers libqt5opengl5-dev libqt5svg5-dev g++ dpkg-dev git 2>>$error_file || exception
+	if [[ $distro_version == "2104" ]] || [[ $distro_version == "2204" ]]
   then
-		echo "==== Compiling PyQt-Qwt for $distro_name $distro_version... ===="
+    echo "==== Compiling PyQt-Qwt for $distro_name $distro_version... ===="
 		printf "==== Compiling PyQt-Qwt for $distro_name $distro_version... ====\n"
-        $sudo_runner $apt_runner sip5-tools 2>>$error_file || exception
-		cd /tmp || exception
+    if [[ $distro_version == "2104" ]]
+    then
+      $sudo_runner $apt_runner sip5-tools 2>>$error_file || exception
+    elif [[ $distro_version == "2204" ]]
+    then
+      $sudo_runner $apt_runner sip-tools sip-dev 2>>$error_file || exception
+    fi
+    cd /tmp || exception
 		rm -rf PyQt-Qwt
 		git clone https://github.com/razman786/PyQt-Qwt.git || exception
 		cd PyQt-Qwt || exception
@@ -245,7 +296,17 @@ fi
 # install PyQt-Qwt package
 if [[ $build_type == "package" ]]
 then
-	if [[ $distro_version == "2104" ]]
+	if [[ $distro_version == "2204" ]]
+    then
+		echo "==== Installing PyQwt for $distro_name $distro_version... ===="
+		printf "==== Installing PyQwt for $distro_name $distro_version... ====\n"
+		if [[ $arch == "aarch64" ]]
+		then
+			$sudo_runner dpkg -i debian_pkgs/ubuntu_22_04_arm64_deb_pkg/python3-pyqt5.qwt_2.00.00-1build1_arm64.deb || exception
+		else
+			$sudo_runner dpkg -i debian_pkgs/ubuntu_22_04_deb_pkg/python3-pyqt5.qwt_2.00.00-1build1_amd64.deb || exception
+		fi
+	elif [[ $distro_version == "2104" ]]
 	then
 		echo "==== Installing PyQwt for $distro_name $distro_version... ===="
 		printf "==== Installing PyQwt for $distro_name $distro_version... ====\n"
@@ -301,8 +362,17 @@ fi
 # install Tigger
 if [[ $VIRTUAL_ENV == "" ]]
 then
-  python3 setup.py install --user 1>>$log_file 2>>$error_file && echo "==== Tigger installation complete! \o/ ====" || exception
+  echo "==== Installing Tigger... ===="
+  printf "==== Installing Tigger... ====\n"
+  pip3 install . --user 1>>$log_file 2>>$error_file && echo "==== Tigger installation complete! \o/ ====" && printf "==== Tigger installation complete! \o/ ====\n" || exception
 else
+  echo "==== Installing Tigger (VENV)... ===="
+  printf "==== Installing Tigger(VENV)... ====\n"
+  if [[ $distro_version == "2204" ]]
+  then
+    $sudo_runner $apt_runner python3-sip-dev 2>>$error_file || exception
+  fi
+  pip3 install -q wheel || exception
   pip3 install -q vext.pyqt5 || exception
-  pip3 install . 1>>$log_file 2>>$error_file && echo "==== Tigger installation complete! \o/ ====" || exception
+  pip3 install . 1>>$log_file 2>>$error_file && echo "==== Tigger installation complete! \o/ ===="  && printf "==== Tigger installation complete! \o/ ====\n"|| exception
 fi

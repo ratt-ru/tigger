@@ -1,4 +1,4 @@
-# Copyright (C) 2002-2011
+# Copyright (C) 2002-2022
 # The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
 # P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
@@ -239,7 +239,7 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
         yp1, yp2, ydp, ys1, ys2, yds = yinfo = ymap.p1(), ymap.p2(), ymap.pDist(), ymap.s1(), ymap.s2(), ymap.sDist()
         dprint(5, "draw:", rect, xinfo, yinfo)
         self._current_rect = QRectF(QPointF(xs2, ys1), QSizeF(xds, yds))
-        self._current_rect_pix = QRect(QPoint(*self.lmToPix(xs1, ys1)), QPoint(*self.lmToPix(xs2, ys2))).intersected(
+        self._current_rect_pix = QRectF(QPointF(*self.lmToPix(xs1, ys1)), QPointF(*self.lmToPix(xs2, ys2))).toRect().intersected(
             self._bounding_rect_pix)
         dprint(5, "draw:", self._current_rect_pix)
         # put together tuple describing current mapping
@@ -338,7 +338,7 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
                 self._cache_qimage[self._image_key] = self.qimg.copy()
         # now draw the image
         t0 = time.time()
-        painter.drawImage(xp1, yp2, self.qimg)
+        painter.drawImage(QPointF(xp1, yp2), self.qimg)
         dprint(2, "drawing took", time.time() - t0, "secs")
         # when exporting images to PNG cache needs to be cleared
         if not use_cache:

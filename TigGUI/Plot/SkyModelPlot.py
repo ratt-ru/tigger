@@ -1,9 +1,4 @@
-# -*- coding: utf-8 -*-
-#
-# % $Id$
-#
-#
-# Copyright (C) 2002-2011
+# Copyright (C) 2002-2022
 # The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
 # P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
@@ -61,6 +56,7 @@ from Tigger.Coordinates import Projection
 from Tigger.Models.SkyModel import SkyModel
 from TigGUI.Widgets import TiggerPlotCurve, TiggerPlotMarker, TDockWidget, TigToolTip
 from TigGUI.Plot import MouseModes
+from TigGUI.Images.ControlDialog import ImageControlDialog
 
 # plot Z depths for various classes of objects
 Z_Image = 1000
@@ -160,7 +156,7 @@ class SourceMarker:
         if style.symbol == "dot":
             self._symbol.setSize(2)
         else:
-            self._symbol.setSize(self._size)
+            self._symbol.setSize(int(self._size))
         self._symbol.setPen(QPen(symbol_color, style.symbol_linewidth))
         self._symbol.setBrush(QBrush(Qt.NoBrush))
         lab_pen = QPen(Qt.NoPen)
@@ -322,9 +318,36 @@ class ToolDialog(QDialog):
         if visible and not self.parent().isVisible():
             self.parent().setGeometry(self.geometry())
             self.parent().setVisible(True)
+            if self.parent().main_win.windowState() != Qt.WindowMaximized:
+                if not self.get_docked_widget_size(self.parent()):
+                    geo = self.parent().main_win.geometry()
+                    geo.setWidth(self.parent().main_win.width() + self.width())
+                    center = geo.center()
+                    geo.moveCenter(QPoint(center.x() - self.width(), geo.y()))
+                    self.parent().main_win.setGeometry(geo)
         elif not visible and self.parent().isVisible():
+            if self.parent().main_win.windowState() != Qt.WindowMaximized:
+                if not self.get_docked_widget_size(self.parent()):
+                    geo = self.parent().main_win.geometry()
+                    geo.setWidth(self.parent().main_win.width() - self.width())
+                    center = geo.center()
+                    geo.moveCenter(QPoint(center.x() + self.width(), geo.y()))
+                    self.parent().main_win.setGeometry(geo)
             self.parent().setVisible(False)
 
+    def get_docked_widget_size(self, _dockable):
+        widget_list = self.parent().main_win.findChildren(QDockWidget)
+        size_list = []
+        if _dockable:
+            for widget in widget_list:
+                if not isinstance(widget.bind_widget, ImageControlDialog):
+                    if widget.bind_widget != _dockable.bind_widget:
+                        if not widget.isWindow() and not widget.isFloating() and widget.isVisible():
+                            size_list.append(widget.bind_widget.width())
+        if size_list:
+            return max(size_list)
+        else:
+            return size_list
 
 class LiveImageZoom(ToolDialog):
     livezoom_resize_signal = pyqtSignal(QSize)
@@ -458,8 +481,8 @@ class LiveImageZoom(ToolDialog):
         self._zoomplot.setMinimumHeight(height + 80)
         self._zoomplot.setMinimumWidth(width + 80)
         # set data array
-        self._data = numpy.ma.masked_array(numpy.zeros((int(self._npix), int(self._npix)), float),
-                                           numpy.zeros((int(self._npix), int(self._npix)), bool))
+        self._data = numpy.ma.masked_array(numpy.zeros((self._npix, self._npix), float),
+                                           numpy.zeros((self._npix, self._npix), bool))
         # reset window size
         self._lo0.update()
         self.resize(self._lo0.minimumSize())
@@ -486,7 +509,8 @@ class LiveImageZoom(ToolDialog):
 
         def draw(self, painter, xmap, ymap, rect):
             """Implements QwtPlotItem.draw(), to render the image on the given painter."""
-            self._qimg and painter.drawImage(QRect(xmap.p1(), ymap.p2(), xmap.pDist(), ymap.pDist()), self._qimg)
+            # drawImage expects QRectF
+            self._qimg and painter.drawImage(QRectF(xmap.p1(), ymap.p2(), xmap.pDist(), ymap.pDist()), self._qimg)
 
     def trackImage(self, image, ix, iy):
         if not self.isVisible():
@@ -501,13 +525,14 @@ class LiveImageZoom(ToolDialog):
                 # There was an error here when using zoom window zoom buttons
                 # (TypeError: slice indices must be integers or None or have an __index__ method).
                 # Therefore indexes have been cast as int()
+                # 16/05/2022: the error no longer occurs, therefore code has been reverted.
                 self._data.mask[...] = False
-                self._data.mask[:int(zx0), ...] = True
-                self._data.mask[int(zx1):, ...] = True
-                self._data.mask[..., :int(zy0)] = True
-                self._data.mask[..., int(zy1):] = True
+                self._data.mask[:zx0, ...] = True
+                self._data.mask[zx1:, ...] = True
+                self._data.mask[..., :zy0] = True
+                self._data.mask[..., zy1:] = True
                 # copy & colorize region
-                self._data[int(zx0):int(zx1), int(zy0):int(zy1)] = image.image()[int(ix0):int(ix1), int(iy0):int(iy1)]
+                self._data[zx0:zx1, zy0:zy1] = image.image()[ix0:ix1, iy0:iy1]
                 intensity = image.intensityMap().remap(self._data)
                 self._zi.setImage(
                     image.colorMap().colorize(image.intensityMap().remap(self._data)).transformed(self._xform))
@@ -515,7 +540,8 @@ class LiveImageZoom(ToolDialog):
             # set cross-sections
             if self._showcs.isChecked():
                 if iy >= 0 and iy < ny and ix1 > ix0:
-                    xcs = [float(x) for x in image.image()[int(ix0):int(ix1), int(iy)]]
+                    # added fix for masked arrays and mosaic images
+                    xcs = [float(x) for x in numpy.ma.filled(image.image()[ix0:ix1, iy], fill_value=0.0)]
                     self._xcs.setData(numpy.arange(ix0 - 1, ix1) + .5, [xcs[0]] + xcs)
                     self._xcs.setVisible(True)
                     self._zoomplot.setAxisAutoScale(QwtPlot.yRight)
@@ -524,8 +550,8 @@ class LiveImageZoom(ToolDialog):
                     self._xcs.setVisible(False)
                     self._zoomplot.setAxisScale(QwtPlot.yRight, 0, 1)
                 if ix >= 0 and ix < nx and iy1 > iy0:
-                    ycs = [float(y) for y in image.image()[int(ix), int(iy0):int(iy1)]]
-                    # self._ycs.setData([ycs[0]] + ycs, numpy.arange(iy0 - 1, iy1) + .5)
+                    # added fix for masked arrays and mosaic images
+                    ycs = [float(y) for y in numpy.ma.filled(image.image()[ix, iy0:iy1], fill_value=0.0)]
                     self._ycs.setData([ycs[0]] + ycs, numpy.arange(iy0 - 1, iy1) + .5)
                     self._ycs.setVisible(True)
                     self._zoomplot.setAxisAutoScale(QwtPlot.xTop)
@@ -675,7 +701,10 @@ class LiveProfile(ToolDialog):
                 i0 = rect.topLeft().y()
                 i1 = i0 + rect.height()
                 self._profplot.setAxisScale(QwtPlot.xBottom, xval[i0], xval[i1 - 1])
-            self._profcurve.setData(xval[i0:i1], yval[i0:i1])
+            # added fix for masked arrays and mosaic images
+            yval = numpy.ma.filled(yval[i0:i1], fill_value=0.0)
+            xval = numpy.ma.filled(xval[i0:i1], fill_value=0.0)
+            self._profcurve.setData(xval, yval)
         self._profcurve.setVisible(inrange)
         # update plots
         self._profplot.replot()
@@ -726,19 +755,23 @@ class SkyModelPlotter(QWidget):
             return self._mainwin.dropEvent(event)
 
         def lmPosToScreen(self, fpos):
-            return QPoint(self.transform(QwtPlot.xBottom, fpos.x()), self.transform(QwtPlot.yLeft, fpos.y()))
+            # transform -> float
+            return QPointF(self.transform(QwtPlot.xBottom, fpos.x()), self.transform(QwtPlot.yLeft, fpos.y()))
 
-        def lmRectToScreen(self, frect):
-            return QRect(self.lmPosToScreen(frect.topLeft()), self.lmPosToScreen(frect.bottomRight()))
+        def lmRectToScreen(self, frect):  # seemingly unused
+            # lmPosToScreen -> float
+            return QRectF(self.lmPosToScreen(frect.topLeft()), self.lmPosToScreen(frect.bottomRight()))
 
         def screenPosToLm(self, pos):
+            # invtransform -> float
             return QPointF(self.invTransform(QwtPlot.xBottom, pos.x()), self.invTransform(QwtPlot.yLeft, pos.y()))
 
         def screenRectToLm(self, rect):
+            # screenPosToLm -> float
             return QRectF(self.screenPosToLm(rect.topLeft()), self.screenPosToLm(rect.bottomRight()))
 
         def getMarkerPosition(self, marker):
-            """Returns QPoint associated with the given marker. Caches coordinate conversion by marker ID."""
+            """Returns QPointF associated with the given marker. Caches coordinate conversion by marker ID."""
             mid = id(marker)
             pos = self._coord_cache.get(mid)
             if pos is None:
@@ -800,7 +833,10 @@ class SkyModelPlotter(QWidget):
             self.replot()
 
     class PlotZoomer(QwtPlotZoomer):
-        provisionalZoom = pyqtSignal(float, float, int, int)
+        # draws the zoom box overlay and selects zoom area
+        provisionalZoom = pyqtSignal(float, float, int)
+        # renders the zoom overlay box
+        replotProvisionalZoom = pyqtSignal()
 
         def __init__(self, canvas, updateLayoutEvent, track_callback=None, label=None):
             QwtPlotZoomer.__init__(self, canvas)
@@ -822,6 +858,8 @@ class SkyModelPlotter(QWidget):
             # watch plot for changes: if resized, aspect ratios need to be checked
             self._updateLayoutEvent = updateLayoutEvent
             self._updateLayoutEvent.connect(self._checkAspects)
+            self._zoom_in_process = False  # zoom wheel lock
+            self._zoom_wheel_threshold = 0  # zoom wheel 1/8th rotaions
 
         def isFixedAspect(self):
             return self._fixed_aspect
@@ -891,7 +929,8 @@ class SkyModelPlotter(QWidget):
                 x2 = self.plot().transform(self.xAxis(), x2)
                 y2 = self.plot().transform(self.yAxis(), y2)
                 dprint(2, "zoom by", abs(x1 - x2), abs(y1 - y2))
-                if abs(x1 - x2) <= 20 and abs(y1 - y2) <= 20:
+                if abs(x1 - x2) <= 40 and abs(y1 - y2) <= 40:
+                    self._zoom_in_process = False  # zoom wheel lock
                     return
             if isinstance(rect, int) or rect.isValid():
                 dprint(2, "zoom", rect)
@@ -915,13 +954,34 @@ class SkyModelPlotter(QWidget):
             x = self.plot().invTransform(self.xAxis(), ev.x())
             y = self.plot().invTransform(self.yAxis(), ev.y())
             if int(ev.button()) == self._dczoom_button and int(ev.modifiers()) == self._dczoom_modifiers:
-                self.provisionalZoom.emit(x, y, 1, 10)
+                self.provisionalZoom.emit(x, y, 1)
 
         def widgetWheelEvent(self, ev):
             x = self.plot().invTransform(self.xAxis(), ev.x())
             y = self.plot().invTransform(self.yAxis(), ev.y())
-            if self._use_wheel:
-                self.provisionalZoom.emit(x, y, (1 if ev.angleDelta().y() > 0 else -1), 200)
+            if self._use_wheel and not self._zoom_in_process:
+                # angleDelta is the relative amount the wheel was rotated,
+                # in eighths of a degree. Therefore,
+                # 120 / 8 = 15 which is 1 wheel increment.
+                n_deg = ev.angleDelta().y() / 8
+                self._zoom_wheel_threshold += n_deg  # collect 1/8th rotaions
+                # process trackpad or mouse wheel
+                if abs(self._zoom_wheel_threshold / 15) < 1:
+                    # process trackpad scroll
+                    n_deg = (self._zoom_wheel_threshold / 15) * 10
+                    if n_deg > 7.5:
+                        self.provisionalZoom.emit(x, y, 1)
+                        self._zoom_wheel_threshold = 0
+                    elif n_deg < -7.5:
+                        self.provisionalZoom.emit(x, y, -1)
+                        self._zoom_wheel_threshold = 0
+                # process mouse wheel
+                elif self._zoom_wheel_threshold >= 15:
+                    self.provisionalZoom.emit(x, y, 1)
+                    self._zoom_wheel_threshold = 0
+                elif self._zoom_wheel_threshold <= -15:
+                    self.provisionalZoom.emit(x, y, -1)
+                    self._zoom_wheel_threshold = 0
             QwtPlotPicker.widgetWheelEvent(self, ev)
 
     class PlotPicker(QwtPlotPicker):
@@ -1200,7 +1260,13 @@ class SkyModelPlotter(QWidget):
             if ea_action.text() == 'Show live zoom && cross-sections':
                 self._dockable_livezoom.setVisible(False)
                 if self._mainwin.windowState() != Qt.WindowMaximized:
-                    self._mainwin.setMaximumWidth(self._mainwin.width() + self._dockable_livezoom.width())
+                    if not self.get_docked_widget_size(self._dockable_livezoom):
+                        if not self._dockable_livezoom.isFloating():
+                            geo = self._mainwin.geometry()
+                            geo.setWidth(self._mainwin.width() - self._dockable_livezoom.width())
+                            center = geo.center()
+                            geo.moveCenter(QPoint(center.x() + self._dockable_livezoom.width(), geo.y()))
+                            self._mainwin.setGeometry(geo)
                 ea_action.setChecked(False)
 
     def liveprofile_dockwidget_closed(self):
@@ -1209,26 +1275,70 @@ class SkyModelPlotter(QWidget):
             if ea_action.text() == 'Show profiles':
                 self._dockable_liveprofile.setVisible(False)
                 if self._mainwin.windowState() != Qt.WindowMaximized:
-                    self._mainwin.setMaximumWidth(self._mainwin.width() + self._dockable_liveprofile.width())
+                    if not self.get_docked_widget_size(self._dockable_liveprofile):
+                        if not self._dockable_liveprofile.isFloating():
+                            geo = self._mainwin.geometry()
+                            geo.setWidth(self._mainwin.width() - self._dockable_liveprofile.width())
+                            center = geo.center()
+                            geo.moveCenter(QPoint(center.x() + self._dockable_liveprofile.width(), geo.y()))
+                            self._mainwin.setGeometry(geo)
                 ea_action.setChecked(False)
 
     def liveprofile_dockwidget_toggled(self):
         if self._dockable_liveprofile.isVisible():
             if self._dockable_liveprofile.isWindow():
                 self._dockable_liveprofile.setFloating(False)
+                if self._mainwin.windowState() != Qt.WindowMaximized:
+                    if not self.get_docked_widget_size(self._dockable_liveprofile):
+                        geo = self._mainwin.geometry()
+                        geo.setWidth(self._mainwin.width() + self._dockable_liveprofile.width())
+                        center = geo.center()
+                        geo.moveCenter(QPoint(center.x() - self._dockable_liveprofile.width(), geo.y()))
+                        self._mainwin.setGeometry(geo)
             else:
                 self._dockable_liveprofile.setFloating(True)
                 if self._mainwin.windowState() != Qt.WindowMaximized:
-                    self._mainwin.setMaximumWidth(self._mainwin.width() + self._dockable_liveprofile.width())
+                    if not self.get_docked_widget_size(self._dockable_liveprofile):
+                        geo = self._mainwin.geometry()
+                        geo.setWidth(self._mainwin.width() - self._dockable_liveprofile.width())
+                        center = geo.center()
+                        geo.moveCenter(QPoint(center.x() + self._dockable_liveprofile.width(), geo.y()))
+                        self._mainwin.setGeometry(geo)
 
     def livezoom_dockwidget_toggled(self):
         if self._dockable_livezoom.isVisible():
             if self._dockable_livezoom.isWindow():
                 self._dockable_livezoom.setFloating(False)
+                if self._mainwin.windowState() != Qt.WindowMaximized:
+                    if not self.get_docked_widget_size(self._dockable_livezoom):
+                        geo = self._mainwin.geometry()
+                        geo.setWidth(self._mainwin.width() + self._dockable_livezoom.width())
+                        center = geo.center()
+                        geo.moveCenter(QPoint(center.x() - self._dockable_livezoom.width(), geo.y()))
+                        self._mainwin.setGeometry(geo)
             else:
                 self._dockable_livezoom.setFloating(True)
                 if self._mainwin.windowState() != Qt.WindowMaximized:
-                    self._mainwin.setMaximumWidth(self._mainwin.width() + self._dockable_livezoom.width())
+                    if not self.get_docked_widget_size(self._dockable_livezoom):
+                        geo = self._mainwin.geometry()
+                        geo.setWidth(self._mainwin.width() - self._dockable_livezoom.width())
+                        center = geo.center()
+                        geo.moveCenter(QPoint(center.x() + self._dockable_livezoom.width(), geo.y()))
+                        self._mainwin.setGeometry(geo)
+
+    def get_docked_widget_size(self, _dockable):
+        widget_list = self._mainwin.findChildren(QDockWidget)
+        size_list = []
+        if _dockable:
+            for widget in widget_list:
+                if not isinstance(widget.bind_widget, ImageControlDialog):
+                    if widget.bind_widget != _dockable.bind_widget:
+                        if not widget.isWindow() and not widget.isFloating() and widget.isVisible():
+                            size_list.append(widget.bind_widget.width())
+        if size_list:
+            return max(size_list)
+        else:
+            return size_list
 
     def setupShowMessages(self, _signal):
         self.plotShowMessage = _signal
@@ -1312,10 +1422,11 @@ class SkyModelPlotter(QWidget):
         self._zoomer_label.setLabelAlignment(Qt.AlignBottom | Qt.AlignRight)
         for item in self._zoomer_label, self._zoomer_box:
             item.setZ(Z_Markup)
-        self._provisional_zoom_timer = QTimer(self)
+        self._provisional_zoom_timer = QTimer(self)  # does the zooming
         self._provisional_zoom_timer.setSingleShot(True)
         self._provisional_zoom_timer.timeout.connect(self._finalizeProvisionalZoom)
         self._provisional_zoom = None
+        self._zoomer.replotProvisionalZoom.connect(self._replot)
 
         # previous version of Qwt had Rect or Drag selection modes.
         # self._zoomer.setSelectionFlags(QwtPicker.RectSelection | QwtPicker.DragSelection)
@@ -1677,7 +1788,11 @@ class SkyModelPlotter(QWidget):
     def _replot(self):
         dprint(1, "replot")
         self.plot.clearDrawCache()
-        self.plot.replot()
+        # render the zoom box overlay
+        self.plot.updateCurrentPlot.emit()
+        # delay the processing of the actual zooming
+        # to allow the zoom box overlay to be rendered
+        self._provisional_zoom_timer.start(200)
 
     def _addPlotMarkup(self, items):
         """Adds a list of QwtPlotItems to the markup"""
@@ -1863,9 +1978,12 @@ class SkyModelPlotter(QWidget):
 
     def _finalizeProvisionalZoom(self):
         if self._provisional_zoom is not None:
+            self._zoomer._zoom_in_process = True  # zoom wheel lock
             self._zoomer.zoom(self._provisional_zoom)
-
-    def _plotProvisionalZoom(self, x, y, level, timeout=200):
+        else:
+            self._zoomer._zoom_in_process = False  # zoom wheel lock
+            
+    def _plotProvisionalZoom(self, x, y, level):
         """Called when mouse wheel is used to zoom in our out"""
         self._provisional_zoom_level += level
         self._zoomer_box.setVisible(False)
@@ -1875,7 +1993,17 @@ class SkyModelPlotter(QWidget):
             x1, y1, x2, y2 = self._zoomer.zoomRect().getCoords()
             w = (x2 - x1) / 2 ** self._provisional_zoom_level
             h = (y2 - y1) / 2 ** self._provisional_zoom_level
-            self._provisional_zoom = QRectF(x - w / 2, y - h / 2, w, h)
+            # check that it's not too small, ignore if it is
+            new_zoom = QRectF(x - w / 2, y - h / 2, w, h)
+            x1, y1, x2, y2 = new_zoom.getCoords()
+            x1 = self.plot.transform(self._zoomer.xAxis(), x1)
+            y1 = self.plot.transform(self._zoomer.yAxis(), y1)
+            x2 = self.plot.transform(self._zoomer.xAxis(), x2)
+            y2 = self.plot.transform(self._zoomer.yAxis(), y2)
+            if abs(x1 - x2) <= 40 and abs(y1 - y2) <= 40:
+                self._zoom_in_process = False  # zoom wheel lock
+                return
+            self._provisional_zoom = new_zoom
             x1, y1, x2, y2 = self._provisional_zoom.getCoords()
             self._zoomer_box.setData([x1, x2, x2, x1, x1], [y1, y1, y2, y2, y1])
             self._zoomer_label.setValue(max(x1, x2), max(y1, y2))
@@ -1883,7 +2011,7 @@ class SkyModelPlotter(QWidget):
             self._zoomer_label.setLabel(self._zoomer_label_text)
             self._zoomer_box.setVisible(True)
             self._zoomer_label.setVisible(True)
-        else:
+        elif self._provisional_zoom_level < 0:
             maxout = -self._zoomer.zoomRectIndex()
             self._provisional_zoom_level = level = max(self._provisional_zoom_level, maxout)
             if self._provisional_zoom_level < 0:
@@ -1894,8 +2022,8 @@ class SkyModelPlotter(QWidget):
                 self._provisional_zoom = int(self._provisional_zoom_level)
             else:
                 self._provisional_zoom = None
-        QTimer.singleShot(5, self._replot)
-        self._provisional_zoom_timer.start(timeout)
+        # signal the rendering of the zoom overlay box
+        self._zoomer.replotProvisionalZoom.emit()
 
     def _plotZoomed(self, rect):
         dprint(2, "zoomed to", rect)
@@ -1906,6 +2034,7 @@ class SkyModelPlotter(QWidget):
         self._zoomrect = QRectF(rect)  # make copy
         self._qa_unzoom.setEnabled(rect != self._zoomer.zoomBase())
         self._updatePsfMarker(rect, replot=True)
+        self._zoom_in_process = False  # zoom wheel lock
 
     def _setGridCircleStepping(self, arcsec=DefaultGridStep_ArcSec):
         """Changes the visible grid circles. None to disable."""

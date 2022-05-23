@@ -1,9 +1,4 @@
-# -*- coding: utf-8 -*-
-#
-# % $Id$
-#
-#
-# Copyright (C) 2002-2011
+# Copyright (C) 2002-2022
 # The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
 # P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
@@ -432,6 +427,8 @@ class TDockWidget(QDockWidget):
                 bind_widget.livezoom_resize_signal.connect(self._resizeDockWidget)
         if close_slot is not None:
             self.close_button.clicked.connect(close_slot)
+            if isinstance(bind_widget, ImageControlDialog):
+                bind_widget.whide.clicked.connect(close_slot)
         if toggle_slot is not None:
             self.toggle_button.clicked.connect(toggle_slot)
 

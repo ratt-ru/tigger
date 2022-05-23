@@ -1,4 +1,4 @@
-# Copyright (C) 2002-2011
+# Copyright (C) 2002-2022
 # The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
 # P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
@@ -89,8 +89,8 @@ class AboutDialog(QDialog):
         self.setWindowTitle(self.__tr("About Tigger"))
         self.title_label.setText(self.__tr( \
             """<h3>Tigger %s</h3>
-            <p>\u00a92010-2021 Oleg Smirnov & Rhodes University & SKA SA<br>
-            <br>Please direct feedback and bug reports at https://github.com/ska-sa/tigger</p>
+            <p>\u00a92010-2022 Oleg Smirnov & Rhodes University & SKA SA<br>
+            <br>Please direct feedback and bug reports at https://github.com/ratt-ru/tigger</p>
             """ % (release_string) \
             ))
 

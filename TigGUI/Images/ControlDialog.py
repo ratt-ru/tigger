@@ -1,5 +1,4 @@
-
-# Copyright (C) 2002-2011
+# Copyright (C) 2002-2022
 # The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
 # P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
@@ -25,7 +24,7 @@ import math
 import numpy
 from PyQt5.Qt import QWidget, QHBoxLayout, QComboBox, QLabel, QLineEdit, QDialog, QToolButton, QVBoxLayout, \
     Qt, QSize, QSizePolicy, QApplication, QColor, QBrush, QTimer, QFrame, QCheckBox, QStackedWidget, QIcon, QMenu, \
-    QGridLayout, QPen, QRect
+    QGridLayout, QPen, QRectF
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QDockWidget
 from PyQt5.Qwt import QwtPlot, QwtText, QwtPlotItem, QwtPlotCurve, QwtSymbol, QwtLinearScaleEngine, QwtLogScaleEngine, \
@@ -86,9 +85,9 @@ class ImageControlDialog(QDialog):
         #    lo0.setContentsMargins(0,0,0,0)
 
         # histogram plot
-        whide = self.makeButton("Hide", self.hide, width=128)
-        whide.setShortcut(Qt.Key_F9)
-        lo0.addWidget(Separator(self, "Histogram and ITF", extra_widgets=[whide]))
+        self.whide = self.makeButton("Hide", self.hide, width=128)
+        self.whide.setShortcut(Qt.Key_F9)
+        lo0.addWidget(Separator(self, "Histogram and ITF", extra_widgets=[self.whide]))
         lo1 = QHBoxLayout()
         lo1.setContentsMargins(0, 0, 0, 0)
         self._histplot = QwtPlot(self)
@@ -544,7 +543,7 @@ class ImageControlDialog(QDialog):
             # remap into an Nx1 image
             qimg = self.cmap.colorize(self.imap.remap(xp.reshape((len(xp), 1))))
             # plot image
-            painter.drawImage(QRect(xp1, y0, xdp, dy), qimg)
+            painter.drawImage(QRectF(xp1, y0, xdp, dy), qimg)
 
     class HistogramLineMarker:
         """Helper class implementing a line marker for a histogram plot"""
