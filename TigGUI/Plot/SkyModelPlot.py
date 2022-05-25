@@ -1576,6 +1576,8 @@ class SkyModelPlotter(QWidget):
         return l, m, ra, dec, dist, pa, rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd, x, y, val, flag
 
     def _trackRulerStartPoint(self, pos):
+        """Provides measurement marker on plot and
+        stores the first point when ruler-drag is initiated"""
         if not self.projection and not pos:
             return
         # store first point when ruler-drag is initiated
@@ -1585,20 +1587,16 @@ class SkyModelPlotter(QWidget):
             if (self._ruler_start_point - pos0).manhattanLength() <= 1:
                 l, m, ra, dec, dist, pa, rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd, x, y, val, flag = self._convertCoordinates(
                     self._ruler_start_point)
-                # make tooltip text with HTML, make console (and cliboard) text w/o HTML
-                tiptext = "<NOBR>"
+                # make console (and cliboard) text
+                _deg = u'\N{DEGREE SIGN}'
                 msgtext = ""
                 if self.projection.has_projection():
-                    tiptext += "X: %02dh%02dm%05.2fs %s%02d&deg;%02d'%05.2f\"  &nbsp;  r<sub>0</sub>=%d&deg;%02d'%05.2f\"   &nbsp;  PA<sub>0</sub>=%06.2f&deg;" % (
-                        rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd)
-                    msgtext += "X: %2dh%02dm%05.2fs %s%02d\u00B0%02d'%05.2f\" (%.6f\u00B0 %.6f\u00B0)  r=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0" % (
-                        rh, rm, rs, dsign, dd, dm, ds, ra * 180 / math.pi, dec * 180 / math.pi, Rd, Rm, Rs,
-                        dist * 180 / math.pi, PAd)
+                    msgtext += (f"X: {rh:2}h{rm:02}m{rs:05.2f}s {dsign}{dd:02}{_deg}{dm:02}'{ds:05.2f}\" "
+                                f"({ra * 180 / math.pi:.6f}{_deg} {dec * 180 / math.pi:.6f}{_deg})  "
+                                f"r={Rd}{_deg}{Rm:02}'{Rs:05.2f}\" ({dist * 180 / math.pi:.6f}{_deg}) "
+                                f"PA={PAd:06.2f}{_deg}")
                 if x is not None:
-                    tiptext += " &nbsp;  x=%d y=%d value=blank" % (x, y) if flag else " &nbsp;  x=%d y=%d value=%g" % (
-                        x, y, val)
-                    msgtext += "   x=%d y=%d value=blank" % (x, y) if flag else "   x=%d y=%d value=%g" % (x, y, val)
-                tiptext += "</NOBR>"
+                    msgtext += f"   x={x} y={y} value=blank" if flag else f"   x={x} y={y} value={val:.6g}"
                 # make marker
                 marker = TiggerPlotMarker()
                 marker.setRenderHint(QwtPlotItem.RenderAntialiased)
@@ -1660,40 +1658,39 @@ class SkyModelPlotter(QWidget):
             tiptext = "<NOBR>"
             msgtext = ""
             statustext = ""
+            _deg = u'\N{DEGREE SIGN}'
             if self.projection.has_projection():
-                tiptext += "A: %02dh%02dm%05.2fs %s%02d&deg;%02d'%05.2f\"  &nbsp; r<sub>0</sub>=%d&deg;%02d'%05.2f\"   &nbsp;  PA<sub>0</sub>=%06.2f&deg;" % (
-                    rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd)
-                msgtext += "A: %2dh%02dm%05.2fs %s%02d\u00B0%02d'%05.2f\" (%.6f\u00B0 %.6f\u00B0)  r=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%06.2f\u00B0" % (
-                    rh, rm, rs, dsign, dd, dm, ds, ra * 180 / math.pi, dec * 180 / math.pi, Rd, Rm, Rs,
-                    dist * 180 / math.pi, PAd)
+                tiptext += (f"A: {rh:2}h{rm:02}m{rs:05.2f}s {dsign}{dd:02}&deg;{dm:02}'{ds:05.2f}\"  "
+                            f"&nbsp; r<sub>0</sub>={Rd}&deg;{Rm:02}'{Rs:05.2f}\"   "
+                            f"&nbsp;  PA<sub>0</sub>={PAd:06.2f}&deg;")
+                msgtext += (f"A: {rh:2}h{rm:02}m{rs:05.2f}s {dsign}{dd:02}{_deg}{dm:02}'{ds:05.2f}\" "
+                            f"({ra * 180 / math.pi:.6f}{_deg} {dec * 180 / math.pi:.6f}{_deg})  "
+                            f"r={Rd}{_deg}{Rm:02}'{Rs:05.2f}\" ({dist * 180 / math.pi:.6f}{_deg}) "
+                            f"PA={PAd:06.2f}{_deg}")
             if x is not None:
-                tiptext += " &nbsp; x=%d y=%d value=blank" % (x, y) if flag else " &nbsp; x=%d y=%d value=%g" % (
-                    x, y, val)
-                msgtext += "   x=%d y=%d value=blank" % (x, y) if flag else "   x=%d y=%d value=%g" % (x, y, val)
+                tiptext += f" &nbsp; x={x} y={y} value=blank" % (x, y) if flag else f" &nbsp; x={x} y={y} value={val:.6g}"
+                msgtext += f"   x={x} y={y} value=blank" if flag else f"   x={x} y={y} value={val:.6g}"
             tiptext += "</NOBR><BR><NOBR>"
             if self.projection.has_projection():
-                tiptext += "B: %02dh%02dm%05.2fs %s%02d&deg;%02d'%05.2f\" &nbsp;  r<sub>0</sub>=%d&deg;%02d'%05.2f\"  &nbsp;  PA<sub>0</sub>=%06.2f&deg;" % (
-                rh1, rm1, rs1, dsign1, dd1, dm1, ds1, Rd1, Rm1, Rs1, PAd1)
-                msgtext += "\nB: %2dh%02dm%05.2fs %s%02d\u00B0%02d'%05.2f\" (%.6f\u00B0 %.6f\u00B0)  r=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0" % (
-                    rh1, rm1, rs1, dsign1, dd1, dm1, ds1, ra1 * 180 / math.pi, dec1 * 180 / math.pi, Rd1, Rm1, Rs1,
-                    dist1 * 180 / math.pi, PAd1)
+                tiptext += (f"B: {rh1:2}h{rm1:02}m{rs1:05.2f}s {dsign}{dd1:02}&deg;{dm1:02}'{ds1:05.2f}\"  "
+                            f"&nbsp; r<sub>0</sub>={Rd1}&deg;{Rm1:02}'{Rs1:05.2f}\"   "
+                            f"&nbsp;  PA<sub>0</sub>={PAd1:06.2f}&deg;")
+                msgtext += (f"\nB: {rh1:2}h{rm1:02}m{rs1:05.2f}s {dsign}{dd1:02}{_deg}{dm1:02}'{ds1:05.2f}\" "
+                            f"({ra1 * 180 / math.pi:.6f}{_deg} {dec1 * 180 / math.pi:.6f}{_deg})  "
+                            f"r={Rd1}{_deg}{Rm1:02}'{Rs1:05.2f}\" ({dist1 * 180 / math.pi:.6f}{_deg}) "
+                            f"PA={PAd1:06.2f}{_deg}")
             if x1 is not None:
-                tiptext += " &nbsp; x=%d y=%d value=blank" % (x1, y1) if flag1 else " &nbsp; x=%d y=%d value=%g" % (
-                x1, y1, val1)
-                msgtext += "   x=%d y=%d value=blank" % (x1, y1) if flag1 else "   x=%d y=%d value=%g" % (
-                x1, y1, val1)
+                tiptext += f" &nbsp; x={x1} y={y1} value=blank" % (x, y) if flag else f" &nbsp; x={x1} y={y1} value={val1:.6g}"
+                msgtext += f"   x={x1} y={y1} value=blank" if flag else f"   x={x1} y={y1} value={val1:.6g}"
             tiptext += "</NOBR><BR>"
             # distance measurement
             dist2, pa2 = Coordinates.angular_dist_pos_angle(ra, dec, ra1, dec1)
             Rd2, Rm2, Rs2 = ModelClasses.Position.dec_dms_static(dist2)
             pa2 *= 180 / math.pi
             pa2 += 360 * (pa2 < 0)
-            tiptext += "<NOBR>|AB|=%d&deg;%02d'%05.2f\" &nbsp; PA<sub>AB</sub>=%06.2f&deg;</NOBR>" % (
-            Rd2, Rm2, Rs2, pa2)
-            msgtext += "\n|AB|=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0" % (
-                Rd2, Rm2, Rs2, dist2 * 180 / math.pi, pa2)
-            statustext += "\n|AB|=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0" % (
-                Rd2, Rm2, Rs2, dist2 * 180 / math.pi, pa2)
+            tiptext += f"<NOBR>|AB|={Rd2}&deg;{Rm2:02}'{Rs2:05.2f}\" &nbsp; PA<sub>AB</sub>={PAd1:06.2f}&deg;</NOBR>"
+            msgtext += f"\n|AB|={Rd2}{_deg}{Rm2:02}'{Rs2:05.2f}\" ({dist2 * 180 / math.pi:.6f}{_deg}) PA={pa2:06.2f}{_deg}"
+            statustext += f"\n|AB|={Rd2}{_deg}{Rm2:02}'{Rs2:05.2f}\" ({dist2 * 180 / math.pi:.6f}{_deg}) PA={pa2:06.2f}{_deg}"
             # make markers
             marka, markb = TiggerPlotMarker(), TiggerPlotMarker()
             marka.setRenderHint(QwtPlotItem.RenderAntialiased)
@@ -1982,7 +1979,7 @@ class SkyModelPlotter(QWidget):
             self._zoomer.zoom(self._provisional_zoom)
         else:
             self._zoomer._zoom_in_process = False  # zoom wheel lock
-            
+
     def _plotProvisionalZoom(self, x, y, level):
         """Called when mouse wheel is used to zoom in our out"""
         self._provisional_zoom_level += level
