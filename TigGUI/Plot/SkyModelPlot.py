@@ -1591,7 +1591,7 @@ class SkyModelPlotter(QWidget):
                 _deg = u'\N{DEGREE SIGN}'
                 msgtext = ""
                 if self.projection.has_projection():
-                    msgtext += (f"X: {rh:2}h{rm:02}m{rs:05.2f}s {dsign}{dd:02}{_deg}{dm:02}'{ds:05.2f}\" "
+                    msgtext += (f"X: {rh:02}h{rm:02}m{rs:05.2f}s {dsign}{dd:02}{_deg}{dm:02}'{ds:05.2f}\" "
                                 f"({ra * 180 / math.pi:.6f}{_deg} {dec * 180 / math.pi:.6f}{_deg})  "
                                 f"r={Rd}{_deg}{Rm:02}'{Rs:05.2f}\" ({dist * 180 / math.pi:.6f}{_deg}) "
                                 f"PA={PAd:06.2f}{_deg}")
@@ -1660,10 +1660,10 @@ class SkyModelPlotter(QWidget):
             statustext = ""
             _deg = u'\N{DEGREE SIGN}'
             if self.projection.has_projection():
-                tiptext += (f"A: {rh:2}h{rm:02}m{rs:05.2f}s {dsign}{dd:02}&deg;{dm:02}'{ds:05.2f}\"  "
+                tiptext += (f"A: {rh:02}h{rm:02}m{rs:05.2f}s {dsign}{dd:02}&deg;{dm:02}'{ds:05.2f}\"  "
                             f"&nbsp; r<sub>0</sub>={Rd}&deg;{Rm:02}'{Rs:05.2f}\"   "
                             f"&nbsp;  PA<sub>0</sub>={PAd:06.2f}&deg;")
-                msgtext += (f"A: {rh:2}h{rm:02}m{rs:05.2f}s {dsign}{dd:02}{_deg}{dm:02}'{ds:05.2f}\" "
+                msgtext += (f"A: {rh:02}h{rm:02}m{rs:05.2f}s {dsign}{dd:02}{_deg}{dm:02}'{ds:05.2f}\" "
                             f"({ra * 180 / math.pi:.6f}{_deg} {dec * 180 / math.pi:.6f}{_deg})  "
                             f"r={Rd}{_deg}{Rm:02}'{Rs:05.2f}\" ({dist * 180 / math.pi:.6f}{_deg}) "
                             f"PA={PAd:06.2f}{_deg}")
@@ -1672,10 +1672,10 @@ class SkyModelPlotter(QWidget):
                 msgtext += f"   x={x} y={y} value=blank" if flag else f"   x={x} y={y} value={val:.6g}"
             tiptext += "</NOBR><BR><NOBR>"
             if self.projection.has_projection():
-                tiptext += (f"B: {rh1:2}h{rm1:02}m{rs1:05.2f}s {dsign}{dd1:02}&deg;{dm1:02}'{ds1:05.2f}\"  "
+                tiptext += (f"B: {rh1:02}h{rm1:02}m{rs1:05.2f}s {dsign}{dd1:02}&deg;{dm1:02}'{ds1:05.2f}\"  "
                             f"&nbsp; r<sub>0</sub>={Rd1}&deg;{Rm1:02}'{Rs1:05.2f}\"   "
                             f"&nbsp;  PA<sub>0</sub>={PAd1:06.2f}&deg;")
-                msgtext += (f"\nB: {rh1:2}h{rm1:02}m{rs1:05.2f}s {dsign}{dd1:02}{_deg}{dm1:02}'{ds1:05.2f}\" "
+                msgtext += (f"\nB: {rh1:02}h{rm1:02}m{rs1:05.2f}s {dsign}{dd1:02}{_deg}{dm1:02}'{ds1:05.2f}\" "
                             f"({ra1 * 180 / math.pi:.6f}{_deg} {dec1 * 180 / math.pi:.6f}{_deg})  "
                             f"r={Rd1}{_deg}{Rm1:02}'{Rs1:05.2f}\" ({dist1 * 180 / math.pi:.6f}{_deg}) "
                             f"PA={PAd1:06.2f}{_deg}")
