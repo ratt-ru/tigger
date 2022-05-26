@@ -67,7 +67,8 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
         self._cache_qimage = {}
         self._cache_mapping = self._cache_imap = self._cache_interp = None
         self._psfsize = 0, 0, 0
-        #self.projection = None
+        self.projection = None
+        self.orig_projection = None
         self._nx, self._ny = 0, 0
         self._l0, self._m0 = 0, 0
         self._dl, self._dm = 0, 0
@@ -536,7 +537,7 @@ class SkyCubePlotItem(SkyImagePlotItem):
         (iaxis_ra, nx, ra0, dra, i0), (iaxis_dec, ny, dec0, ddec, j0) = self._skyaxes
         proj = proj or self.projection
         # setup projection properties and get center of field
-        l0, m0 = proj.lm(ra0, dec0)
+        l0, m0 = self.projection.lm(ra0, dec0)
         # find cell sizes
         if proj is self.projection:
             dl, dm = -self.projection.xscale, self.projection.yscale
@@ -550,7 +551,10 @@ class SkyCubePlotItem(SkyImagePlotItem):
         """Sets default image projection. If None is given, sets up default SinWCS projection."""
         # FITSWCS_static does not seem to be called often, if at all.
         self.projection = projection or Projection.FITSWCS_static(self.ra0, self.dec0)
-        self.setPlotProjection()
+        # save the original projection
+        if self.orig_projection is None:
+            self.orig_projection = projection
+        self.setPlotProjection(proj=projection)
 
     def _setupSlice(self):
         index = tuple(self.imgslice)

@@ -22,6 +22,9 @@
 import math
 import re
 import time
+from astropy.coordinates.sky_coordinate import SkyCoord
+from astropy.coordinates import SkyOffsetFrame 
+from astropy import units as u
 
 import numpy
 from PyQt5 import QtGui
@@ -1552,25 +1555,35 @@ class SkyModelPlotter(QWidget):
 
     def _convertCoordinates(self, _pos):
         """This method is used to calculate coordinates from the GUI position."""
+        # set projection from centered image
+        _projection = self.projection
+        # set default image
+        _image = self._image
+
         # get ra/dec coordinates of point
         l, m = _pos.x(), _pos.y()
-        ra, dec = self.projection.radec(l, m)
+        ra, dec = _projection.radec(l, m)
+        if numpy.isnan(ra):
+            ra = _projection.ra0
+        if numpy.isnan(dec):
+            dec = _projection.dec0
         rh, rm, rs = ModelClasses.Position.ra_hms_static(ra)
         dsign, dd, dm, ds = ModelClasses.Position.dec_sdms_static(dec)
-        dist, pa = Coordinates.angular_dist_pos_angle(self.projection.ra0, self.projection.dec0, ra, dec)
+        dist, pa = Coordinates.angular_dist_pos_angle(_projection.ra0, _projection.dec0, ra, dec)
         Rd, Rm, Rs = ModelClasses.Position.dec_dms_static(dist)
         PAd = pa * 180 / math.pi
         if PAd < 0:
             PAd += 360
         # if we have an image, add pixel coordinates
         x = y = val = flag = None
-        image = self._imgman and self._imgman.getTopImage()
-        if image:
-            x, y = list(map(int, list(map(round, image.lmToPix(l, m)))))
-            nx, ny = image.imageDims()
+        if not _image:
+            _image = self._imgman and self._imgman.getTopImage()
+        if _image:
+            x, y = list(map(int, list(map(round, _image.lmToPix(l, m)))))
+            nx, ny = _image.imageDims()
             if x >= 0 and x < nx and y >= 0 and y < ny:
                 #        text += "<BR>x=%d y=%d"%(round(x),round(y))
-                val, flag = image.imagePixel(x, y)
+                val, flag = _image.imagePixel(x, y)
             else:
                 x = y = None
         return l, m, ra, dec, dist, pa, rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd, x, y, val, flag
@@ -1578,9 +1591,10 @@ class SkyModelPlotter(QWidget):
     def _trackRulerStartPoint(self, pos):
         """Provides measurement marker on plot and
         stores the first point when ruler-drag is initiated"""
-        if not self.projection and not pos:
+        if not pos:
             return
-        # store first point when ruler-drag is initiated
+        # set default projection from centered image
+        _projection = self._imgman.getCenterImage().projection
         pos0 = pos
         if pos0 != self._ruler_start_point:
             self._ruler_start_point = pos0
@@ -1590,7 +1604,7 @@ class SkyModelPlotter(QWidget):
                 # make console (and cliboard) text
                 _deg = u'\N{DEGREE SIGN}'
                 msgtext = ""
-                if self.projection.has_projection():
+                if _projection.has_projection():
                     msgtext += (f"X: {rh:02}h{rm:02}m{rs:05.2f}s {dsign}{dd:02}{_deg}{dm:02}'{ds:05.2f}\" "
                                 f"({ra * 180 / math.pi:.6f}{_deg} {dec * 180 / math.pi:.6f}{_deg})  "
                                 f"r={Rd}{_deg}{Rm:02}'{Rs:05.2f}\" ({dist * 180 / math.pi:.6f}{_deg}) "
