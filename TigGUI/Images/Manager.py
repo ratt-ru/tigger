@@ -24,6 +24,7 @@ from re import split
 import sys
 import time
 import traceback
+from astropy.coordinates.sky_coordinate import SkyCoord
 
 import numpy
 from PyQt5.Qt import (QWidget, QFileDialog, QVBoxLayout, QApplication, QMenu, QClipboard, QInputDialog, QActionGroup, QTextOption, QFont)
@@ -33,6 +34,8 @@ from PyQt5.QtWidgets import QDockWidget, QLabel, QPlainTextEdit
 from astropy.io import fits as pyfits
 from astropy.wcs import WCS
 from astropy.io.fits import Header
+from astropy import units as u
+from Tigger.Coordinates import Projection
 
 from TigGUI.Images import FITS_ExtensionList
 from TigGUI.Images import SkyImage
@@ -207,8 +210,93 @@ class ImageManager(QWidget):
                                          model=model)
         print("""Loaded FITS image %s""" % filename)
         self.signalShowMessage.emit("""Loaded FITS image %s""" % filename, 3000)
+        # optimise WCS for multiple image projection
+        result = self.optimise_wcs_projection()
+        if result is False:
+            self.signalShowErrorMessage.emit(
+                f"Measurements and positioning for image {os.path.basename(filename)} will be incorrect! "
+                f"Optimising WCS projection failed.")
         busy.reset_cursor()
         return ic
+
+    def optimise_wcs_projection(self):
+        """Finds the optimal celestial WCS for displaying multiple images on the same projection."""
+        rtn_val = None
+        image_list = self.getImages()
+        if len(image_list) > 1:
+            # check reproject pacakge is available
+            try:
+                from reproject.mosaicking import find_optimal_celestial_wcs
+            except:
+                self.signalShowErrorMessage.emit("Error reproject package not found. "
+                                                 "WCS optimisation for WCS projection will not take place")
+                rtn_val = False
+            else:
+                wcs_info = []  # contains (data.shape, celestial WCS)
+                # for each image create a NAXIS=2 view
+                # of the WCS and data.
+                for image in image_list:
+                    # assume data and wcs are 2,3 or 4 ndim
+                    if numpy.ndim(image.data()) == 4:
+                        _data = image.data()
+                        _data = _data[:, :, 0, 0]
+                        if image.orig_projection.wcs.pixel_n_dim == 4:
+                            wcs_c = image.orig_projection.wcs.dropaxis(2)
+                            wcs_c = wcs_c.dropaxis(2)
+                            wcs_c.fix()
+                            wcs_info.append((_data.shape, wcs_c))
+                    elif numpy.ndim(image.data()) == 3:
+                        _data = image.data()
+                        _data = _data[:, :, 0]
+                        if image.orig_projection.wcs.pixel_n_dim == 3:
+                            wcs_c = image.orig_projection.wcs.dropaxis(2)
+                            wcs_c.fix()
+                            wcs_info.append((_data.shape, wcs_c))
+                    elif numpy.ndim(image.data()) == 2:
+                        _data = image.data()
+                        if image.orig_projection.wcs.pixel_n_dim == 2:
+                            wcs_c = image.orig_projection.wcs
+                            wcs_c.fix()
+                            wcs_info.append((_data.shape, wcs_c))
+
+                if wcs_info:
+                    # Assume reference coord is from the first image loaded.
+                    ref_coord = SkyCoord(
+                        image_list[-1].orig_projection.ra0 * u.rad,
+                        image_list[-1].orig_projection.dec0 * u.rad,
+                        frame='icrs')
+                    # create the optimal celestial WCS for all images
+                    # and convert projection to SIN with an ICRS frame
+                    try:
+                        combined_wcs, total_shape = find_optimal_celestial_wcs(
+                            wcs_info,
+                            frame='icrs',
+                            reference=ref_coord,
+                            resolution=1.0 * u.arcsec,
+                            projection='SIN')
+                    except Exception as e:
+                        print(f"Error optimising WCS projection for images with reproject: {e}")
+                        rtn_val = False
+                    else:
+                        combined_wcs.fix()
+                        # add the minimum needed to process the WCS as a header
+                        fits_header = combined_wcs.to_header()
+                        fits_header.insert('WCSAXES', ('NAXIS2', total_shape[1]))
+                        fits_header.insert('NAXIS2', ('NAXIS1', total_shape[0]))
+                        fits_header.insert('NAXIS1', ('NAXIS', 2))
+
+                        # set the new projection and scale for each image
+                        proj = Projection.FITSWCS(fits_header)
+                        for image in image_list:
+                            image.setSkyAxis(0, image._skyaxes[0][0], image._skyaxes[0][1], image._skyaxes[0][2], -proj.xscale, image._skyaxes[0][4])
+                            image.setSkyAxis(1, image._skyaxes[1][0], image._skyaxes[1][1], image._skyaxes[1][2], proj.yscale, image._skyaxes[1][4])
+                            image.setDefaultProjection(proj)
+                        # re-center the plot
+                        self.centerImage(self._imagecons[0])
+                        self.replot()
+                        rtn_val = True
+            finally:
+                return rtn_val
 
     def setZ0(self, z0):
         self._z0 = z0

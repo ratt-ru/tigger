@@ -15,6 +15,7 @@ requirements = [
     'astropy',  # tested with 4.1, 4.2 and 5.0.4
     'astro_tigger_lsm==1.7.1',  # PyQt5 version of astro-tigger-lsm
     'configparser',  # tested with version 5.0.1 and 5.2.0
+    'reproject',  # tested with version 0.8
 ]
 
 scripts = [

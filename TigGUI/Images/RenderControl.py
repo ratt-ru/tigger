@@ -345,6 +345,10 @@ class RenderControl(QObject):
                 return xx1, xx2, yy1, yy2
         return None, None, None, None
 
+    def getLMPointToPix(self, l, m):
+        x, y = self.image.lmToPix(l, m)
+        return x, y
+
     def setLMRectSubset(self, rect):
         xx1, xx2, yy1, yy2 = self._lmRectToPix(rect)
         if xx1 is not None:
