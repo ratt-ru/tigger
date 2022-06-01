@@ -244,27 +244,27 @@ class ImageManager(QWidget):
                             wcs_c = image.orig_projection.wcs.dropaxis(2)
                             wcs_c = wcs_c.dropaxis(2)
                             wcs_c.fix()
-                            wcs_info.append((_data.shape, wcs_c))
+                            wcs_info.append((_data, wcs_c))
                     elif numpy.ndim(image.data()) == 3:
                         _data = image.data()
                         _data = _data[:, :, 0]
                         if image.orig_projection.wcs.pixel_n_dim == 3:
                             wcs_c = image.orig_projection.wcs.dropaxis(2)
                             wcs_c.fix()
-                            wcs_info.append((_data.shape, wcs_c))
+                            wcs_info.append((_data, wcs_c))
                     elif numpy.ndim(image.data()) == 2:
                         _data = image.data()
                         if image.orig_projection.wcs.pixel_n_dim == 2:
                             wcs_c = image.orig_projection.wcs
                             wcs_c.fix()
-                            wcs_info.append((_data.shape, wcs_c))
+                            wcs_info.append((_data, wcs_c))
 
                 if wcs_info:
                     # Assume reference coord is from the first image loaded.
                     ref_coord = SkyCoord(
                         image_list[-1].orig_projection.ra0 * u.rad,
                         image_list[-1].orig_projection.dec0 * u.rad,
-                        frame='icrs')
+                        frame=image_list[-1].orig_projection.radesys)
                     # create the optimal celestial WCS for all images
                     # and convert projection to SIN with an ICRS frame
                     try:
