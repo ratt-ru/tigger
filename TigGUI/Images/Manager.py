@@ -297,6 +297,16 @@ class ImageManager(QWidget):
                         rtn_val = True
             finally:
                 return rtn_val
+        else:
+            image = image_list[-1]
+            # set the new projection and scale for each image
+            proj = Projection.FITSWCS(image.fits_header)
+            image.setSkyAxis(0, image._skyaxes[0][0], image._skyaxes[0][1], image._skyaxes[0][2], -proj.xscale, image._skyaxes[0][4])
+            image.setSkyAxis(1, image._skyaxes[1][0], image._skyaxes[1][1], image._skyaxes[1][2], proj.yscale, image._skyaxes[1][4])
+            image.setDefaultProjection(proj)
+            # re-center the plot
+            self.centerImage(self._imagecons[0])
+            self.replot()
 
     def setZ0(self, z0):
         self._z0 = z0
@@ -422,6 +432,10 @@ class ImageManager(QWidget):
                 self.mainwin.skyplot.setVisible(False)
             # reset size to be minus dockables - workaround for bug #164
             # self.mainwin.setMaximumWidth(self.mainwin.width() - 700)
+        # optimise WCS for multiple image projection
+        result = self.optimise_wcs_projection()
+        if result is False:
+            self.signalShowErrorMessage.emit("Optimising WCS projection for the remaining images failed.")
 
     def getCenterImage(self):
         return self._center_image
