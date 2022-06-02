@@ -213,6 +213,11 @@ class ImageManager(QWidget):
         # optimise WCS for multiple image projection
         result = self.optimise_wcs_projection()
         if result is False:
+            # If this fails it is most likely due to a NaN error
+            # being thrown from find_optimal_celestial_wcs.
+            # Currently, we can only throw a warning to the user
+            # and fall back to previous code.
+            # TODO - merge in additional fall back measurement code.
             self.signalShowErrorMessage.emit(
                 f"Measurements and positioning for image {os.path.basename(filename)} will be incorrect! "
                 f"Optimising WCS projection failed.")
@@ -220,11 +225,15 @@ class ImageManager(QWidget):
         return ic
 
     def optimise_wcs_projection(self):
-        """Finds the optimal celestial WCS for displaying multiple images on the same projection."""
+        """Finds the optimal celestial WCS for displaying multiple images on 
+        the same projection."""
+        # A solution to provide the correct coordinate measurements between
+        # images and their correct positioning in the GUI.
         rtn_val = None
+        # Get a list of all images and and attempt to process an optimised WCS.
         image_list = self.getImages()
         if len(image_list) > 1:
-            # check reproject pacakge is available
+            # Check reproject pacakge is available.
             try:
                 from reproject.mosaicking import find_optimal_celestial_wcs
             except:
@@ -232,42 +241,54 @@ class ImageManager(QWidget):
                                                  "WCS optimisation for WCS projection will not take place")
                 rtn_val = False
             else:
-                wcs_info = []  # contains (data.shape, celestial WCS)
-                # for each image create a NAXIS=2 view
-                # of the WCS and data.
+                # `find_optimal_celestial_wcs` requires WCS and data shapes
+                # to be NAXIS = 2 (i.e. only the celestial components).
+                # For each image create NAXIS=2 views of the WCS and data shape.
+                wcs_info = []  # Contains (data.shape, celestial WCS).
                 for image in image_list:
-                    # assume data and wcs are 2,3 or 4 ndim
-                    if numpy.ndim(image.data()) == 4:
+                    # Data and wcs need to be >= 2 NAXIS.
+                    if numpy.ndim(image.data()) > 1:
+                        # Get the data shape of the first two NAXIS.
                         _data = image.data()
-                        _data = _data[:, :, 0, 0]
-                        if image.orig_projection.wcs.pixel_n_dim == 4:
-                            wcs_c = image.orig_projection.wcs.dropaxis(2)
+                        _data_nx = _data.shape[0]
+                        _data_ny = _data.shape[1]
+                        # Get WCS for image and its dimensions.
+                        wcs_c = image.orig_projection.wcs
+                        wcs_ndim = wcs_c.pixel_n_dim
+                        # Trim WCS to NAXIS = 2.
+                        while wcs_ndim > 2:
                             wcs_c = wcs_c.dropaxis(2)
+                            wcs_ndim = wcs_c.pixel_n_dim
+
+                        # debug
+                        # print(f"{image.name} wcs_ndim {wcs_ndim} _data shape {_data_nx, _data_ny}")
+                        # print(f"wcs_c_t {wcs_c}\n")
+
+                        # Save the data shape and new WCS appropriately for
+                        # processing by find_optimal_celestial_wcs.
+                        if wcs_ndim == 2:
                             wcs_c.fix()
-                            wcs_info.append((_data, wcs_c))
-                    elif numpy.ndim(image.data()) == 3:
-                        _data = image.data()
-                        _data = _data[:, :, 0]
-                        if image.orig_projection.wcs.pixel_n_dim == 3:
-                            wcs_c = image.orig_projection.wcs.dropaxis(2)
-                            wcs_c.fix()
-                            wcs_info.append((_data, wcs_c))
-                    elif numpy.ndim(image.data()) == 2:
-                        _data = image.data()
-                        if image.orig_projection.wcs.pixel_n_dim == 2:
-                            wcs_c = image.orig_projection.wcs
-                            wcs_c.fix()
-                            wcs_info.append((_data, wcs_c))
+                            wcs_info.append(((_data_nx, _data_ny), wcs_c))
 
                 if wcs_info:
                     # Assume reference coord is from the first image loaded.
+                    # The reference coord could be skipped, in which case
+                    # find_optimal_celestial_wcs will use the mean from all WCS's
+                    # instead.
+                    # TODO - add a toggle for this setting
                     ref_coord = SkyCoord(
                         image_list[-1].orig_projection.ra0 * u.rad,
                         image_list[-1].orig_projection.dec0 * u.rad,
                         frame=image_list[-1].orig_projection.radesys)
-                    # create the optimal celestial WCS for all images
-                    # and convert projection to SIN with an ICRS frame
+                    ref_coord = ref_coord.transform_to('icrs')
+                    # Create the optimal celestial WCS for all images
+                    # and convert projection to SIN with an ICRS frame.
                     try:
+                        # find_optimal_celestial_wcs can throw a NaN error
+                        # and the projection will fail.
+                        # N.B. its source code has a comment that, it does
+                        # not currently take into account NaN values for
+                        # determining the extent of the final WCS.
                         combined_wcs, total_shape = find_optimal_celestial_wcs(
                             wcs_info,
                             frame='icrs',
@@ -275,36 +296,42 @@ class ImageManager(QWidget):
                             resolution=1.0 * u.arcsec,
                             projection='SIN')
                     except Exception as e:
-                        print(f"Error optimising WCS projection for images with reproject: {e}")
+                        print(f"Error optimising WCS projection for images with find_optimal_celestial_wcs: {e}")
                         rtn_val = False
                     else:
+                        # Add the minimum needed to process the WCS as a header
+                        # for FITSWCS.
                         combined_wcs.fix()
-                        # add the minimum needed to process the WCS as a header
                         fits_header = combined_wcs.to_header()
                         fits_header.insert('WCSAXES', ('NAXIS2', total_shape[1]))
                         fits_header.insert('NAXIS2', ('NAXIS1', total_shape[0]))
                         fits_header.insert('NAXIS1', ('NAXIS', 2))
 
-                        # set the new projection and scale for each image
+                        # Set the new projection and scale for each image.
                         proj = Projection.FITSWCS(fits_header)
                         for image in image_list:
+                            # SkyAxes contains: 0/1, iaxs_ra/dec, nx/ny, proj.ra0/dec0, proj.x/yscale, proj.x/ypix0
                             image.setSkyAxis(0, image._skyaxes[0][0], image._skyaxes[0][1], image._skyaxes[0][2], -proj.xscale, image._skyaxes[0][4])
                             image.setSkyAxis(1, image._skyaxes[1][0], image._skyaxes[1][1], image._skyaxes[1][2], proj.yscale, image._skyaxes[1][4])
                             image.setDefaultProjection(proj)
-                        # re-center the plot
+                        # Re-center and replot the images.
                         self.centerImage(self._imagecons[0])
                         self.replot()
                         rtn_val = True
             finally:
                 return rtn_val
         else:
+            # Because this method is called when unloading images,
+            # reset the projection when there is only one image.
             image = image_list[-1]
-            # set the new projection and scale for each image
+            # Set the new projection and scale for each image
+            # using the original FITS Header.
             proj = Projection.FITSWCS(image.fits_header)
+            # SkyAxes contains: 0/1, iaxs_ra/dec, nx/ny, proj.ra0/dec0, proj.x/yscale, proj.x/ypix0
             image.setSkyAxis(0, image._skyaxes[0][0], image._skyaxes[0][1], image._skyaxes[0][2], -proj.xscale, image._skyaxes[0][4])
             image.setSkyAxis(1, image._skyaxes[1][0], image._skyaxes[1][1], image._skyaxes[1][2], proj.yscale, image._skyaxes[1][4])
             image.setDefaultProjection(proj)
-            # re-center the plot
+            # Re-center and replot the image.
             self.centerImage(self._imagecons[0])
             self.replot()
 
@@ -656,7 +683,7 @@ class ImageManager(QWidget):
         template = arglist[0][1]
         # if all images in arglist have the same projection, then it doesn't matter what we use
         # else ask
-        if len([x for x in arglist[1:] if x[1].projection == template.projection]) != len(arglist) - 1:
+        if len([x for x in arglist[1:] if x[1].orig_projection == template.projection]) != len(arglist) - 1:
             options = [x[0] for x in arglist]
             (which, ok) = QInputDialog.getItem(self, "Compute image",
                                                "Coordinate system to use for the result of \"%s\":" % expression,
@@ -797,6 +824,8 @@ class ImageManager(QWidget):
                                     save=((dirname and os.path.dirname(dirname)) or "."))
         self.signalShowMessage.emit("Created new image for %s" % expression, 3000)
         dprint(2, "image created")
+        # recalculate the projection with the new image
+        self.optimise_wcs_projection()
         busy.reset_cursor()
 
     def _createImageController(self, image, name, basename, model=False, save=False):
