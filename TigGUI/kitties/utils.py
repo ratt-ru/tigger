@@ -22,15 +22,14 @@
 #
 
 import os
-import string
-import sys
-import traceback
-import weakref
-
 import os.path
 import re
+import string
+import sys
 import time
+import traceback
 import types
+import weakref
 
 _time0 = time.time()
 
@@ -64,7 +63,8 @@ class recdict(dict):
 
 
 def collapseuser(path):
-    """If path begins with the home directory, replaces the start of the path with "~/". Essentially the reverse of os.path.expanduser()"""
+    """If path begins with the home directory, replaces the start of the path with "~/".
+    Essentially the reverse of os.path.expanduser()"""
     home = os.path.join(os.path.expanduser("~"), "")
     if path.startswith(home):
         path = os.path.join("~", path[len(home):])
@@ -73,9 +73,7 @@ def collapseuser(path):
 
 def type_maker(objtype, **kwargs):
     def maker(x):
-        if isinstance(x, objtype):
-            return x
-        return objtype(x)
+        return x if isinstance(x, objtype) else objtype(x)
 
     return maker
 
@@ -121,10 +119,9 @@ def _VmB(VmKey):
     global _proc_status, _scale
     # get pseudo file  /proc/<pid>/status
     try:
-        t = open(_proc_status)
-        v = t.read()
-        t.close()
-    except:
+        with open(_proc_status) as t:
+            v = t.read()
+    except Exception:
         return 0.0  # non-Linux?
     # get VmKey line e.g. 'VmRSS:  9999  kB\n ...'
     i = v.index(VmKey)
@@ -226,7 +223,7 @@ class verbosity:
                         have_debug = True
                     try:
                         self.verbose = int(patt.match(arg).group(1))
-                    except:
+                    except Exception:
                         pass
             if have_debug:
                 print("Registered verbosity context:" + name + "=" + str(self.verbose))
@@ -238,19 +235,18 @@ class verbosity:
             del self._verbosities[self.verbosity_name]
 
     def dheader(self, tblevel=-2):
-        if self._tb:
-            tb = extract_stack()
-            try:
-                (filename, line, funcname, text) = tb[tblevel]
-            except:
-                return "%s%s (no traceback): " % (self.timestamp(), self.get_verbosity_name())
-            filename = filename.split('/')[-1]
-            if self._tb > 1:
-                return "%s%s(%s:%d:%s): " % (self.timestamp(), self.get_verbosity_name(), filename, line, funcname)
-            else:
-                return "%s%s(%s): " % (self.timestamp(), self.get_verbosity_name(), funcname)
-        else:
+        if not self._tb:
             return "%s%s: " % (self.timestamp(), self.get_verbosity_name())
+        tb = extract_stack()
+        try:
+            (filename, line, funcname, text) = tb[tblevel]
+        except Exception:
+            return "%s%s (no traceback): " % (self.timestamp(), self.get_verbosity_name())
+        filename = filename.split('/')[-1]
+        if self._tb > 1:
+            return "%s%s(%s:%d:%s): " % (self.timestamp(), self.get_verbosity_name(), filename, line, funcname)
+        else:
+            return "%s%s(%s): " % (self.timestamp(), self.get_verbosity_name(), funcname)
 
     def dprint(self, level, *args):
         if level <= self.verbose:
@@ -263,8 +259,8 @@ class verbosity:
             stream = self.stream or sys.stderr
             try:
                 s = _format % args
-            except:
-                stream.write('dprintf format exception: ' + str(_format) + '\n')
+            except Exception:
+                stream.write(f'dprintf format exception: {str(_format)}' + '\n')
             else:
                 stream.write(self.dheader(-3))
                 stream.write(s)
@@ -335,11 +331,11 @@ def xcurry(func, _args=(), _argslice=slice(0), _kwds={}, **kwds):
         kw.update(kwds1)
         try:
             return func(*a, **kw)
-        except:
+        except Exception:
             print("======== xcurry: exception while calling a curried function")
-            print("  function:" + func)
-            print("  args:" + a)
-            print("  kwargs:" + kw)
+            print(f"  function:{func}")
+            print(f"  args:{a}")
+            print(f"  kwargs:{kw}")
             _print_curry_exception()
             raise
 
@@ -396,7 +392,4 @@ class WeakInstanceMethod:
 def weakref_proxy(obj):
     """returns either a weakref.proxy for the object, or if object is already a proxy,
     returns itself."""
-    if type(obj) in weakref.ProxyTypes:
-        return obj
-    else:
-        return weakref.proxy(obj)
+    return obj if type(obj) in weakref.ProxyTypes else weakref.proxy(obj)

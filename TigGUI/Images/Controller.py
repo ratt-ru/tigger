@@ -22,19 +22,27 @@
 import sys
 import traceback
 
-import numpy
-from PyQt5.Qt import QHBoxLayout, QFileDialog, QComboBox, QLabel, QLineEdit, QDialog, QToolButton, \
-    Qt, QApplication, QColor, QPixmap, QPainter, QFrame, QMenu, QPen, QKeySequence, QCheckBox
-from PyQt5.QtGui import QFont
-from PyQt5.QtWidgets import QDockWidget, QSizePolicy, QWidget, QPushButton, QStyle
-from PyQt5.Qwt import QwtText, QwtPlotCurve, QwtPlotMarker, QwtScaleMap, QwtPlotItem
-from PyQt5.QtCore import pyqtSignal, QPoint, QPointF, QSize
+from PyQt5.Qt import (QApplication, QCheckBox, QColor, QComboBox, QDialog,
+                      QFileDialog, QFrame, QHBoxLayout, QKeySequence, QLabel,
+                      QLineEdit, QMenu, QPainter, QPen, QPixmap, QToolButton,
+                      Qt)
+from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtWidgets import QDockWidget, QSizePolicy
 
-import TigGUI.kitties.utils
+from PyQt5.Qwt import (QwtPlotCurve, QwtPlotItem, QwtPlotMarker, QwtScaleMap,
+                       QwtText)
+
+from TigGUI.Images.ControlDialog import ImageControlDialog
+from TigGUI.Images.RenderControl import RenderControl
 from TigGUI.Images.SkyImage import FITSImagePlotItem
 from TigGUI.Plot.SkyModelPlot import LiveImageZoom
+from TigGUI.Widgets import FloatValidator, TDockWidget
+from TigGUI.init import pixmaps
+import TigGUI.kitties.utils
 from TigGUI.kitties.utils import PersistentCurrier
 from TigGUI.kitties.widgets import BusyIndicator
+
+import numpy
 
 
 QStringList = list
@@ -42,11 +50,6 @@ QStringList = list
 _verbosity = TigGUI.kitties.utils.verbosity(name="imagectl")
 dprint = _verbosity.dprint
 dprintf = _verbosity.dprintf
-
-from TigGUI.init import pixmaps
-from TigGUI.Widgets import FloatValidator, TDockWidget
-from TigGUI.Images.RenderControl import RenderControl
-from TigGUI.Images.ControlDialog import ImageControlDialog
 
 
 class ImageController(QFrame):
@@ -94,7 +97,8 @@ class ImageController(QFrame):
         self._wcenter = QLabel(self)
         self._wcenter.setPixmap(pixmaps.center_image.pm())
         self._wcenter.setToolTip(
-            "<P>The plot is currently centered on (the reference pixel %d,%d) of this image.</P>" % self.image.referencePixel())
+            "<P>The plot is currently centered on (the reference pixel %d,%d) of this image.</P>"
+            % self.image.referencePixel())
         lo.addWidget(self._wcenter)
         # name/filename label
         self.name = image.name
@@ -169,8 +173,9 @@ class ImageController(QFrame):
         self._wlock = QToolButton(self)
         self._wlock.setIcon(pixmaps.unlocked.icon())
         self._wlock.setAutoRaise(True)
-        self._wlock.setToolTip("""<P>Click to lock or unlock the intensity range. When the intensity range is locked across multiple images, any changes in the intensity
-          range of one are propagated to the others. Hold the button down briefly for additional options.</P>""")
+        self._wlock.setToolTip("""<P>Click to lock or unlock the intensity range. When the intensity range is
+                               locked across multiple images, any changes in the intensity range of one are propagated
+                               to the others. Hold the button down briefly for additional options.</P>""")
         lo.addWidget(self._wlock)
         self._wlock.clicked.connect(self._toggleDisplayRangeLock)
         self.renderControl().displayRangeLocked.connect(self._setDisplayRangeLock)
@@ -351,16 +356,12 @@ class ImageController(QFrame):
                 self._dockable_colour_ctrl.show()
                 self._dockable_colour_ctrl.raise_()
                 if not self.get_docked_widget_size(self._dockable_colour_ctrl):
-                    geo = self.parent().mainwin.geometry()
-                    geo.setWidth(self.parent().mainwin.width() + self._dockable_colour_ctrl.width())
-                    self.parent().mainwin.setGeometry(geo)
+                    self.expand_mainwindow_dockable(self._dockable_colour_ctrl)
         else:
             self._control_dialog.hide()
             self._dockable_colour_ctrl.setVisible(False)
             if not self.get_docked_widget_size(self._dockable_colour_ctrl):
-                geo = self.parent().mainwin.geometry()
-                geo.setWidth(self.parent().mainwin.width() - self._dockable_colour_ctrl.width())
-                self.parent().mainwin.setGeometry(geo)
+                self.shrink_mainwindow_dockable(self._dockable_colour_ctrl)
 
     def addDockWidgetToTab(self):
         # Add dockable widget to main window.
@@ -415,16 +416,22 @@ class ImageController(QFrame):
             self._dockable_colour_ctrl.setFloating(False)
             if self.parent().mainwin.windowState() != Qt.WindowMaximized:
                 if not self.get_docked_widget_size(self._dockable_colour_ctrl):
-                    geo = self.parent().mainwin.geometry()
-                    geo.setWidth(self.parent().mainwin.width() + self._dockable_colour_ctrl.width())
-                    self.parent().mainwin.setGeometry(geo)
+                    self.expand_mainwindow_dockable(self._dockable_colour_ctrl)
         else:
             self._dockable_colour_ctrl.setFloating(True)
             if self.parent().mainwin.windowState() != Qt.WindowMaximized:
                 if not self.get_docked_widget_size(self._dockable_colour_ctrl):
-                    geo = self.parent().mainwin.geometry()
-                    geo.setWidth(self.parent().mainwin.width() - self._dockable_colour_ctrl.width())
-                    self.parent().mainwin.setGeometry(geo)
+                    self.shrink_mainwindow_dockable(self._dockable_colour_ctrl)
+
+    def shrink_mainwindow_dockable(self, _dockable):
+        geo = self.parent().mainwin.geometry()
+        geo.setWidth(self.parent().mainwin.width() - _dockable.width())
+        self.parent().mainwin.setGeometry(geo)
+
+    def expand_mainwindow_dockable(self, _dockable):
+        geo = self.parent().mainwin.geometry()
+        geo.setWidth(self.parent().mainwin.width() + _dockable.width())
+        self.parent().mainwin.setGeometry(geo)
 
     def get_docked_widget_size(self, _dockable):
         widget_list = self.parent().mainwin.findChildren(QDockWidget)
@@ -537,7 +544,8 @@ class ImageController(QFrame):
         except Exception as exc:
             busy.reset_cursor()
             traceback.print_exc()
-            self._imgman.signalShowErrorMessage.emit("""Error writing FITS image %s: %s""" % (filename, str(sys.exc_info()[1])))
+            self._imgman.signalShowErrorMessage.emit("""Error writing FITS image %s: %s""" %
+                                                     (filename, str(sys.exc_info()[1])))
             return None
         self.renderControl().startSavingConfig(filename)
         self.setName(self.image.name)
@@ -642,8 +650,8 @@ class ImageController(QFrame):
     def _updateFullRangeIcon(self):
         if self._rc.isSubsetDisplayRange():
             self._wfullrange.setIcon(pixmaps.zoom_range.icon())
-            self._wfullrange.setToolTip(
-                """<P>The current intensity range is the full range. Hold this button down briefly for additional options.</P>""")
+            self._wfullrange.setToolTip("""<P>The current intensity range is the full range.
+                                        Hold this button down briefly for additional options.</P>""")
         else:
             self._wfullrange.setIcon(pixmaps.full_range.icon())
             self._wfullrange.setToolTip(

@@ -22,26 +22,28 @@
 import os
 import sys
 
-import Tigger.Models.Formats
-from PyQt5.Qt import QWidget, QFileDialog, QDialog, QVBoxLayout, \
-    Qt, QSize, QSizePolicy, QApplication, QMenu, QMessageBox, QErrorMessage, QMainWindow, QSplitter
+from PyQt5.Qt import (QApplication, QDialog, QErrorMessage, QFileDialog,
+                      QMainWindow, QMenu, QMessageBox, QSize, QSizePolicy,
+                      QSplitter, QVBoxLayout, QWidget, Qt)
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QDockWidget
-from Tigger.Models import SkyModel
-from Tigger.Models.Formats import ModelHTML
 
-import TigGUI.Tools.source_selector
-import TigGUI.kitties.utils
 from TigGUI import AboutDialog
 from TigGUI import Images
 from TigGUI import Widgets
 from TigGUI.Images.ControlDialog import ImageControlDialog
 from TigGUI.Images.Manager import ImageManager
-from TigGUI.Plot.SkyModelPlot import SkyModelPlotter, PersistentCurrier, LiveImageZoom
-from TigGUI.SkyModelTreeWidget import SkyModelTreeWidget, ModelGroupsTable
-from TigGUI.init import pixmaps, Config
+from TigGUI.Plot.SkyModelPlot import LiveImageZoom, PersistentCurrier, SkyModelPlotter
+from TigGUI.SkyModelTreeWidget import ModelGroupsTable, SkyModelTreeWidget
+import TigGUI.Tools.source_selector
+from TigGUI.init import Config, pixmaps
+import TigGUI.kitties.utils
 from TigGUI.kitties.widgets import BusyIndicator
+
+from Tigger.Models import SkyModel
+import Tigger.Models.Formats
+from Tigger.Models.Formats import ModelHTML
 
 QStringList = list
 
@@ -196,7 +198,11 @@ class MainWindow(QMainWindow):
         self.model = None
         self.filename = None
         self._display_filename = None
-        self._open_file_dialog = self._merge_file_dialog = self._save_as_dialog = self._save_sel_as_dialog = self._open_image_dialog = None
+        self._open_file_dialog = None
+        self._merge_file_dialog = None
+        self._save_as_dialog = None
+        self._save_sel_as_dialog = None
+        self._open_image_dialog = None
         self.isUpdated.emit(False)
         self.hasSkyModel.emit(False)
         self.hasSelection.emit(False)
@@ -214,7 +220,8 @@ class MainWindow(QMainWindow):
     LayoutSplit = "split"
 
     def _getFilenamesFromDropEvent(self, event):
-        """Checks if drop event is valid (i.e. contains a local URL to a FITS file), and returns list of filenames contained therein."""
+        """Checks if drop event is valid (i.e. contains a local URL to a FITS file),
+        and returns list of filenames contained therein."""
         dprint(1, "drop event:", event.mimeData().text())
         if not event.mimeData().hasUrls():
             dprint(1, "drop event: no urls")
@@ -298,10 +305,6 @@ class MainWindow(QMainWindow):
             size_policy.setVerticalPolicy(QSizePolicy.Minimum)
             size_policy.setHorizontalPolicy(QSizePolicy.Expanding)
             self.setSizePolicy(size_policy)
-            # set central widget size - workaround for bug #164
-            # self.cw.setFixedSize(self.max_width - self._ctrl_dialog_min_size - self._profile_and_zoom_widget_min_size, self.max_height)
-            # self.cw.setGeometry(0, self.max_width - self._ctrl_dialog_min_size - self._profile_and_zoom_widget_min_size / 2,
-                               # self.max_width - self._ctrl_dialog_min_size - self._profile_and_zoom_widget_min_size, self.max_height)
         elif layout is self.LayoutEmpty:
             lo = self._skyplot_stack_lo
         else:
@@ -526,9 +529,10 @@ class MainWindow(QMainWindow):
         try:
             model = import_func(_filename)
             model.setFilename(_filename)
-        except:
+        except Exception:
             busy.reset_cursor()
-            self.signalShowErrorMessage.emit("""Error loading '%s' file %s: %s""" % (filetype, _filename, str(sys.exc_info()[1])))
+            self.signalShowErrorMessage.emit("""Error loading '%s' file %s: %s""" %
+                                             (filetype, _filename, str(sys.exc_info()[1])))
             return
         else:
             # set the layout
@@ -537,18 +541,19 @@ class MainWindow(QMainWindow):
             # add to content
             if _merge and self.model:
                 self.model.addSources(model.sources)
-                self.signalShowMessage.emit("""Merged in %d sources from '%s' file %s""" % (len(model.sources), filetype, _filename),
-                                 3000)
+                self.signalShowMessage.emit("""Merged in %d sources from '%s' file %s""" %
+                                            (len(model.sources), filetype, _filename), 3000)
                 self.model.emitUpdate(SkyModel.SkyModel.UpdateAll)
             else:
                 print("""Loaded %d sources from '%s' file %s""" % (len(model.sources), filetype, _filename))
-                self.signalShowMessage.emit("""Loaded %d sources from '%s' file %s""" % (len(model.sources), filetype, _filename),
-                                 3000)
+                self.signalShowMessage.emit("""Loaded %d sources from '%s' file %s""" %
+                                            (len(model.sources), filetype, _filename), 3000)
                 self._display_filename = os.path.basename(_filename)
                 self.setModel(model)
                 self._indicateModelUpdated(updated=False)
-                # only set self.filename if an export function is available for this format. Otherwise set it to None, so that trying to save
-                # the file results in a save-as operation (so that we don't save to a file in an unsupported format).
+                # only set self.filename if an export function is available for this format. Otherwise set it to None,
+                # so that trying to save the file results in a save-as operation (so that we don't save to a
+                # file in an unsupported format).
                 self.filename = _filename if export_func else None
         finally:
             busy.reset_cursor()
@@ -566,7 +571,6 @@ class MainWindow(QMainWindow):
         self.closing.emit()
         dprint(1, "invoking os._exit(0)")
         os._exit(0)
-        QMainWindow.closeEvent(self, event)
 
     def _canCloseExistingModel(self):
         # save model if modified
@@ -630,7 +634,7 @@ class MainWindow(QMainWindow):
             try:
                 export_func(self.model, filename)
                 self.model.setFilename(filename)
-            except:
+            except Exception:
                 busy.reset_cursor()
                 self.signalShowErrorMessage.emit("""Error saving model file %s: %s""" % (filename, str(sys.exc_info()[1])))
                 return False
@@ -694,7 +698,7 @@ class MainWindow(QMainWindow):
         busy = BusyIndicator()
         try:
             export_func(self.model, filename, sources=sources)
-        except:
+        except Exception:
             busy.reset_cursor()
             self.signalShowErrorMessage.emit(
                 """Error saving selection to model file %s: %s""" % (filename, str(sys.exc_info()[1])))

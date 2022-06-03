@@ -18,9 +18,9 @@
 # or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-from PyQt5.Qt import QWidget, QHBoxLayout, QLabel, QDialog, QVBoxLayout, \
-    QPushButton, Qt, QSize, QSizePolicy, QSpacerItem
-from PyQt5.QtWidgets import *
+from PyQt5.Qt import (QDialog, QHBoxLayout, QLabel, QPushButton, QSize,
+                      QSizePolicy, QSpacerItem, QVBoxLayout, QWidget, Qt)
+from PyQt5.QtWidgets import QApplication
 
 from TigGUI import release_string
 from TigGUI.init import pixmaps
@@ -87,11 +87,11 @@ class AboutDialog(QDialog):
 
     def languageChange(self):
         self.setWindowTitle(self.__tr("About Tigger"))
-        self.title_label.setText(self.__tr( \
+        self.title_label.setText(self.__tr(
             """<h3>Tigger %s</h3>
             <p>\u00a92010-2022 Oleg Smirnov & Rhodes University & SKA SA<br>
             <br>Please direct feedback and bug reports at https://github.com/ratt-ru/tigger</p>
-            """ % (release_string) \
+            """ % (release_string)
             ))
 
         self.btn_ok.setText(self.__tr("&OK"))
