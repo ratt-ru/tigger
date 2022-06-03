@@ -22,9 +22,6 @@
 import math
 import re
 import time
-from astropy.coordinates.sky_coordinate import SkyCoord
-from astropy.coordinates import SkyOffsetFrame 
-from astropy import units as u
 
 import numpy
 from PyQt5 import QtGui
@@ -1528,37 +1525,41 @@ class SkyModelPlotter(QWidget):
                 return mindist[1].src
         return None
 
-    def _convertCoordinatesRuler(self, _pos):
-        # get ra/dec coordinates of point
-        pos = self.plot.screenPosToLm(_pos)
-        l, m = pos.x(), pos.y()
-        ra, dec = self.projection.radec(l, m)
-        rh, rm, rs = ModelClasses.Position.ra_hms_static(ra)
-        dsign, dd, dm, ds = ModelClasses.Position.dec_sdms_static(dec)
-        dist, pa = Coordinates.angular_dist_pos_angle(self.projection.ra0, self.projection.dec0, ra, dec)
-        Rd, Rm, Rs = ModelClasses.Position.dec_dms_static(dist)
-        PAd = pa * 180 / math.pi
-        if PAd < 0:
-            PAd += 360
-        # if we have an image, add pixel coordinates
-        x = y = val = flag = None
-        image = self._imgman and self._imgman.getTopImage()
-        if image:
-            x, y = list(map(int, list(map(round, image.lmToPix(l, m)))))
-            nx, ny = image.imageDims()
-            if x >= 0 and x < nx and y >= 0 and y < ny:
-                #        text += "<BR>x=%d y=%d"%(round(x),round(y))
-                val, flag = image.imagePixel(x, y)
-            else:
-                x = y = None
-        return l, m, ra, dec, dist, pa, rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd, x, y, val, flag
+    def findImageFromPos(self, pos):
+        """Find if the current mouse pos is related to an image that failed when optimisning WCS projection."""
+        _projection = None
+        image = None
+        # If there are images that failed to use the optimised WCS,
+        # then find the corresponding image and projection for the current pos.
+        if self._imgman._failed_wcs_images:
+            for ic in self._imgman._imagecons:
+                if ic.image.boundingRect().contains(pos):
+                    # Only process failed images.
+                    if ic in self._imgman._failed_wcs_images:
+                        image = ic.image
+                        _projection = ic.image.orig_projection
+                        # Check if image selected has intersects with other images.
+                        for c in self._imgman._imagecons:
+                            if image is not c.image and image.boundingRect().intersects(
+                                    c.image.boundingRect()):
+                                intersect = image.boundingRect().intersected(c.image.boundingRect())
+                                # Check if pos is within the intersect and
+                                # select the image that is at the top.
+                                if intersect.contains(pos):
+                                    if c.image is self._imgman.getTopImage():
+                                        image = c.image
+                                        _projection = c.image.orig_projection
+        return _projection, image
 
-    def _convertCoordinates(self, _pos):
-        """This method is used to calculate coordinates from the GUI position."""
-        # set projection from centered image
-        _projection = self.projection
-        # set default image
-        _image = self._image
+    def _convertCoordinates(self, _pos, _projection=None, _image=None):
+        """This method is used to calculate coordinates from the GUI position. 
+        Optionally, it can use a particular projection and image to calculate coordinates."""
+        if _projection is None:
+            # set projection from centered image
+            _projection = self.projection
+        if _image is None:
+            # set default image
+            _image = self._image
 
         # get ra/dec coordinates of point
         l, m = _pos.x(), _pos.y()
@@ -1593,17 +1594,22 @@ class SkyModelPlotter(QWidget):
         stores the first point when ruler-drag is initiated"""
         if not pos:
             return
-        # set default projection from centered image
-        _projection = self._imgman.getCenterImage().projection
+        # find the image and projection from pos
+        _projection, image = self.findImageFromPos(pos)
+        if _projection is None:
+            image = None
         pos0 = pos
         if pos0 != self._ruler_start_point:
             self._ruler_start_point = pos0
             if (self._ruler_start_point - pos0).manhattanLength() <= 1:
                 l, m, ra, dec, dist, pa, rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd, x, y, val, flag = self._convertCoordinates(
-                    self._ruler_start_point)
+                    self._ruler_start_point, _projection=_projection, _image=image)
                 # make console (and cliboard) text
                 _deg = u'\N{DEGREE SIGN}'
                 msgtext = ""
+                if _projection is None:
+                    # set default projection from centered image
+                    _projection = self._imgman.getCenterImage().projection
                 if _projection.has_projection():
                     msgtext += (f"X: {rh:02}h{rm:02}m{rs:05.2f}s {dsign}{dd:02}{_deg}{dm:02}'{ds:05.2f}\" "
                                 f"({ra * 180 / math.pi:.6f}{_deg} {dec * 180 / math.pi:.6f}{_deg})  "
@@ -1634,28 +1640,6 @@ class SkyModelPlotter(QWidget):
                 print(msgtext)
                 return QwtText(msgtext)
 
-    """def _trackRuler(self, pos):
-        if not self.projection and self._ruler_start_point is None:
-            return None
-        if self._ruler_start_point is not None and (pos - self._ruler_start_point).manhattanLength() > 1:
-            # find first point details
-            l, m, ra, dec, dist, pa, rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd, x, y, val, flag = self._convertCoordinatesRuler(self._ruler_start_point)
-            # find second point details
-            l1, m1, ra1, dec1, dist1, pa1, rh1, rm1, rs1, dsign1, dd1, dm1, ds1, Rd1, Rm1, Rs1, PAd1, x1, y1, val1, flag1 = self._convertCoordinates(pos)
-            # distance measurement
-            dist2, pa2 = Coordinates.angular_dist_pos_angle(ra, dec, ra1, dec1)
-            Rd2, Rm2, Rs2 = ModelClasses.Position.dec_dms_static(dist2)
-            pa2 *= 180 / math.pi
-            pa2 += 360 * (pa2 < 0)
-            # send current point B and ruler length AB to GUI display
-            msgtext = ""
-            msgtext += "\nB: %2dh%02dm%05.2fs %s%02d\u00B0%02d'%05.2f\" (%.6f\u00B0 %.6f\u00B0)  r=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0" % (
-                rh1, rm1, rs1, dsign1, dd1, dm1, ds1, ra1 * 180 / math.pi, dec1 * 180 / math.pi, Rd1, Rm1, Rs1,
-                dist1 * 180 / math.pi, PAd1)
-            msgtext += "\n|AB|=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0" % (
-                Rd2, Rm2, Rs2, dist2 * 180 / math.pi, pa2)
-            self.plotShowMessage.emit(msgtext, 3000)"""
-
     def _measureRuler(self, pos):
         if not self.projection or pos is None or self._ruler_start_point is None:
             return
@@ -1664,16 +1648,26 @@ class SkyModelPlotter(QWidget):
         pos1 = pos
         # get point coords
         if pos0 != pos1:
+            # find the image and projection from pos0
+            _projection, image = self.findImageFromPos(pos0)
+            if _projection is None:
+                _projection = self.projection
+                image = None
             l, m, ra, dec, dist, pa, rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd, x, y, val, flag = self._convertCoordinates(
-                pos0)
+                pos0, _projection=_projection, _image=image)
+            # find the image and projection from pos1
+            _projection1, image1 = self.findImageFromPos(pos1)
+            if _projection1 is None:
+                _projection1 = self.projection
+                image1 = None
             l1, m1, ra1, dec1, dist1, pa1, rh1, rm1, rs1, dsign1, dd1, dm1, ds1, Rd1, Rm1, Rs1, PAd1, x1, y1, val1, flag1 = self._convertCoordinates(
-                pos1)
+                pos1, _projection=_projection1, _image=image1)
             # make tooltip text with HTML, and console/clipboard text without HTML
             tiptext = "<NOBR>"
             msgtext = ""
             statustext = ""
             _deg = u'\N{DEGREE SIGN}'
-            if self.projection.has_projection():
+            if _projection.has_projection():
                 tiptext += (f"A: {rh:02}h{rm:02}m{rs:05.2f}s {dsign}{dd:02}&deg;{dm:02}'{ds:05.2f}\"  "
                             f"&nbsp; r<sub>0</sub>={Rd}&deg;{Rm:02}'{Rs:05.2f}\"   "
                             f"&nbsp;  PA<sub>0</sub>={PAd:06.2f}&deg;")
@@ -1685,7 +1679,7 @@ class SkyModelPlotter(QWidget):
                 tiptext += f" &nbsp; x={x} y={y} value=blank" % (x, y) if flag else f" &nbsp; x={x} y={y} value={val:.6g}"
                 msgtext += f"   x={x} y={y} value=blank" if flag else f"   x={x} y={y} value={val:.6g}"
             tiptext += "</NOBR><BR><NOBR>"
-            if self.projection.has_projection():
+            if _projection.has_projection():
                 tiptext += (f"B: {rh1:02}h{rm1:02}m{rs1:05.2f}s {dsign}{dd1:02}&deg;{dm1:02}'{ds1:05.2f}\"  "
                             f"&nbsp; r<sub>0</sub>={Rd1}&deg;{Rm1:02}'{Rs1:05.2f}\"   "
                             f"&nbsp;  PA<sub>0</sub>={PAd1:06.2f}&deg;")
@@ -1756,8 +1750,6 @@ class SkyModelPlotter(QWidget):
         dprint(2, text)
         location = self.plot.mapToGlobal((QPoint(0, 0)))
         if rect:
-            # old line
-            # QToolTip.showText(self.plot.mapToGlobal(QPoint(0, 0)), text, self.plot, self.plot.rect(), 30000)
             self.tigToolTip.showText(location=location, text=text)
         else:
             self.tigToolTip.showText(location=location, text=text)
@@ -1823,7 +1815,12 @@ class SkyModelPlotter(QWidget):
         self._plot_markup = []
 
     def _trackCoordinates(self, pos):
-        if not self.projection:
+        # find the image and projection from pos
+        _projection, image = self.findImageFromPos(pos)
+        if _projection is None:
+            _projection = self.projection
+            image = self._imgman.getTopImage()
+        if not _projection:
             return None
         # if Ctrl is pushed, get nearest source and make it "current"
         if QApplication.keyboardModifiers() & (Qt.ControlModifier | Qt.ShiftModifier):
@@ -1832,44 +1829,35 @@ class SkyModelPlotter(QWidget):
                 self.model.setCurrentSource(src)
         # get ra/dec coordinates of point
         l, m, ra, dec, dist, pa, rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd, x, y, val, flag = self._convertCoordinates(
-            pos)
-        #    text = "<P align=\"right\">%2dh%02dm%05.2fs %+2d&deg;%02d'%05.2f\""%(rh,rm,rs,dd,dm,ds)
-        # emit message as well
+            pos, _projection=_projection, _image=image)
         msgtext = ""
-        if self.projection.has_projection():
+        if _projection.has_projection():
             msgtext = "%02dh%02dm%05.2fs %s%02d\u00B0%02d'%05.2f\"  r=%d\u00B0%02d'%05.2f\"  PA=%.2f\u00B0" % (
                 rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd)
         # if we have an image, add pixel coordinates
-        image = self._imgman and self._imgman.getTopImage()
-        if image and x is not None:
+        if image is None:
+            image = self._imgman and self._imgman.getTopImage()
+        if image and x is not None and image is self._imgman.getTopImage():
             msgtext += "   x=%d y=%d value=blank" % (x, y) if flag else "   x=%d y=%d value=%g" % (x, y, val)
             self._livezoom.trackImage(image, x, y)
         self.plotShowMessage[str, int].emit(msgtext, 10000)
         return msgtext
 
     def _trackCoordinatesProfile(self, pos):
-        if not self.projection:
+        # find the image and projection from pos
+        _projection, image = self.findImageFromPos(pos)
+        if _projection is None:
+            _projection = self.projection
+            image = self._imgman.getTopImage()
+        if not _projection or image is not self._imgman.getTopImage():
             return None
-        # disabled as it is enabled in _trackCoordinates above.
-        # if Ctrl is pushed, get nearest source and make it "current"
-        #if QApplication.keyboardModifiers() & (Qt.ControlModifier | Qt.ShiftModifier):
-        #    src = self.findNearestSource(pos, world=False, range=range)
-        #    if src:
-        #        self.model.setCurrentSource(src)
         # get ra/dec coordinates of point
         l, m, ra, dec, dist, pa, rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd, x, y, val, flag = self._convertCoordinates(
-            pos)
-        #    text = "<P align=\"right\">%2dh%02dm%05.2fs %+2d&deg;%02d'%05.2f\""%(rh,rm,rs,dd,dm,ds)
-        # emit message as well
-        # leaving commented out as _trackCoordinates already has this
+            pos, _projection=_projection, _image=image)
         msgtext = ""
-        #if self.projection.has_projection():
-        #    msgtext = "%02dh%02dm%05.2fs %s%02d\u00B0%02d'%05.2f\"  r=%d\u00B0%02d'%05.2f\"  PA=%.2f\u00B0" % (
-        #        rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd)
-        # if we have an image, add pixel coordinates
-        image = self._imgman and self._imgman.getTopImage()
+        if image is None:
+            image = self._imgman and self._imgman.getTopImage()
         if image and x is not None:
-            # msgtext += "   x=%d y=%d value=blank" % (x, y) if flag else "   x=%d y=%d value=%g" % (x, y, val)
             self._liveprofile.trackImage(image, x, y)
 
     def _selectSources(self, sources, mode):

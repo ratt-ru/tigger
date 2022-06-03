@@ -24,7 +24,7 @@ from re import split
 import sys
 import time
 import traceback
-from astropy.coordinates.sky_coordinate import SkyCoord
+from astropy.coordinates import SkyCoord
 
 import numpy
 from PyQt5.Qt import (QWidget, QFileDialog, QVBoxLayout, QApplication, QMenu, QClipboard, QInputDialog, QActionGroup, QTextOption, QFont)
@@ -68,6 +68,7 @@ class ImageManager(QWidget):
         self._locked_display_range = False
         self._imagecons = []
         self._imagecon_loadorder = []
+        self._failed_wcs_images = []
         self._center_image = None
         self._plot = None
         self._border_pen = None
@@ -213,14 +214,13 @@ class ImageManager(QWidget):
         # optimise WCS for multiple image projection
         result = self.optimise_wcs_projection()
         if result is False:
-            # If this fails it is most likely due to a NaN error
-            # being thrown from find_optimal_celestial_wcs.
-            # Currently, we can only throw a warning to the user
-            # and fall back to previous code.
-            # TODO - merge in additional fall back measurement code.
+            # If the creation of a new WCS fails,
+            # we can only throw a warning to the user
+            # and fall back to an alternative method.
+            if ic not in self._failed_wcs_images:
+                self._failed_wcs_images.append(ic)
             self.signalShowErrorMessage.emit(
-                f"Measurements and positioning for image {os.path.basename(filename)} will be incorrect! "
-                f"Optimising WCS projection failed.")
+                f"Optimising WCS projection failed for image {os.path.basename(filename)}")
         busy.reset_cursor()
         return ic
 
@@ -233,7 +233,7 @@ class ImageManager(QWidget):
         # Get a list of all images and and attempt to process an optimised WCS.
         image_list = self.getImages()
         if len(image_list) > 1:
-            # Check reproject pacakge is available.
+            # Check reproject package is available.
             try:
                 from reproject.mosaicking import find_optimal_celestial_wcs
             except:
@@ -259,13 +259,8 @@ class ImageManager(QWidget):
                         while wcs_ndim > 2:
                             wcs_c = wcs_c.dropaxis(2)
                             wcs_ndim = wcs_c.pixel_n_dim
-
-                        # debug
-                        # print(f"{image.name} wcs_ndim {wcs_ndim} _data shape {_data_nx, _data_ny}")
-                        # print(f"wcs_c_t {wcs_c}\n")
-
-                        # Save the data shape and new WCS appropriately for
-                        # processing by find_optimal_celestial_wcs.
+                        # Save the data shape and new WCS for
+                        # processing by `find_optimal_celestial_wcs`.
                         if wcs_ndim == 2:
                             wcs_c.fix()
                             wcs_info.append(((_data_nx, _data_ny), wcs_c))
@@ -273,7 +268,7 @@ class ImageManager(QWidget):
                 if wcs_info:
                     # Assume reference coord is from the first image loaded.
                     # The reference coord could be skipped, in which case
-                    # find_optimal_celestial_wcs will use the mean from all WCS's
+                    # `find_optimal_celestial_wcs` will use the mean from all WCS's
                     # instead.
                     # TODO - add a toggle for this setting
                     ref_coord = SkyCoord(
@@ -284,8 +279,8 @@ class ImageManager(QWidget):
                     # Create the optimal celestial WCS for all images
                     # and convert projection to SIN with an ICRS frame.
                     try:
-                        # find_optimal_celestial_wcs can throw a NaN error
-                        # and the projection will fail.
+                        # `find_optimal_celestial_wcs` can throw a NaN error
+                        # and the optimal projection will fail.
                         # N.B. its source code has a comment that, it does
                         # not currently take into account NaN values for
                         # determining the extent of the final WCS.
@@ -299,14 +294,12 @@ class ImageManager(QWidget):
                         print(f"Error optimising WCS projection for images with find_optimal_celestial_wcs: {e}")
                         rtn_val = False
                     else:
-                        # Add the minimum needed to process the WCS as a header
-                        # for FITSWCS.
+                        # Add the minimum needed to process the WCS as a header for FITSWCS.
                         combined_wcs.fix()
                         fits_header = combined_wcs.to_header()
                         fits_header.insert('WCSAXES', ('NAXIS2', total_shape[1]))
                         fits_header.insert('NAXIS2', ('NAXIS1', total_shape[0]))
                         fits_header.insert('NAXIS1', ('NAXIS', 2))
-
                         # Set the new projection and scale for each image.
                         proj = Projection.FITSWCS(fits_header)
                         for image in image_list:
@@ -324,7 +317,7 @@ class ImageManager(QWidget):
             # Because this method is called when unloading images,
             # reset the projection when there is only one image.
             image = image_list[-1]
-            # Set the new projection and scale for each image
+            # Set the new projection and scale for the image
             # using the original FITS Header.
             proj = Projection.FITSWCS(image.fits_header)
             # SkyAxes contains: 0/1, iaxs_ra/dec, nx/ny, proj.ra0/dec0, proj.x/yscale, proj.x/ypix0
@@ -431,6 +424,9 @@ class ImageManager(QWidget):
         """Unloads the given imagecon object."""
         if imagecon not in self._imagecons:
             return
+        # remove from failed WCS list
+        if imagecon in self._failed_wcs_images:
+            self._failed_wcs_images.remove(imagecon)
         # recenter if needed
         self._imagecons.remove(imagecon)
         self._imagecon_loadorder.remove(imagecon)
