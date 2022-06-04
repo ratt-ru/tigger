@@ -1268,6 +1268,7 @@ class SkyModelPlotter(QWidget):
                             geo.moveCenter(QPoint(center.x() + self._dockable_livezoom.width(), geo.y()))
                             self._mainwin.setGeometry(geo)
                 ea_action.setChecked(False)
+        Config.set('livezoom-show', False)
 
     def liveprofile_dockwidget_closed(self):
         list_of_actions = self._menu.actions()
@@ -1283,6 +1284,7 @@ class SkyModelPlotter(QWidget):
                             geo.moveCenter(QPoint(center.x() + self._dockable_liveprofile.width(), geo.y()))
                             self._mainwin.setGeometry(geo)
                 ea_action.setChecked(False)
+        Config.set('liveprofile-show', False)
 
     def liveprofile_dockwidget_toggled(self):
         if self._dockable_liveprofile.isVisible():
