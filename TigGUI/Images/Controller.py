@@ -44,7 +44,7 @@ dprint = _verbosity.dprint
 dprintf = _verbosity.dprintf
 
 from TigGUI.init import pixmaps
-from TigGUI.Widgets import FloatValidator, TDockWidget
+from TigGUI.Widgets import FloatValidator, TDockWidget, WCSViewer
 from TigGUI.Images.RenderControl import RenderControl
 from TigGUI.Images.ControlDialog import ImageControlDialog
 
@@ -203,6 +203,7 @@ class ImageController(QFrame):
                                                self._currier.curry(self.image.signalCenter.emit, True))
         self._qa_show_rc = self._menu.addAction(pixmaps.colours.icon(), "Colours && Intensities...",
                                                 self.showRenderControls)
+        self._qa_wcs = self._menu.addAction(pixmaps.wcs_image.icon(), "Information", self._viewWCS)
         if save:
             self._qa_save = self._menu.addAction("Save image...", self._saveImage)
         self._menu.addAction("Export image to PNG file...", self._exportImageToPNG)
@@ -522,6 +523,14 @@ class ImageController(QFrame):
             self.image.signalRaise.emit(self.image)
         else:
             self._wraise.showMenu()
+
+    def _viewWCS(self):
+        if self in self._imgman._failed_wcs_images:
+            _projection = None
+        else:
+            _projection = self.image.projection.wcs
+        viewer = WCSViewer(self, self.image, _projection=_projection)
+        viewer.show()
 
     def _saveImage(self):
         filename = QFileDialog.getSaveFileName(self, "Save FITS file", self._save_dir,

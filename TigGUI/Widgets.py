@@ -25,8 +25,8 @@ import os
 from PyQt5.Qt import  QValidator, QWidget, QHBoxLayout, QFileDialog, QComboBox, QLabel, \
     QLineEdit, QDialog, QIntValidator, QDoubleValidator, QToolButton, QListWidget, QVBoxLayout, \
     QPushButton, QMessageBox
-from PyQt5.QtGui import QMouseEvent, QFont
-from PyQt5.QtWidgets import QDockWidget, QStyle, QSizePolicy, QToolTip, QApplication
+from PyQt5.QtGui import QMouseEvent, QFont, QTextOption
+from PyQt5.QtWidgets import QDockWidget, QPlainTextEdit, QStyle, QSizePolicy, QTabWidget, QToolTip, QApplication
 from PyQt5.Qwt import QwtPlotCurve, QwtPlotMarker
 from PyQt5.QtCore import pyqtSignal, Qt, QEvent, QSize, QTimer
 
@@ -498,3 +498,63 @@ class TigToolTip(QLabel):
                 self._qtimer.stop()
             self.close()
         return super(TigToolTip, self).eventFilter(source, event)
+
+
+class WCSViewer(QDialog):
+    def __init__(self, parent, _image, _projection=None, modal=False):
+        super().__init__(parent)
+        self.setModal(modal)
+        self.setWindowTitle(f"{_image.name}")
+        self.layout = QVBoxLayout()
+        f = QFont()
+        f.setFamily("Monospace")
+        f.setPointSize(10)
+        f.setFixedPitch(True)
+
+        # Create header viewer
+        self.fits_info = QPlainTextEdit()
+        self.fits_info.setMinimumWidth(650)
+        self.fits_info.setMinimumHeight(600)
+        self.fits_info.setWordWrapMode(QTextOption.NoWrap)
+        self.fits_info.setLineWrapMode(QPlainTextEdit.NoWrap)
+        self.fits_info.setTabStopWidth(40)
+        self.fits_info.setFont(f)
+        self.fits_info.setReadOnly(True)
+        self.fits_info.setPlainText(_image.fits_header.tostring(sep='\n', padding=True))
+
+        # Create projection viewer
+        self.proj_info = QPlainTextEdit()
+        self.proj_info.setMinimumWidth(650)
+        self.proj_info.setMinimumHeight(600)
+        self.proj_info.setWordWrapMode(QTextOption.NoWrap)
+        self.proj_info.setLineWrapMode(QPlainTextEdit.NoWrap)
+        self.proj_info.setTabStopWidth(40)
+        self.proj_info.setFont(f)
+        self.proj_info.setReadOnly(True)
+        if _projection:
+            self.proj_info.setPlainText(repr(_projection))
+        else:
+            self.proj_info.setPlainText("Projection optimisation failed for this image")
+
+        # Initialize tab screen
+        self.tabs = QTabWidget()
+        self.wcs_tab = QWidget()
+        self.proj_tab = QWidget()
+
+        # Add tabs
+        self.tabs.addTab(self.wcs_tab, "FITS Header")
+        self.tabs.addTab(self.proj_tab, "Plot WCS Projection")
+
+        # Create header tab
+        self.wcs_tab.layout = QVBoxLayout(self)
+        self.wcs_tab.layout.addWidget(self.fits_info)
+        self.wcs_tab.setLayout(self.wcs_tab.layout)
+
+        # Create projection tab
+        self.proj_tab.layout = QVBoxLayout(self)
+        self.proj_tab.layout.addWidget(self.proj_info)
+        self.proj_tab.setLayout(self.proj_tab.layout)
+
+        # Add tabs to widget
+        self.layout.addWidget(self.tabs)
+        self.setLayout(self.layout)
