@@ -1,5 +1,5 @@
 # Copyright (C) 2002-2022
-# The MeqTree Foundation & 
+# The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
 # P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
 #
@@ -15,43 +15,45 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>,
-# or write to the Free Software Foundation, Inc., 
+# or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
 import math
-
 import os.path
 import time
+
 from PyQt5.Qt import QObject
 from PyQt5.QtCore import pyqtSignal
-from scipy.ndimage import measurements
+
+from TigGUI.Images import Colormaps
+from TigGUI.Images.Colormaps import HistEqIntensityMap
+
+import TigGUI.kitties.config
+import TigGUI.kitties.utils
+from TigGUI.kitties.widgets import BusyIndicator
+
 import numpy as np
 
-import TigGUI.kitties.utils
-from TigGUI.Images.Colormaps import HistEqIntensityMap, LogIntensityMap, CubeHelixColormap
-from TigGUI.kitties.widgets import BusyIndicator
+from scipy.ndimage import measurements
 
 _verbosity = TigGUI.kitties.utils.verbosity(name="rc")
 dprint = _verbosity.dprint
 dprintf = _verbosity.dprintf
-
-from TigGUI.Images import Colormaps
-
-import TigGUI.kitties.config
 
 
 ImageConfigFile = TigGUI.kitties.config.DualConfigParser("tigger.images.conf")
 
 
 class RenderControl(QObject):
-    """RenderControl represents all the options (slices, color and intensity policy data) associated with an image. This object is shared by various GUI elements
-    that control the rendering of images.
+    """RenderControl represents all the options (slices, color and intensity policy data) associated with an image.
+    This object is shared by various GUI elements that control the rendering of images.
     """
     intensityMapChanged = pyqtSignal(object, float)
     colorMapChanged = pyqtSignal(object)
     dataSubsetChanged = pyqtSignal(np.ndarray, tuple, str, str)
-    displayRangeChanged = pyqtSignal([float, float], [np.float32, np.float32], [HistEqIntensityMap, float])  # on file save np.float32's become float's on reload?
+    # on file save np.float32's become float's on reload?
+    displayRangeChanged = pyqtSignal([float, float], [np.float32, np.float32], [HistEqIntensityMap, float])
     displayRangeLocked = pyqtSignal(bool)
 
     SUBSET_FULL = "full"
@@ -111,12 +113,14 @@ class RenderControl(QObject):
         # This is the data subset corresponding to the current display range. When the display range is set to
         # _fullrange, this is the image cube. When it is set to _slicerange, this is the current image slice. When
         # setLMRectDisplayRange() or setWindowDisplayRange() is used to set the range to the specified window,
-        # this is the a subset of the current slice. The data subset is passed to setDataSubset() of the intensity mapper object
+        # this is the a subset of the current slice. The data subset is passed to setDataSubset()
+        # of the intensity mapper object
         self._displaydata = None
-        # This is a tuple of the extrema of the current data subset. This is not quite the same thing as self._displayrange below.
-        # When the display range is reset to cube/slice/window, _displayrange is set to _displaydata_minmax. But if
-        # setDisplayRange() is subsequently called (e.g. if the user manually enters new values into the Range boxes), then
-        # _displayrange will be set to something else until the next reset....() call.
+        # This is a tuple of the extrema of the current data subset. This is not quite the same thing as
+        # self._displayrange below. When the display range is reset to cube/slice/window, _displayrange is
+        # set to _displaydata_minmax. But if setDisplayRange() is subsequently called (e.g. if the user manually
+        # enters new values into the Range boxes), then _displayrange will be set to something
+        # else until the next reset....() call.
         self._displaydata_minmax = None
         # This is a low,high tuple of the current display range -- will be initialized by resetFullDisplayRange()
         self._displayrange = None
@@ -130,7 +134,7 @@ class RenderControl(QObject):
             if self._config and self._config.has_option("slice"):
                 try:
                     curslice = list(map(int, self._config.get("slice").split()))
-                except:
+                except Exception:
                     curslice = []
                 if len(curslice) == len(self._current_slice):
                     for iaxis, i in enumerate(curslice):
@@ -286,12 +290,17 @@ class RenderControl(QObject):
             self.setDisplayRange(write_config=write_config, *range)
 
     def setFullSubset(self, display_range=None, write_config=True):
-        shapedesc = "\u00D7".join(["%d" % x for x in
-                                    list(self.image.imageDims()) + [len(labels) for iaxis, name, labels in
-                                                                    self._sliced_axes]])
+        shapedesc = "\u00D7".join([
+            "%d" % x for x in list(self.image.imageDims()) +
+            [len(labels) for iaxis, name, labels in self._sliced_axes]
+        ])
         desc = "full cube" if self._sliced_axes else "full image"
-        self._resetDisplaySubset(self.image.data(), desc, range=self._fullrange, subset_type=self.SUBSET_FULL,
-                                 write_config=write_config, set_display_range=False)
+        self._resetDisplaySubset(self.image.data(),
+                                 desc,
+                                 range=self._fullrange,
+                                 subset_type=self.SUBSET_FULL,
+                                 write_config=write_config,
+                                 set_display_range=False)
         self.setDisplayRange(write_config=write_config, *(display_range or self._fullrange))
 
     def _makeSliceDesc(self):
@@ -306,10 +315,13 @@ class RenderControl(QObject):
                 descs.append(labels[self._current_slice[iextra]])
         return "%s plane" % (" ".join(descs),)
 
-    def setSliceSubset(self, set_display_range=True, write_config=True): \
-            return self._resetDisplaySubset(self.image.image(), self._makeSliceDesc(), self._slicerange,
-                                            subset_type=self.SUBSET_SLICE,
-                                            set_display_range=set_display_range, write_config=write_config)
+    def setSliceSubset(self, set_display_range=True, write_config=True):
+        return self._resetDisplaySubset(self.image.image(),
+                                        self._makeSliceDesc(),
+                                        self._slicerange,
+                                        subset_type=self.SUBSET_SLICE,
+                                        set_display_range=set_display_range,
+                                        write_config=write_config)
 
     def _setRectangularSubset(self, xx1, xx2, yy1, yy2):
         descs = []

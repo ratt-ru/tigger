@@ -20,23 +20,22 @@
 # or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 import faulthandler
-import time
-
-from TigGUI.Tools import dependency_check  # checks dependencies are available
-
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPalette
-from PyQt5.QtWidgets import QStyleFactory, QSizePolicy, QStyle, QSplashScreen
-
-faulthandler.enable()
-import sys
-import os
-import traceback
 from optparse import OptionParser
+import os
+import sys
+import time
+import traceback
+
+from TigGUI.Tools import dependency_check
 
 from PyQt5.Qt import QApplication, QColor
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QPalette
+from PyQt5.QtWidgets import QSplashScreen, QStyle, QStyleFactory
 
 from TigGUI.kitties import utils
+
+faulthandler.enable()
 
 
 def main():

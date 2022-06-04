@@ -20,25 +20,21 @@
 #
 
 import math
-from PyQt5.QtWidgets import *
-
-from PyQt5.Qt import QObject, QHBoxLayout, QFileDialog, pyqtSignal, QLabel, \
-    QLineEdit, QDialog, QDoubleValidator, QVBoxLayout, \
-    QPushButton, Qt, QGridLayout, QMessageBox, QErrorMessage
-
-import TigGUI.kitties.utils
-
-from astropy.io import fits as pyfits
-
 import os.path
 
-from TigGUI.kitties.widgets import BusyIndicator
-from TigGUI.Widgets import FileSelector
-from Tigger.Models import SkyModel, ModelClasses
+from PyQt5.Qt import (QDialog, QDoubleValidator, QErrorMessage, QFileDialog,
+                      QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMessageBox,
+                      QPushButton, QVBoxLayout, Qt)
 
-DEG = math.pi / 180
+from TigGUI.Tools import registerTool
+from TigGUI.Widgets import FileSelector
+from TigGUI.kitties.widgets import BusyIndicator
+from Tigger.Models import ModelClasses, SkyModel
 
 from astLib.astWCS import WCS
+from astropy.io import fits as pyfits
+
+DEG = math.pi / 180
 
 
 class AddBrickDialog(QDialog):
@@ -52,8 +48,12 @@ class AddBrickDialog(QDialog):
         lo.setContentsMargins(10, 10, 10, 10)
         lo.setSpacing(5)
         # file selector
-        self.wfile = FileSelector(self, label="FITS filename:", dialog_label="FITS file", default_suffix="fits",
-                                  file_types="FITS files (*.fits *.FITS)", file_mode=QFileDialog.ExistingFile)
+        self.wfile = FileSelector(self,
+                                  label="FITS filename:",
+                                  dialog_label="FITS file",
+                                  default_suffix="fits",
+                                  file_types="FITS files (*.fits *.FITS)",
+                                  file_mode=QFileDialog.ExistingFile)
         lo.addWidget(self.wfile)
         # overwrite or add mode
         lo1 = QGridLayout()
@@ -111,13 +111,14 @@ class AddBrickDialog(QDialog):
             return None
         # if filename is not in model already, enable the "add to model" control
         for src in self.model.sources:
-            if isinstance(getattr(src, 'shape', None), ModelClasses.FITSImage):
-                if os.path.exists(src.shape.filename) and os.path.samefile(src.shape.filename, filename):
-                    if not quiet:
-                        QMessageBox.warning(self, "Already in model",
-                                            "This FITS brick is already present in the model.")
-                    self.wfile.setFilename('')
-                    return None
+            if (isinstance(getattr(src, 'shape', None), ModelClasses.FITSImage)
+                    and os.path.exists(src.shape.filename)
+                    and os.path.samefile(src.shape.filename, filename)):
+                if not quiet:
+                    QMessageBox.warning(self, "Already in model",
+                                        "This FITS brick is already present in the model.")
+                self.wfile.setFilename('')
+                return None
         if not str(self.wname.text()):
             self.wname.setText(os.path.splitext(os.path.basename(str(filename)))[0])
         self.wokbtn.setEnabled(True)
@@ -136,9 +137,11 @@ class AddBrickDialog(QDialog):
             return
         # check name
         srcname = str(self.wname.text()) or os.path.splitext(os.path.basename(str(filename)))[0]
-        if srcname in set([src.name for src in self.model.sources]):
-            QMessageBox.warning(self, "Already in model",
-                                "<p>The model already contains a source named '%s'. Please select a different name.</p>" % srcname)
+        if srcname in {src.name for src in self.model.sources}:
+            QMessageBox.warning(
+                self, "Already in model",
+                "<p>The model already contains a source named '%s'. Please select a different name.</p>"
+                % srcname)
             return
         # get image parameters
         hdr = input_hdu.header
@@ -150,11 +153,11 @@ class AddBrickDialog(QDialog):
         ra0 = dec0 = 1
         for iaxis in range(hdr['NAXIS']):
             axs = str(iaxis + 1)
-            name = hdr.get('CTYPE' + axs, axs).upper()
+            name = hdr.get(f'CTYPE{axs}', axs).upper()
             if name.startswith("RA"):
-                ra0 = hdr.get('CRPIX' + axs, 1) - 1
+                ra0 = hdr.get(f'CRPIX{axs}', 1) - 1
             elif name.startswith("DEC"):
-                dec0 = hdr.get('CRPIX' + axs, 1) - 1
+                dec0 = hdr.get(f'CRPIX{axs}', 1) - 1
         # convert pixel to degrees
         #    print ra0,dec0
         ra0, dec0 = wcs.pix2wcs(ra0, dec0)
@@ -185,7 +188,5 @@ def add_brick(mainwin, model):
     # show dialog
     return dialog.exec_()
 
-
-from TigGUI.Tools import registerTool
 
 registerTool("Add FITS brick to model...", add_brick)

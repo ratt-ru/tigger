@@ -21,23 +21,29 @@
 
 import math
 
-import numpy
-from PyQt5.Qt import QWidget, QHBoxLayout, QComboBox, QLabel, QLineEdit, QDialog, QToolButton, QVBoxLayout, \
-    Qt, QSize, QSizePolicy, QApplication, QColor, QBrush, QTimer, QFrame, QCheckBox, QStackedWidget, QIcon, QMenu, \
-    QGridLayout, QPen, QRectF
+from PyQt5.Qt import (QApplication, QBrush, QCheckBox, QColor, QComboBox,
+                      QDialog, QFrame, QGridLayout, QHBoxLayout, QIcon, QLabel,
+                      QLineEdit, QMenu, QPen, QRectF, QSize, QSizePolicy,
+                      QStackedWidget, QTimer, QToolButton, QVBoxLayout,
+                      QWidget, Qt)
 from PyQt5.QtGui import QFont
-from PyQt5.QtWidgets import QDockWidget
-from PyQt5.Qwt import QwtPlot, QwtText, QwtPlotItem, QwtPlotCurve, QwtSymbol, QwtLinearScaleEngine, QwtLogScaleEngine, \
-    QwtPlotPicker, QwtPicker, QwtEventPattern, QwtWheel, QwtSlider,  QwtPickerMachine, QwtPickerClickPointMachine, QwtPickerClickRectMachine
+from PyQt5.Qwt import (QwtEventPattern, QwtLinearScaleEngine,
+                       QwtLogScaleEngine, QwtPicker,
+                       QwtPickerClickPointMachine, QwtPickerClickRectMachine,
+                       QwtPlot, QwtPlotCurve, QwtPlotItem, QwtPlotPicker,
+                       QwtSlider, QwtSymbol, QwtText, QwtWheel)
+
+from TigGUI.Images import Colormaps
+from TigGUI.Widgets import FloatValidator, TiggerPlotCurve, TiggerPlotMarker
+from TigGUI.init import pixmaps
+from TigGUI.kitties.utils import PersistentCurrier
+from TigGUI.kitties.widgets import BusyIndicator
+
+import numpy
 
 from scipy.ndimage import measurements
 
-from TigGUI.kitties.utils import PersistentCurrier
-from TigGUI.kitties.widgets import BusyIndicator
 from .RenderControl import RenderControl, dprint
-from TigGUI.Images import Colormaps
-from TigGUI.Widgets import FloatValidator, TiggerPlotCurve, TiggerPlotMarker, TDockWidget
-from TigGUI.init import pixmaps
 
 DataValueFormat = "%.4g"
 
@@ -395,7 +401,7 @@ class ImageControlDialog(QDialog):
         lo0.addLayout(lo1, 1)
         lo1.addWidget(QLabel("Colourmap:", self))
         # colormap list
-        ### NB: use setIconSize() and icons in QComboBox!!!
+        # NB: use setIconSize() and icons in QComboBox!!!
         self._wcolmaps = QComboBox(self)
         self._wcolmaps.setIconSize(QSize(128, 16))
         self._wcolmaps.setToolTip("""<P>Use this to select a different colourmap.</P>""")
@@ -785,7 +791,8 @@ class ImageControlDialog(QDialog):
         self._line_std.hide()
         # if we're visibile, recompute histograms and stats
         if self.isVisible():
-            # if subset is sufficiently small, compute extended stats on-the-fly. Else show the "more" button to compute them later
+            # if subset is sufficiently small, compute extended stats on-the-fly.
+            # Else show the "more" button to compute them later
             self._updateHistogram()
             self._updateStats(subset, minmax)
             self._histplot.replot()
@@ -844,8 +851,8 @@ class ImageControlDialog(QDialog):
         self._wrangeleft0.setEnabled(dmin != 0)
         self._display_range = dmin, dmax
         # if auto-zoom is on, zoom the histogram
-        # try to be a little clever about this. Zoom only if (a) both limits have changed (so that adjusting one end of the range
-        # does not cause endless rezooms), or (b) display range is < 1/10 of the histogram range
+        # try to be a little clever about this. Zoom only if (a) both limits have changed (so that adjusting one end of the
+        # range does not cause endless rezooms), or (b) display range is < 1/10 of the histogram range
         if self._wautozoom.isChecked() and self._hist is not None:
             if (dmax - dmin) / (self._hist_range[1] - self._hist_range[0]) < .1 or (
                     dmin != self._prev_range[0] and dmax != self._prev_range[1]):
@@ -877,7 +884,7 @@ class ImageControlDialog(QDialog):
         self._histplot.replot()
         try:
             index = self._rc.getColormapList().index(cmap)
-        except:
+        except Exception:
             return
         self._setCurrentColormapNumber(index, cmap)
 

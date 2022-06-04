@@ -22,15 +22,20 @@
 import copy
 import math
 
-import numpy
-import numpy.ma
-from PyQt5.Qt import QObject, QWidget, QHBoxLayout, QLabel, \
-    QToolButton, Qt, QColor, QImage, QPixmap, QPainter, QGridLayout, QBrush, QTimer
-from PyQt5.Qwt import QwtSlider
+from PyQt5.Qt import (QBrush, QColor, QGridLayout, QHBoxLayout, QImage,
+                      QLabel, QObject, QPainter, QPixmap, QTimer,
+                      QToolButton, QWidget, Qt)
 from PyQt5.QtCore import pyqtSignal
-from scipy.ndimage import measurements
+from PyQt5.Qwt import QwtSlider
 
 import TigGUI.kitties.utils
+
+import numpy
+import numpy.ma
+
+from scipy.ndimage import measurements
+
+from .ColormapTables import Karma
 
 _verbosity = TigGUI.kitties.utils.verbosity(name="colormap")
 dprint = _verbosity.dprint
@@ -72,7 +77,7 @@ class IntensityMap:
 
     def remap(self, data):
         """Remaps data into 0...1 range"""
-        raise RuntimeError("remap() not implemented in " + str(type(self)))
+        raise RuntimeError(f"remap() not implemented in {str(type(self))}")
 
 
 class LinearIntensityMap(IntensityMap):
@@ -150,10 +155,7 @@ class HistEqIntensityMap(IntensityMap):
             values = numpy.interp(data.ravel(), self._bins, self._cdf).reshape(data.shape)
         if hasattr(data, 'mask') and values is not None:
             values = numpy.ma.masked_array(values, data.mask)
-        if values is not None:
-            return values
-        else:
-            return numpy.zeros(data.shape, float)
+        return values if values is not None else numpy.zeros(data.shape, float)
 
 
 class Colormap(QObject):
@@ -411,7 +413,6 @@ class CubeHelixColormap(ColormapWithControls):
 GreyscaleColormap = Colormap("Greyscale")
 TransparentFuchsiaColormap = Colormap("Transparent Fuchsia", color0="fuchsia", color1="fuchsia", alpha=(0, 1))
 
-from .ColormapTables import Karma
 
 _karma_colormaps = [
     Colormap(cmap, getattr(Karma, cmap))

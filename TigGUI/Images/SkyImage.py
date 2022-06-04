@@ -20,25 +20,25 @@
 #
 
 import math
-
-import numpy
-import numpy.ma
 import os.path
 import time
 
 from PyQt5 import QtCore
-from PyQt5.Qt import QObject, QRect, QRectF, QPointF, QPoint, QSizeF
+from PyQt5.Qt import QObject, QPointF, QRect, QRectF, QSizeF
 from PyQt5.Qwt import QwtPlotItem
-from PyQt5.QtCore import pyqtSignal
-from scipy.ndimage import interpolation, measurements
 
+from TigGUI.Images import Colormaps
 import TigGUI.kitties.utils
+
+from Tigger.Coordinates import Projection
+from Tigger.Tools import FITSHeaders
 
 from astropy.io import fits as pyfits
 
-from Tigger.Coordinates import Projection
-from TigGUI.Images import Colormaps
-from Tigger.Tools import FITSHeaders
+import numpy
+import numpy.ma
+
+from scipy.ndimage import interpolation, measurements
 
 
 DEG = math.pi / 180
@@ -73,8 +73,6 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
         self._l0, self._m0 = 0, 0
         self._dl, self._dm = 0, 0
         self._x0, self._y0 = 0, 0
-        self._lminmax = None
-        self._mminmax = None
         self._bounding_rect = None
         self._bounding_rect_pix = None
         self._image_key = None
@@ -87,7 +85,7 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
             self.setImage(image)
         # set coordinates, if specified
         if nx and ny:
-            self.setImageCoordinates(nx, ny, l0, m0, dl, dm)
+            self.setImageCoordinates(nx=nx, ny=ny, l0=l0, m0=m0, dl=dl, dm=dm)
         # set default colormap and intensity map
         self.colormap = Colormaps.GreyscaleColormap
         self.imap = Colormaps.LinearIntensityMap()
@@ -152,19 +150,28 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
     def intensityMap(self):
         return self.imap
 
-    def setImageCoordinates(self, nx, ny, x0, y0, l0, m0, dl, dm):
-        """Sets up image coordinates. Pixel x0,y0 is centered at location l0,m0 in the plot, pixel size is dl,dm, image size is (nx,ny)"""
+    def setImageCoordinates(self, nx=None, ny=None, x0=None, y0=None, l0=None, m0=None, dl=None, dm=None):
+        """Sets up image coordinates. Pixel x0,y0 is centered at location l0,m0 in the plot,
+        pixel size is dl,dm, image size is (nx,ny)"""
         dprint(2, "image coordinates are", nx, ny, x0, y0, l0, m0, dl, dm)
-        self._nx, self._ny = nx, ny
-        self._l0, self._m0 = l0, m0
-        self._dl, self._dm = dl, dm
-        self._x0, self._y0 = x0, y0
-        self._lminmax = (l0 - dl * (x0 + 0.5), l0 + (nx - x0 - 0.5) * dl)
-        if dl < 0:
+        if nx is not None and ny is not None:
+            self._nx, self._ny = nx, ny
+        if l0 is not None and m0 is not None:
+            self._l0, self._m0 = l0, m0
+        if dl is not None and dm is not None:
+            self._dl, self._dm = dl, dm
+        if x0 is not None and y0 is not None:
+            self._x0, self._y0 = x0, y0
+        if all(i is not None for i in [l0, dl, x0, nx]):
+            self._lminmax = (l0 - dl * (x0 + 0.5), l0 + (nx - x0 - 0.5) * dl)
+        if dl is not None and dl < 0:
             self._lminmax = (self._lminmax[1], self._lminmax[0])
-        self._mminmax = (m0 - dm * (y0 + 0.5), m0 + (ny - y0 - 0.5) * dm)
-        self._bounding_rect = QRectF(self._lminmax[0], self._mminmax[0], nx * abs(dl), ny * abs(dm))
-        self._bounding_rect_pix = QRect(0, 0, nx, ny)
+        if all(i is not None for i in [m0, dm, y0, ny]):
+            self._mminmax = (m0 - dm * (y0 + 0.5), m0 + (ny - y0 - 0.5) * dm)
+        if all(i is not None for i in [nx, ny, dl, dm]):
+            self._bounding_rect = QRectF(self._lminmax[0], self._mminmax[0], nx * abs(dl), ny * abs(dm))
+        if nx is not None and ny is not None:
+            self._bounding_rect_pix = QRect(0, 0, nx, ny)
         dprint(2, "image extents are", self._lminmax, self._mminmax)
 
     def imageDims(self):
@@ -228,7 +235,7 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
             rdata, rmask = self.optimalRavel(self._image)
             try:
                 self._imgminmax = measurements.extrema(rdata, labels=rmask, index=None if rmask is None else False)[:2]
-            except:
+            except Exception:
                 # when all data is masked, some versions of extrema() throw an exception
                 self._imgminmax = numpy.nan, numpy.nan
             dprint(3, self._imgminmax)
@@ -240,8 +247,8 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
         yp1, yp2, ydp, ys1, ys2, yds = yinfo = ymap.p1(), ymap.p2(), ymap.pDist(), ymap.s1(), ymap.s2(), ymap.sDist()
         dprint(5, "draw:", rect, xinfo, yinfo)
         self._current_rect = QRectF(QPointF(xs2, ys1), QSizeF(xds, yds))
-        self._current_rect_pix = QRectF(QPointF(*self.lmToPix(xs1, ys1)), QPointF(*self.lmToPix(xs2, ys2))).toRect().intersected(
-            self._bounding_rect_pix)
+        self._current_rect_pix = QRectF(QPointF(*self.lmToPix(xs1, ys1)),
+                                        QPointF(*self.lmToPix(xs2, ys2))).toRect().intersected(self._bounding_rect_pix)
         dprint(5, "draw:", self._current_rect_pix)
         # put together tuple describing current mapping
         mapping = xinfo, yinfo
@@ -280,7 +287,8 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
                         t0 = time.time()
                     # make arrays of plot coordinates
                     # xp[0],yp[0] corresponds to pixel 0,0, where 0,0 is the upper-left corner of the plot
-                    # the maps are in a funny order (w.r.t. meaning of p1/p2/s1/s2), so the indices here are determined empirically
+                    # the maps are in a funny order (w.r.t. meaning of p1/p2/s1/s2),
+                    # so the indices here are determined empirically
                     # We also adjust by half-pixel, to get the world coordinate of the pixel _center_
                     xp = xmap.s1() - (xmap.sDist() / xmap.pDist()) * (0.5 + numpy.arange(int(xmap.pDist())))
                     yp = ymap.s2() - (ymap.sDist() / ymap.pDist()) * (0.5 + numpy.arange(int(ymap.pDist())))
@@ -288,22 +296,24 @@ class SkyImagePlotItem(QwtPlotItem, QObject):
                     xi = self._x0 + (xp - self._l0) / self._dl
                     yi = self._y0 + (yp - self._m0) / self._dm
                     # interpolate image data
-                    ###        # old code for nearest-neighbour interpolation
-                    ###        # superceded by interpolation below (we simply round pixel coordinates to go to NN when oversampling)
-                    ###        xi = xi.round().astype(int)
-                    ###        oob_x = (xi<0)|(xi>=self._nx)
-                    ###        xi[oob_x] = 0
-                    ###        yi = yi.round().astype(int)
-                    ###        oob_y = (yi<0)|(yi>=self._ny)
-                    ###        yi[oob_y] = 0
-                    ###        idx = (xi[:,numpy.newaxis]*self._ny + yi[numpy.newaxis,:]).ravel()
-                    ###        interp_image = self._image.ravel()[idx].reshape((len(xi),len(yi)))
-                    ###        interp_image[oob_x,:] = 0
-                    ###        interp_image[:,oob_y] = 0
-                    ###        self._qimage_cache = self.colormap.colorize(interp_image,self._img_range)
-                    ###        self._qimage_cache_attrs = (rect,xinfo,yinfo)
+                    #        # old code for nearest-neighbour interpolation
+                    #        # superceded by interpolation below (we simply round pixel coordinates
+                    #        # to go to NN when oversampling)
+                    #        xi = xi.round().astype(int)
+                    #        oob_x = (xi<0)|(xi>=self._nx)
+                    #        xi[oob_x] = 0
+                    #        yi = yi.round().astype(int)
+                    #        oob_y = (yi<0)|(yi>=self._ny)
+                    #        yi[oob_y] = 0
+                    #        idx = (xi[:,numpy.newaxis]*self._ny + yi[numpy.newaxis,:]).ravel()
+                    #        interp_image = self._image.ravel()[idx].reshape((len(xi),len(yi)))
+                    #        interp_image[oob_x,:] = 0
+                    #        interp_image[:,oob_y] = 0
+                    #        self._qimage_cache = self.colormap.colorize(interp_image,self._img_range)
+                    #        self._qimage_cache_attrs = (rect,xinfo,yinfo)
 
-                    # if either axis is oversampled by a factor of 3 or more, switch to nearest-neighbour interpolation by rounding pixel values
+                    # if either axis is oversampled by a factor of 3 or more,
+                    # switch to nearest-neighbour interpolation by rounding pixel values
                     if xsamp < .33:
                         xi = xi.round()
                     if ysamp < .33:
@@ -429,7 +439,7 @@ class SkyCubePlotItem(SkyImagePlotItem):
         self._data_fortran_order = fortran_order
         self._dataminmax = None
         self.setNumAxes(data.ndim)
-        ### old slow code
+        # ## old slow code
         # dprint(3,"setData: computing mask")
         # fin = numpy.isfinite(data)
         # mask = ~fin
@@ -464,7 +474,7 @@ class SkyCubePlotItem(SkyImagePlotItem):
             dprint(3, "computing data min/max")
             try:
                 self._dataminmax = measurements.extrema(rdata, labels=rmask, index=None if rmask is None else False)
-            except:
+            except Exception:
                 # when all data is masked, some versions of extrema() throw an exception
                 self._dataminmax = numpy.nan, numpy.nan
             dprint(3, self._dataminmax)
@@ -494,7 +504,8 @@ class SkyCubePlotItem(SkyImagePlotItem):
         return self._skyaxes[n][:2]
 
     def setExtraAxis(self, iaxis, name, labels, values, units):
-        """Sets additional hypercube axis. labels is an array of strings, one per each axis element, for labelled axes, or None if axis should be labelled with values/units.
+        """Sets additional hypercube axis. labels is an array of strings, one per each axis element, for labelled axes,
+        or None if axis should be labelled with values/units.
         values is an array of axis values, and units are the units in which values are expressed.
         """
         units = units or ""
@@ -510,7 +521,7 @@ class SkyCubePlotItem(SkyImagePlotItem):
                 format = ".%de" % ndigits
             else:
                 format = ".%df" % ndigits
-        except:
+        except Exception:
             format = ".2g"
         if labels is None:
             labels = [("%d: %" + format + " %s") % (i, val / scale, units) for i, val in enumerate(values)]
@@ -545,7 +556,7 @@ class SkyCubePlotItem(SkyImagePlotItem):
             dl = proj.offset(dra, 0)[0]
             dm = proj.offset(0, ddec)[1]
         # setup image coordinates
-        self.setImageCoordinates(nx, ny, i0, j0, l0, m0, dl, dm)
+        self.setImageCoordinates(nx=nx, ny=ny, x0=i0, y0=j0, l0=l0, m0=m0, dl=dl, dm=dm)
 
     def setDefaultProjection(self, projection=None):
         """Sets default image projection. If None is given, sets up default SinWCS projection."""
@@ -559,7 +570,6 @@ class SkyCubePlotItem(SkyImagePlotItem):
     def _setupSlice(self):
         index = tuple(self.imgslice)
         key = tuple([index[iaxis] for iaxis, name, labels, values, units, scale in self._extra_axes])
-        image = self._data[index]
         self.setImage(self._data[index], key=key)
 
     def selectSlice(self, *indices):

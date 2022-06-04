@@ -20,11 +20,9 @@
 #
 
 from PyQt5 import QtWidgets
-from PyQt5.Qt import QCursor, Qt, QWidgetAction, QLabel, QFrame, QTreeWidget, QObject, QApplication, \
-    QTreeWidgetItemIterator, QListWidget
-from PyQt5.QtWidgets import *
-from PyQt5 import *
-from PyQt5.QtCore import *
+from PyQt5.Qt import (QApplication, QCursor, QFrame, QLabel, QListWidget,
+                      QTreeWidget, QTreeWidgetItemIterator, QWidgetAction, Qt)
+from PyQt5.QtCore import QPoint
 
 
 class BusyIndicator:
@@ -61,8 +59,8 @@ class ClickableTreeWidget(QTreeWidget):
         self._mouse_press_pos = None
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested[QPoint].connect(self._request_context_menu)
-        self.itemExpanded[QTreeWidgetItem].connect(self._item_expanded_collapsed)
-        self.itemCollapsed[QTreeWidgetItem].connect(self._item_expanded_collapsed)
+        self.itemExpanded[QtWidgets.QTreeWidgetItem].connect(self._item_expanded_collapsed)
+        self.itemCollapsed[QtWidgets.QTreeWidgetItem].connect(self._item_expanded_collapsed)
 
     def mousePressEvent(self, ev):
         self._expanded_item = None
@@ -71,9 +69,7 @@ class ClickableTreeWidget(QTreeWidget):
 
     def mouseReleaseEvent(self, ev):
         item = self.itemAt(self._mouse_press_pos)
-        col = None
-        if item:
-            col = self.header().logicalIndexAt(self._mouse_press_pos)
+        col = self.header().logicalIndexAt(self._mouse_press_pos) if item else None
         # pass event to parent
         QTreeWidget.mouseReleaseEvent(self, ev)
         # now see if the item was expanded or collapsed because of the event. Only emit signal if this was

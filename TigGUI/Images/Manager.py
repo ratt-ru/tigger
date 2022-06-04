@@ -20,29 +20,33 @@
 #
 
 import os.path
-from re import split
 import sys
 import time
 import traceback
-from astropy.coordinates import SkyCoord
 
-import numpy
-from PyQt5.Qt import (QWidget, QFileDialog, QVBoxLayout, QApplication, QMenu, QClipboard, QInputDialog, QActionGroup, QTextOption, QFont)
+from PyQt5.Qt import (
+    QActionGroup, QApplication, QClipboard, QFileDialog, QFont, QInputDialog,
+    QMenu, QTextOption, QVBoxLayout, QWidget)
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QDockWidget, QLabel, QPlainTextEdit
-from astropy.io import fits as pyfits
-from astropy.wcs import WCS
-from astropy.io.fits import Header
-from astropy import units as u
-from Tigger.Coordinates import Projection
 
 from TigGUI.Images import FITS_ExtensionList
 from TigGUI.Images import SkyImage
-from TigGUI.Images.SkyImage import FITSImagePlotItem
 from TigGUI.Images.Controller import ImageController, dprint
+from TigGUI.Images.SkyImage import FITSImagePlotItem
 from TigGUI.kitties.utils import PersistentCurrier
 from TigGUI.kitties.widgets import BusyIndicator
+
+from Tigger.Coordinates import Projection
+
+from astropy import units as u
+from astropy.coordinates import SkyCoord
+from astropy.io import fits as pyfits
+from astropy.io.fits import Header
+
+from astropy.wcs import WCS
+import numpy
 
 QStringList = list
 
@@ -127,8 +131,10 @@ class ImageManager(QWidget):
                         hdu.verify('silentfix')
                         hdr = hdu[0].header
                         self.fits_info.setPlainText(
-                            "[File size: " + str(round(hdu._file.tell()/1024/1024, 2)) + " MiB]\n" + hdr.tostring(sep='\n', padding=True))
-                except:
+                            "[File size: " +
+                            str(round(hdu._file.tell() / 1024 / 1024, 2)) +
+                            " MiB]\n" + hdr.tostring(sep='\n', padding=True))
+                except Exception:
                     self.fits_info.setPlainText("Error Reading FITS file")
         else:
             self.fits_info.clear()
@@ -137,20 +143,20 @@ class ImageManager(QWidget):
         """Loads image. Returns ImageControlBar object.
         If image is already loaded: returns old ICB if duplicate=False (raises to top if to_top=True),
         or else makes a new control bar.
-        If model is set to a source name, marks the image as associated with a model source. These can be unloaded en masse by calling
-        unloadModelImages().
+        If model is set to a source name, marks the image as associated with a model source.
+        These can be unloaded en masse by calling unloadModelImages().
         """
         if filename is None:
             if not self._load_image_dialog:
                 dialog = self._load_image_dialog = QFileDialog(self, "Load FITS image", ".",
-                                                               "FITS images (%s);;All files (*)" % (" ".join(
-                                                                   ["*" + ext for ext in FITS_ExtensionList])),
+                                                               ("FITS images (%s);;All files (*)"
+                                                                % " ".join([f"*{ext}" for ext in FITS_ExtensionList])),
                                                                options=QFileDialog.DontUseNativeDialog)
+
                 dialog.setFileMode(QFileDialog.ExistingFile)
                 dialog.setModal(True)
                 dialog.filesSelected['QStringList'].connect(self.loadImage)
-                layout = dialog.layout()
-                if layout:
+                if layout := dialog.layout():
                     # FITS header preview pane
                     dialog.currentChanged.connect(self.FITSHeaderPreview)
                     self.fits_info.setMinimumWidth(263)
@@ -196,15 +202,18 @@ class ImageManager(QWidget):
             image = SkyImage.FITSImagePlotItem(str(filename))
         except KeyboardInterrupt:
             raise
-        except:
+        except Exception:
             busy.reset_cursor()
             traceback.print_exc()
-            print("""Error loading FITS image %s: %s. This may be due to a bug in Tigger; if the FITS file loads fine in another viewer,
-          please send the FITS file, along with a copy of any error messages from the text console, to osmirnov@gmail.com.""" % (
-                filename, str(sys.exc_info()[1])))
-            self.signalShowErrorMessage.emit("""<P>Error loading FITS image %s: %s. This may be due to a bug in Tigger; if the FITS file loads fine in another viewer,
-          please send the FITS file, along with a copy of any error messages from the text console, to osmirnov@gmail.com.</P>""" % (
-                filename, str(sys.exc_info()[1])))
+            print("""Error loading FITS image %s: %s. This may be due to a bug in Tigger;
+                  if the FITS file loads fine in another viewer, please send the FITS file,
+                  along with a copy of any error messages from the text console, to osmirnov@gmail.com."""
+                  % (filename, str(sys.exc_info()[1])))
+            self.signalShowErrorMessage.emit("""<P>Error loading FITS image %s: %s. This may be due to a bug in Tigger;
+                                             if the FITS file loads fine in another viewer, please send the FITS file,
+                                             along with a copy of any error messages from the text console,
+                                             to osmirnov@gmail.com.</P>"""
+                                             % (filename, str(sys.exc_info()[1])))
             return None
         # create control bar, add to widget stack
         ic = self._createImageController(image, "model source '%s'" % model if model else filename, model or image.name,
@@ -225,7 +234,7 @@ class ImageManager(QWidget):
         return ic
 
     def optimise_wcs_projection(self):
-        """Finds the optimal celestial WCS for displaying multiple images on 
+        """Finds the optimal celestial WCS for displaying multiple images on
         the same projection."""
         # A solution to provide the correct coordinate measurements between
         # images and their correct positioning in the GUI.
@@ -236,7 +245,7 @@ class ImageManager(QWidget):
             # Check reproject package is available.
             try:
                 from reproject.mosaicking import find_optimal_celestial_wcs
-            except:
+            except Exception:
                 self.signalShowErrorMessage.emit("Error reproject package not found. "
                                                  "WCS optimisation for WCS projection will not take place")
                 rtn_val = False
@@ -304,8 +313,18 @@ class ImageManager(QWidget):
                         proj = Projection.FITSWCS(fits_header)
                         for image in image_list:
                             # SkyAxes contains: 0/1, iaxs_ra/dec, nx/ny, proj.ra0/dec0, proj.x/yscale, proj.x/ypix0
-                            image.setSkyAxis(0, image._skyaxes[0][0], image._skyaxes[0][1], image._skyaxes[0][2], -proj.xscale, image._skyaxes[0][4])
-                            image.setSkyAxis(1, image._skyaxes[1][0], image._skyaxes[1][1], image._skyaxes[1][2], proj.yscale, image._skyaxes[1][4])
+                            image.setSkyAxis(0,
+                                             image._skyaxes[0][0],
+                                             image._skyaxes[0][1],
+                                             image._skyaxes[0][2],
+                                             -proj.xscale,
+                                             image._skyaxes[0][4])
+                            image.setSkyAxis(1,
+                                             image._skyaxes[1][0],
+                                             image._skyaxes[1][1],
+                                             image._skyaxes[1][2],
+                                             proj.yscale,
+                                             image._skyaxes[1][4])
                             image.setDefaultProjection(proj)
                         # Re-center and replot the images.
                         self.centerImage(self._imagecons[0])
@@ -321,8 +340,18 @@ class ImageManager(QWidget):
             # using the original FITS Header.
             proj = Projection.FITSWCS(image.fits_header)
             # SkyAxes contains: 0/1, iaxs_ra/dec, nx/ny, proj.ra0/dec0, proj.x/yscale, proj.x/ypix0
-            image.setSkyAxis(0, image._skyaxes[0][0], image._skyaxes[0][1], image._skyaxes[0][2], -proj.xscale, image._skyaxes[0][4])
-            image.setSkyAxis(1, image._skyaxes[1][0], image._skyaxes[1][1], image._skyaxes[1][2], proj.yscale, image._skyaxes[1][4])
+            image.setSkyAxis(0,
+                             image._skyaxes[0][0],
+                             image._skyaxes[0][1],
+                             image._skyaxes[0][2],
+                             -proj.xscale,
+                             image._skyaxes[0][4])
+            image.setSkyAxis(1,
+                             image._skyaxes[1][0],
+                             image._skyaxes[1][1],
+                             image._skyaxes[1][2],
+                             proj.yscale,
+                             image._skyaxes[1][4])
             image.setDefaultProjection(proj)
             # Re-center and replot the image.
             self.centerImage(self._imagecons[0])
@@ -339,17 +368,18 @@ class ImageManager(QWidget):
 
     def lockAllDisplayRanges(self, rc0, curry=False):
         """Locks all display ranges, and sets the intensity from rc0"""
-        if not self._updating_imap:
-            self._updating_imap = True
-            rc0.lockDisplayRange()
-            try:
-                for ic in self._imagecons:
-                    rc1 = ic.renderControl()
-                    if rc1 is not rc0:
-                        rc1.setDisplayRange(*rc0.displayRange())
-                        rc1.lockDisplayRange()
-            finally:
-                self._updating_imap = False
+        if self._updating_imap:
+            return
+        self._updating_imap = True
+        rc0.lockDisplayRange()
+        try:
+            for ic in self._imagecons:
+                rc1 = ic.renderControl()
+                if rc1 is not rc0:
+                    rc1.setDisplayRange(*rc0.displayRange())
+                    rc1.lockDisplayRange()
+        finally:
+            self._updating_imap = False
 
     def unlockAllDisplayRanges(self):
         """Unlocks all display range."""
@@ -370,7 +400,8 @@ class ImageManager(QWidget):
                 self._updating_imap = False
 
     def _updateDisplayRange(self, rc, dmin, dmax):
-        """This is called whenever one of the images (or rather, its associated RenderControl object) changes its display range."""
+        """This is called whenever one of the images (or rather, its associated RenderControl object)
+        changes its display range."""
         if not rc.isDisplayRangeLocked():
             return
         # If the display range is locked, propagate it to all images.
@@ -453,8 +484,6 @@ class ImageManager(QWidget):
                 widget.close()
             if self.mainwin._current_layout is not self.mainwin.LayoutImageModel:
                 self.mainwin.skyplot.setVisible(False)
-            # reset size to be minus dockables - workaround for bug #164
-            # self.mainwin.setMaximumWidth(self.mainwin.width() - 700)
         # optimise WCS for multiple image projection
         result = self.optimise_wcs_projection()
         if result is False:
@@ -485,8 +514,6 @@ class ImageManager(QWidget):
             # adjust visibility
             for j, ic in enumerate(self._imagecons):
                 ic.setImageVisible(not j or bool(self._qa_plot_all.isChecked()))
-            # issue replot signal fixed with assumption that this signal is now correct according to the old version
-            # self.imageRaised.emit(self._imagecons[0])  # This was the old signal
             self.imagePlotRaised.emit()
             self.fastReplot()
         # else simply update labels
@@ -567,14 +594,14 @@ class ImageManager(QWidget):
             self._clipboard_mode = mode
             try:
                 path = str(QApplication.clipboard().text(mode))
-            except:
+            except Exception:
                 path = None
             self._qa_load_clipboard.setEnabled(bool(path and os.path.isfile(path)))
 
     def _loadClipboardPath(self):
         try:
             path = QApplication.clipboard().text(self._clipboard_mode)
-        except:
+        except Exception:
             return
         self.loadImage(path)
 
@@ -610,18 +637,12 @@ class ImageManager(QWidget):
     def computeImage(self, expression=None):
         """Computes image from expression (if expression is None, pops up dialog)"""
         if expression is None:
-            (expression, ok) = QInputDialog.getText(self, "Compute image",
-                                                    """Enter an image expression to compute.
-                                              Any valid numpy expression is supported, and
-                                              all functions from the numpy module are available (including sub-modules such as fft).
-                                              Use 'a', 'b', 'c' to refer to images.
-                                              Examples:  "(a+b)/2", "cos(a)+sin(b)", "a-a.mean()", "fft.fft2(a)", etc.""")
-            #      (expression,ok) = QInputDialog.getText(self,"Compute image","""<P>Enter an expression to compute.
-            #        Use 'a', 'b', etc. to refer to loaded images. Any valid numpy expression is supported, and all the
-            #       functions from the numpy module are available. Examples of valid expressions include "(a+b)/2",
-            #       "cos(a)+sin(b)", "a-a.mean()", etc.
-            #        </P>
-            #      """)
+            (expression, ok) = QInputDialog.getText(
+                self, "Compute image", """Enter an image expression to compute. Any valid numpy expression is supported, and
+                                        all functions from the numpy module are available (including sub-modules such as fft).
+                                        Use 'a', 'b', 'c' to refer to images.
+                                        Examples:  "(a+b)/2", "cos(a)+sin(b)", "a-a.mean()", "fft.fft2(a)", etc."""
+            )
             expression = str(expression)
             if not ok or not expression:
                 return
@@ -688,7 +709,7 @@ class ImageManager(QWidget):
                 return None
             try:
                 template = arglist[options.index(which)][1]
-            except:
+            except Exception:
                 pass
         # create a FITS image
         busy = BusyIndicator()
@@ -742,39 +763,39 @@ class ImageManager(QWidget):
                         for n in range(_naxis):
                             try:
                                 _header.remove(f'PC0{i+1+_ndims}_0{n + 1}')
-                            except:
+                            except Exception:
                                 continue
                     for i in range(_naxis):
                         for n in range(_naxis):
                             try:
                                 _header.remove(f'PC0{i+1}_0{n + 1+_ndims}')
-                            except:
+                            except Exception:
                                 continue
                 elif template.fits_header.get('PC1_1'):
                     for i in range(_naxis):
                         for n in range(_naxis):
                             try:
                                 _header.remove(f'PC{i+1+_ndims}_{n + 1}')
-                            except:
+                            except Exception:
                                 continue
                     for i in range(_naxis):
                         for n in range(_naxis):
                             try:
                                 _header.remove(f'PC{i+1}_{n + 1+_ndims}')
-                            except:
+                            except Exception:
                                 continue
                 elif template.fits_header.get('PC001001'):
                     for i in range(_naxis):
                         for n in range(_naxis):
                             try:
                                 _header.remove(f'PC00{i+1+_ndims}00{n + 1}')
-                            except:
+                            except Exception:
                                 continue
                     for i in range(_naxis):
                         for n in range(_naxis):
                             try:
                                 _header.remove(f'PC00{i+1}00{n + 1+_ndims}')
-                            except:
+                            except Exception:
                                 continue
 
                 # add comments
@@ -805,7 +826,7 @@ class ImageManager(QWidget):
             skyimage = SkyImage.FITSImagePlotItem(name=expression,
                                                   filename=None,
                                                   hdu=hdu)
-        except:
+        except Exception:
             busy.reset_cursor()
             traceback.print_exc()
             self.signalShowErrorMessage.emit("""Error creating FITS image %s: %s""" % (expression, str(sys.exc_info()[1])))

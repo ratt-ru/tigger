@@ -21,11 +21,11 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
+from configparser import (ConfigParser, DuplicateSectionError, NoOptionError,
+                          NoSectionError)
 import os
-import sys
-from configparser import ConfigParser, NoSectionError, NoOptionError, DuplicateSectionError
-
 import os.path
+import sys
 
 _default_system_paths = [
     "/usr/local/Timba",
@@ -46,7 +46,7 @@ class DualConfigParser:
         system_paths = [os.path.join(path, filename) for path in system_paths]
         self.syscp.read(system_paths)
         self.usercp = ConfigParser()
-        self._user_file = os.path.join(user_path, "." + filename)
+        self._user_file = os.path.join(user_path, f".{filename}")
         self.usercp.read([self._user_file])
 
     def add_section(self, _section):
@@ -59,7 +59,7 @@ class DualConfigParser:
         return self.syscp.has_section(_section) or self.usercp.has_section(_section)
 
     def _get(self, _method, _section, _option, default=None, init=False, save=False):
-        _section = _section or self.defsection  # TODO - defsection is unresolved for DualConfigParser
+        _section = _section or self.defsection
         # try user defaults
         try:
             return getattr(self.usercp, _method)(_section, _option)
@@ -149,11 +149,11 @@ if __name__ == '__main__':
     print('test3:', conf.getfloat('test3', 3.0))
     try:
         print('test4:', conf.get('test4'))
-    except:
+    except Exception:
         print('test4:', sys.exc_info())
     try:
         print('test5:', conf.get('test5'))
-    except:
+    except Exception:
         print('test5:', sys.exc_info())
     conf.set('test6', 'abc')
     conf.set('test7', 1)

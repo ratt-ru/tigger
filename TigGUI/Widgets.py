@@ -19,16 +19,17 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-import traceback
 import re
-import os
-from PyQt5.Qt import  QValidator, QWidget, QHBoxLayout, QFileDialog, QComboBox, QLabel, \
-    QLineEdit, QDialog, QIntValidator, QDoubleValidator, QToolButton, QListWidget, QVBoxLayout, \
-    QPushButton, QMessageBox
-from PyQt5.QtGui import QMouseEvent, QFont, QTextOption
-from PyQt5.QtWidgets import QDockWidget, QPlainTextEdit, QStyle, QSizePolicy, QTabWidget, QToolTip, QApplication
+import traceback
+
+from PyQt5.Qt import (QComboBox, QDialog, QDoubleValidator, QFileDialog,
+                      QHBoxLayout, QIntValidator, QLabel, QLineEdit,
+                      QListWidget, QMessageBox, QPushButton, QToolButton,
+                      QVBoxLayout, QValidator, QWidget)
+from PyQt5.QtCore import QEvent, QSize, QTimer, Qt, pyqtSignal
+from PyQt5.QtGui import QFont, QMouseEvent, QTextOption
+from PyQt5.QtWidgets import QDockWidget, QPlainTextEdit, QSizePolicy, QStyle, QTabWidget
 from PyQt5.Qwt import QwtPlotCurve, QwtPlotMarker
-from PyQt5.QtCore import pyqtSignal, Qt, QEvent, QSize, QTimer
 
 from TigGUI.init import pixmaps
 
@@ -61,7 +62,7 @@ class FloatValidator(QValidator):
         try:
             x = float(_input)
             return QValidator.Acceptable, _input, _pos
-        except:
+        except Exception:
             pass
         if not _input or self.re_intermediate.match(_input):
             return QValidator.Intermediate, _input, _pos
@@ -79,7 +80,7 @@ class ValueTypeEditor(QWidget):
         lo.setSpacing(5)
         # type selector
         self.wtypesel = QComboBox(self)
-        for i, tp in enumerate(self.ValueTypes):
+        for tp in self.ValueTypes:
             self.wtypesel.addItem(tp.__name__)
         self.wtypesel.activated[int].connect(self._selectTypeNum)
         typesel_lab = QLabel("&Type:", self)
@@ -127,13 +128,12 @@ class ValueTypeEditor(QWidget):
         tp = self.ValueTypes[self.wtypesel.currentIndex()]
         if tp is bool:
             return bool(self.wbool.currentIndex())
-        else:
-            try:
-                return tp(self.wvalue.text())
-            except:
-                print("Error converting input to type ", tp.__name__)
-                traceback.print_exc()
-                return None
+        try:
+            return tp(self.wvalue.text())
+        except Exception:
+            print("Error converting input to type ", tp.__name__)
+            traceback.print_exc()
+            return None
 
 
 class FileSelector(QWidget):
@@ -445,11 +445,13 @@ class TDockWidget(QDockWidget):
             label = self.childAt(event.pos())
             if not label:
                 return super(TDockWidget, self).eventFilter(source, event)
-            if isinstance(label, QLabel):
-                if not self.isFloating():
-                    fake_mouse_event = QMouseEvent(QEvent.MouseButtonRelease, event.pos(), event.button(), event.buttons(), event.modifiers())
-                    super(TDockWidget, self).event(fake_mouse_event)
-                    return True
+            if isinstance(label, QLabel) and not self.isFloating():
+                fake_mouse_event = QMouseEvent(QEvent.MouseButtonRelease,
+                                               event.pos(), event.button(),
+                                               event.buttons(),
+                                               event.modifiers())
+                super(TDockWidget, self).event(fake_mouse_event)
+                return True
         return super(TDockWidget, self).eventFilter(source, event)
 
 

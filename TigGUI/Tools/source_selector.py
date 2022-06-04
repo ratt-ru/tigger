@@ -1,5 +1,5 @@
 # Copyright (C) 2002-2022
-# The MeqTree Foundation & 
+# The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
 # P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
 #
@@ -15,23 +15,21 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>,
-# or write to the Free Software Foundation, Inc., 
+# or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
 import math
-import numpy as np
 import operator
-
-from PyQt5.QtWidgets import *
 import traceback
 
-from PyQt5.Qt import QObject, QHBoxLayout, QComboBox, QLabel, QLineEdit, QDialog, QVBoxLayout, Qt, QErrorMessage,\
-    QSlider
+from PyQt5.Qt import (QComboBox, QDialog, QErrorMessage, QHBoxLayout, QLabel,
+                      QLineEdit, QSlider, QVBoxLayout, Qt)
 
 import TigGUI.kitties.utils
-from TigGUI.kitties.utils import curry
 from TigGUI.kitties.widgets import BusyIndicator
+
+import numpy as np
 
 QString = str
 
@@ -153,17 +151,17 @@ class SourceSelectorDialog(QDialog):
                     # test if item can be cast to float
                     try:
                         float(getattr(src, tag))
-                    except:
+                    except Exception:
                         continue
                     else:
                         value = float(getattr(src, tag))
 
                 elif tag in TagAccessors:
                     value = float(TagAccessors[tag](src))
-                else: # not existant for this source (maybe a tag or something??)
+                else:  # not existant for this source (maybe a tag or something??)
                     value = np.nan
             # skip source if failed to access this tag as a float
-            except:
+            except Exception:
                 traceback.print_exc()
                 continue
             if value is not None:
@@ -216,7 +214,7 @@ class SourceSelectorDialog(QDialog):
             # try to parse threshold, ignore if invalid
             try:
                 threshold = float(threshold)
-            except:
+            except Exception:
                 self._reset_percentile()
                 return
             # get comparison operator

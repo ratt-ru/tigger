@@ -20,28 +20,23 @@
 #
 
 import math
-from PyQt5.QtWidgets import *
-
-from PyQt5.Qt import QObject, QHBoxLayout, QFileDialog, pyqtSignal, QLabel, \
-    QLineEdit, QDialog, QDoubleValidator, QVBoxLayout, \
-    QPushButton, Qt, QCheckBox, QMessageBox, QErrorMessage, \
-    QRadioButton
-
-# import TigGUI.kitties.utils
-
-from astropy.io import fits as pyfits
-
 import os.path
 import traceback
 
-from TigGUI.kitties.widgets import BusyIndicator
+from PyQt5.Qt import (QCheckBox, QDialog, QDoubleValidator, QErrorMessage,
+                      QFileDialog, QHBoxLayout, QLabel, QLineEdit, QMessageBox,
+                      QPushButton, QRadioButton, QVBoxLayout, Qt)
+
+from TigGUI.Tools import registerTool
 from TigGUI.Widgets import FileSelector
-from Tigger.Models import SkyModel, ModelClasses
+from TigGUI.kitties.widgets import BusyIndicator
+from Tigger.Models import ModelClasses, SkyModel
 from Tigger.Tools import Imaging
 
-DEG = math.pi / 180
-
 from astLib.astWCS import WCS
+from astropy.io import fits as pyfits
+
+DEG = math.pi / 180
 
 
 class MakeBrickDialog(QDialog):
@@ -64,8 +59,9 @@ class MakeBrickDialog(QDialog):
         lo1.setContentsMargins(0, 0, 0, 0)
         label = QLabel("Frequency, MHz:", self)
         lo1.addWidget(label)
-        tip = """<P>If your sky model contains spectral information (such as spectral indices), then a brick may be generated
-    for a specific frequency. If a frequency is not specified here, the reference frequency of the model sources will be assumed.</P>"""
+        tip = ("""<P>If your sky model contains spectral information (such as spectral indices),
+              then a brick may be generated for a specific frequency. If a frequency is not specified here,
+              the reference frequency of the model sources will be assumed.</P>""")
         self.wfreq = QLineEdit(self)
         self.wfreq.setValidator(QDoubleValidator(self))
         label.setToolTip(tip)
@@ -78,9 +74,9 @@ class MakeBrickDialog(QDialog):
         self.wpb_apply = QCheckBox("Apply primary beam expression:", self)
         self.wpb_apply.setChecked(True)
         lo1.addWidget(self.wpb_apply)
-        tip = """<P>If this option is specified, a primary power beam gain will be applied to the sources before inserting
-    them into the brick. This can be any valid Python expression making use of the variables 'r' (corresponding
-    to distance from field centre, in radians) and 'fq' (corresponding to frequency.)</P>"""
+        tip = ("""<P>If this option is specified, a primary power beam gain will be applied to the sources before inserting
+               them into the brick. This can be any valid Python expression making use of the variables 'r' (corresponding
+               to distance from field centre, in radians) and 'fq' (corresponding to frequency.)</P>""")
         self.wpb_exp = QLineEdit(self)
         self.wpb_apply.setToolTip(tip)
         self.wpb_exp.setToolTip(tip)
@@ -210,10 +206,15 @@ class MakeBrickDialog(QDialog):
         if self.wpb_apply.isChecked():
             pbexp = str(self.wpb_exp.text())
             try:
-                pbfunc = eval("lambda r,fq:" + pbexp)
+                pbfunc = eval(f"lambda r,fq:{pbexp}")
             except Exception as err:
-                QMessageBox.warning(self, "Error parsing PB experssion",
-                                    "Error parsing primary beam expression %s: %s" % (pbexp, str(err)))
+                QMessageBox.warning(
+                    self,
+                    "Error parsing PB experssion",
+                    "Error parsing primary beam expression %s: %s"
+                    % (pbexp, str(err)),
+                )
+
                 return
         # get frequency
         freq = str(self.wfreq.text())
@@ -265,11 +266,11 @@ class MakeBrickDialog(QDialog):
             ra0 = dec0 = 1
             for iaxis in range(hdr['NAXIS']):
                 axs = str(iaxis + 1)
-                name = hdr.get('CTYPE' + axs, axs).upper()
+                name = hdr.get(f'CTYPE{axs}', axs).upper()
                 if name.startswith("RA"):
-                    ra0 = hdr.get('CRPIX' + axs, 1) - 1
+                    ra0 = hdr.get(f'CRPIX{axs}', 1) - 1
                 elif name.startswith("DEC"):
-                    dec0 = hdr.get('CRPIX' + axs, 1) - 1
+                    dec0 = hdr.get(f'CRPIX{axs}', 1) - 1
             # convert pixel to degrees
             ra0, dec0 = wcs.pix2wcs(ra0, dec0)
             ra0 *= DEG
@@ -318,7 +319,5 @@ def make_brick(mainwin, model):
     # show dialog
     return dialog.exec_()
 
-
-from TigGUI.Tools import registerTool
 
 registerTool("Make FITS brick from selected sources...", make_brick)
