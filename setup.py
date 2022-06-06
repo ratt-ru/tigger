@@ -4,7 +4,7 @@ from __future__ import print_function
 from setuptools import setup, find_packages
 from pathlib import Path
 
-__version__ = "1.6.1"
+__version__ = "1.6.1.1"
 
 # PyQt (5.15.x) has not been added here are it needs to be installed via apt-get instead to support Qwt.
 # requirements below do not have versions for upstream packaging processes, but tested and compatible versions are given
