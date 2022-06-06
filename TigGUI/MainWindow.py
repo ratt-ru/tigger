@@ -44,6 +44,7 @@ from TigGUI.kitties.widgets import BusyIndicator
 from Tigger.Models import SkyModel
 import Tigger.Models.Formats
 from Tigger.Models.Formats import ModelHTML
+from astropy.io.fits.hdu import base
 
 QStringList = list
 
@@ -78,6 +79,7 @@ class MainWindow(QMainWindow):
         self.setWindowIcon(QIcon(pixmaps.purr_logo.pm()))
         # central widget setup
         self.cw = QWidget(self)
+        self.cw.setContentsMargins(10, 10, 10, 10)
         # The actual min width of the control dialog is ~396
         self._ctrl_dialog_min_size = 400  # approx value
         # The actual min width of the profile/zoom windows is ~256
@@ -101,13 +103,13 @@ class MainWindow(QMainWindow):
         spl2.setOpaqueResize(False)
         self._skyplot_stack = QWidget(spl2)
         self._skyplot_stack_lo = QVBoxLayout(self._skyplot_stack)
-        self._skyplot_stack_lo.setContentsMargins(0, 0, 0, 0)
+        self._skyplot_stack_lo.setContentsMargins(5, 5, 5, 5)
 
         # add plot
         self.skyplot = SkyModelPlotter(self._skyplot_stack, self)
         self.skyplot.resize(128, 128)
-        self.skyplot.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
-        self._skyplot_stack_lo.addWidget(self.skyplot, 1000)
+        self.skyplot.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Preferred)
+        self._skyplot_stack_lo.addWidget(self.skyplot)
         self.skyplot.hide()
         self.skyplot.imagesChanged.connect(self._imagesChanged)
         self.skyplot.setupShowMessages(self.signalShowMessage)
@@ -115,7 +117,7 @@ class MainWindow(QMainWindow):
 
         self._grouptab_stack = QWidget(spl2)
         self._grouptab_stack_lo = lo = QVBoxLayout(self._grouptab_stack)
-        self._grouptab_stack_lo.setContentsMargins(0, 0, 0, 0)
+        self._grouptab_stack_lo.setContentsMargins(5, 5, 5, 5)
         # add groupings table
         self.grouptab = ModelGroupsTable(self._grouptab_stack)
         self.grouptab.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
@@ -324,11 +326,15 @@ class MainWindow(QMainWindow):
             if Config.getbool('livezoom-show'):
                 self.skyplot._livezoom.setVisible(True)
                 self.skyplot._dockable_livezoom.setVisible(True)
-                self.addDockWidget(Qt.LeftDockWidgetArea, self.skyplot._dockable_livezoom)
+                self.addDockWidget(Qt.RightDockWidgetArea, self.skyplot._dockable_livezoom)
             if Config.getbool('liveprofile-show'):
                 self.skyplot._liveprofile.setVisible(True)
                 self.skyplot._dockable_liveprofile.setVisible(True)
                 self.addDockWidget(Qt.LeftDockWidgetArea, self.skyplot._dockable_liveprofile)
+            if Config.getbool('liveprofileselected-show'):
+                self.skyplot._liveprofile_selected.setVisible(True)
+                self.skyplot._dockable_liveprofile_selected.setVisible(True)
+                self.addDockWidget(Qt.LeftDockWidgetArea, self.skyplot._dockable_liveprofile_selected)
             # resize dock areas
             widget_list = self.findChildren(QDockWidget)
             size_list = []
@@ -779,3 +785,107 @@ class MainWindow(QMainWindow):
         if self.model:
             self.setWindowTitle(
                 "Tigger - %s%s" % ((self._display_filename or "(unnamed)", " (modified)" if updated else "")))
+
+    def restoreDockArea(self, _area):
+        """Restores the dockable area and untabs dockables if possible."""
+        _dockarea = []
+        widget_list = self.findChildren(QDockWidget)
+        for widget in widget_list:
+            if self.dockWidgetArea(widget) == _area:
+                if widget.isVisible() and not widget.isFloating():
+                    if _area == 2:
+                        if isinstance(widget.bind_widget, ImageControlDialog):
+                            # or isinstance(widget.bind_widget, LiveImageZoom):
+                            _dockarea = []
+                            break
+                    _dockarea.append(widget)
+        if len(_dockarea) > 1:
+            for widget in _dockarea:
+                self.removeDockWidget(widget)
+                self.addDockWidget(_area, widget)
+                widget.setVisible(True)
+        self.resize_docked_widgets(_area)
+
+    def addDockWidgetToArea(self, _dockable, _area):
+        """Add a dockable widget to a dock area in the main window. If other dockable widgets are
+        in place then it will tab the dockables together."""
+        # This needs to itterate through the widgets to find DockWidgets already in the area,
+        # then tabifydockwidget when adding, or add to the area if empty
+        # Find all dockwidgets in the related area
+        _dockarea = []
+        widget_list = self.findChildren(QDockWidget)
+        for widget in widget_list:
+            if self.dockWidgetArea(widget) == _area:
+                if widget.isVisible() and not widget.isFloating():
+                    if _dockable is not widget:  # check not itself
+                        # Add dock widget to list
+                        _dockarea.append(widget)
+        # From the dockwidgets found check which widgets are tabbed
+        tabbed_in_area = []
+        for widget in _dockarea:
+            _w = self.tabifiedDockWidgets(widget)
+            if _w:
+                tabbed_in_area = tabbed_in_area + _w
+        if tabbed_in_area:
+            tabbed_in_area = list(dict.fromkeys(tabbed_in_area))
+        dprint(2, f"tabbed dockables {tabbed_in_area}, dockables from area {_area}, {_dockarea}")
+        # If widgegts that are not tabbed, tab them and then add the new dockable
+        if not tabbed_in_area and _dockarea:
+            # Tabify dockables before adding
+            if len(_dockarea) > 1:
+                base_widget = _dockarea.pop()
+                for widget in _dockarea:
+                    self.tabifyDockWidget(base_widget, widget)
+                    self.resizeDocks([base_widget, widget],
+                                     [base_widget.bind_widget.width(), widget.bind_widget.width()],
+                                     Qt.Horizontal)
+                # Add dockable after tabifying
+                self.tabifyDockWidget(base_widget, _dockable)
+            else:
+                if isinstance(_dockarea[-1].bind_widget, ImageControlDialog):
+                    self.tabifyDockWidget(_dockarea[-1], _dockable)
+                else:
+                    # No need to tabify as there is only 1 other dockable
+                    self.addDockWidget(_area, _dockable)
+        # If already tabbed just tabify
+        elif tabbed_in_area and not _dockarea:
+            self.tabifyDockWidget(tabbed_in_area[-1], _dockable)
+        # If a mixture of tabbed and untabbed - organise
+        elif tabbed_in_area and _dockarea:
+            # If equal the all are tabbed
+            if tabbed_in_area == _dockarea:
+                self.tabifyDockWidget(tabbed_in_area[-1], _dockable)
+            else:
+                # Get all that are not tabbed
+                wdiff = set(_dockarea) - set(tabbed_in_area)
+                # Tabify if only one
+                if wdiff and len(wdiff) == 1:
+                    self.tabifyDockWidget(list(wdiff)[-1], _dockable)
+                # If more then tabify all before adding dockable
+                elif wdiff and len(wdiff) > 1:
+                    wdiff = list(wdiff)
+                    base_widget = wdiff.pop()
+                    for widget in wdiff:
+                        self.tabifyDockWidget(base_widget, widget)
+                        self.resizeDocks([base_widget, widget],
+                                         [base_widget.bind_widget.width(), widget.bind_widget.width()],
+                                         Qt.Horizontal)
+                    # Add dockable after tabifying
+                    self.tabifyDockWidget(base_widget, _dockable)
+        # If no other dockables found
+        elif not tabbed_in_area and not _dockarea:
+            self.addDockWidget(_area, _dockable)
+        # Resize dockables in this area
+        self.resize_docked_widgets(_area)
+
+    def resize_docked_widgets(self, _area):
+        """Resize dockables within a given dock widget area."""
+        size_list = []
+        resize_list = []
+        widget_list = self.findChildren(QDockWidget)
+        for widget in widget_list:
+            if self.dockWidgetArea(widget) == _area:
+                if widget.isVisible() and not widget.isFloating():
+                    resize_list.append(widget)
+                    size_list.append(widget.bind_widget.width())
+        self.resizeDocks(resize_list, size_list, Qt.Horizontal)
