@@ -417,7 +417,7 @@ class TDockWidget(QDockWidget):
             if isinstance(bind_widget, ToolDialog):
                 self.setAllowedAreas(Qt.AllDockWidgetAreas)
             elif isinstance(bind_widget, ImageControlDialog):
-                self.setAllowedAreas(Qt.RightDockWidgetArea | Qt.LeftDockWidgetArea)
+                self.setAllowedAreas(Qt.RightDockWidgetArea)
         self.setTitleBarWidget(self.dock_title_bar)
         self.setFloating(False)
         # get current sizeHints()
@@ -431,6 +431,7 @@ class TDockWidget(QDockWidget):
                 bind_widget.whide.clicked.connect(close_slot)
         if toggle_slot is not None:
             self.toggle_button.clicked.connect(toggle_slot)
+        self._dockVisible = self.isVisible()
 
     def _resizeDockWidget(self, qsize):
         # live zoom signal slot to resize dockwidget and dock areas

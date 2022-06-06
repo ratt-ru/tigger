@@ -146,9 +146,9 @@ def main():
     max_w, max_h = int(usable_screen.width()*0.9), int(usable_screen.height()*0.88)
     mainwin = TigGUI.MainWindow.MainWindow(None, max_width=max_w, max_height=max_h)
     # set minimum size as the height of image control dialog
-    if usable_screen.width() >= 895 <= usable_screen.height():
+    if usable_screen.width() >= 1100 and 895 <= usable_screen.height():
         mainwin.setMinimumHeight(895)
-        mainwin.setMinimumWidth(895)
+        mainwin.setMinimumWidth(1100)
     # centre on screen
     centre = QStyle.alignedRect(Qt.LeftToRight, Qt.AlignHCenter, mainwin.size(), QApplication.desktop().availableGeometry())
     mainwin.setGeometry(centre)

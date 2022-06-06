@@ -208,7 +208,7 @@ class ImageController(QFrame):
                                                self._currier.curry(self.image.signalCenter.emit, True))
         self._qa_show_rc = self._menu.addAction(pixmaps.colours.icon(), "Colours && Intensities...",
                                                 self.showRenderControls)
-        self._qa_wcs = self._menu.addAction(pixmaps.wcs_image.icon(), "Information", self._viewWCS)
+        self._qa_wcs = self._menu.addAction(pixmaps.wcs_image.icon(), "Information", self._viewWCS, shortcut=Qt.Key_F5)
         if save:
             self._qa_save = self._menu.addAction("Save image...", self._saveImage)
         self._menu.addAction("Export image to PNG file...", self._exportImageToPNG)
@@ -345,7 +345,7 @@ class ImageController(QFrame):
                                                      bind_widget=self._control_dialog,
                                                      close_slot=self.colourctrl_dockwidget_closed,
                                                      toggle_slot=self.colourctrl_dockwidget_toggled)
-            self.addDockWidgetToTab()
+            self.parent().mainwin.addDockWidgetToArea(self._dockable_colour_ctrl, 2)
             dprint(1, "done")
         # set dockable widget visibility in sync with control dialog
         if not self._control_dialog.isVisible():
@@ -353,62 +353,28 @@ class ImageController(QFrame):
             self._control_dialog.show()
             if self._dockable_colour_ctrl is not None:
                 self._dockable_colour_ctrl.setVisible(True)
-                self.addDockWidgetToTab()
+                self.parent().mainwin.addDockWidgetToArea(self._dockable_colour_ctrl, 2)
                 self._dockable_colour_ctrl.show()
                 self._dockable_colour_ctrl.raise_()
-                if not self.get_docked_widget_size(self._dockable_colour_ctrl):
+                if not self.get_docked_widget_size(self._dockable_colour_ctrl, 2):
                     self.expand_mainwindow_dockable(self._dockable_colour_ctrl)
         else:
             self._control_dialog.hide()
             self._dockable_colour_ctrl.setVisible(False)
-            if not self.get_docked_widget_size(self._dockable_colour_ctrl):
+            if not self.get_docked_widget_size(self._dockable_colour_ctrl, 2):
                 self.shrink_mainwindow_dockable(self._dockable_colour_ctrl)
-
-    def addDockWidgetToTab(self):
-        # Add dockable widget to main window.
-        # This needs to itterate through the widgets to find DockWidgets already in the right side area,
-        # then tabifydockwidget when adding, or add to the right area if empty
-        widget_list = self.parent().mainwin.findChildren(QDockWidget)
-        for widget in widget_list:
-            if self.parent().mainwin.dockWidgetArea(widget) == 2:  # if in right dock area
-                if widget.isVisible() and not widget.isFloating():  # if widget active and not a window
-                    if self._dockable_colour_ctrl is not widget:  # check not itself
-                        # add dock widget in tab on top of current widget in right area
-                        self.parent().mainwin.tabifyDockWidget(widget, self._dockable_colour_ctrl)
-                        self.parent().mainwin.resizeDocks([widget], [widget.bind_widget.width()], Qt.Horizontal)
-            elif self.parent().mainwin.dockWidgetArea(
-                    widget) == 0:  # if not in any dock area assume we have new dock widget
-                # no previous widget in this area then add
-                self.parent().mainwin.addDockWidget(Qt.RightDockWidgetArea, self._dockable_colour_ctrl)
-                self.parent().mainwin.resizeDocks([widget], [widget.bind_widget.width()], Qt.Horizontal)
-
-    def removeDockWidget(self):
-        # remove image control dock widget
-        self.parent().mainwin.removeDockWidget(self._dockable_colour_ctrl)
-        # get widgets to resize
-        widget_list = self.parent().mainwin.findChildren(QDockWidget)
-        size_list = []
-        result = []
-        for widget in widget_list:
-            if not isinstance(widget.bind_widget, ImageControlDialog):
-                size_list.append(widget.bind_widget.width())
-                result.append(widget)
-                dprint(2, f"{widget} width {widget.width()}")
-                dprint(2, f"{widget} bind_widget width {widget.bind_widget.width()}")
-                if isinstance(widget.bind_widget, LiveImageZoom):
-                    widget.bind_widget.setMinimumWidth(widget.width())
-        widget_list = result
-        # resize dock areas
-        self.parent().mainwin.resizeDocks(widget_list, size_list, Qt.Horizontal)
+            self.parent().mainwin.restoreDockArea(2)
 
     def colourctrl_dockwidget_closed(self):
         self._dockable_colour_ctrl.setVisible(False)
         if self.parent().mainwin.windowState() != Qt.WindowMaximized:
-            if not self.get_docked_widget_size(self._dockable_colour_ctrl):
+            if not self.get_docked_widget_size(self._dockable_colour_ctrl, 2):
                 if not self._dockable_colour_ctrl.isFloating():
                     geo = self.parent().mainwin.geometry()
-                    geo.setWidth(self.parent().mainwin.width() - self._dockable_colour_ctrl.width())
+                    geo.setWidth(self.parent().mainwin.width() -
+                                 self._dockable_colour_ctrl.width())
                     self.parent().mainwin.setGeometry(geo)
+        self.parent().mainwin.restoreDockArea(2)
 
     def colourctrl_dockwidget_toggled(self):
         if not self._dockable_colour_ctrl.isVisible():
@@ -416,32 +382,40 @@ class ImageController(QFrame):
         if self._dockable_colour_ctrl.isWindow():
             self._dockable_colour_ctrl.setFloating(False)
             if self.parent().mainwin.windowState() != Qt.WindowMaximized:
-                if not self.get_docked_widget_size(self._dockable_colour_ctrl):
+                if not self.get_docked_widget_size(self._dockable_colour_ctrl, 2):
                     self.expand_mainwindow_dockable(self._dockable_colour_ctrl)
+            self.parent().mainwin.addDockWidgetToArea(self._dockable_colour_ctrl, 2)
         else:
             self._dockable_colour_ctrl.setFloating(True)
             if self.parent().mainwin.windowState() != Qt.WindowMaximized:
-                if not self.get_docked_widget_size(self._dockable_colour_ctrl):
+                if not self.get_docked_widget_size(self._dockable_colour_ctrl, 2):
                     self.shrink_mainwindow_dockable(self._dockable_colour_ctrl)
+            self.parent().mainwin.restoreDockArea(2)
 
     def shrink_mainwindow_dockable(self, _dockable):
         geo = self.parent().mainwin.geometry()
         geo.setWidth(self.parent().mainwin.width() - _dockable.width())
-        self.parent().mainwin.setGeometry(geo)
+        self._resize_mainwindow_docked_widgets(geo, _dockable)
 
     def expand_mainwindow_dockable(self, _dockable):
         geo = self.parent().mainwin.geometry()
         geo.setWidth(self.parent().mainwin.width() + _dockable.width())
-        self.parent().mainwin.setGeometry(geo)
+        self._resize_mainwindow_docked_widgets(geo, _dockable)
 
-    def get_docked_widget_size(self, _dockable):
+    def _resize_mainwindow_docked_widgets(self, geo, _dockable):
+        self.parent().mainwin.setGeometry(geo)
+        _area = self.parent().mainwin.dockWidgetArea(_dockable)
+        self.parent().mainwin.resize_docked_widgets(_area)
+
+    def get_docked_widget_size(self, _dockable, _area):
         widget_list = self.parent().mainwin.findChildren(QDockWidget)
         size_list = []
         if _dockable:
             for widget in widget_list:
-                if isinstance(widget.bind_widget, ImageControlDialog):
+                if self.parent().mainwin.dockWidgetArea(widget) == _area:
                     if widget is not _dockable:
-                        if not widget.isWindow() and not widget.isFloating() and widget.isVisible():
+                        if (not widget.isWindow() and not widget.isFloating()
+                                and widget.isVisible()):
                             size_list.append(widget.bind_widget.width())
         if size_list:
             return max(size_list)

@@ -55,6 +55,7 @@ from Tigger.Models.SkyModel import SkyModel
 
 import numpy
 
+
 QStringList = list
 
 _verbosity = TigGUI.kitties.utils.verbosity(name="plot")
@@ -245,10 +246,11 @@ def makeDualColorPen(color1, color2, width=3):
 class ToolDialog(QDialog):
     signalIsVisible = pyqtSignal(bool)
 
-    def __init__(self, parent, configname, menuname, show_shortcut=None):
+    def __init__(self, parent, mainwin, configname, menuname, show_shortcut=None):
         QDialog.__init__(self, parent)
         self.setModal(False)
         self.setFocusPolicy(Qt.NoFocus)
+        self.mainwin = mainwin
         self.hide()
         self._configname = configname
         self._geometry = None
@@ -323,25 +325,36 @@ class ToolDialog(QDialog):
         if visible and not self.parent().isVisible():
             self.parent().setGeometry(self.geometry())
             self.parent().setVisible(True)
-            if self.parent().main_win.windowState() != Qt.WindowMaximized:
+            _area = self.mainwin.dockWidgetArea(self.parent())  # in right dock area
+            if self.mainwin.windowState() != Qt.WindowMaximized:
                 if not self.get_docked_widget_size(self.parent()):
-                    geo = self.parent().main_win.geometry()
-                    geo.setWidth(self.parent().main_win.width() + self.width())
+                    geo = self.mainwin.geometry()
+                    geo.setWidth(self.mainwin.width() + self.parent().width())
                     center = geo.center()
-                    geo.moveCenter(QPoint(center.x() - self.width(), geo.y()))
-                    self.parent().main_win.setGeometry(geo)
+                    if self.mainwin.dockWidgetArea(self.parent()) == 2:  # in right dock area
+                        geo.moveCenter(QPoint(center.x() + self.parent().width(), geo.y()))
+                    elif self.mainwin.dockWidgetArea(self.parent()) == 1:
+                        geo.moveCenter(QPoint(center.x() - self.width(), geo.y()))
+                    self.mainwin.setGeometry(geo)
+            if _area == 2 and isinstance(self.parent().bind_widget, TigGUI.Plot.SkyModelPlot.LiveImageZoom):
+                self.mainwin.addDockWidgetToArea(self.parent(), _area)
+            else:
+                self.mainwin.addDockWidgetToArea(self.parent(), _area)
         elif not visible and self.parent().isVisible():
-            if self.parent().main_win.windowState() != Qt.WindowMaximized:
+            if self.mainwin.windowState() != Qt.WindowMaximized:
                 if not self.get_docked_widget_size(self.parent()):
-                    geo = self.parent().main_win.geometry()
-                    geo.setWidth(self.parent().main_win.width() - self.width())
+                    geo = self.mainwin.geometry()
+                    geo.setWidth(self.mainwin.width() - self.parent().width())
                     center = geo.center()
-                    geo.moveCenter(QPoint(center.x() + self.width(), geo.y()))
-                    self.parent().main_win.setGeometry(geo)
+                    if self.mainwin.dockWidgetArea(self.parent()) == 1:  # in left dock area
+                        geo.moveCenter(QPoint(center.x() + self.parent().width(), geo.y()))
+                    self.mainwin.setGeometry(geo)
             self.parent().setVisible(False)
+            _area = self.mainwin.dockWidgetArea(self.parent())  # in right dock area
+            self.mainwin.restoreDockArea(_area)
 
     def get_docked_widget_size(self, _dockable):
-        widget_list = self.parent().main_win.findChildren(QDockWidget)
+        widget_list = self.mainwin.findChildren(QDockWidget)
         size_list = []
         if _dockable:
             for widget in widget_list:
@@ -354,12 +367,11 @@ class ToolDialog(QDialog):
         else:
             return size_list
 
-
 class LiveImageZoom(ToolDialog):
     livezoom_resize_signal = pyqtSignal(QSize)
 
-    def __init__(self, parent, radius=10, factor=12):
-        ToolDialog.__init__(self, parent, configname="livezoom", menuname="live zoom & cross-sections",
+    def __init__(self, parent, mainwin, radius=10, factor=12):
+        ToolDialog.__init__(self, parent, mainwin, configname="livezoom", menuname="live zoom & cross-sections",
                             show_shortcut=Qt.Key_F2)
         self.setWindowTitle("Zoom & Cross-sections")
         radius = Config.getint("livezoom-radius", radius)
@@ -396,6 +408,10 @@ class LiveImageZoom(ToolDialog):
         self._has_zoom = self._has_xcs = self._has_ycs = False
         # setup zoom plot
         font = QApplication.font()
+        font.setPointSize(8)
+        axis_font = QApplication.font()
+        axis_font.setBold(True)
+        axis_font.setPointSize(10)
         self._zoomplot = QwtPlot(self)
         #    self._zoomplot.setSizePolicy(QSizePolicy.Fixed,QSizePolicy.Fixed)
         self._zoomplot.setContentsMargins(5, 5, 5, 5)
@@ -408,11 +424,14 @@ class LiveImageZoom(ToolDialog):
             self._zoomplot.setAxisScale(axis, 0, 1)
             self._zoomplot.setAxisFont(axis, font)
             self._zoomplot.setAxisMaxMajor(axis, 3)
-            self._zoomplot.axisWidget(axis).setMinBorderDist(16, 16)
+            self._zoomplot.axisWidget(axis).setMinBorderDist(5, 5)
             self._zoomplot.axisWidget(axis).show()
             text = QwtText(title)
             text.setFont(font)
             self._zoomplot.axisWidget(axis).setTitle(text.text())
+            axis_text = QwtText(title)
+            axis_text.setFont(axis_font)
+            self._zoomplot.setAxisTitle(axis, axis_text)
         self._zoomplot.setAxisLabelRotation(QwtPlot.yLeft, -90)
         self._zoomplot.setAxisLabelAlignment(QwtPlot.yLeft, Qt.AlignVCenter)
         self._zoomplot.setAxisLabelRotation(QwtPlot.yRight, 90)
@@ -468,10 +487,10 @@ class LiveImageZoom(ToolDialog):
             self._ycs.setVisible(False)
 
     def _enlarge(self):
-        self.setPlotSize(self._radius * 2, self._magfac)
+        self.setPlotSize(int(self._radius * 2), self._magfac)
 
     def _shrink(self):
-        self.setPlotSize(self._radius / 2, self._magfac)
+        self.setPlotSize(int(self._radius / 2), self._magfac)
 
     def setPlotSize(self, radius, factor):
         Config.set('livezoom-radius', radius)
@@ -580,8 +599,8 @@ class LiveImageZoom(ToolDialog):
 
 
 class LiveProfile(ToolDialog):
-    def __init__(self, parent):
-        ToolDialog.__init__(self, parent, configname="liveprofile", menuname="profiles", show_shortcut=Qt.Key_F3)
+    def __init__(self, parent, mainwin, configname="liveprofile", menuname="profiles", show_shortcut=Qt.Key_F3):
+        ToolDialog.__init__(self, parent, mainwin, configname=configname, menuname=menuname, show_shortcut=show_shortcut)
         self.setWindowTitle("Profiles")
         # create size policy for live profile
         liveprofile_policy = QSizePolicy()
@@ -1017,6 +1036,9 @@ class SkyModelPlotter(QWidget):
                 elif track_callback.__name__ == "_trackCoordinates":
                     dprint(2, "PlotPicker adding _trackCoordinates")
                     self.moved[QPointF].connect(self._track_callback)
+                elif track_callback.__name__ == "_trackCoordinatesProfile":
+                    dprint(2, "PlotPicker adding _trackCoordinatesProfile")
+                    self.moved[QPointF].connect(self._track_callback)
             # setup select_callbacks
             if select_callback:
                 dprint(2, f"PlotPicker select_callback {select_callback.__name__}")
@@ -1137,27 +1159,49 @@ class SkyModelPlotter(QWidget):
         self._markup_b_label = QwtText("B")
         self._markup_b_label.setColor(self._markup_color)
         # init live zoomers
-        self._livezoom = LiveImageZoom(self)
+        self._livezoom = LiveImageZoom(self, self._mainwin)
         self._livezoom.setObjectName('livezoom')
-        self._liveprofile = LiveProfile(self)
+        self._liveprofile = LiveProfile(self, self._mainwin)
+        self._liveprofile_selected = LiveProfile(
+            self,
+            self._mainwin,
+            configname="liveprofileselected",
+            menuname="selected profiles",
+            show_shortcut=Qt.Key_F4)
         self._liveprofile.setObjectName('liveprofile')
+        self._liveprofile_selected.setObjectName('liveprofileselected')
         # get current sizeHints()
         self.live_zoom_size = self._livezoom.sizeHint()
         self.live_profile_size = self._liveprofile.sizeHint()
         # setup dockable widgets
-        self._dockable_liveprofile = TDockWidget(title="Profiles", parent=mainwin, bind_widget=self._liveprofile,
-                                                 close_slot=self.liveprofile_dockwidget_closed,
-                                                 toggle_slot=self.liveprofile_dockwidget_toggled)
-        self._dockable_livezoom = TDockWidget(title="Zoom & Cross-sections", parent=mainwin, bind_widget=self._livezoom,
-                                              close_slot=self.livezoom_dockwidget_closed,
-                                              toggle_slot=self.livezoom_dockwidget_toggled)
+        self._dockable_liveprofile = TDockWidget(
+            title="Profiles",
+            parent=mainwin,
+            bind_widget=self._liveprofile,
+            close_slot=self.liveprofile_dockwidget_closed,
+            toggle_slot=self.liveprofile_dockwidget_toggled)
+        self._dockable_liveprofile_selected = TDockWidget(
+            title="Selected Profiles",
+            parent=mainwin,
+            bind_widget=self._liveprofile_selected,
+            close_slot=self.liveprofile_selected_dockwidget_closed,
+            toggle_slot=self.liveprofile_selected_dockwidget_toggled)
+        self._dockable_livezoom = TDockWidget(
+            title="Zoom & Cross-sections",
+            parent=mainwin,
+            bind_widget=self._livezoom,
+            close_slot=self.livezoom_dockwidget_closed,
+            toggle_slot=self.livezoom_dockwidget_toggled)
         # add dock widgets to main window and set to hidden
-        self._mainwin.addDockWidget(Qt.LeftDockWidgetArea, self._dockable_livezoom)
+        self._mainwin.addDockWidget(Qt.RightDockWidgetArea, self._dockable_livezoom)
         self._mainwin.addDockWidget(Qt.LeftDockWidgetArea, self._dockable_liveprofile)
+        self._mainwin.addDockWidget(Qt.LeftDockWidgetArea, self._dockable_liveprofile_selected)
         self._livezoom.setVisible(False)
         self._liveprofile.setVisible(False)
+        self._liveprofile_selected.setVisible(False)
         self._dockable_livezoom.setVisible(False)
         self._dockable_liveprofile.setVisible(False)
+        self._dockable_liveprofile_selected.setVisible(False)
 
         # other internal init
         self.projection = None
@@ -1204,6 +1248,7 @@ class SkyModelPlotter(QWidget):
         self._menu.addAction(self._qa_colorzoom)
         # hide/show tools
         self._menu.addAction(self._dockable_liveprofile.widget().getShowQAction())
+        self._menu.addAction(self._dockable_liveprofile_selected.widget().getShowQAction())
         self._menu.addAction(self._dockable_livezoom.widget().getShowQAction())
         # fixed aspect
         qa = self._menu.addAction("Fix aspect ratio")
@@ -1255,20 +1300,24 @@ class SkyModelPlotter(QWidget):
         self._wtoolbar.clear()
         self._livezoom.close()
         self._liveprofile.close()
+        self._liveprofile_selected.close()
 
     def livezoom_dockwidget_closed(self):
         list_of_actions = self._menu.actions()
         for ea_action in list_of_actions:
             if ea_action.text() == 'Show live zoom && cross-sections':
                 self._dockable_livezoom.setVisible(False)
+                _area = self._mainwin.dockWidgetArea(self._dockable_livezoom)
                 if self._mainwin.windowState() != Qt.WindowMaximized:
-                    if not self.get_docked_widget_size(self._dockable_livezoom):
+                    if not self.get_docked_widget_size(self._dockable_livezoom, _area):
                         if not self._dockable_livezoom.isFloating():
                             geo = self._mainwin.geometry()
                             geo.setWidth(self._mainwin.width() - self._dockable_livezoom.width())
                             center = geo.center()
-                            geo.moveCenter(QPoint(center.x() + self._dockable_livezoom.width(), geo.y()))
+                            if self._mainwin.dockWidgetArea(self._dockable_livezoom) == 1:  # in left dock area
+                                geo.moveCenter(QPoint(center.x() + self._dockable_livezoom.width(), geo.y()))
                             self._mainwin.setGeometry(geo)
+                self._mainwin.restoreDockArea(_area)
                 ea_action.setChecked(False)
         Config.set('livezoom-show', False)
 
@@ -1277,72 +1326,154 @@ class SkyModelPlotter(QWidget):
         for ea_action in list_of_actions:
             if ea_action.text() == 'Show profiles':
                 self._dockable_liveprofile.setVisible(False)
+                _area = self._mainwin.dockWidgetArea(self._dockable_liveprofile)
                 if self._mainwin.windowState() != Qt.WindowMaximized:
-                    if not self.get_docked_widget_size(self._dockable_liveprofile):
+                    if not self.get_docked_widget_size(self._dockable_liveprofile, _area):
                         if not self._dockable_liveprofile.isFloating():
                             geo = self._mainwin.geometry()
                             geo.setWidth(self._mainwin.width() - self._dockable_liveprofile.width())
                             center = geo.center()
-                            geo.moveCenter(QPoint(center.x() + self._dockable_liveprofile.width(), geo.y()))
+                            if self._mainwin.dockWidgetArea(self._dockable_liveprofile) == 1:  # in left dock area
+                                geo.moveCenter(QPoint(center.x() + self._dockable_liveprofile.width(), geo.y()))
                             self._mainwin.setGeometry(geo)
+                self._mainwin.restoreDockArea(_area)
                 ea_action.setChecked(False)
         Config.set('liveprofile-show', False)
+
+    def liveprofile_selected_dockwidget_closed(self):
+        list_of_actions = self._menu.actions()
+        for ea_action in list_of_actions:
+            if ea_action.text() == 'Show selected profiles':
+                self._dockable_liveprofile_selected.setVisible(False)
+                _area = self._mainwin.dockWidgetArea(self._dockable_liveprofile_selected)
+                if self._mainwin.windowState() != Qt.WindowMaximized:
+                    if not self.get_docked_widget_size(self._dockable_liveprofile_selected, _area):
+                        if not self._dockable_liveprofile_selected.isFloating():
+                            geo = self._mainwin.geometry()
+                            geo.setWidth(self._mainwin.width() - self._dockable_liveprofile_selected.width())
+                            center = geo.center()
+                            if self._mainwin.dockWidgetArea(self._dockable_liveprofile_selected) == 1:  # in left dock area
+                                geo.moveCenter(QPoint(center.x() + self._dockable_liveprofile_selected.width(), geo.y()))
+                            self._mainwin.setGeometry(geo)
+                self._mainwin.restoreDockArea(_area)
+                ea_action.setChecked(False)
+        Config.set('liveprofileselected-show', False)
 
     def liveprofile_dockwidget_toggled(self):
         if self._dockable_liveprofile.isVisible():
             if self._dockable_liveprofile.isWindow():
                 self._dockable_liveprofile.setFloating(False)
+                _area = self._mainwin.dockWidgetArea(self._dockable_liveprofile)
                 if self._mainwin.windowState() != Qt.WindowMaximized:
-                    if not self.get_docked_widget_size(self._dockable_liveprofile):
+                    if not self.get_docked_widget_size(self._dockable_liveprofile, _area):
                         geo = self._mainwin.geometry()
                         geo.setWidth(self._mainwin.width() + self._dockable_liveprofile.width())
                         center = geo.center()
-                        geo.moveCenter(QPoint(center.x() - self._dockable_liveprofile.width(), geo.y()))
+                        if self._mainwin.dockWidgetArea(self._dockable_liveprofile) == 1:  # in left dock area
+                            geo.moveCenter(QPoint(center.x() - self._dockable_liveprofile.width(), geo.y()))
                         self._mainwin.setGeometry(geo)
+                self._mainwin.addDockWidgetToArea(self._dockable_liveprofile, _area)
             else:
                 self._dockable_liveprofile.setFloating(True)
+                _area = self._mainwin.dockWidgetArea(self._dockable_liveprofile)
                 if self._mainwin.windowState() != Qt.WindowMaximized:
-                    if not self.get_docked_widget_size(self._dockable_liveprofile):
+                    if not self.get_docked_widget_size(self._dockable_liveprofile, _area):
                         geo = self._mainwin.geometry()
                         geo.setWidth(self._mainwin.width() - self._dockable_liveprofile.width())
                         center = geo.center()
-                        geo.moveCenter(QPoint(center.x() + self._dockable_liveprofile.width(), geo.y()))
+                        if self._mainwin.dockWidgetArea(self._dockable_liveprofile) == 1:  # in left dock area
+                            geo.moveCenter(QPoint(center.x() + self._dockable_liveprofile.width(), geo.y()))
                         self._mainwin.setGeometry(geo)
+                self._mainwin.restoreDockArea(_area)
+
+    def liveprofile_selected_dockwidget_toggled(self):
+        if self._dockable_liveprofile_selected.isVisible():
+            if self._dockable_liveprofile_selected.isWindow():
+                self._dockable_liveprofile_selected.setFloating(False)
+                _area = self._mainwin.dockWidgetArea(self._dockable_liveprofile_selected)
+                if self._mainwin.windowState() != Qt.WindowMaximized:
+                    if not self.get_docked_widget_size(self._dockable_liveprofile_selected, _area):
+                        geo = self._mainwin.geometry()
+                        geo.setWidth(self._mainwin.width() + self._dockable_liveprofile_selected.width())
+                        center = geo.center()
+                        if self._mainwin.dockWidgetArea(self._dockable_liveprofile_selected) == 1:  # in left dock area
+                            geo.moveCenter(QPoint(center.x() - self._dockable_liveprofile_selected.width(), geo.y()))
+                        self._mainwin.setGeometry(geo)
+                self._mainwin.addDockWidgetToArea(self._dockable_liveprofile_selected, _area)
+            else:
+                self._dockable_liveprofile_selected.setFloating(True)
+                _area = self._mainwin.dockWidgetArea(self._dockable_liveprofile_selected)
+                if self._mainwin.windowState() != Qt.WindowMaximized:
+                    if not self.get_docked_widget_size(self._dockable_liveprofile_selected, _area):
+                        geo = self._mainwin.geometry()
+                        geo.setWidth(self._mainwin.width() - self._dockable_liveprofile_selected.width())
+                        center = geo.center()
+                        if self._mainwin.dockWidgetArea(self._dockable_liveprofile_selected) == 1:  # in left dock area
+                            geo.moveCenter(QPoint(center.x() + self._dockable_liveprofile_selected.width(), geo.y()))
+                        self._mainwin.setGeometry(geo)
+                self._mainwin.restoreDockArea(_area)
 
     def livezoom_dockwidget_toggled(self):
         if self._dockable_livezoom.isVisible():
             if self._dockable_livezoom.isWindow():
                 self._dockable_livezoom.setFloating(False)
+                _area = self._mainwin.dockWidgetArea(self._dockable_livezoom)
                 if self._mainwin.windowState() != Qt.WindowMaximized:
-                    if not self.get_docked_widget_size(self._dockable_livezoom):
+                    if not self.get_docked_widget_size(self._dockable_livezoom, _area):
                         geo = self._mainwin.geometry()
-                        geo.setWidth(self._mainwin.width() + self._dockable_livezoom.width())
-                        center = geo.center()
-                        geo.moveCenter(QPoint(center.x() - self._dockable_livezoom.width(), geo.y()))
+                        if self._mainwin.dockWidgetArea(self._dockable_livezoom) == 1:  # in left dock area
+                            geo.setWidth(self._mainwin.width() + self._dockable_livezoom.width())
                         self._mainwin.setGeometry(geo)
+                self._mainwin.addDockWidgetToArea(self._dockable_livezoom, _area)
             else:
                 self._dockable_livezoom.setFloating(True)
+                _area = self._mainwin.dockWidgetArea(self._dockable_livezoom)
                 if self._mainwin.windowState() != Qt.WindowMaximized:
-                    if not self.get_docked_widget_size(self._dockable_livezoom):
+                    if not self.get_docked_widget_size(self._dockable_livezoom, _area):
                         geo = self._mainwin.geometry()
-                        geo.setWidth(self._mainwin.width() - self._dockable_livezoom.width())
-                        center = geo.center()
-                        geo.moveCenter(QPoint(center.x() + self._dockable_livezoom.width(), geo.y()))
+                        if self._mainwin.dockWidgetArea(self._dockable_livezoom) == 1:  # in left dock area
+                            geo.setWidth(self._mainwin.width() - self._dockable_livezoom.width())
                         self._mainwin.setGeometry(geo)
+                self._mainwin.restoreDockArea(_area)
 
-    def get_docked_widget_size(self, _dockable):
+    def shrink_mainwindow_dockable(self, _dockable):
+        geo = self._mainwin.geometry()
+        geo.setWidth(self._mainwin.width() - _dockable.width())
+        self._mainwin.setGeometry(geo)
+
+    def expand_mainwindow_dockable(self, _dockable):
+        geo = self._mainwin.geometry()
+        geo.setWidth(self._mainwin.width() + _dockable.width())
+        self._mainwin.setGeometry(geo)
+
+    def get_docked_widget_size(self, _dockable, _area):
         widget_list = self._mainwin.findChildren(QDockWidget)
         size_list = []
         if _dockable:
             for widget in widget_list:
-                if not isinstance(widget.bind_widget, ImageControlDialog):
-                    if widget.bind_widget != _dockable.bind_widget:
-                        if not widget.isWindow() and not widget.isFloating() and widget.isVisible():
+                if self._mainwin.dockWidgetArea(widget) == _area:
+                    if widget is not _dockable:
+                        if (not widget.isWindow() and not widget.isFloating()
+                                and widget.isVisible()):
                             size_list.append(widget.bind_widget.width())
         if size_list:
             return max(size_list)
         else:
             return size_list
+
+    # def get_docked_widget_size(self, _dockable):
+    #     widget_list = self._mainwin.findChildren(QDockWidget)
+    #     size_list = []
+    #     if _dockable:
+    #         for widget in widget_list:
+    #             # if not isinstance(widget.bind_widget, ImageControlDialog):
+    #             if widget.bind_widget != _dockable.bind_widget:
+    #                 if not widget.isWindow() and not widget.isFloating() and widget.isVisible():
+    #                     size_list.append(widget.bind_widget.width())
+    #     if size_list:
+    #         return max(size_list)
+    #     else:
+    #         return size_list
 
     def setupShowMessages(self, _signal):
         self.plotShowMessage = _signal
@@ -1407,8 +1538,10 @@ class SkyModelPlotter(QWidget):
         # TODO - adjust the colour of the coordinate tracker according to image colour map.
         self._tracker.setTrackerPen(QColor('white'))
         # this pricker provides the profile on click
-        self._tracker_profile = self.PlotPicker(self.plot.canvas(), "", mode=QwtPickerClickPointMachine(),
-                                                select_callback=self._trackCoordinatesProfile)
+        self._tracker_click_profile = self.PlotPicker(self.plot.canvas(), "", mode=QwtPickerClickPointMachine(),
+                                         select_callback=self._selectCoordinatesProfile)
+        self._tracker_profile = self.PlotPicker(self.plot.canvas(), "", mode=QwtPickerTrackerMachine(),
+                                        track_callback=self._trackCoordinatesProfile)
         # zoom picker
         self._zoomer = self.PlotZoomer(self.plot.canvas(), self.plot.getUpdateSignal(), label="zoom")
         self._zoomer_pen = makeDualColorPen("navy", "yellow")
@@ -1851,6 +1984,23 @@ class SkyModelPlotter(QWidget):
         self.plotShowMessage[str, int].emit(msgtext, 10000)
         return msgtext
 
+    def _selectCoordinatesProfile(self, pos):
+        # find the image and projection from pos
+        _projection, image = self.findImageFromPos(pos)
+        if _projection is None:
+            _projection = self.projection
+            image = self._imgman.getTopImage()
+        if not _projection or image is not self._imgman.getTopImage():
+            return None
+        # get ra/dec coordinates of point
+        l, m, ra, dec, dist, pa, rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd, x, y, val, flag = self._convertCoordinates(
+            pos, _projection=_projection, _image=image)
+        msgtext = ""
+        if image is None:
+            image = self._imgman and self._imgman.getTopImage()
+        if image and x is not None:
+            self._liveprofile_selected.trackImage(image, x, y)
+
     def _trackCoordinatesProfile(self, pos):
         # find the image and projection from pos
         _projection, image = self.findImageFromPos(pos)
@@ -2111,7 +2261,7 @@ class SkyModelPlotter(QWidget):
         self._image = self._imgman and self._imgman.getCenterImage()
         # show/hide live zoomer with image
         if self._image:
-            for tool in self._livezoom, self._liveprofile:
+            for tool in self._livezoom, self._liveprofile, self._liveprofile_selected:
                 tool.makeAvailable(bool(self._image))
         # enable or disable mouse modes as appropriate
         self._mousemodes.setContext(has_image=bool(self._image), has_model=bool(self.model))
