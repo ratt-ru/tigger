@@ -1,6 +1,8 @@
 ================
 Tigger Changelog
 ================
+1.6.1.1
+Minor bug fixes to window and docking config loading upon Tigger startup
 
 1.6.2
 =====
