@@ -1614,6 +1614,7 @@ class SkyModelPlotter(QWidget):
         if self._qa_mwzoom.isChecked():
             tooltip += """<P>You also have mouse-wheel zoom enabled. Rolling the wheel up will zoom in at the current zoom point.
       Rolling the wheel down will zoom back out.</P>"""
+        tooltip += """<P>With the 'Show selected profiles' option, you can select spectra using ALT+LeftButton. Selected spectra will be marked with a star.</P>"""
         QMessageBox.information(self, "Quick mouse reference", tooltip)
 
     #    self._showCoordinateToolTip(self._mousemodes.currentMode().tooltip,rect=False)  # TODO - check why commented out
