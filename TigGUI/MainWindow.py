@@ -27,7 +27,7 @@ from PyQt5.Qt import (QApplication, QDialog, QErrorMessage, QFileDialog,
                       QSplitter, QVBoxLayout, QWidget, Qt)
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QDockWidget
+from PyQt5.QtWidgets import QDockWidget, QLayout
 
 from TigGUI import AboutDialog
 from TigGUI import Images
@@ -110,6 +110,7 @@ class MainWindow(QMainWindow):
         self.skyplot.resize(128, 128)
         self.skyplot.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Preferred)
         self._skyplot_stack_lo.addWidget(self.skyplot)
+        self._skyplot_stack_lo.setSizeConstraint(QLayout.SetMaximumSize)
         self.skyplot.hide()
         self.skyplot.imagesChanged.connect(self._imagesChanged)
         self.skyplot.setupShowMessages(self.signalShowMessage)
@@ -118,6 +119,7 @@ class MainWindow(QMainWindow):
         self._grouptab_stack = QWidget(spl2)
         self._grouptab_stack_lo = lo = QVBoxLayout(self._grouptab_stack)
         self._grouptab_stack_lo.setContentsMargins(5, 5, 5, 5)
+        self._grouptab_stack_lo.setSizeConstraint(QLayout.SetMaximumSize)
         # add groupings table
         self.grouptab = ModelGroupsTable(self._grouptab_stack)
         self.grouptab.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
