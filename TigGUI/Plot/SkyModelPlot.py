@@ -32,7 +32,7 @@ from PyQt5.Qt import (QAction, QActionGroup, QApplication, QBrush, QCheckBox,
                       QToolBar, QToolButton, QTransform, QVBoxLayout, QWidget)
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QDockWidget
+from PyQt5.QtWidgets import QDockWidget, QLayout
 from PyQt5.Qwt import (QwtEventPattern, QwtPicker, QwtPickerClickPointMachine,
                        QwtPickerClickRectMachine, QwtPickerDragLineMachine,
                        QwtPickerDragRectMachine, QwtPickerTrackerMachine,
@@ -384,6 +384,7 @@ class LiveImageZoom(ToolDialog):
         self.setSizePolicy(livezoom_policy)
         # add plots
         self._lo0 = lo0 = QVBoxLayout(self)
+        self._lo0.setSizeConstraint(QLayout.SetFixedSize)
         lo1 = QHBoxLayout()
         lo1.setContentsMargins(0, 0, 0, 0)
         lo1.setSpacing(0)
@@ -415,7 +416,6 @@ class LiveImageZoom(ToolDialog):
         axis_font.setBold(True)
         axis_font.setPointSize(10)
         self._zoomplot = QwtPlot(self)
-        #    self._zoomplot.setSizePolicy(QSizePolicy.Fixed,QSizePolicy.Fixed)
         self._zoomplot.setContentsMargins(5, 5, 5, 5)
         axes = {QwtPlot.xBottom: "X pixel coordinate",
                 QwtPlot.yLeft: "Y pixel coordinate",
