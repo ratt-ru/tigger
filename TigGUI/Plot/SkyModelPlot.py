@@ -1542,6 +1542,8 @@ class SkyModelPlotter(QWidget):
         # this pricker provides the profile on click
         self._tracker_click_profile = self.PlotPicker(self.plot.canvas(), "", mode=QwtPickerClickPointMachine(),
                                                       select_callback=self._selectCoordinatesProfile)
+        # set profile click to use Alt key modifier to avoid conflicting with zoomer
+        self._tracker_click_profile.setMousePattern(QwtEventPattern.MouseSelect1, Qt.LeftButton, Qt.AltModifier)
         self._tracker_profile = self.PlotPicker(self.plot.canvas(), "", mode=QwtPickerTrackerMachine(),
                                                 track_callback=self._trackCoordinatesProfile)
         # zoom picker
