@@ -1155,6 +1155,7 @@ class SkyModelPlotter(QWidget):
         self._markup_symbol_pen = QPen(self._markup_color, 1)
         self._markup_brush = QBrush(Qt.NoBrush)
         self._markup_xsymbol = QwtSymbol(QwtSymbol.XCross, self._markup_brush, self._markup_symbol_pen, QSize(16, 16))
+        self._markup_starsymbol = QwtSymbol(QwtSymbol.Star1, self._markup_brush, self._markup_symbol_pen, QSize(16, 16))
         self._markup_absymbol = QwtSymbol(QwtSymbol.Ellipse, self._markup_brush, self._markup_symbol_pen, QSize(4, 4))
         self._markup_a_label = QwtText("A")
         self._markup_a_label.setColor(self._markup_color)
@@ -1296,6 +1297,7 @@ class SkyModelPlotter(QWidget):
         self._menu.addAction("Export plot to PNG file...", self._exportPlotToPNG, Qt.CTRL + Qt.Key_F12)
         self.plotShowMessage = None
         self.plotShowErrorMessage = None
+        self._selected_profile_markup = None
 
     def close(self):
         self._menu.clear()
@@ -1347,6 +1349,10 @@ class SkyModelPlotter(QWidget):
         for ea_action in list_of_actions:
             if ea_action.text() == 'Show selected profiles':
                 self._dockable_liveprofile_selected.setVisible(False)
+                # remove markup item
+                if self._selected_profile_markup:
+                    self._removePlotMarkupItem(self._selected_profile_markup)
+                    self._selected_profile_markup = None
                 _area = self._mainwin.dockWidgetArea(self._dockable_liveprofile_selected)
                 if self._mainwin.windowState() != Qt.WindowMaximized:
                     if not self.get_docked_widget_size(self._dockable_liveprofile_selected, _area):
@@ -1953,11 +1959,21 @@ class SkyModelPlotter(QWidget):
     def _removePlotMarkup(self, replot=True):
         """Removes all markup items, and refreshes the plot if replot=True"""
         for item in self._plot_markup:
+            if item is not self._selected_profile_markup:
+                item.detach()
+        if self._plot_markup and replot:
+            self.tigToolTip.hideText()
+            self._replot()
+        else:
+            self._plot_markup = []
+
+    def _removePlotMarkupItem(self, item, replot=True):
+        """Removes all markup items, and refreshes the plot if replot=True"""
+        if item in self._plot_markup:
             item.detach()
         if self._plot_markup and replot:
             self.tigToolTip.hideText()
             self._replot()
-        self._plot_markup = []
 
     def _trackCoordinates(self, pos):
         # find the image and projection from pos
@@ -2004,6 +2020,17 @@ class SkyModelPlotter(QWidget):
             image = self._imgman and self._imgman.getTopImage()
         if image and x is not None:
             self._liveprofile_selected.trackImage(image, x, y)
+            if self._liveprofile_selected.isVisible():
+                # add a marker at the location of the selected profile
+                self._selected_profile_markup = TiggerPlotMarker()
+                self._selected_profile_markup.setRenderHint(QwtPlotItem.RenderAntialiased)
+                self._selected_profile_markup.setValue(l, m)
+                self._selected_profile_markup.setSymbol(self._markup_starsymbol)
+                markup_items = [self._selected_profile_markup]
+                # same deal for markup items
+                for item in markup_items:
+                    item.setZ(Z_Markup)
+                QTimer.singleShot(10, self._currier.curry(self._addPlotMarkup, markup_items))
 
     def _trackCoordinatesProfile(self, pos):
         # find the image and projection from pos
