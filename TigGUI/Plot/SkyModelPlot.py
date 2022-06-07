@@ -327,7 +327,7 @@ class ToolDialog(QDialog):
             self.parent().setVisible(True)
             _area = self.mainwin.dockWidgetArea(self.parent())  # in right dock area
             if self.mainwin.windowState() != Qt.WindowMaximized:
-                if not self.get_docked_widget_size(self.parent()):
+                if not self.get_docked_widget_size(self.parent(), _area):
                     geo = self.mainwin.geometry()
                     geo.setWidth(self.mainwin.width() + self.parent().width())
                     center = geo.center()
@@ -341,8 +341,9 @@ class ToolDialog(QDialog):
             else:
                 self.mainwin.addDockWidgetToArea(self.parent(), _area)
         elif not visible and self.parent().isVisible():
+            _area = self.mainwin.dockWidgetArea(self.parent())  # in right dock area
             if self.mainwin.windowState() != Qt.WindowMaximized:
-                if not self.get_docked_widget_size(self.parent()):
+                if not self.get_docked_widget_size(self.parent(), _area):
                     geo = self.mainwin.geometry()
                     geo.setWidth(self.mainwin.width() - self.parent().width())
                     center = geo.center()
@@ -350,22 +351,23 @@ class ToolDialog(QDialog):
                         geo.moveCenter(QPoint(center.x() + self.parent().width(), geo.y()))
                     self.mainwin.setGeometry(geo)
             self.parent().setVisible(False)
-            _area = self.mainwin.dockWidgetArea(self.parent())  # in right dock area
             self.mainwin.restoreDockArea(_area)
 
-    def get_docked_widget_size(self, _dockable):
+    def get_docked_widget_size(self, _dockable, _area):
         widget_list = self.mainwin.findChildren(QDockWidget)
         size_list = []
         if _dockable:
             for widget in widget_list:
-                if not isinstance(widget.bind_widget, ImageControlDialog):
-                    if widget.bind_widget != _dockable.bind_widget:
-                        if not widget.isWindow() and not widget.isFloating() and widget.isVisible():
+                if self.mainwin.dockWidgetArea(widget) == _area:
+                    if widget is not _dockable:
+                        if (not widget.isWindow() and not widget.isFloating()
+                                and widget.isVisible()):
                             size_list.append(widget.bind_widget.width())
         if size_list:
             return max(size_list)
         else:
             return size_list
+
 
 class LiveImageZoom(ToolDialog):
     livezoom_resize_signal = pyqtSignal(QSize)
