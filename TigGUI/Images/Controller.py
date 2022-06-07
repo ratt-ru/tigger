@@ -208,7 +208,7 @@ class ImageController(QFrame):
                                                self._currier.curry(self.image.signalCenter.emit, True))
         self._qa_show_rc = self._menu.addAction(pixmaps.colours.icon(), "Colours && Intensities...",
                                                 self.showRenderControls)
-        self._qa_wcs = self._menu.addAction(pixmaps.wcs_image.icon(), "Information", self._viewWCS, shortcut=Qt.Key_F5)
+        self._qa_wcs = self._menu.addAction(pixmaps.wcs_image.icon(), "Information", self._viewWCS)
         if save:
             self._qa_save = self._menu.addAction("Save image...", self._saveImage)
         self._menu.addAction("Export image to PNG file...", self._exportImageToPNG)
