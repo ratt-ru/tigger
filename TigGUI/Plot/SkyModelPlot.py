@@ -1549,7 +1549,7 @@ class SkyModelPlotter(QWidget):
         self._zoomer_pen = makeDualColorPen("navy", "yellow")
         self._zoomer.setRubberBandPen(self._zoomer_pen)
         self._zoomer.setTrackerPen(QColor("yellow"))
-        self._zoomer.zoomed[QRectF].connect(self._plotZoomed)
+        self._zoomer.zoomed.connect(self._plotZoomed)
         self._zoomer.provisionalZoom.connect(self._plotProvisionalZoom)
         self._zoomer_box = TiggerPlotCurve()
         self._zoomer_box.setRenderHint(QwtPlotItem.RenderAntialiased)
