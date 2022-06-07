@@ -1541,9 +1541,9 @@ class SkyModelPlotter(QWidget):
         self._tracker.setTrackerPen(QColor('white'))
         # this pricker provides the profile on click
         self._tracker_click_profile = self.PlotPicker(self.plot.canvas(), "", mode=QwtPickerClickPointMachine(),
-                                         select_callback=self._selectCoordinatesProfile)
+                                                      select_callback=self._selectCoordinatesProfile)
         self._tracker_profile = self.PlotPicker(self.plot.canvas(), "", mode=QwtPickerTrackerMachine(),
-                                        track_callback=self._trackCoordinatesProfile)
+                                                track_callback=self._trackCoordinatesProfile)
         # zoom picker
         self._zoomer = self.PlotZoomer(self.plot.canvas(), self.plot.getUpdateSignal(), label="zoom")
         self._zoomer_pen = makeDualColorPen("navy", "yellow")
