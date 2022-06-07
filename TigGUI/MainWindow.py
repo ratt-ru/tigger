@@ -877,7 +877,7 @@ class MainWindow(QMainWindow):
                     # Add dockable after tabifying
                     self.tabifyDockWidget(base_widget, _dockable)
         # If no other dockables found
-        elif not tabbed_in_area and not _dockarea:
+        elif not tabbed_in_area and not _dockarea and _area != 0:
             self.addDockWidget(_area, _dockable)
         # Resize dockables in this area
         self.resize_docked_widgets(_area)
