@@ -28,7 +28,7 @@ From source with Ubuntu LTS
 Python dependencies
 ^^^^^^^^^^^^^^^^^^^
 
-* Tigger-LSM v1.7.1 - if you are not installing Tigger via the KERN repository or using the ``install_tigger_ubuntu.sh`` script provided, please go here <https://github.com/ratt-ru/tigger-lsm> and install this first.
+* Tigger-LSM v1.7.2 - if you are not installing Tigger via the KERN repository or using the ``install_tigger_ubuntu.sh`` script provided, please go here <https://github.com/ratt-ru/tigger-lsm> and install this first.
 
 Automatically installed Python dependencies:
 
