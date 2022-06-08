@@ -24,9 +24,9 @@ import sys
 import time
 import traceback
 
-from PyQt5.Qt import (
-    QActionGroup, QApplication, QClipboard, QFileDialog, QFont, QInputDialog,
-    QMenu, QTextOption, QVBoxLayout, QWidget)
+from PyQt5.Qt import (QActionGroup, QApplication, QClipboard, QFileDialog,
+                      QFont, QInputDialog, QMenu, QTextOption, QVBoxLayout,
+                      QWidget)
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QDockWidget, QLabel, QPlainTextEdit
@@ -43,7 +43,7 @@ from Tigger.Coordinates import Projection
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.io import fits as pyfits
-from astropy.io.fits import Header
+from astropy.io.fits.header import Header
 
 from astropy.wcs import WCS
 import numpy
@@ -132,10 +132,9 @@ class ImageManager(QWidget):
                     with pyfits.open(fname) as hdu:
                         hdu.verify('silentfix')
                         hdr = hdu[0].header
-                        self.fits_info.setPlainText(
-                            "[File size: " +
-                            str(round(hdu._file.tell() / 1024 / 1024, 2)) +
-                            " MiB]\n" + hdr.tostring(sep='\n', padding=True))
+                        self.fits_info.setPlainText("[File size: " +
+                                                    str(round(hdu._file.tell() / 1024 / 1024, 2)) + " MiB]\n" +
+                                                    hdr.tostring(sep='\n', padding=True))
                 except Exception:
                     self.fits_info.setPlainText("Error Reading FITS file")
         else:
@@ -158,7 +157,8 @@ class ImageManager(QWidget):
                 dialog.setFileMode(QFileDialog.ExistingFile)
                 dialog.setModal(True)
                 dialog.filesSelected['QStringList'].connect(self.loadImage)
-                if layout := dialog.layout():
+                layout = dialog.layout()
+                if layout:
                     # FITS header preview pane
                     dialog.currentChanged.connect(self.FITSHeaderPreview)
                     self.fits_info.setMinimumWidth(263)
