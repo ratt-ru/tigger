@@ -43,7 +43,7 @@ from Tigger.Coordinates import Projection
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.io import fits as pyfits
-from astropy.io.fits import Header
+from astropy.io.fits.header import Header
 
 from astropy.wcs import WCS
 import numpy
