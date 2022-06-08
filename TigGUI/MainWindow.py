@@ -211,6 +211,7 @@ class MainWindow(QMainWindow):
         self.hasSkyModel.emit(False)
         self.hasSelection.emit(False)
         self._exiting = False
+        self.right_dock_max_width = 507
 
         # set initial layout
         self._current_layout = None

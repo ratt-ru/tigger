@@ -334,17 +334,13 @@ class ImageController(QFrame):
             self._control_dialog = ImageControlDialog(self, self._rc, self._imgman)
             # line below allows window to be resized by the user
             self._control_dialog.setSizeGripEnabled(True)
-            # get and set sizing
-            self._control_dialog.setMinimumWidth(396)
-            # create size policy for control dialog
-            colour_ctrl_policy = QSizePolicy()
-            colour_ctrl_policy.setHorizontalPolicy(QSizePolicy.Minimum)
-            self._control_dialog.setSizePolicy(colour_ctrl_policy)
             # setup dockable colour control dialog
             self._dockable_colour_ctrl = TDockWidget(title=f"{self._rc.image.name}", parent=self.parent().mainwin,
                                                      bind_widget=self._control_dialog,
                                                      close_slot=self.colourctrl_dockwidget_closed,
                                                      toggle_slot=self.colourctrl_dockwidget_toggled)
+            self._dockable_colour_ctrl.setMaximumWidth(self.parent().mainwin.right_dock_max_width)
+            self._dockable_colour_ctrl.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
             self.parent().mainwin.addDockWidgetToArea(self._dockable_colour_ctrl, 2)
             dprint(1, "done")
         # set dockable widget visibility in sync with control dialog
