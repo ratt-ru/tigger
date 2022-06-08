@@ -431,7 +431,6 @@ class TDockWidget(QDockWidget):
                 bind_widget.whide.clicked.connect(close_slot)
         if toggle_slot is not None:
             self.toggle_button.clicked.connect(toggle_slot)
-        self._dockVisible = self.isVisible()
 
     def _resizeDockWidget(self, qsize):
         # live zoom signal slot to resize dockwidget and dock areas
