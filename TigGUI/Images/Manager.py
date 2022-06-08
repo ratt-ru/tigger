@@ -157,7 +157,8 @@ class ImageManager(QWidget):
                 dialog.setFileMode(QFileDialog.ExistingFile)
                 dialog.setModal(True)
                 dialog.filesSelected['QStringList'].connect(self.loadImage)
-                if layout := dialog.layout():
+                layout = dialog.layout()
+                if layout:
                     # FITS header preview pane
                     dialog.currentChanged.connect(self.FITSHeaderPreview)
                     self.fits_info.setMinimumWidth(263)
