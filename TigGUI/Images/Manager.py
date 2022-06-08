@@ -24,9 +24,9 @@ import sys
 import time
 import traceback
 
-from PyQt5.Qt import (
-    QActionGroup, QApplication, QClipboard, QFileDialog, QFont, QInputDialog,
-    QMenu, QTextOption, QVBoxLayout, QWidget)
+from PyQt5.Qt import (QActionGroup, QApplication, QClipboard, QFileDialog,
+                      QFont, QInputDialog, QMenu, QTextOption, QVBoxLayout,
+                      QWidget)
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QDockWidget, QLabel, QPlainTextEdit
@@ -132,10 +132,9 @@ class ImageManager(QWidget):
                     with pyfits.open(fname) as hdu:
                         hdu.verify('silentfix')
                         hdr = hdu[0].header
-                        self.fits_info.setPlainText(
-                            "[File size: " +
-                            str(round(hdu._file.tell() / 1024 / 1024, 2)) +
-                            " MiB]\n" + hdr.tostring(sep='\n', padding=True))
+                        self.fits_info.setPlainText("[File size: " +
+                                                    str(round(hdu._file.tell() / 1024 / 1024, 2)) + " MiB]\n" +
+                                                    hdr.tostring(sep='\n', padding=True))
                 except Exception:
                     self.fits_info.setPlainText("Error Reading FITS file")
         else:
