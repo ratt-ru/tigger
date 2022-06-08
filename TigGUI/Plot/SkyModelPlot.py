@@ -1314,152 +1314,104 @@ class SkyModelPlotter(QWidget):
         self._liveprofile_selected.close()
 
     def livezoom_dockwidget_closed(self):
+        """Signal slot for closing a dockable widget."""
         list_of_actions = self._menu.actions()
         for ea_action in list_of_actions:
             if ea_action.text() == 'Show live zoom && cross-sections':
-                self._dockable_livezoom.setVisible(False)
-                _area = self._mainwin.dockWidgetArea(self._dockable_livezoom)
-                if self._mainwin.windowState() != Qt.WindowMaximized:
-                    if not self.get_docked_widget_size(self._dockable_livezoom, _area):
-                        if not self._dockable_livezoom.isFloating():
-                            geo = self._mainwin.geometry()
-                            geo.setWidth(self._mainwin.width() - self._dockable_livezoom.width())
-                            center = geo.center()
-                            if self._mainwin.dockWidgetArea(self._dockable_livezoom) == 1:  # in left dock area
-                                geo.moveCenter(QPoint(center.x() + self._dockable_livezoom.width(), geo.y()))
-                            self._mainwin.setGeometry(geo)
-                self._mainwin.restoreDockArea(_area)
+                self._dockable_closed(self._dockable_livezoom)
                 ea_action.setChecked(False)
         Config.set('livezoom-show', False)
 
     def liveprofile_dockwidget_closed(self):
+        """Signal slot for closing a dockable widget."""
         list_of_actions = self._menu.actions()
         for ea_action in list_of_actions:
             if ea_action.text() == 'Show profiles':
-                self._dockable_liveprofile.setVisible(False)
-                _area = self._mainwin.dockWidgetArea(self._dockable_liveprofile)
-                if self._mainwin.windowState() != Qt.WindowMaximized:
-                    if not self.get_docked_widget_size(self._dockable_liveprofile, _area):
-                        if not self._dockable_liveprofile.isFloating():
-                            geo = self._mainwin.geometry()
-                            geo.setWidth(self._mainwin.width() - self._dockable_liveprofile.width())
-                            center = geo.center()
-                            if self._mainwin.dockWidgetArea(self._dockable_liveprofile) == 1:  # in left dock area
-                                geo.moveCenter(QPoint(center.x() + self._dockable_liveprofile.width(), geo.y()))
-                            self._mainwin.setGeometry(geo)
-                self._mainwin.restoreDockArea(_area)
+                self._dockable_closed(self._dockable_liveprofile)
                 ea_action.setChecked(False)
         Config.set('liveprofile-show', False)
 
     def liveprofile_selected_dockwidget_closed(self):
+        """Signal slot for closing a dockable widget."""
         list_of_actions = self._menu.actions()
         for ea_action in list_of_actions:
             if ea_action.text() == 'Show selected profiles':
-                self._dockable_liveprofile_selected.setVisible(False)
                 # remove markup item
                 if self._selected_profile_markup:
                     self._removePlotMarkupItem(self._selected_profile_markup)
                     self._selected_profile_markup = None
-                _area = self._mainwin.dockWidgetArea(self._dockable_liveprofile_selected)
-                if self._mainwin.windowState() != Qt.WindowMaximized:
-                    if not self.get_docked_widget_size(self._dockable_liveprofile_selected, _area):
-                        if not self._dockable_liveprofile_selected.isFloating():
-                            geo = self._mainwin.geometry()
-                            geo.setWidth(self._mainwin.width() - self._dockable_liveprofile_selected.width())
-                            center = geo.center()
-                            if self._mainwin.dockWidgetArea(self._dockable_liveprofile_selected) == 1:  # in left dock area
-                                geo.moveCenter(QPoint(center.x() + self._dockable_liveprofile_selected.width(), geo.y()))
-                            self._mainwin.setGeometry(geo)
-                self._mainwin.restoreDockArea(_area)
+                self._dockable_closed(self._dockable_liveprofile_selected)
                 ea_action.setChecked(False)
         Config.set('liveprofileselected-show', False)
 
     def liveprofile_dockwidget_toggled(self):
-        if self._dockable_liveprofile.isVisible():
-            if self._dockable_liveprofile.isWindow():
-                self._dockable_liveprofile.setFloating(False)
-                _area = self._mainwin.dockWidgetArea(self._dockable_liveprofile)
-                if self._mainwin.windowState() != Qt.WindowMaximized:
-                    if not self.get_docked_widget_size(self._dockable_liveprofile, _area):
-                        geo = self._mainwin.geometry()
-                        geo.setWidth(self._mainwin.width() + self._dockable_liveprofile.width())
-                        center = geo.center()
-                        if self._mainwin.dockWidgetArea(self._dockable_liveprofile) == 1:  # in left dock area
-                            geo.moveCenter(QPoint(center.x() - self._dockable_liveprofile.width(), geo.y()))
-                        self._mainwin.setGeometry(geo)
-                self._mainwin.addDockWidgetToArea(self._dockable_liveprofile, _area)
-            else:
-                self._dockable_liveprofile.setFloating(True)
-                _area = self._mainwin.dockWidgetArea(self._dockable_liveprofile)
-                if self._mainwin.windowState() != Qt.WindowMaximized:
-                    if not self.get_docked_widget_size(self._dockable_liveprofile, _area):
-                        geo = self._mainwin.geometry()
-                        geo.setWidth(self._mainwin.width() - self._dockable_liveprofile.width())
-                        center = geo.center()
-                        if self._mainwin.dockWidgetArea(self._dockable_liveprofile) == 1:  # in left dock area
-                            geo.moveCenter(QPoint(center.x() + self._dockable_liveprofile.width(), geo.y()))
-                        self._mainwin.setGeometry(geo)
-                self._mainwin.restoreDockArea(_area)
+        """Signal slot for toggling a dockable widget between a floating or a docked window."""
+        self._dockable_toggled(self._dockable_liveprofile)
 
     def liveprofile_selected_dockwidget_toggled(self):
-        if self._dockable_liveprofile_selected.isVisible():
-            if self._dockable_liveprofile_selected.isWindow():
-                self._dockable_liveprofile_selected.setFloating(False)
-                _area = self._mainwin.dockWidgetArea(self._dockable_liveprofile_selected)
-                if self._mainwin.windowState() != Qt.WindowMaximized:
-                    if not self.get_docked_widget_size(self._dockable_liveprofile_selected, _area):
-                        geo = self._mainwin.geometry()
-                        geo.setWidth(self._mainwin.width() + self._dockable_liveprofile_selected.width())
-                        center = geo.center()
-                        if self._mainwin.dockWidgetArea(self._dockable_liveprofile_selected) == 1:  # in left dock area
-                            geo.moveCenter(QPoint(center.x() - self._dockable_liveprofile_selected.width(), geo.y()))
-                        self._mainwin.setGeometry(geo)
-                self._mainwin.addDockWidgetToArea(self._dockable_liveprofile_selected, _area)
-            else:
-                self._dockable_liveprofile_selected.setFloating(True)
-                _area = self._mainwin.dockWidgetArea(self._dockable_liveprofile_selected)
-                if self._mainwin.windowState() != Qt.WindowMaximized:
-                    if not self.get_docked_widget_size(self._dockable_liveprofile_selected, _area):
-                        geo = self._mainwin.geometry()
-                        geo.setWidth(self._mainwin.width() - self._dockable_liveprofile_selected.width())
-                        center = geo.center()
-                        if self._mainwin.dockWidgetArea(self._dockable_liveprofile_selected) == 1:  # in left dock area
-                            geo.moveCenter(QPoint(center.x() + self._dockable_liveprofile_selected.width(), geo.y()))
-                        self._mainwin.setGeometry(geo)
-                self._mainwin.restoreDockArea(_area)
+        """Signal slot for toggling a dockable widget between a floating or a docked window."""
+        self._dockable_toggled(self._dockable_liveprofile_selected)
 
     def livezoom_dockwidget_toggled(self):
-        if self._dockable_livezoom.isVisible():
-            if self._dockable_livezoom.isWindow():
-                self._dockable_livezoom.setFloating(False)
-                _area = self._mainwin.dockWidgetArea(self._dockable_livezoom)
+        """Signal slot for toggling a dockable widget between a floating or a docked window."""
+        self._dockable_toggled(self._dockable_livezoom)
+
+    def _dockable_closed(self, _dockable):
+        _dockable.setVisible(False)
+        _area = self._mainwin.dockWidgetArea(_dockable)
+        if self._mainwin.windowState() != Qt.WindowMaximized:
+            if not self.get_docked_widget_size(_dockable, _area):
+                if not _dockable.isFloating():
+                    geo = self._mainwin.geometry()
+                    geo.setWidth(self._mainwin.width() - _dockable.width())
+                    center = geo.center()
+                    if self._mainwin.dockWidgetArea(_dockable) == 1:  # in left dock area
+                        geo.moveCenter(QPoint(center.x() + _dockable.width(), geo.y()))
+                    self._mainwin.setGeometry(geo)
+        self._mainwin.restoreDockArea(_area)
+
+    def _dockable_toggled(self, _dockable):
+        if _dockable.isVisible():
+            if _dockable.isWindow():
+                _dockable.setFloating(False)
+                _area = self._mainwin.dockWidgetArea(_dockable)
                 if self._mainwin.windowState() != Qt.WindowMaximized:
-                    if not self.get_docked_widget_size(self._dockable_livezoom, _area):
-                        geo = self._mainwin.geometry()
-                        if self._mainwin.dockWidgetArea(self._dockable_livezoom) == 1:  # in left dock area
-                            geo.setWidth(self._mainwin.width() + self._dockable_livezoom.width())
+                    if not self.get_docked_widget_size(_dockable, _area):
+                        geo = self.expand_mainwindow_dockable(_dockable)
+                        if self._mainwin.dockWidgetArea(_dockable) == 1:  # in left dock area
+                            geo = self.center_mainwindow_left(geo, _dockable)
                         self._mainwin.setGeometry(geo)
-                self._mainwin.addDockWidgetToArea(self._dockable_livezoom, _area)
+                self._mainwin.addDockWidgetToArea(_dockable, _area)
             else:
-                self._dockable_livezoom.setFloating(True)
-                _area = self._mainwin.dockWidgetArea(self._dockable_livezoom)
+                _dockable.setFloating(True)
+                _area = self._mainwin.dockWidgetArea(_dockable)
                 if self._mainwin.windowState() != Qt.WindowMaximized:
-                    if not self.get_docked_widget_size(self._dockable_livezoom, _area):
-                        geo = self._mainwin.geometry()
-                        if self._mainwin.dockWidgetArea(self._dockable_livezoom) == 1:  # in left dock area
-                            geo.setWidth(self._mainwin.width() - self._dockable_livezoom.width())
+                    if not self.get_docked_widget_size(_dockable, _area):
+                        geo = self.shrink_mainwindow_dockable(_dockable)
+                        if self._mainwin.dockWidgetArea(_dockable) == 1:  # in left dock area
+                            geo = self.center_mainwindow_right(geo, _dockable)
                         self._mainwin.setGeometry(geo)
                 self._mainwin.restoreDockArea(_area)
 
     def shrink_mainwindow_dockable(self, _dockable):
-        geo = self._mainwin.geometry()
-        geo.setWidth(self._mainwin.width() - _dockable.width())
-        self._mainwin.setGeometry(geo)
+        _geo = self._mainwin.geometry()
+        _geo.setWidth(self._mainwin.width() - _dockable.width())
+        return _geo
 
     def expand_mainwindow_dockable(self, _dockable):
-        geo = self._mainwin.geometry()
-        geo.setWidth(self._mainwin.width() + _dockable.width())
-        self._mainwin.setGeometry(geo)
+        _geo = self._mainwin.geometry()
+        _geo.setWidth(self._mainwin.width() + _dockable.width())
+        return _geo
+
+    def center_mainwindow_left(self, _geo, _dockable):
+        center = _geo.center()
+        _geo.moveCenter(QPoint(center.x() - _dockable.width(), _geo.y()))
+        return _geo
+
+    def center_mainwindow_right(self, _geo, _dockable):
+        center = _geo.center()
+        _geo.moveCenter(QPoint(center.x() + _dockable.width(), _geo.y()))
+        return _geo
 
     def get_docked_widget_size(self, _dockable, _area):
         widget_list = self._mainwin.findChildren(QDockWidget)
@@ -1475,20 +1427,6 @@ class SkyModelPlotter(QWidget):
             return max(size_list)
         else:
             return size_list
-
-    # def get_docked_widget_size(self, _dockable):
-    #     widget_list = self._mainwin.findChildren(QDockWidget)
-    #     size_list = []
-    #     if _dockable:
-    #         for widget in widget_list:
-    #             # if not isinstance(widget.bind_widget, ImageControlDialog):
-    #             if widget.bind_widget != _dockable.bind_widget:
-    #                 if not widget.isWindow() and not widget.isFloating() and widget.isVisible():
-    #                     size_list.append(widget.bind_widget.width())
-    #     if size_list:
-    #         return max(size_list)
-    #     else:
-    #         return size_list
 
     def setupShowMessages(self, _signal):
         self.plotShowMessage = _signal
