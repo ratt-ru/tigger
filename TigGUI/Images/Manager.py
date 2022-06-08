@@ -102,6 +102,8 @@ class ImageManager(QWidget):
         self.signalShowErrorMessage = None
         # FITS header preview pane
         self.fits_info = QPlainTextEdit()
+        # WCS menu option
+        self.use_mean_wcs_ref_coord = True
 
     def close(self):
         dprint(1, "closing Manager")
@@ -233,6 +235,11 @@ class ImageManager(QWidget):
         busy.reset_cursor()
         return ic
 
+    def setWCSRefCoord(self, value):
+        self.use_mean_wcs_ref_coord = value is True
+        self.optimise_wcs_projection()
+        self.replot()
+
     def optimise_wcs_projection(self):
         """Finds the optimal celestial WCS for displaying multiple images on
         the same projection."""
@@ -279,12 +286,14 @@ class ImageManager(QWidget):
                     # The reference coord could be skipped, in which case
                     # `find_optimal_celestial_wcs` will use the mean from all WCS's
                     # instead.
-                    # TODO - add a toggle for this setting
-                    ref_coord = SkyCoord(
-                        image_list[-1].orig_projection.ra0 * u.rad,
-                        image_list[-1].orig_projection.dec0 * u.rad,
-                        frame=image_list[-1].orig_projection.radesys)
-                    ref_coord = ref_coord.transform_to('icrs')
+                    if not self.use_mean_wcs_ref_coord:
+                        ref_coord = SkyCoord(
+                            image_list[-1].orig_projection.ra0 * u.rad,
+                            image_list[-1].orig_projection.dec0 * u.rad,
+                            frame=image_list[-1].orig_projection.radesys)
+                        ref_coord = ref_coord.transform_to('icrs')
+                    else:
+                        ref_coord = None
                     # Create the optimal celestial WCS for all images
                     # and convert projection to SIN with an ICRS frame.
                     try:

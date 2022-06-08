@@ -1244,6 +1244,13 @@ class SkyModelPlotter(QWidget):
         self._mousemodes = MouseModes.MouseModeManager(self, mouse_menu, self._wtoolbar)
         self._mousemodes.setMouseMode.connect(self._setMouseMode)
         self._setMouseMode(self._mousemodes.currentMode())
+        # WCS projection menu
+        wcs_menu = self._menu.addMenu("WCS Projection")
+        self._qa_wcs_proj = qa_wcs_menu = wcs_menu.addAction("Mean reference coordinate")
+        qa_wcs_menu.setCheckable(True)
+        qa_wcs_menu.triggered[bool].connect(self._currier.curry(Config.set, "wcs-ref-coord"))
+        qa_wcs_menu.setChecked(Config.getbool("wcs-ref-coord", True))
+        # zoom colour map into subset menu
         self._qa_colorzoom = self._wtoolbar.addAction(pixmaps.zoom_colours.icon(), "Zoom colourmap into subset",
                                                       self._colourZoomIntoSubset)
         self._qa_colorzoom.setShortcut(Qt.SHIFT + Qt.Key_F4)
@@ -1507,6 +1514,8 @@ class SkyModelPlotter(QWidget):
         im.enableImageBorders(self._image_pen, self._grid_color, self._bg_brush)
         im.imagesChanged.connect(self._currier.curry(self.postUpdateEvent, self.UpdateImages))
         im.imagePlotRaised.connect(self._imageRaised)
+        # Connect WCS projection menu item
+        self._qa_wcs_proj.toggled[bool].connect(self._imgman.setWCSRefCoord)
 
     class UpdateEvent(QEvent):
         def __init__(self, serial):
