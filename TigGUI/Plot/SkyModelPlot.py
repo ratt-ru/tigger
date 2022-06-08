@@ -1195,6 +1195,7 @@ class SkyModelPlotter(QWidget):
             bind_widget=self._livezoom,
             close_slot=self.livezoom_dockwidget_closed,
             toggle_slot=self.livezoom_dockwidget_toggled)
+        self._mainwin.right_dock_max_width = self._dockable_livezoom.width()
         # add dock widgets to main window and set to hidden
         self._mainwin.addDockWidget(Qt.RightDockWidgetArea, self._dockable_livezoom)
         self._mainwin.addDockWidget(Qt.LeftDockWidgetArea, self._dockable_liveprofile)

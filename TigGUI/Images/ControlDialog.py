@@ -27,6 +27,7 @@ from PyQt5.Qt import (QApplication, QBrush, QCheckBox, QColor, QComboBox,
                       QStackedWidget, QTimer, QToolButton, QVBoxLayout,
                       QWidget, Qt)
 from PyQt5.QtGui import QFont
+from PyQt5.QtWidgets import QLayout
 from PyQt5.Qwt import (QwtEventPattern, QwtLinearScaleEngine,
                        QwtLogScaleEngine, QwtPicker,
                        QwtPickerClickPointMachine, QwtPickerClickRectMachine,
@@ -87,8 +88,10 @@ class ImageControlDialog(QDialog):
         self._geometry = None
 
         # create layouts
+        self.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
+        self.setMinimumWidth(256)
         lo0 = QVBoxLayout(self)
-        #    lo0.setContentsMargins(0,0,0,0)
+        lo0.setSizeConstraint(QLayout.SetMinimumSize)
 
         # histogram plot
         self.whide = self.makeButton("Hide", self.hide, width=128)
