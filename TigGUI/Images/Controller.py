@@ -418,6 +418,25 @@ class ImageController(QFrame):
         else:
             return size_list
 
+    def removeDockWidget(self):
+        # remove image control dock widget
+        self.parent().mainwin.removeDockWidget(self._dockable_colour_ctrl)
+        # get widgets to resize
+        widget_list = self.parent().mainwin.findChildren(QDockWidget)
+        size_list = []
+        result = []
+        for widget in widget_list:
+            if not isinstance(widget.bind_widget, ImageControlDialog):
+                size_list.append(widget.bind_widget.width())
+                result.append(widget)
+                dprint(2, f"{widget} width {widget.width()}")
+                dprint(2, f"{widget} bind_widget width {widget.bind_widget.width()}")
+                if isinstance(widget.bind_widget, LiveImageZoom):
+                    widget.bind_widget.setMinimumWidth(widget.width())
+        widget_list = result
+        # resize dock areas
+        self.parent().mainwin.resizeDocks(widget_list, size_list, Qt.Horizontal)
+
     def _changeDisplayRangeToPercent(self, percent):
         if not self._control_dialog:
             self._control_dialog = ImageControlDialog(self, self._rc, self._imgman)
