@@ -294,9 +294,9 @@ class ImageManager(QWidget):
                     _imgcon, _image = self._wcs_get_center_image()
                     if not self.use_mean_wcs_ref_coord:
                         ref_coord = SkyCoord(
-                            _image.projection.ra0 * u.rad,
-                            _image.projection.dec0 * u.rad,
-                            frame=_image.projection.radesys)
+                            _image.orig_projection.ra0 * u.rad,
+                            _image.orig_projection.dec0 * u.rad,
+                            frame=_image.orig_projection.radesys)
                         ref_coord = ref_coord.transform_to('icrs')
                     else:
                         ref_coord = None
