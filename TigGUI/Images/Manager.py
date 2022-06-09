@@ -373,12 +373,8 @@ class ImageManager(QWidget):
             _image = self._imagecons[0].image
             _imgcon = self._imagecons[0]
         else:
-            _image = self._center_image
-
-        if not _imgcon:
-            for ic in self._imagecons:
-                if ic.image is _image:
-                    _imgcon = ic
+            _image = self._imagecon_loadorder[0].image
+            _imgcon = self._imagecon_loadorder[0]
         return _imgcon, _image
 
     def setZ0(self, z0):
