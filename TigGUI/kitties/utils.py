@@ -24,7 +24,6 @@
 import os
 import os.path
 import re
-import string
 import sys
 import time
 import traceback
@@ -210,7 +209,7 @@ class verbosity:
         # look for argv to override debug levels (unless they were already set via set_verbosity_level above)
         if verbosity._levels:
             self.verbose = verbosity._levels.get(name, 0)
-            print("Registered verbosity context: " + name + " = " + self.verbose)
+            print(f"Registered verbosity context: {name}={self.verbose}")
         elif verbosity._parse_argv:
             # NB: sys.argv doesn't always exist -- e.g., when embedding Python
             # it doesn't seem to be present.  Hence the check.
@@ -226,7 +225,7 @@ class verbosity:
                     except Exception:
                         pass
             if have_debug:
-                print("Registered verbosity context:" + name + "=" + str(self.verbose))
+                print(f"Registered verbosity context: {name}={self.verbose}")
         # add name to map
         self._verbosities[name] = self
 
@@ -252,7 +251,7 @@ class verbosity:
         if level <= self.verbose:
             stream = self.stream or sys.stderr
             stream.write(self.dheader(-3))
-            stream.write(string.join(list(map(str, args)), ' ') + '\n')
+            stream.write(" ".join(list(map(str, args))) + '\n')
 
     def dprintf(self, _level, _format, *args):
         if _level <= self.verbose:
