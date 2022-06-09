@@ -292,6 +292,7 @@ class ImageManager(QWidget):
                     # `find_optimal_celestial_wcs` will use the mean from all WCS's
                     # instead.
                     _imgcon, _image = self._wcs_get_center_image()
+                    dprint(5, "image being used for reference coordinate", _image.name)
                     if not self.use_mean_wcs_ref_coord:
                         ref_coord = SkyCoord(
                             _image.orig_projection.ra0 * u.rad,
@@ -318,6 +319,8 @@ class ImageManager(QWidget):
                         print(f"Error optimising WCS projection for images with find_optimal_celestial_wcs: {e}")
                         rtn_val = False
                     else:
+                        dprint(5, "optimised WCS", combined_wcs)
+                        dprint(5, "optimised WCS shape", total_shape)
                         # Add the minimum needed to process the WCS as a header for FITSWCS.
                         combined_wcs.fix()
                         fits_header = combined_wcs.to_header()
