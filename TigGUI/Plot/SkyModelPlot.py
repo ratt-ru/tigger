@@ -2385,7 +2385,7 @@ class SkyModelPlotter(QWidget):
         dprint(5, "updating zoomer")
         self._zoomer.setZoomStack(zooms, len(zooms) - 1)
         self._updatePsfMarker(None, replot=True)
-        #  self.plot.replot()  # this shouldn't be needed as it is handled in the line above.
+        self.plot.replot()  # this shouldn't be needed as it is handled in the line above.
 
     def setModel(self, model):
         self._source_lm = {}
