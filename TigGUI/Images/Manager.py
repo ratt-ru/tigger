@@ -232,12 +232,17 @@ class ImageManager(QWidget):
                 self._failed_wcs_images.append(ic)
             self.signalShowErrorMessage.emit(
                 f"Optimising WCS projection failed for image {os.path.basename(filename)}")
+        elif result is True:
+            self._failed_wcs_images = []
         busy.reset_cursor()
         return ic
 
     def setWCSRefCoord(self, value):
         self.use_mean_wcs_ref_coord = value is True
-        self.optimise_wcs_projection()
+        result = self.optimise_wcs_projection()
+        if result is True:
+            self._failed_wcs_images = []
+        self.imagesChanged.emit()
         self.replot()
 
     def optimise_wcs_projection(self):
@@ -507,6 +512,8 @@ class ImageManager(QWidget):
         result = self.optimise_wcs_projection()
         if result is False:
             self.signalShowErrorMessage.emit("Optimising WCS projection for the remaining images failed.")
+        elif result is True:
+            self._failed_wcs_images = []
 
     def getCenterImage(self):
         return self._center_image
@@ -856,12 +863,23 @@ class ImageManager(QWidget):
             dirnames = [getattr(img, 'filename') for x, img in arglist if hasattr(img, 'filename')]
             dirname = dirnames[0] if dirnames else None
         # create control bar, add to widget stack
-        self._createImageController(skyimage, expression, expression,
+        ic = self._createImageController(skyimage, expression, expression,
                                     save=((dirname and os.path.dirname(dirname)) or "."))
         self.signalShowMessage.emit("Created new image for %s" % expression, 3000)
         dprint(2, "image created")
         # recalculate the projection with the new image
-        self.optimise_wcs_projection()
+        result = self.optimise_wcs_projection()
+        if result is False:
+            # If the creation of a new WCS fails,
+            # we can only throw a warning to the user
+            # and fall back to an alternative method.
+            if ic not in self._failed_wcs_images:
+                self._failed_wcs_images.append(ic)
+            self.signalShowErrorMessage.emit(
+                f"Optimising WCS projection failed for image {expression}")
+        elif result is True:
+            self._failed_wcs_images = []
+        self.replot()
         busy.reset_cursor()
 
     def _createImageController(self, image, name, basename, model=False, save=False):
