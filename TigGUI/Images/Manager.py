@@ -286,11 +286,12 @@ class ImageManager(QWidget):
                     # The reference coord could be skipped, in which case
                     # `find_optimal_celestial_wcs` will use the mean from all WCS's
                     # instead.
+                    _imgcon, _image = self._wcs_get_center_image()
                     if not self.use_mean_wcs_ref_coord:
                         ref_coord = SkyCoord(
-                            image_list[-1].orig_projection.ra0 * u.rad,
-                            image_list[-1].orig_projection.dec0 * u.rad,
-                            frame=image_list[-1].orig_projection.radesys)
+                            _image.projection.ra0 * u.rad,
+                            _image.projection.dec0 * u.rad,
+                            frame=_image.projection.radesys)
                         ref_coord = ref_coord.transform_to('icrs')
                     else:
                         ref_coord = None
@@ -336,7 +337,7 @@ class ImageManager(QWidget):
                                              image._skyaxes[1][4])
                             image.setDefaultProjection(proj)
                         # Re-center and replot the images.
-                        self.centerImage(self._imagecons[0])
+                        self.centerImage(_imgcon)
                         self.replot()
                         rtn_val = True
             finally:
@@ -344,27 +345,36 @@ class ImageManager(QWidget):
         else:
             # Because this method is called when unloading images,
             # reset the projection when there is only one image.
-            image = image_list[-1]
+            _imgcon, _image = self._wcs_get_center_image()
             # Set the new projection and scale for the image
             # using the original FITS Header.
-            proj = Projection.FITSWCS(image.fits_header)
+            proj = Projection.FITSWCS(_image.fits_header)
             # SkyAxes contains: 0/1, iaxs_ra/dec, nx/ny, proj.ra0/dec0, proj.x/yscale, proj.x/ypix0
-            image.setSkyAxis(0,
-                             image._skyaxes[0][0],
-                             image._skyaxes[0][1],
-                             image._skyaxes[0][2],
-                             -proj.xscale,
-                             image._skyaxes[0][4])
-            image.setSkyAxis(1,
-                             image._skyaxes[1][0],
-                             image._skyaxes[1][1],
-                             image._skyaxes[1][2],
-                             proj.yscale,
-                             image._skyaxes[1][4])
-            image.setDefaultProjection(proj)
+            _image.setSkyAxis(0, _image._skyaxes[0][0], _image._skyaxes[0][1],
+                              _image._skyaxes[0][2], -proj.xscale,
+                              _image._skyaxes[0][4])
+            _image.setSkyAxis(1, _image._skyaxes[1][0], _image._skyaxes[1][1],
+                              _image._skyaxes[1][2], proj.yscale,
+                              _image._skyaxes[1][4])
+            _image.setDefaultProjection(proj)
             # Re-center and replot the image.
-            self.centerImage(self._imagecons[0])
+            self.centerImage(_imgcon)
             self.replot()
+
+    def _wcs_get_center_image(self):
+        _image = None
+        _imgcon = None
+        if not self._center_image:
+            _image = self._imagecons[0].image
+            _imgcon = self._imagecons[0]
+        else:
+            _image = self._center_image
+
+        if not _imgcon:
+            for ic in self._imagecons:
+                if ic.image is _image:
+                    _imgcon = ic
+        return _imgcon, _image
 
     def setZ0(self, z0):
         self._z0 = z0
