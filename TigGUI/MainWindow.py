@@ -44,7 +44,6 @@ from TigGUI.kitties.widgets import BusyIndicator
 from Tigger.Models import SkyModel
 import Tigger.Models.Formats
 from Tigger.Models.Formats import ModelHTML
-from astropy.io.fits.hdu import base
 
 QStringList = list
 
