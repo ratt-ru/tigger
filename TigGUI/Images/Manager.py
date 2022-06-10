@@ -863,7 +863,7 @@ class ImageManager(QWidget):
             dirname = dirnames[0] if dirnames else None
         # create control bar, add to widget stack
         ic = self._createImageController(skyimage, expression, expression,
-                                    save=((dirname and os.path.dirname(dirname)) or "."))
+                                         save=((dirname and os.path.dirname(dirname)) or "."))
         self.signalShowMessage.emit("Created new image for %s" % expression, 3000)
         dprint(2, "image created")
         # recalculate the projection with the new image
