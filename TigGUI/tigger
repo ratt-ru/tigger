@@ -61,11 +61,12 @@ def main():
     if 'verbose' in option_vals:
         debug_list = option_vals['verbose']
         # set debug verbosity levels
-        for item in debug_list:
-            debug_setting = item.split('=')
-            context = debug_setting[0]
-            level = int(debug_setting[1])
-            TigGUI.kitties.utils.verbosity.set_verbosity_level(context, level)
+        if debug_list:
+            for item in debug_list:
+                debug_setting = item.split('=')
+                context = debug_setting[0]
+                level = int(debug_setting[1])
+                TigGUI.kitties.utils.verbosity.set_verbosity_level(context, level)
 
     if options.timestamps:
         try:
