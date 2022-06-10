@@ -374,7 +374,7 @@ class WeakInstanceMethod:
     DeadRef = object()
 
     def __init__(self, method):
-        if type(method) != types.MethodType:
+        if isinstance(method, types.MethodType):
             raise TypeError("weakinstancemethod must be constructed from an instancemethod")
         (self.__func__, self.__self__) = (method.__func__, weakref.ref(method.__self__))
 
