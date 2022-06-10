@@ -814,15 +814,70 @@ class MainWindow(QMainWindow):
         # This needs to itterate through the widgets to find DockWidgets already in the area,
         # then tabifydockwidget when adding, or add to the area if empty
         # Find all dockwidgets in the related area
-        _dockarea = []
-        widget_list = self.findChildren(QDockWidget)
-        for widget in widget_list:
-            if self.dockWidgetArea(widget) == _area:
-                if widget.isVisible() and not widget.isFloating():
-                    if _dockable is not widget:  # check not itself
-                        # Add dock widget to list
-                        _dockarea.append(widget)
+        _dockarea = self.get_active_dock_widgets(_area, _dockable)
         # From the dockwidgets found check which widgets are tabbed
+        tabbed_in_area = self.get_tabbed_dock_widgets(_dockarea)
+        dprint(2, f"tabbed dockables {tabbed_in_area}, dockables from area {_area}, {_dockarea}")
+        # If widgegts that are not tabbed, tab them and then add the new dockable
+        if not tabbed_in_area and _dockarea:
+            self.tabify_dock_widgets(_dockarea, _dockable, _area)
+        # If already tabbed just tabify
+        elif tabbed_in_area and not _dockarea:
+            self.tabifyDockWidget(tabbed_in_area[-1], _dockable)
+        # If a mixture of tabbed and untabbed - organise
+        elif tabbed_in_area and _dockarea:
+            self.diff_and_tabify_dock_widgets(tabbed_in_area, _dockarea, _dockable)
+        # If no other dockables found
+        elif not tabbed_in_area and not _dockarea and _area != 0:
+            self.addDockWidget(_area, _dockable)
+        # Resize dockables in this area
+        self.resize_docked_widgets(_area)
+
+    def diff_and_tabify_dock_widgets(self, tabbed_in_area, _dockarea, _dockable):
+        # If equal the all are tabbed
+        if tabbed_in_area == _dockarea:
+            self.tabifyDockWidget(tabbed_in_area[-1], _dockable)
+        else:
+            # Get all that are not tabbed
+            wdiff = set(_dockarea) - set(tabbed_in_area)
+            # Tabify if only one
+            if wdiff and len(wdiff) == 1:
+                self.tabifyDockWidget(list(wdiff)[-1], _dockable)
+            # If more then tabify all before adding dockable
+            elif wdiff and len(wdiff) > 1:
+                wdiff = list(wdiff)
+                base_widget = wdiff.pop()
+                for widget in wdiff:
+                    self.tabifyDockWidget(base_widget, widget)
+                    self.resizeDocks([base_widget, widget],
+                                     [base_widget.bind_widget.width(), widget.bind_widget.width()],
+                                     Qt.Horizontal)
+                # Add dockable after tabifying
+                self.tabifyDockWidget(base_widget, _dockable)
+
+    def tabify_dock_widgets(self, _dockarea, _dockable, _area):
+        # Tabify dockables before adding
+        if len(_dockarea) > 1:
+            base_widget = _dockarea.pop()
+            for widget in _dockarea:
+                self.tabifyDockWidget(base_widget, widget)
+                self.resizeDocks([base_widget, widget],
+                                 [base_widget.bind_widget.width(), widget.bind_widget.width()],
+                                 Qt.Horizontal)
+            # Add dockable after tabifying
+            self.tabifyDockWidget(base_widget, _dockable)
+        else:
+            if len(_dockarea) == 1 and _area == 2:
+                if (isinstance(_dockarea[-1].bind_widget, ImageControlDialog)
+                        or isinstance(_dockable.bind_widget, ImageControlDialog)):
+                    self.tabifyDockWidget(_dockarea[-1], _dockable)
+                else:
+                    self.addDockWidget(_area, _dockable)
+            else:
+                # No need to tabify as there is only 1 other dockable
+                self.addDockWidget(_area, _dockable)
+
+    def get_tabbed_dock_widgets(self, _dockarea):
         tabbed_in_area = []
         for widget in _dockarea:
             _w = self.tabifiedDockWidgets(widget)
@@ -830,59 +885,18 @@ class MainWindow(QMainWindow):
                 tabbed_in_area = tabbed_in_area + _w
         if tabbed_in_area:
             tabbed_in_area = list(dict.fromkeys(tabbed_in_area))
-        dprint(2, f"tabbed dockables {tabbed_in_area}, dockables from area {_area}, {_dockarea}")
-        # If widgegts that are not tabbed, tab them and then add the new dockable
-        if not tabbed_in_area and _dockarea:
-            # Tabify dockables before adding
-            if len(_dockarea) > 1:
-                base_widget = _dockarea.pop()
-                for widget in _dockarea:
-                    self.tabifyDockWidget(base_widget, widget)
-                    self.resizeDocks([base_widget, widget],
-                                     [base_widget.bind_widget.width(), widget.bind_widget.width()],
-                                     Qt.Horizontal)
-                # Add dockable after tabifying
-                self.tabifyDockWidget(base_widget, _dockable)
-            else:
-                if len(_dockarea) == 1 and _area == 2:
-                    if (isinstance(_dockarea[-1].bind_widget, ImageControlDialog)
-                            or isinstance(_dockable.bind_widget, ImageControlDialog)):
-                        self.tabifyDockWidget(_dockarea[-1], _dockable)
-                    else:
-                        self.addDockWidget(_area, _dockable)
-                else:
-                    # No need to tabify as there is only 1 other dockable
-                    self.addDockWidget(_area, _dockable)
-        # If already tabbed just tabify
-        elif tabbed_in_area and not _dockarea:
-            self.tabifyDockWidget(tabbed_in_area[-1], _dockable)
-        # If a mixture of tabbed and untabbed - organise
-        elif tabbed_in_area and _dockarea:
-            # If equal the all are tabbed
-            if tabbed_in_area == _dockarea:
-                self.tabifyDockWidget(tabbed_in_area[-1], _dockable)
-            else:
-                # Get all that are not tabbed
-                wdiff = set(_dockarea) - set(tabbed_in_area)
-                # Tabify if only one
-                if wdiff and len(wdiff) == 1:
-                    self.tabifyDockWidget(list(wdiff)[-1], _dockable)
-                # If more then tabify all before adding dockable
-                elif wdiff and len(wdiff) > 1:
-                    wdiff = list(wdiff)
-                    base_widget = wdiff.pop()
-                    for widget in wdiff:
-                        self.tabifyDockWidget(base_widget, widget)
-                        self.resizeDocks([base_widget, widget],
-                                         [base_widget.bind_widget.width(), widget.bind_widget.width()],
-                                         Qt.Horizontal)
-                    # Add dockable after tabifying
-                    self.tabifyDockWidget(base_widget, _dockable)
-        # If no other dockables found
-        elif not tabbed_in_area and not _dockarea and _area != 0:
-            self.addDockWidget(_area, _dockable)
-        # Resize dockables in this area
-        self.resize_docked_widgets(_area)
+        return tabbed_in_area
+
+    def get_active_dock_widgets(self, _area, _dockable):
+        active_dockables = []
+        widget_list = self.findChildren(QDockWidget)
+        for widget in widget_list:
+            if self.dockWidgetArea(widget) == _area:
+                if widget.isVisible() and not widget.isFloating():
+                    if _dockable is not widget:  # check not itself
+                        # Add dock widget to list
+                        active_dockables.append(widget)
+        return active_dockables
 
     def resize_docked_widgets(self, _area):
         """Resize dockables within a given dock widget area."""
