@@ -2,8 +2,14 @@
 Tigger Changelog
 ================
 
+1.6.1.2 
+=======
+
+* Updated the dependency version of tigger-lsm to 1.7.2
+
 1.6.1.1
 =====
+
 Minor bug fixes to window and docking config loading upon Tigger startup
 
 1.6.1
