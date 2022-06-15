@@ -22,6 +22,7 @@ echo "==== Log file: $log_file ===="
 echo "==== Error log: $error_file ===="
 printf "==== Tigger v1.6.2 - Ubuntu install script ====\n"
 
+
 # sudo runner by default
 sudo_runner="sudo"
 
