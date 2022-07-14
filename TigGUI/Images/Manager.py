@@ -29,7 +29,7 @@ from PyQt5.Qt import (QActionGroup, QApplication, QClipboard, QFileDialog,
                       QWidget)
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QDockWidget, QLabel, QPlainTextEdit
+from PyQt5.QtWidgets import QDockWidget, QLabel, QPlainTextEdit, QStyle
 
 from TigGUI.Images import FITS_ExtensionList
 from TigGUI.Images import SkyImage
@@ -202,6 +202,8 @@ class ImageManager(QWidget):
         QApplication.flush()
         try:
             image = SkyImage.FITSImagePlotItem(str(filename))
+            centre = QStyle.alignedRect(Qt.LeftToRight, Qt.AlignHCenter, self.mainwin.size(), QApplication.desktop().availableGeometry())
+            self.mainwin.setGeometry(centre)
         except KeyboardInterrupt:
             raise
         except Exception:
