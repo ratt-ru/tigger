@@ -275,7 +275,7 @@ class ImageManager(QWidget):
                         _data = image.data()
                         # BH: This is perhaps a bit dodgy -- it would be better to
                         # dynamically slice the spactial dimensions based on the header
-                        _data_chopped = _data[:,:].reshape(_data.shape[0], _data.shape[1])
+                        _data_chopped = _data[:, :].reshape(_data.shape[0], _data.shape[1])
                         # Get WCS for image and its dimensions.
                         wcs_c = image.orig_projection.wcs
                         wcs_ndim = wcs_c.pixel_n_dim
