@@ -6,7 +6,7 @@ Tigger Changelog
 =====
 
 * Version bump in preparation for release
-* Adds selected profile feature (ALT+LeftButton)
+* Adds selected profile feature (CTRL+ALT+LeftButton)
 * WCS projection is now optimised for multiple images
 * WCS projection provides 2 modes, switchable via the new WCS Projection menu
 * Adds FITS header and WCS projection viewer

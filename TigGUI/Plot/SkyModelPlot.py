@@ -1497,7 +1497,7 @@ class SkyModelPlotter(QWidget):
         self._tracker_click_profile = self.PlotPicker(self.plot.canvas(), "", mode=QwtPickerClickPointMachine(),
                                                       select_callback=self._selectCoordinatesProfile)
         # set profile click to use Alt key modifier to avoid conflicting with zoomer
-        self._tracker_click_profile.setMousePattern(QwtEventPattern.MouseSelect1, Qt.LeftButton, Qt.AltModifier)
+        self._tracker_click_profile.setMousePattern(QwtEventPattern.MouseSelect1, Qt.LeftButton, Qt.AltModifier | Qt.ControlModifier)
         self._tracker_profile = self.PlotPicker(self.plot.canvas(), "", mode=QwtPickerTrackerMachine(),
                                                 track_callback=self._trackCoordinatesProfile)
         # zoom picker
@@ -1562,7 +1562,7 @@ class SkyModelPlotter(QWidget):
         if self._qa_mwzoom.isChecked():
             tooltip += """<P>You also have mouse-wheel zoom enabled. Rolling the wheel up will zoom in at the current zoom point.
       Rolling the wheel down will zoom back out.</P>"""
-        tooltip += """<P>With the 'Show selected profiles' option, you can select spectra using ALT+LeftButton.
+        tooltip += """<P>With the 'Show selected profiles' option, you can select spectra using CNTL+ALT+LeftButton.
         Selected spectra will be marked with a star.</P>"""
         QMessageBox.information(self, "Quick mouse reference", tooltip)
 
