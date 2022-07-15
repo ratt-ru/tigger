@@ -259,7 +259,7 @@ class ImageManager(QWidget):
             # Check reproject package is available.
             try:
                 from reproject.mosaicking import find_optimal_celestial_wcs
-            except Exception:
+            except Exception as e:
                 self.signalShowErrorMessage.emit("Error reproject package not found. "
                                                  "WCS optimisation for WCS projection will not take place")
                 rtn_val = False
@@ -273,8 +273,9 @@ class ImageManager(QWidget):
                     if numpy.ndim(image.data()) > 1:
                         # Get the data shape of the first two NAXIS.
                         _data = image.data()
-                        _data_nx = _data.shape[0]
-                        _data_ny = _data.shape[1]
+                        # BH: This is perhaps a bit dodgy -- it would be better to
+                        # dynamically slice the spactial dimensions based on the header
+                        _data_chopped = _data[:,:].reshape(_data.shape[0], _data.shape[1])
                         # Get WCS for image and its dimensions.
                         wcs_c = image.orig_projection.wcs
                         wcs_ndim = wcs_c.pixel_n_dim
@@ -286,7 +287,7 @@ class ImageManager(QWidget):
                         # processing by `find_optimal_celestial_wcs`.
                         if wcs_ndim == 2:
                             wcs_c.fix()
-                            wcs_info.append(((_data_nx, _data_ny), wcs_c))
+                            wcs_info.append((_data_chopped, wcs_c))
 
                 if wcs_info:
                     # Assume reference coord is from the first image loaded.
@@ -311,6 +312,7 @@ class ImageManager(QWidget):
                         # N.B. its source code has a comment that, it does
                         # not currently take into account NaN values for
                         # determining the extent of the final WCS.
+
                         combined_wcs, total_shape = find_optimal_celestial_wcs(
                             wcs_info,
                             frame='icrs',
