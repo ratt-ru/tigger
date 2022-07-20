@@ -29,7 +29,8 @@ from PyQt5.Qt import (QAction, QActionGroup, QApplication, QBrush, QCheckBox,
                       QEvent, QFileDialog, QHBoxLayout, QImage, QInputDialog,
                       QLabel, QMenu, QMessageBox, QPainter, QPen, QPixmap,
                       QPoint, QPointF, QRectF, QSize, QSizePolicy, QTimer,
-                      QToolBar, QToolButton, QTransform, QVBoxLayout, QWidget)
+                      QToolBar, QToolButton, QTransform, QVBoxLayout, QWidget, QPushButton,
+                      QGridLayout)
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QDockWidget, QLayout
@@ -604,64 +605,101 @@ class LiveProfile(ToolDialog):
     def __init__(self, parent, mainwin, configname="liveprofile", menuname="profiles", show_shortcut=Qt.Key_F3):
         ToolDialog.__init__(self, parent, mainwin, configname=configname, menuname=menuname, show_shortcut=show_shortcut)
         self.setWindowTitle("Profiles")
-        # create size policy for live profile
-        liveprofile_policy = QSizePolicy()
-        liveprofile_policy.setHorizontalPolicy(QSizePolicy.MinimumExpanding)
-        liveprofile_policy.setVerticalPolicy(QSizePolicy.Fixed)
-        self.setSizePolicy(liveprofile_policy)
-        # add plots
-        lo0 = QVBoxLayout(self)
-        lo0.setSpacing(0)
-        lo1 = QHBoxLayout()
+        self._profplot = None
+        self._setupLayout()
+        self._axes = []
+        self._lastsel = None
+        self._image_id = None
+        self._image_hnd = None
+        self._last_x = None
+        self._last_y = None
+        self._parent_picker = None
+    
+    def _setupAxisSelectorLayout(self, lo1):
         lo1.setContentsMargins(0, 0, 0, 0)
-        lo0.addLayout(lo1)
         lab = QLabel("Axis: ", self)
         self._wprofile_axis = QComboBox(self)
         self._wprofile_axis.activated[int].connect(self.selectAxis)
         lo1.addWidget(lab, 0)
         lo1.addWidget(self._wprofile_axis, 0)
         lo1.addStretch(1)
-        # add profile plot
+                
+    def _setupPlot(self):
+        lo0 = self._lo0
+        liveprofile_policy = self._liveprofile_policy
         self._font = font = QApplication.font()
-        self._profplot = QwtPlot(self)
-        self._profplot.setContentsMargins(0, 0, 0, 0)
-        self._profplot.enableAxis(QwtPlot.xBottom)
-        self._profplot.enableAxis(QwtPlot.yLeft)
-        self._profplot.setAxisFont(QwtPlot.xBottom, font)
-        self._profplot.setAxisFont(QwtPlot.yLeft, font)
-        #    self._profplot.setAxisMaxMajor(QwtPlot.xBottom,3)
-        self._profplot.setAxisAutoScale(QwtPlot.yLeft)
-        self._profplot.setAxisMaxMajor(QwtPlot.yLeft, 3)
-        self._profplot.axisWidget(QwtPlot.yLeft).setMinBorderDist(16, 16)
-        self._profplot.setAxisLabelRotation(QwtPlot.yLeft, -90)
-        self._profplot.setAxisLabelAlignment(QwtPlot.yLeft, Qt.AlignVCenter)
-        self._profplot.plotLayout().setAlignCanvasToScales(True)
-        lo0.addWidget(self._profplot, 0)
-        self._profplot.setMaximumHeight(256)
-        self._profplot.setMinimumHeight(56)
-        # self._profplot.setMinimumWidth(256)
-        # self._profplot.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
-        self._profplot.setSizePolicy(liveprofile_policy)
-        # and profile curve
-        self._profcurve = TiggerPlotCurve()
-        self._profcurve.setRenderHint(QwtPlotItem.RenderAntialiased)
-        self._ycs = TiggerPlotCurve()
-        self._ycs.setRenderHint(QwtPlotItem.RenderAntialiased)
-        self._profcurve.setPen(QPen(QColor("white")))
-        self._profcurve.setStyle(QwtPlotCurve.Lines)
-        self._profcurve.setOrientation(Qt.Horizontal)
-        self._profcurve.attach(self._profplot)
+
+        # detach and release plots if already initialized
+        if self._profplot is not None:
+            self._profcurve.setData([0, 0], [0, 0])
+            self._profcurve.setVisible(True)
+            self._profplot.replot()
+            self._profplot.setMaximumHeight(256)
+            self._profplot.setMinimumHeight(256)
+        else:    
+            self._profplot = QwtPlot(self)
+            self._profplot.setContentsMargins(0, 0, 0, 0)
+            self._profplot.enableAxis(QwtPlot.xBottom)
+            self._profplot.enableAxis(QwtPlot.yLeft)
+            self._profplot.setAxisFont(QwtPlot.xBottom, font)
+            self._profplot.setAxisFont(QwtPlot.yLeft, font)
+            #    self._profplot.setAxisMaxMajor(QwtPlot.xBottom,3)
+            self._profplot.setAxisAutoScale(QwtPlot.yLeft)
+            self._profplot.setAxisMaxMajor(QwtPlot.yLeft, 3)
+            self._profplot.axisWidget(QwtPlot.yLeft).setMinBorderDist(16, 16)
+            self._profplot.setAxisLabelRotation(QwtPlot.yLeft, -90)
+            self._profplot.setAxisLabelAlignment(QwtPlot.yLeft, Qt.AlignVCenter)
+            self._profplot.plotLayout().setAlignCanvasToScales(True)
+            self._profplot.setMaximumHeight(256)
+            self._profplot.setMinimumHeight(56)
+            # self._profplot.setMinimumWidth(256)
+            # self._profplot.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+            self._profplot.setSizePolicy(liveprofile_policy)
+            lo0.addWidget(self._profplot, 0)
+            # and new profile curve
+            self._profcurve = TiggerPlotCurve()
+            self._profcurve.setRenderHint(QwtPlotItem.RenderAntialiased)
+            self._ycs = TiggerPlotCurve()
+            self._ycs.setRenderHint(QwtPlotItem.RenderAntialiased)
+            self._profcurve.setPen(QPen(QColor("white")))
+            self._profcurve.setStyle(QwtPlotCurve.Lines)
+            self._profcurve.setOrientation(Qt.Horizontal)
+            self._profcurve.attach(self._profplot)
+        # self.mainwin.resizeDocks([self.mainwin.skyplot._dockable_liveprofile_selected], [300], Qt.Horizontal)
+        # self.mainwin.resizeDocks([self.mainwin.skyplot._dockable_liveprofile_selected], [192], Qt.Vertical)
+        
+
+    def _setupLayout(self):
+        # create size policy for live profile
+        liveprofile_policy = QSizePolicy()
+        liveprofile_policy.setHorizontalPolicy(QSizePolicy.MinimumExpanding)
+        liveprofile_policy.setVerticalPolicy(QSizePolicy.Fixed)
+        self._liveprofile_policy = liveprofile_policy
+        self.setSizePolicy(liveprofile_policy)
+        # add plots
+        lo0 = QVBoxLayout(self)
+        lo0.setSpacing(0)
+        self._lo0 = lo0
+        
+        lo1 = QHBoxLayout()
+        lo1.setContentsMargins(0, 0, 0, 0)
+        lo0.addLayout(lo1)
+        self._setupAxisSelectorLayout(lo1)
+        # add profile plot
+        self._setupPlot()
         # config geometry
         if not self.initGeometry():
+            print("Fail")
             self.resize(300, 192)
-        self._axes = []
-        self._lastsel = None
-        self._image_id = None
 
-    def setImage(self, image):
-        if id(image) == self._image_id:
+    def setImage(self, image, force_repopulate=False):
+        if image is None:
+            return
+        if id(image) == self._image_id and not force_repopulate:
             return
         self._image_id = id(image)
+        self._image_hnd = image
+
         # build list of axes -- first X and Y
         self._axes = []
         for n, label in enumerate(("X", "Y")):
@@ -689,6 +727,8 @@ class LiveProfile(ToolDialog):
         self.selectAxis(axis, remember=False)
 
     def selectAxis(self, i, remember=True):
+        if i is None:
+            return
         if i < len(self._axes):
             name, iaxis, values, unit = self._axes[i]
             self._selaxis = iaxis, values
@@ -703,6 +743,9 @@ class LiveProfile(ToolDialog):
     def trackImage(self, image, ix, iy):
         if not self.isVisible():
             return
+        if ix is None or iy is None:
+            return
+
         nx, ny = image.imageDims()
         inrange = ix < nx and ix >= 0 and iy < ny and iy >= 0
         if inrange:
@@ -734,7 +777,102 @@ class LiveProfile(ToolDialog):
         self._profcurve.setVisible(inrange)
         # update plots
         self._profplot.replot()
+        # store profile last update coordinates
+        self._last_x = ix
+        self._last_y = iy
 
+class SelectedProfile(LiveProfile):
+    """ 'Freezed' profile showing profile for axis at selected cube pierce point """
+    def __init__(self, parent, mainwin, configname="liveprofile", menuname="profiles", show_shortcut=Qt.Key_F4, picker_parent=None):
+        LiveProfile.__init__(self, parent, mainwin, configname, menuname, show_shortcut)
+        self.profiles_info = {}
+        self._numprofiles = 0
+        self._currentprofile = 0
+        self.addProfile()
+        self._parent_picker = picker_parent
+    
+    def _setupAxisSelectorLayout(self, lo1):
+        
+        lo2 = QGridLayout()
+        lab = QLabel("Selected profile: ")
+        lo2.addWidget(lab, 0, 0, 1, 1)
+        self._static_profile_select = QComboBox(self)
+        lo2.addWidget(self._static_profile_select, 0, 1, 1, 1)
+
+        self._static_profile_select.activated[int].connect(self.selectProfile)
+        self._add_profile_btn = QPushButton("+")
+        lo2.addWidget(self._add_profile_btn, 0, 2, 1, 1)
+        self._add_profile_btn.clicked.connect(self.addProfile)
+        
+        lo3 = QHBoxLayout()
+        lo3.setContentsMargins(0, 0, 0, 0)
+        lab = QLabel("Axis: ", self)
+        self._wprofile_axis = QComboBox(self)
+        self._wprofile_axis.activated[int].connect(self.selectAxis)
+        lo3.addWidget(lab, 0)
+        lo3.addWidget(self._wprofile_axis, 0)
+        
+        lo2.addLayout(lo3, 0, 3, 1, 2, alignment=Qt.AlignRight)
+
+        lo1.setContentsMargins(0, 0, 0, 0)
+        lo1.addLayout(lo2)
+        
+    def selectProfile(self, i):
+        """ event handler for switching profiles """
+        self._storeSelectedProfileInfos()
+        # pick new state from the stack and restore
+        self._currentprofile = i
+        self._restoreSelectedProfileInfos()
+        self._wprofile_axis.clear()
+        # switch to corresponding image and set the axis
+        self.setImage(self._image_hnd, force_repopulate=True)
+        if self._lastsel is not None:
+            names = [name for name, iaxis, vals, unit in self._axes]
+            axisno = names.index(self._lastsel)
+            # select axis, which in turn redraws the plot
+            self.selectAxis(axisno)
+            self._wprofile_axis.setCurrentIndex(axisno)
+        # update marker on the SkyPlot
+        if self._parent_picker is not None:
+            self._parent_picker.setSelectedProfileIndex(i)
+
+    def _profileInfosKeys(self):
+        return ["_lastsel", "_image_id", "_image_hnd", 
+                "_last_x", "_last_y"]
+
+    def _restoreSelectedProfileInfos(self):
+        """ restores the profile infos for the currently selected profile """
+        profiles_info_keys = self._profileInfosKeys()
+        for k in profiles_info_keys:
+            setattr(self, k, self.profiles_info[self._currentprofile].get(k))
+
+    def _storeSelectedProfileInfos(self):
+        """ store the profile infos for selected profile switching """
+        profiles_info_keys = self._profileInfosKeys()
+        self.profiles_info[self._currentprofile] = dict(zip(profiles_info_keys,
+                                                            map(lambda k: getattr(self, k, None), 
+                                                                profiles_info_keys)))
+
+    def addProfile(self):
+        """ event handler for adding new selected profiles """
+        self._numprofiles += 1
+        self._static_profile_select.addItems([f"Profile {self._numprofiles}"])
+        profiles_info_keys = self._profileInfosKeys()
+        self.profiles_info[self._numprofiles-1] = dict(zip(profiles_info_keys,
+                                                           [None] * len(profiles_info_keys)))
+        
+        # refresh profile for blank profile
+        self._setupPlot()
+        # switch to newly created profile
+        self.selectProfile(self._numprofiles-1)
+        self._static_profile_select.setCurrentIndex(self._numprofiles-1)
+        self._wprofile_axis.clear()
+        # reinitialize axes
+        self.setImage(self._image_hnd, force_repopulate=False)
+
+    def selectAxis(self, i, remember=True):
+        LiveProfile.selectAxis(self, i, remember=True)
+        self.trackImage(self._image_hnd, self._last_x, self._last_y)        
 
 class SkyModelPlotter(QWidget):
     # Selection modes for the various selector functions below.
@@ -1165,12 +1303,13 @@ class SkyModelPlotter(QWidget):
         self._livezoom = LiveImageZoom(self, self._mainwin)
         self._livezoom.setObjectName('livezoom')
         self._liveprofile = LiveProfile(self, self._mainwin)
-        self._liveprofile_selected = LiveProfile(
+        self._liveprofile_selected = SelectedProfile(
             self,
             self._mainwin,
             configname="liveprofileselected",
             menuname="selected profiles",
-            show_shortcut=Qt.Key_F4)
+            show_shortcut=Qt.Key_F4,
+            picker_parent=self)
         self._liveprofile.setObjectName('liveprofile')
         self._liveprofile_selected.setObjectName('liveprofileselected')
         # get current sizeHints()
@@ -1306,6 +1445,21 @@ class SkyModelPlotter(QWidget):
         self.plotShowMessage = None
         self.plotShowErrorMessage = None
         self._selected_profile_markup = None
+        # stack of positions - one per selected ("static frame") profile
+        self._selected_profile_markup_positions = {0: None}
+        self._selected_profile_index = 0
+
+    def setSelectedProfileIndex(self, index=0):
+        self._selected_profile_index = index
+        if self._selected_profile_markup is not None:
+            if self._selected_profile_markup_positions.get(index, None) is not None:
+                l, m = self._selected_profile_markup_positions[index]
+                self._selected_profile_markup.setValue(l, m)
+                self._selected_profile_markup.attach(self.plot)
+                self._replot()
+            else: # currently active marker, but profile yet to get a position, so detach
+                self._selected_profile_markup.detach()
+                self._replot()
 
     def close(self):
         self._menu.clear()
@@ -1341,6 +1495,8 @@ class SkyModelPlotter(QWidget):
                 if self._selected_profile_markup:
                     self._removePlotMarkupItem(self._selected_profile_markup)
                     self._selected_profile_markup = None
+                    self._selected_profile_markup_positions = {0: None}
+                    self._selected_profile_index = 0
                 self._dockable_closed(self._dockable_liveprofile_selected)
                 ea_action.setChecked(False)
         Config.set('liveprofileselected-show', False)
@@ -1906,6 +2062,10 @@ class SkyModelPlotter(QWidget):
         self._plot_markup = items
         self._replot()
 
+    def removeSelectedProfileMarkup(self):
+        self._removePlotMarkupItem(self._selected_profile_markup,
+                                   replot=True)
+
     def _removePlotMarkup(self, replot=True):
         """Removes all markup items, and refreshes the plot if replot=True"""
         for item in self._plot_markup:
@@ -1975,6 +2135,7 @@ class SkyModelPlotter(QWidget):
                 self._selected_profile_markup = TiggerPlotMarker()
                 self._selected_profile_markup.setRenderHint(QwtPlotItem.RenderAntialiased)
                 self._selected_profile_markup.setValue(l, m)
+                self._selected_profile_markup_positions[self._selected_profile_index] = (l, m)
                 self._selected_profile_markup.setSymbol(self._markup_starsymbol)
                 markup_items = [self._selected_profile_markup]
                 # same deal for markup items
