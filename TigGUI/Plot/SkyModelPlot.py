@@ -787,6 +787,7 @@ class SelectedProfile(LiveProfile):
         self._numprofiles = 0
         self._currentprofile = 0
         self._parent_picker = None
+        self._current_profile_name = None
         LiveProfile.__init__(self, parent, mainwin, configname, menuname, show_shortcut)
         self.addProfile()
         self._parent_picker = picker_parent
@@ -795,7 +796,13 @@ class SelectedProfile(LiveProfile):
         
         lo2 = QGridLayout()
         self._menu = QMenu("Selected Profile", self)
+        def __inputNewName():
+            text, ok = QInputDialog.getText(self, "Set profile name", "<P>Enter new name for profile:</P>", 
+                                 text=self._current_profile_name)
+            if text:
+                self.setProfileName(text)
         self._menu.addAction("Clear profile", self.clearProfile)
+        self._menu.addAction("Set profile name", __inputNewName)
         self._profile_ctrl_btn = QToolButton()
         self._profile_ctrl_btn.setMenu(self._menu)
         self._profile_ctrl_btn.setToolTip("<P> Click to show options for this profile </P>")
@@ -848,7 +855,8 @@ class SelectedProfile(LiveProfile):
 
     def _profileInfosKeys(self):
         return ["_lastsel", "_image_id", "_image_hnd", 
-                "_last_x", "_last_y"]
+                "_last_x", "_last_y",
+                "_current_profile_name"]
 
     def _restoreSelectedProfileInfos(self):
         """ restores the profile infos for the currently selected profile """
@@ -872,10 +880,14 @@ class SelectedProfile(LiveProfile):
             self._parent_picker.removeSelectedProfileMarkings(self._currentprofile,
                                                               purge_history=True)
 
+    def setProfileName(self, name):
+        self._current_profile_name = name
+        self._static_profile_select.setItemText(self._currentprofile, name)
+
     def addProfile(self):
         """ event handler for adding new selected profiles """
         self._numprofiles += 1
-        self._static_profile_select.addItems([f"Profile {self._numprofiles}"])
+        self._static_profile_select.addItems(["tmp"])
         profiles_info_keys = self._profileInfosKeys()
         self.profiles_info[self._numprofiles-1] = dict(zip(profiles_info_keys,
                                                            [None] * len(profiles_info_keys)))
@@ -888,6 +900,8 @@ class SelectedProfile(LiveProfile):
         self.clearProfile()
         # reinitialize axes
         self.setImage(self._image_hnd, force_repopulate=False)
+
+        self.setProfileName(f"Profile {self._numprofiles}")
 
     def selectAxis(self, i, remember=True):
         LiveProfile.selectAxis(self, i, remember=True)
