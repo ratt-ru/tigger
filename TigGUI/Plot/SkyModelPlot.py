@@ -959,6 +959,7 @@ class SelectedProfile(LiveProfile):
             try:
                 with open(filename, "w+") as fprof:
                     fprof.write("# Tigger profile format v1.0\n")
+                    fprof.write(f"Profile name:\n{self._current_profile_name}\n")
                     fprof.write(f"Axis:\n{axisname}\n")
                     fprof.write(f"Units:\n{axisunit}\n")
                     fprof.write(f"X-data:\n{xdatastr}\n")
