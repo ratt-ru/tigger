@@ -1963,7 +1963,7 @@ class SkyModelPlotter(QWidget):
                             f"r={Rd}{_deg}{Rm:02}'{Rs:05.2f}\" ({dist * 180 / math.pi:.6f}{_deg}) "
                             f"PA={PAd:06.2f}{_deg}")
             if x is not None:
-                tiptext += f" &nbsp; x={x} y={y} value=blank" % (x, y) if flag else f" &nbsp; x={x} y={y} value={val:.6g}"
+                tiptext += f" &nbsp; x={x} y={y} value=blank" if flag else f" &nbsp; x={x} y={y} value={val:.6g}"
                 msgtext += f"   x={x} y={y} value=blank" if flag else f"   x={x} y={y} value={val:.6g}"
             tiptext += "</NOBR><BR><NOBR>"
             if _projection.has_projection():
@@ -1975,7 +1975,7 @@ class SkyModelPlotter(QWidget):
                             f"r={Rd1}{_deg}{Rm1:02}'{Rs1:05.2f}\" ({dist1 * 180 / math.pi:.6f}{_deg}) "
                             f"PA={PAd1:06.2f}{_deg}")
             if x1 is not None:
-                tiptext += f" &nbsp; x={x1} y={y1} value=blank" % (x, y) if flag else f" &nbsp; x={x1} y={y1} value={val1:.6g}"
+                tiptext += f" &nbsp; x={x1} y={y1} value=blank" if flag else f" &nbsp; x={x1} y={y1} value={val1:.6g}"
                 msgtext += f"   x={x1} y={y1} value=blank" if flag else f"   x={x1} y={y1} value={val1:.6g}"
             tiptext += "</NOBR><BR>"
             # distance measurement
