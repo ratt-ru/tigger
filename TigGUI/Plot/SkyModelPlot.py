@@ -794,14 +794,24 @@ class SelectedProfile(LiveProfile):
     def _setupAxisSelectorLayout(self, lo1):
         
         lo2 = QGridLayout()
+        self._menu = QMenu("Selected Profile", self)
+        self._menu.addAction("Clear profile", self.clearProfile)
+        self._profile_ctrl_btn = QToolButton()
+        self._profile_ctrl_btn.setMenu(self._menu)
+        self._profile_ctrl_btn.setToolTip("<P> Click to show options for this profile </P>")
+        self._profile_ctrl_btn.setIcon(pixmaps.raise_up.icon())
+        lo2.addWidget(self._profile_ctrl_btn, 0, 0, 1, 1)
+
         lab = QLabel("Selected profile: ")
-        lo2.addWidget(lab, 0, 0, 1, 1)
+        lo2.addWidget(lab, 0, 1, 1, 1)
         self._static_profile_select = QComboBox(self)
-        lo2.addWidget(self._static_profile_select, 0, 1, 1, 1)
+        lo2.addWidget(self._static_profile_select, 0, 2, 1, 1)
 
         self._static_profile_select.activated[int].connect(self.selectProfile)
-        self._add_profile_btn = QPushButton("+")
-        lo2.addWidget(self._add_profile_btn, 0, 2, 1, 1)
+        self._add_profile_btn = QToolButton()
+        self._add_profile_btn.setIcon(pixmaps.big_plus.icon())
+        self._add_profile_btn.setToolTip("<P> Click to add another freezed profile </P>")
+        lo2.addWidget(self._add_profile_btn, 0, 3, 1, 1)
         self._add_profile_btn.clicked.connect(self.addProfile)
         
         lo3 = QHBoxLayout()
@@ -812,7 +822,7 @@ class SelectedProfile(LiveProfile):
         lo3.addWidget(lab, 0)
         lo3.addWidget(self._wprofile_axis, 0)
         
-        lo2.addLayout(lo3, 0, 3, 1, 2, alignment=Qt.AlignRight)
+        lo2.addLayout(lo3, 0, 4, 1, 2, alignment=Qt.AlignRight)
 
         lo1.setContentsMargins(0, 0, 0, 0)
         lo1.addLayout(lo2)
@@ -853,6 +863,15 @@ class SelectedProfile(LiveProfile):
                                                             map(lambda k: getattr(self, k, None), 
                                                                 profiles_info_keys)))
 
+    def clearProfile(self):
+        self._last_x = None
+        self._last_y = None
+
+        self._setupPlot()
+        if self._parent_picker is not None:
+            self._parent_picker.removeSelectedProfileMarkings(self._currentprofile,
+                                                              purge_history=True)
+
     def addProfile(self):
         """ event handler for adding new selected profiles """
         self._numprofiles += 1
@@ -861,18 +880,21 @@ class SelectedProfile(LiveProfile):
         self.profiles_info[self._numprofiles-1] = dict(zip(profiles_info_keys,
                                                            [None] * len(profiles_info_keys)))
         
-        # refresh profile for blank profile
-        self._setupPlot()
         # switch to newly created profile
         self.selectProfile(self._numprofiles-1)
         self._static_profile_select.setCurrentIndex(self._numprofiles-1)
         self._wprofile_axis.clear()
+        # refresh profile for blank profile
+        self.clearProfile()
         # reinitialize axes
         self.setImage(self._image_hnd, force_repopulate=False)
 
     def selectAxis(self, i, remember=True):
         LiveProfile.selectAxis(self, i, remember=True)
-        self.trackImage(self._image_hnd, self._last_x, self._last_y)  
+        self.trackImage(self._image_hnd, self._last_x, self._last_y) 
+        # clear profile if no coordinate is set
+        if self._last_y is None or self._last_x is None:
+            self.clearProfile()
 
     def setVisible(self, visible, emit=True):
         LiveProfile.setVisible(self, visible, emit=emit)
@@ -1489,8 +1511,18 @@ class SkyModelPlotter(QWidget):
     def removeAllSelectedProfileMarkings(self):
         """ Remove all selected profile markings """
         for k in self._selected_profile_markup:
-            marker = self._selected_profile_markup[k]['marker']
-            self._removePlotMarkupItem(marker)
+            self.removeSelectedProfileMarkings(k)
+    
+    def removeSelectedProfileMarkings(self, index, purge_history=False):
+        """ Remove selected profile marking 
+            purge_history: remove position and marking from history
+        """
+        if index in self._selected_profile_markup:
+            marker = self._selected_profile_markup[index]['marker']
+            if marker is not None:
+                self._removePlotMarkupItem(marker)
+            if purge_history:
+                del self._selected_profile_markup[index]
 
     def close(self):
         self._menu.clear()
@@ -2088,7 +2120,8 @@ class SkyModelPlotter(QWidget):
         """Adds a list of QwtPlotItems to the markup"""
         self._removePlotMarkup(replot=False)
         for item in items:
-            item.attach(self.plot)
+            if item is not None:
+                item.attach(self.plot)
         self._plot_markup = items
         self._replot()
 
@@ -2173,7 +2206,8 @@ class SkyModelPlotter(QWidget):
                 markup_items = [self._selected_profile_markup[k]["marker"]
                                  for k in self._selected_profile_markup]
                 for item in markup_items:
-                    item.setZ(Z_Markup)
+                    if item is not None:
+                        item.setZ(Z_Markup)
                 QTimer.singleShot(10, self._currier.curry(self._addPlotMarkup, markup_items))
 
     def _trackCoordinatesProfile(self, pos):
