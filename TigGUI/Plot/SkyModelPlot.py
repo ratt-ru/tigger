@@ -689,7 +689,6 @@ class LiveProfile(ToolDialog):
         self._setupPlot()
         # config geometry
         if not self.initGeometry():
-            print("Fail")
             self.resize(300, 192)
 
     def setImage(self, image, force_repopulate=False):
@@ -787,9 +786,10 @@ class SelectedProfile(LiveProfile):
         self.profiles_info = {}
         self._numprofiles = 0
         self._currentprofile = 0
-        self._parent_picker = picker_parent
+        self._parent_picker = None
         LiveProfile.__init__(self, parent, mainwin, configname, menuname, show_shortcut)
         self.addProfile()
+        self._parent_picker = picker_parent
 
     def _setupAxisSelectorLayout(self, lo1):
         
@@ -2089,7 +2089,7 @@ class SkyModelPlotter(QWidget):
         self._removePlotMarkup(replot=False)
         for item in items:
             item.attach(self.plot)
-        self._plot_markup += items
+        self._plot_markup = items
         self._replot()
 
     def _removePlotMarkup(self, replot=True):
