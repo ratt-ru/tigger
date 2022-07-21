@@ -616,6 +616,7 @@ class LiveProfile(ToolDialog):
         self._parent_picker = None
         self._last_data_x = None
         self._last_data_y = None
+        self._selaxis = None
     
     def _setupAxisSelectorLayout(self, lo1):
         lo1.setContentsMargins(0, 0, 0, 0)
@@ -807,19 +808,7 @@ class SelectedProfile(LiveProfile):
                 self.setProfileName(text)
         self._menu.addAction("Clear profile", self.clearProfile)
         self._menu.addAction("Set profile name", __inputNewName)
-        def __saveProfileTxt():
-            if not self._export_profile_dialog:
-                dialog = self._export_profile_dialog = QFileDialog(self, 
-                                                                   "Export profile data", ".", "*.txt")
-                dialog.setDefaultSuffix("txt")
-                dialog.setFileMode(QFileDialog.AnyFile)
-                dialog.setAcceptMode(QFileDialog.AcceptSave)
-                dialog.setNameFilter("Text files (*.txt)")
-                dialog.setModal(True)
-                dialog.filesSelected.connect(self.saveProfile)
-            return self._export_profile_dialog.exec_() == QDialog.Accepted
-
-        self._menu.addAction("Save profile as", __saveProfileTxt)
+        self._menu.addAction("Save profile as", self.saveProfile)
         self._profile_ctrl_btn = QToolButton()
         self._profile_ctrl_btn.setMenu(self._menu)
         self._profile_ctrl_btn.setToolTip("<P> Click to show options for this profile </P>")
@@ -938,16 +927,27 @@ class SelectedProfile(LiveProfile):
                 self._parent_picker.removeAllSelectedProfileMarkings()
 
     def saveProfile(self, filename=None):
-        if filename is None:
-            return 
         if self._selaxis and self._selaxis[0] < len(self._axes) and \
            self._last_x is not None and \
            self._last_y is not None and \
            self._last_data_x is not None and \
            self._last_data_y is not None:
+            if filename is None:
+                if not self._export_profile_dialog:
+                    dialog = self._export_profile_dialog = QFileDialog(self, 
+                                                                    "Export profile data", ".", "*.txt")
+                    dialog.setDefaultSuffix("txt")
+                    dialog.setFileMode(QFileDialog.AnyFile)
+                    dialog.setAcceptMode(QFileDialog.AcceptSave)
+                    dialog.setNameFilter("Text files (*.txt)")
+                    dialog.setModal(True)
+                    dialog.filesSelected.connect(self.saveProfile)
+                return self._export_profile_dialog.exec_() == QDialog.Accepted
+
             axisname, axisindx, axisvals, axisunit = self._axes[self._selaxis[0]]
             xdatastr = ",".join(map(str, self._last_data_x))
             ydatastr = ",".join(map(str,self._last_data_y))
+
             if isinstance(filename, QStringList):
                 filename = filename[0]
             if os.path.exists(filename):
@@ -963,14 +963,15 @@ class SelectedProfile(LiveProfile):
                     fprof.write(f"Units:\n{axisunit}\n")
                     fprof.write(f"X-data:\n{xdatastr}\n")
                     fprof.write(f"Y-data:\n{ydatastr}\n")
+                print(f"Saved current selected profile as {filename}")
             except IOError:
-                QMessageBox.error(self,
+                QMessageBox.critical(self,
                                   "Could not store profile to disk",
                                   "<P> An IO error occurred while trying to write out profile. "
                                   "Check that the location is writable and you have sufficient space </P>")
 
         else: # no axes selected yet
-            QMessageBox.error(self,
+            QMessageBox.critical(self,
                               "Nothing to save",
                               "<P> Profile is empty. Capture profile using CTRL+ALT+LeftClick "
                               "somewhere on the image first!</P>")
