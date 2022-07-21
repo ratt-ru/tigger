@@ -509,13 +509,14 @@ class SkyCubePlotItem(SkyImagePlotItem):
         values is an array of axis values, and units are the units in which values are expressed.
         """
         units = units or ""
-        scale, prefix = getScalePrefix(values)
+        finitevalues = (numpy.array(values)[numpy.isfinite(values)]).ravel()
+        scale, prefix = getScalePrefix(finitevalues)
         units = prefix + units
         # estimate number of significant digits
-        valarr = numpy.array(values) / scale
+        valarr = numpy.array(finitevalues) / scale
         try:
-            ndigits = int(math.ceil(math.log10(max(abs(valarr)) / abs((valarr[1:] - valarr[0:-1])).min())))
-            nexp = int(abs(numpy.log10(abs(valarr))).max())
+            ndigits = int(math.ceil(math.log10(max(abs(valarr)) / abs((valarr[1:] - valarr[0:-1])+1e-8).min())))
+            nexp = int(abs(numpy.log10(abs(valarr)+1e-8)).max())
             #     print ndigits,nexp
             if nexp > 4:
                 format = ".%de" % ndigits
@@ -524,7 +525,7 @@ class SkyCubePlotItem(SkyImagePlotItem):
         except Exception:
             format = ".2g"
         if labels is None:
-            labels = [("%d: %" + format + " %s") % (i, val / scale, units) for i, val in enumerate(values)]
+            labels = [("%d: %" + format + " %s") % (i, val / scale, units) for i, val in enumerate(finitevalues)]
         self._extra_axes.append((iaxis, name, labels, values, units, scale))
 
     def numExtraAxes(self):
