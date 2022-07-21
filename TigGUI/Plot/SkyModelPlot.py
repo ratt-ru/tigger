@@ -54,7 +54,7 @@ from Tigger.Coordinates import Projection
 from Tigger.Models import ModelClasses
 from Tigger.Models.SkyModel import SkyModel
 
-from TigGUI.kitties.profiles import TiggerProfile
+from TigGUI.kitties.profiles import TiggerProfile, TiggerProfileFactory
 
 import numpy
 import os
@@ -794,13 +794,13 @@ class SelectedProfile(LiveProfile):
         self._parent_picker = None
         self._current_profile_name = None
         self._export_profile_dialog = None
+        self._load_profile_dialog = None
         LiveProfile.__init__(self, parent, mainwin, configname, menuname, show_shortcut)
         self.addProfile()
         self._parent_picker = picker_parent
         
-
     def _setupAxisSelectorLayout(self, lo1):
-        
+        """ Adds controls for freeze pane profile dialog """
         lo2 = QGridLayout()
         self._menu = QMenu("Selected Profile", self)
         def __inputNewName():
@@ -810,6 +810,7 @@ class SelectedProfile(LiveProfile):
                 self.setProfileName(text)
         self._menu.addAction("Clear profile", self.clearProfile)
         self._menu.addAction("Set profile name", __inputNewName)
+        self._menu.addAction("Load TigProf profile", self.loadProfile)
         self._menu.addAction("Save profile as", self.saveProfile)
         self._profile_ctrl_btn = QToolButton()
         self._profile_ctrl_btn.setMenu(self._menu)
@@ -929,6 +930,7 @@ class SelectedProfile(LiveProfile):
                 self._parent_picker.removeAllSelectedProfileMarkings()
 
     def saveProfile(self, filename=None):
+        """ Saves current profile to disk """
         if self._selaxis and self._selaxis[0] < len(self._axes) and \
            self._last_x is not None and \
            self._last_y is not None and \
@@ -937,11 +939,11 @@ class SelectedProfile(LiveProfile):
             if filename is None:
                 if not self._export_profile_dialog:
                     dialog = self._export_profile_dialog = QFileDialog(self, 
-                                                                    "Export profile data", ".", "*.txt")
-                    dialog.setDefaultSuffix("txt")
+                                                                    "Export profile data", ".", "*.tigprof")
+                    dialog.setDefaultSuffix("tigprof")
                     dialog.setFileMode(QFileDialog.AnyFile)
                     dialog.setAcceptMode(QFileDialog.AcceptSave)
-                    dialog.setNameFilter("Text files (*.txt)")
+                    dialog.setNameFilter("Tigger profile files (*.tigprof)")
                     dialog.setModal(True)
                     dialog.filesSelected.connect(self.saveProfile)
                 return self._export_profile_dialog.exec_() == QDialog.Accepted
@@ -975,6 +977,31 @@ class SelectedProfile(LiveProfile):
                               "Nothing to save",
                               "<P> Profile is empty. Capture profile using CTRL+ALT+LeftClick "
                               "somewhere on the image first!</P>")
+
+    def loadProfile(self, filename=None):
+        """ Loads TigProf profile from disk """
+        if filename is None:
+            if not self._load_profile_dialog:
+                dialog = self._load_profile_dialog = QFileDialog(self, 
+                                                                "Load TigProf profile data", ".", "*.tigprof")
+                dialog.setDefaultSuffix("tigprof")
+                dialog.setFileMode(QFileDialog.ExistingFile)
+                dialog.setAcceptMode(QFileDialog.AcceptOpen)
+                dialog.setNameFilter("Tigger profile files (*.tigprof)")
+                dialog.setModal(True)
+                dialog.filesSelected.connect(self.loadProfile)
+            return self._load_profile_dialog.exec_() == QDialog.Accepted
+        
+        if isinstance(filename, QStringList):
+            filename = filename[0]
+        
+        try:
+            prof = TiggerProfileFactory.load(filename)
+        except IOError as e:
+            QMessageBox.critical(self, 
+                                 f"Error loading TigProf profile", 
+                                 f"Loading failed with message '{str(e)}'")
+        
 
 class SkyModelPlotter(QWidget):
     # Selection modes for the various selector functions below.
