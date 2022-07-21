@@ -54,6 +54,8 @@ from Tigger.Coordinates import Projection
 from Tigger.Models import ModelClasses
 from Tigger.Models.SkyModel import SkyModel
 
+from TigGUI.kitties.profiles import TiggerProfile
+
 import numpy
 import os
 
@@ -955,16 +957,13 @@ class SelectedProfile(LiveProfile):
                                      QMessageBox.Yes | QMessageBox.No)
                 if ret == QMessageBox.No:
                     return
-
+            prof = TiggerProfile(self._current_profile_name,
+                                 axisname,
+                                 axisunit,
+                                 self._last_data_x,
+                                 self._last_data_y)
             try:
-                with open(filename, "w+") as fprof:
-                    fprof.write("# Tigger profile format v1.0\n")
-                    fprof.write(f"Profile name:\n{self._current_profile_name}\n")
-                    fprof.write(f"Axis:\n{axisname}\n")
-                    fprof.write(f"Units:\n{axisunit}\n")
-                    fprof.write(f"X-data:\n{xdatastr}\n")
-                    fprof.write(f"Y-data:\n{ydatastr}\n")
-                print(f"Saved current selected profile as {filename}")
+                prof.saveProfile(filename)
             except IOError:
                 QMessageBox.critical(self,
                                   "Could not store profile to disk",
