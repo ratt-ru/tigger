@@ -55,7 +55,7 @@ from Tigger.Models import ModelClasses
 from Tigger.Models.SkyModel import SkyModel
 
 import numpy
-
+import os
 
 QStringList = list
 
@@ -614,6 +614,8 @@ class LiveProfile(ToolDialog):
         self._last_x = None
         self._last_y = None
         self._parent_picker = None
+        self._last_data_x = None
+        self._last_data_y = None
     
     def _setupAxisSelectorLayout(self, lo1):
         lo1.setContentsMargins(0, 0, 0, 0)
@@ -665,9 +667,6 @@ class LiveProfile(ToolDialog):
             self._profcurve.setStyle(QwtPlotCurve.Lines)
             self._profcurve.setOrientation(Qt.Horizontal)
             self._profcurve.attach(self._profplot)
-        # self.mainwin.resizeDocks([self.mainwin.skyplot._dockable_liveprofile_selected], [300], Qt.Horizontal)
-        # self.mainwin.resizeDocks([self.mainwin.skyplot._dockable_liveprofile_selected], [192], Qt.Vertical)
-        
 
     def _setupLayout(self):
         # create size policy for live profile
@@ -773,12 +772,15 @@ class LiveProfile(ToolDialog):
             yval = numpy.ma.filled(yval[i0:i1], fill_value=0.0)
             xval = numpy.ma.filled(xval[i0:i1], fill_value=0.0)
             self._profcurve.setData(xval, yval)
+            # store the data slice for the last pixel coordinate
+            self._last_data_x = xval
+            self._last_data_y = yval
+            # store profile last update coordinates
+            self._last_x = ix
+            self._last_y = iy
         self._profcurve.setVisible(inrange)
         # update plots
         self._profplot.replot()
-        # store profile last update coordinates
-        self._last_x = ix
-        self._last_y = iy
 
 class SelectedProfile(LiveProfile):
     """ 'Freezed' profile showing profile for axis at selected cube pierce point """
@@ -788,9 +790,11 @@ class SelectedProfile(LiveProfile):
         self._currentprofile = 0
         self._parent_picker = None
         self._current_profile_name = None
+        self._export_profile_dialog = None
         LiveProfile.__init__(self, parent, mainwin, configname, menuname, show_shortcut)
         self.addProfile()
         self._parent_picker = picker_parent
+        
 
     def _setupAxisSelectorLayout(self, lo1):
         
@@ -803,6 +807,19 @@ class SelectedProfile(LiveProfile):
                 self.setProfileName(text)
         self._menu.addAction("Clear profile", self.clearProfile)
         self._menu.addAction("Set profile name", __inputNewName)
+        def __saveProfileTxt():
+            if not self._export_profile_dialog:
+                dialog = self._export_profile_dialog = QFileDialog(self, 
+                                                                   "Export profile data", ".", "*.txt")
+                dialog.setDefaultSuffix("txt")
+                dialog.setFileMode(QFileDialog.AnyFile)
+                dialog.setAcceptMode(QFileDialog.AcceptSave)
+                dialog.setNameFilter("Text files (*.txt)")
+                dialog.setModal(True)
+                dialog.filesSelected.connect(self.saveProfile)
+            return self._export_profile_dialog.exec_() == QDialog.Accepted
+
+        self._menu.addAction("Save profile as", __saveProfileTxt)
         self._profile_ctrl_btn = QToolButton()
         self._profile_ctrl_btn.setMenu(self._menu)
         self._profile_ctrl_btn.setToolTip("<P> Click to show options for this profile </P>")
@@ -856,6 +873,7 @@ class SelectedProfile(LiveProfile):
     def _profileInfosKeys(self):
         return ["_lastsel", "_image_id", "_image_hnd", 
                 "_last_x", "_last_y",
+                "_last_data_x", "_last_data_y",
                 "_current_profile_name"]
 
     def _restoreSelectedProfileInfos(self):
@@ -874,12 +892,13 @@ class SelectedProfile(LiveProfile):
     def clearProfile(self):
         self._last_x = None
         self._last_y = None
-
+        self._last_data_x = None
+        self._last_data_y = None
         self._setupPlot()
         if self._parent_picker is not None:
             self._parent_picker.removeSelectedProfileMarkings(self._currentprofile,
                                                               purge_history=True)
-
+        
     def setProfileName(self, name):
         self._current_profile_name = name
         self._static_profile_select.setItemText(self._currentprofile, name)
@@ -917,6 +936,44 @@ class SelectedProfile(LiveProfile):
                 self._parent_picker.setSelectedProfileIndex(self._currentprofile)
             else:
                 self._parent_picker.removeAllSelectedProfileMarkings()
+
+    def saveProfile(self, filename=None):
+        if filename is None:
+            return 
+        if self._selaxis and self._selaxis[0] < len(self._axes) and \
+           self._last_x is not None and \
+           self._last_y is not None and \
+           self._last_data_x is not None and \
+           self._last_data_y is not None:
+            axisname, axisindx, axisvals, axisunit = self._axes[self._selaxis[0]]
+            xdatastr = ",".join(map(str, self._last_data_x))
+            ydatastr = ",".join(map(str,self._last_data_y))
+            if isinstance(filename, QStringList):
+                filename = filename[0]
+            if os.path.exists(filename):
+                ret = QMessageBox.question(self, "Overwrite file?", f"File {filename} exists. Overwrite?", 
+                                     QMessageBox.Yes | QMessageBox.No)
+                if ret == QMessageBox.No:
+                    return
+
+            try:
+                with open(filename, "w+") as fprof:
+                    fprof.write("# Tigger profile format v1.0\n")
+                    fprof.write(f"Axis:\n{axisname}\n")
+                    fprof.write(f"Units:\n{axisunit}\n")
+                    fprof.write(f"X-data:\n{xdatastr}\n")
+                    fprof.write(f"Y-data:\n{ydatastr}\n")
+            except IOError:
+                QMessageBox.error(self,
+                                  "Could not store profile to disk",
+                                  "<P> An IO error occurred while trying to write out profile. "
+                                  "Check that the location is writable and you have sufficient space </P>")
+
+        else: # no axes selected yet
+            QMessageBox.error(self,
+                              "Nothing to save",
+                              "<P> Profile is empty. Capture profile using CTRL+ALT+LeftClick "
+                              "somewhere on the image first!</P>")
 
 class SkyModelPlotter(QWidget):
     # Selection modes for the various selector functions below.
@@ -2651,6 +2708,7 @@ class SkyModelPlotter(QWidget):
                 dialog.setDefaultSuffix("png")
                 dialog.setFileMode(QFileDialog.AnyFile)
                 dialog.setAcceptMode(QFileDialog.AcceptSave)
+                dialog.setNameFilter("PNG files (*.png)")
                 dialog.setModal(True)
                 dialog.filesSelected.connect(self._exportPlotToPNG)
             return self._export_png_dialog.exec_() == QDialog.Accepted
