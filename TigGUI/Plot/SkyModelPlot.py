@@ -784,13 +784,13 @@ class LiveProfile(ToolDialog):
 class SelectedProfile(LiveProfile):
     """ 'Freezed' profile showing profile for axis at selected cube pierce point """
     def __init__(self, parent, mainwin, configname="liveprofile", menuname="profiles", show_shortcut=Qt.Key_F4, picker_parent=None):
-        LiveProfile.__init__(self, parent, mainwin, configname, menuname, show_shortcut)
         self.profiles_info = {}
         self._numprofiles = 0
         self._currentprofile = 0
-        self.addProfile()
         self._parent_picker = picker_parent
-    
+        LiveProfile.__init__(self, parent, mainwin, configname, menuname, show_shortcut)
+        self.addProfile()
+
     def _setupAxisSelectorLayout(self, lo1):
         
         lo2 = QGridLayout()
@@ -872,7 +872,15 @@ class SelectedProfile(LiveProfile):
 
     def selectAxis(self, i, remember=True):
         LiveProfile.selectAxis(self, i, remember=True)
-        self.trackImage(self._image_hnd, self._last_x, self._last_y)        
+        self.trackImage(self._image_hnd, self._last_x, self._last_y)  
+
+    def setVisible(self, visible, emit=True):
+        LiveProfile.setVisible(self, visible, emit=emit)
+        if self._parent_picker is not None:
+            if visible:
+                self._parent_picker.setSelectedProfileIndex(self._currentprofile)
+            else:
+                self._parent_picker.removeAllSelectedProfileMarkings()
 
 class SkyModelPlotter(QWidget):
     # Selection modes for the various selector functions below.
@@ -1244,6 +1252,13 @@ class SkyModelPlotter(QWidget):
     # this is __init__ for SkyModelPlotter
     def __init__(self, parent, mainwin, *args):
         QWidget.__init__(self, parent, *args)
+        # "Active selected profile marker"
+        self._selected_profile_index = 0
+        # stack of positions - one per selected ("static frame") profile
+        # will contain "marker" object and "position" (l, m) tupple
+        # on the first click to set position
+        self._selected_profile_markup = {}
+
         self._mainwin = mainwin
         self.tigToolTip = TigToolTip()
         self._ruler_timer = QTimer()
@@ -1290,11 +1305,11 @@ class SkyModelPlotter(QWidget):
         self._markup_color = QColor("cyan")
         self._markup_pen = QPen(self._markup_color, 1)
         self._markup_pen.setStyle(Qt.DotLine)
-        self._markup_symbol_pen = QPen(self._markup_color, 1)
+        self._markup_symbol_active_pen = QPen(self._stats_color, 1)
+        self._markup_symbol_inactive_pen = QPen(self._markup_color, 1)
         self._markup_brush = QBrush(Qt.NoBrush)
-        self._markup_xsymbol = QwtSymbol(QwtSymbol.XCross, self._markup_brush, self._markup_symbol_pen, QSize(16, 16))
-        self._markup_starsymbol = QwtSymbol(QwtSymbol.Star1, self._markup_brush, self._markup_symbol_pen, QSize(16, 16))
-        self._markup_absymbol = QwtSymbol(QwtSymbol.Ellipse, self._markup_brush, self._markup_symbol_pen, QSize(4, 4))
+        self._markup_xsymbol = QwtSymbol(QwtSymbol.XCross, self._markup_brush, self._markup_symbol_inactive_pen, QSize(16, 16))
+        self._markup_absymbol = QwtSymbol(QwtSymbol.Ellipse, self._markup_brush, self._markup_symbol_inactive_pen, QSize(4, 4))
         self._markup_a_label = QwtText("A")
         self._markup_a_label.setColor(self._markup_color)
         self._markup_b_label = QwtText("B")
@@ -1444,22 +1459,38 @@ class SkyModelPlotter(QWidget):
         self._menu.addAction("Export plot to PNG file...", self._exportPlotToPNG, Qt.CTRL + Qt.Key_F12)
         self.plotShowMessage = None
         self.plotShowErrorMessage = None
-        self._selected_profile_markup = None
-        # stack of positions - one per selected ("static frame") profile
-        self._selected_profile_markup_positions = {0: None}
-        self._selected_profile_index = 0
+
+    def _create_profile_marker_symbol(self, active=True):
+        if active:
+            return QwtSymbol(QwtSymbol.Star1, self._markup_brush, self._markup_symbol_active_pen, QSize(20, 20))
+        else:
+            return QwtSymbol(QwtSymbol.Star1, self._markup_brush, self._markup_symbol_inactive_pen, QSize(16, 16))
 
     def setSelectedProfileIndex(self, index=0):
+        # Invalidate other profile markers
+        for k in self._selected_profile_markup:
+            selmarker = self._selected_profile_markup.get(k, {"marker": None, 
+                                                              "position": None})["marker"]
+            if selmarker is not None:
+                selmarker.setSymbol(self._create_profile_marker_symbol(active=False))
+                selmarker.attach(self.plot)
+    
         self._selected_profile_index = index
-        if self._selected_profile_markup is not None:
-            if self._selected_profile_markup_positions.get(index, None) is not None:
-                l, m = self._selected_profile_markup_positions[index]
-                self._selected_profile_markup.setValue(l, m)
-                self._selected_profile_markup.attach(self.plot)
-                self._replot()
-            else: # currently active marker, but profile yet to get a position, so detach
-                self._selected_profile_markup.detach()
-                self._replot()
+        selprof = self._selected_profile_markup.get(index, {"marker": None, 
+                                                            "position": None})
+        # Activate requested marker, if already placed at a position
+        if selprof["marker"] is not None:
+            if selprof["position"] is not None:
+                selprof["marker"].setSymbol(self._create_profile_marker_symbol(active=True))
+                selprof["marker"].attach(self.plot)
+        # finally make sure to redraw
+        self._replot()
+
+    def removeAllSelectedProfileMarkings(self):
+        """ Remove all selected profile markings """
+        for k in self._selected_profile_markup:
+            marker = self._selected_profile_markup[k]['marker']
+            self._removePlotMarkupItem(marker)
 
     def close(self):
         self._menu.clear()
@@ -1481,7 +1512,7 @@ class SkyModelPlotter(QWidget):
         """Signal slot for closing a dockable widget."""
         list_of_actions = self._menu.actions()
         for ea_action in list_of_actions:
-            if ea_action.text() == 'Show profiles':
+            if ea_action.text() == '&Show profiles':
                 self._dockable_closed(self._dockable_liveprofile)
                 ea_action.setChecked(False)
         Config.set('liveprofile-show', False)
@@ -1490,13 +1521,11 @@ class SkyModelPlotter(QWidget):
         """Signal slot for closing a dockable widget."""
         list_of_actions = self._menu.actions()
         for ea_action in list_of_actions:
-            if ea_action.text() == 'Show selected profiles':
-                # remove markup item
-                if self._selected_profile_markup:
-                    self._removePlotMarkupItem(self._selected_profile_markup)
-                    self._selected_profile_markup = None
-                    self._selected_profile_markup_positions = {0: None}
-                    self._selected_profile_index = 0
+            if ea_action.text() == 'S&how selected profiles':
+                # remove markup from display on close 
+                # but keep the state and positions for retoggle of window
+                self.removeAllSelectedProfileMarkings()
+                
                 self._dockable_closed(self._dockable_liveprofile_selected)
                 ea_action.setChecked(False)
         Config.set('liveprofileselected-show', False)
@@ -1508,6 +1537,7 @@ class SkyModelPlotter(QWidget):
     def liveprofile_selected_dockwidget_toggled(self):
         """Signal slot for toggling a dockable widget between a floating or a docked window."""
         self._dockable_toggled(self._dockable_liveprofile_selected)
+        self.setSelectedProfileIndex(self._selected_profile_index)
 
     def livezoom_dockwidget_toggled(self):
         """Signal slot for toggling a dockable widget between a floating or a docked window."""
@@ -2059,17 +2089,14 @@ class SkyModelPlotter(QWidget):
         self._removePlotMarkup(replot=False)
         for item in items:
             item.attach(self.plot)
-        self._plot_markup = items
+        self._plot_markup += items
         self._replot()
-
-    def removeSelectedProfileMarkup(self):
-        self._removePlotMarkupItem(self._selected_profile_markup,
-                                   replot=True)
 
     def _removePlotMarkup(self, replot=True):
         """Removes all markup items, and refreshes the plot if replot=True"""
         for item in self._plot_markup:
-            if item is not self._selected_profile_markup:
+            if not item in map(lambda k: self._selected_profile_markup[k]["marker"], 
+                               self._selected_profile_markup):
                 item.detach()
         if self._plot_markup and replot:
             self.tigToolTip.hideText()
@@ -2132,13 +2159,19 @@ class SkyModelPlotter(QWidget):
             self._liveprofile_selected.trackImage(image, x, y)
             if self._liveprofile_selected.isVisible():
                 # add a marker at the location of the selected profile
-                self._selected_profile_markup = TiggerPlotMarker()
-                self._selected_profile_markup.setRenderHint(QwtPlotItem.RenderAntialiased)
-                self._selected_profile_markup.setValue(l, m)
-                self._selected_profile_markup_positions[self._selected_profile_index] = (l, m)
-                self._selected_profile_markup.setSymbol(self._markup_starsymbol)
-                markup_items = [self._selected_profile_markup]
-                # same deal for markup items
+                def __initMarker(markerindex):
+                    marker = TiggerPlotMarker()
+                    marker.setRenderHint(QwtPlotItem.RenderAntialiased)
+                    marker.setLabel(QwtText(str(markerindex + 1)))
+                    marker.setSymbol(self._create_profile_marker_symbol(active=True))
+                    return {"marker": marker, "position": None}
+                sel_marker = self._selected_profile_markup.setdefault(self._selected_profile_index,
+                                                                      __initMarker(self._selected_profile_index))
+                sel_marker["marker"].setValue(l, m)
+                sel_marker["position"] = (l, m)
+                # remove and add back marker
+                markup_items = [self._selected_profile_markup[k]["marker"]
+                                 for k in self._selected_profile_markup]
                 for item in markup_items:
                     item.setZ(Z_Markup)
                 QTimer.singleShot(10, self._currier.curry(self._addPlotMarkup, markup_items))
