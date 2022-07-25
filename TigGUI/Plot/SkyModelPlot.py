@@ -1047,7 +1047,7 @@ class SelectedProfile(LiveProfile):
             )
         self.addStaticProfile(prof)
 
-    def addStaticProfile(self, prof, curvecol=None):
+    def addStaticProfile(self, prof, curvecol=None, coord=None):
         pastedname, ok = QInputDialog.getText(self, 
                                               "Set pasted profile name", 
                                               "<P> Set name of pasted profile </P>",
@@ -1057,7 +1057,8 @@ class SelectedProfile(LiveProfile):
                                                prof.axisUnit,
                                                prof.xdata,
                                                prof.ydata,
-                                               qwtplot=self._profplot)
+                                               qwtplot=self._profplot,
+                                               profilecoord=coord)
         if curvecol is None:
             curvecol = QColorDialog.getColor(initial=Qt.white,
                                              parent=self,
@@ -1112,7 +1113,7 @@ class SelectedProfile(LiveProfile):
                profname = self.profiles_info.get(i, {}).get("_current_profile_name", "Unnamed")
                axisname, axisindx, axisvals, axisunit = self._axes[self._selaxis[0]]
                prof = TiggerProfile(profname, axisname, axisunit, last_data_x, last_data_y)
-               return (prof, i)
+               return (prof, i, (last_x, last_y))
             return None
         
         avail_profs = list(filter(lambda x: x is not None,
@@ -1133,9 +1134,9 @@ class SelectedProfile(LiveProfile):
                                            current=0,
                                            editable=False)
         if ok:
-            selprof, iselitem = list(filter(lambda x: x[0].profileName == selitem, avail_profs))[0]
+            selprof, iselitem, coord = list(filter(lambda x: x[0].profileName == selitem, avail_profs))[0]
             dprint(0, f"Pasting active profile from '{selprof.profileName}'")
-            self.addStaticProfile(selprof)
+            self.addStaticProfile(selprof, coord=coord)
 
 class SkyModelPlotter(QWidget):
     # Selection modes for the various selector functions below.

@@ -53,7 +53,7 @@ class PlottableTiggerProfile(MutableTiggerProfile):
     def profileAssociatedCoord(self, profilecoord):
         if profilecoord is not None:
             if not (isinstance(profilecoord, tuple) and 
-                    len(profilecoord) != 2 and
+                    len(profilecoord) == 2 and
                     all(map(lambda x: isinstance(x, int), profilecoord))):
                 raise TypeError("profilecoord should be 2-element pixel coord tuple")
         self._profilecoord = profilecoord
