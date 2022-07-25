@@ -30,7 +30,7 @@ from PyQt5.Qt import (QAction, QActionGroup, QApplication, QBrush, QCheckBox,
                       QLabel, QMenu, QMessageBox, QPainter, QPen, QPixmap,
                       QPoint, QPointF, QRectF, QSize, QSizePolicy, QTimer,
                       QToolBar, QToolButton, QTransform, QVBoxLayout, QWidget, QPushButton,
-                      QGridLayout)
+                      QGridLayout, QColorDialog)
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QDockWidget, QLayout
@@ -38,13 +38,15 @@ from PyQt5.Qwt import (QwtEventPattern, QwtPicker, QwtPickerClickPointMachine,
                        QwtPickerClickRectMachine, QwtPickerDragLineMachine,
                        QwtPickerDragRectMachine, QwtPickerTrackerMachine,
                        QwtPlot, QwtPlotCurve, QwtPlotItem, QwtPlotPicker,
-                       QwtPlotZoomer, QwtScaleEngine, QwtSymbol, QwtText)
+                       QwtPlotZoomer, QwtScaleEngine, QwtSymbol, QwtText,
+                       QwtLegend)
 
 from TigGUI.Images.ControlDialog import ImageControlDialog
 from TigGUI.Plot import MouseModes
 from TigGUI.Widgets import (TDockWidget, TigToolTip, TiggerPlotCurve,
                             TiggerPlotMarker)
 from TigGUI.init import Config, pixmaps
+from TigGUI.kitties.plottable_profiles import PlottableTiggerProfile
 import TigGUI.kitties.utils
 from TigGUI.kitties.utils import PersistentCurrier, curry
 from TigGUI.kitties.widgets import BusyIndicator
@@ -661,8 +663,9 @@ class LiveProfile(ToolDialog):
             # self._profplot.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
             self._profplot.setSizePolicy(liveprofile_policy)
             lo0.addWidget(self._profplot, 0)
+            
             # and new profile curve
-            self._profcurve = TiggerPlotCurve()
+            self._profcurve = TiggerPlotCurve("Active")
             self._profcurve.setRenderHint(QwtPlotItem.RenderAntialiased)
             self._ycs = TiggerPlotCurve()
             self._ycs.setRenderHint(QwtPlotItem.RenderAntialiased)
@@ -789,12 +792,14 @@ class SelectedProfile(LiveProfile):
     """ 'Freezed' profile showing profile for axis at selected cube pierce point """
     def __init__(self, parent, mainwin, configname="liveprofile", menuname="profiles", show_shortcut=Qt.Key_F4, picker_parent=None):
         self.profiles_info = {}
+        self._legend = None
         self._numprofiles = 0
         self._currentprofile = 0
         self._parent_picker = None
         self._current_profile_name = None
         self._export_profile_dialog = None
         self._load_profile_dialog = None
+        self._overlay_static_profiles = None
         LiveProfile.__init__(self, parent, mainwin, configname, menuname, show_shortcut)
         self.addProfile()
         self._parent_picker = picker_parent
@@ -810,8 +815,9 @@ class SelectedProfile(LiveProfile):
                 self.setProfileName(text)
         self._menu.addAction("Clear profile", self.clearProfile)
         self._menu.addAction("Set profile name", __inputNewName)
-        self._menu.addAction("Load TigProf profile", self.loadProfile)
-        self._menu.addAction("Save profile as", self.saveProfile)
+        self._menu.addAction("Save active profile as", self.saveProfile)
+        self._menu.addAction("Overlay TigProf static profile from file", self.loadProfile)
+        self._menu_opt_paste = self._menu.addAction("Overlay another active profile as static profile", self.pasteActiveProfileAsStatic)
         self._profile_ctrl_btn = QToolButton()
         self._profile_ctrl_btn.setMenu(self._menu)
         self._profile_ctrl_btn.setToolTip("<P> Click to show options for this profile </P>")
@@ -846,6 +852,10 @@ class SelectedProfile(LiveProfile):
     def selectProfile(self, i):
         """ event handler for switching profiles """
         self._storeSelectedProfileInfos()
+        # detach overlay profiles for previous profile
+        if self._overlay_static_profiles is not None:
+            for p in self._overlay_static_profiles:
+                p.detach()
         # pick new state from the stack and restore
         self._currentprofile = i
         self._restoreSelectedProfileInfos()
@@ -858,15 +868,21 @@ class SelectedProfile(LiveProfile):
             # select axis, which in turn redraws the plot
             self.selectAxis(axisno)
             self._wprofile_axis.setCurrentIndex(axisno)
+        else:
+            self.clearProfile()
         # update marker on the SkyPlot
         if self._parent_picker is not None:
             self._parent_picker.setSelectedProfileIndex(i)
+        # overlay other static plots for current profile
+        if self._overlay_static_profiles is not None:
+            for p in self._overlay_static_profiles:
+                p.attach()
 
     def _profileInfosKeys(self):
         return ["_lastsel", "_image_id", "_image_hnd", 
                 "_last_x", "_last_y",
                 "_last_data_x", "_last_data_y",
-                "_current_profile_name"]
+                "_current_profile_name", "_overlay_static_profiles"]
 
     def _restoreSelectedProfileInfos(self):
         """ restores the profile infos for the currently selected profile """
@@ -881,11 +897,19 @@ class SelectedProfile(LiveProfile):
                                                             map(lambda k: getattr(self, k, None), 
                                                                 profiles_info_keys)))
 
-    def clearProfile(self):
+    def clearProfile(self, keep_overlays=False):
         self._last_x = None
         self._last_y = None
         self._last_data_x = None
         self._last_data_y = None
+        if not keep_overlays:
+            if self._overlay_static_profiles is not None:
+                for p in self._overlay_static_profiles:
+                    p.detach()
+            self._overlay_static_profiles = None
+        if self._legend is not None:
+            self._legend = None
+
         self._setupPlot()
         if self._parent_picker is not None:
             self._parent_picker.removeSelectedProfileMarkings(self._currentprofile,
@@ -899,19 +923,19 @@ class SelectedProfile(LiveProfile):
         """ event handler for adding new selected profiles """
         self._numprofiles += 1
         self._static_profile_select.addItems(["tmp"])
+
         profiles_info_keys = self._profileInfosKeys()
         self.profiles_info[self._numprofiles-1] = dict(zip(profiles_info_keys,
                                                            [None] * len(profiles_info_keys)))
-        
         # switch to newly created profile
         self.selectProfile(self._numprofiles-1)
         self._static_profile_select.setCurrentIndex(self._numprofiles-1)
         self._wprofile_axis.clear()
         # refresh profile for blank profile
         self.clearProfile()
+        self._overlay_static_profiles = None
         # reinitialize axes
         self.setImage(self._image_hnd, force_repopulate=False)
-
         self.setProfileName(f"Profile {self._numprofiles}")
 
     def selectAxis(self, i, remember=True):
@@ -919,7 +943,12 @@ class SelectedProfile(LiveProfile):
         self.trackImage(self._image_hnd, self._last_x, self._last_y) 
         # clear profile if no coordinate is set
         if self._last_y is None or self._last_x is None:
-            self.clearProfile()
+            self.clearProfile(keep_overlays=True)
+
+    def setImage(self, image, force_repopulate=False):
+        if self._image_id != id(image):
+            self._wprofile_axis.clear()
+        LiveProfile.setImage(self, image, force_repopulate=force_repopulate)
 
     def setVisible(self, visible, emit=True):
         LiveProfile.setVisible(self, visible, emit=emit)
@@ -949,8 +978,6 @@ class SelectedProfile(LiveProfile):
                 return self._export_profile_dialog.exec_() == QDialog.Accepted
 
             axisname, axisindx, axisvals, axisunit = self._axes[self._selaxis[0]]
-            xdatastr = ",".join(map(str, self._last_data_x))
-            ydatastr = ",".join(map(str,self._last_data_y))
 
             if isinstance(filename, QStringList):
                 filename = filename[0]
@@ -996,12 +1023,102 @@ class SelectedProfile(LiveProfile):
             filename = filename[0]
         
         try:
-            prof = TiggerProfileFactory.load(filename)
+            prof = TiggerProfileFactory.load(filename)                       
         except IOError as e:
             QMessageBox.critical(self, 
                                  f"Error loading TigProf profile", 
                                  f"Loading failed with message '{str(e)}'")
+        self.addStaticProfile(prof)
+
+    def addStaticProfile(self, prof, curvecol=None):
+        pastedname, ok = QInputDialog.getText(self, 
+                                              "Set pasted profile name", 
+                                              "<P> Set name of pasted profile </P>",
+                                              text=prof.profileName)
+        plottableprof = PlottableTiggerProfile(pastedname,
+                                               prof.axisName,
+                                               prof.axisUnit,
+                                               prof.xdata,
+                                               prof.ydata,
+                                               qwtplot=self._profplot)
+        if curvecol is None:
+            curvecol = QColorDialog.getColor(initial=Qt.white,
+                                             parent=self,
+                                             title="Select color for loaded TigProf profile",)
+        if curvecol.isValid():
+            plottableprof.setCurveColor(curvecol)
+
+        if self._overlay_static_profiles is None:
+            self._overlay_static_profiles = []
+        self._overlay_static_profiles.append(plottableprof)
+        if (self._last_data_x is None or 
+            self._last_data_y is None or 
+            self._last_data_x is None or 
+            self._last_data_y is None) and \
+           len(self._overlay_static_profiles) > 0:
+            # temporary titles and labels from pasted profiles
+            xmin = numpy.nanmin(list(map(lambda x: numpy.nanmin(x.xdata),
+                                         self._overlay_static_profiles)))
+            xmax = numpy.nanmax(list(map(lambda x: numpy.nanmax(x.ydata),
+                                         self._overlay_static_profiles)))
+            self._profplot.setAxisScale(QwtPlot.xBottom, xmin, xmax)
+            # set custom label if first loaded profile
+            if len(self._overlay_static_profiles) == 1:
+                name, ok = QInputDialog.getText(self, 
+                                                "Set custom axis name", 
+                                                "<P> Set custom axis name for loaded static profile </P>",
+                                                text=self._overlay_static_profiles[0].axisName)
+                unit, ok = QInputDialog.getText(self, 
+                                                "Set custom axis unit", 
+                                                "<P> Set custom axis unit for loaded static profile </P>",
+                                                text=self._overlay_static_profiles[0].axisUnit)
+                title = QwtText("%s, %s" % (name, unit) if unit else name)
+                title.setFont(self._font)
+                self._profplot.setAxisTitle(QwtPlot.xBottom, title)
+        if self._legend is None:
+            self._legend = QwtLegend()
+            self._profplot.insertLegend(self._legend, QwtPlot.BottomLegend) 
+    
+    def pasteActiveProfileAsStatic(self):
+        def __constructProfileIndex(i):
+            last_x = self.profiles_info.get(i, {}).get("_last_x", None)
+            last_y = self.profiles_info.get(i, {}).get("_last_y", None)
+            last_data_x = self.profiles_info.get(i, {}).get("_last_data_x", None)
+            last_data_y = self.profiles_info.get(i, {}).get("_last_data_y", None)
+
+            if self._selaxis and self._selaxis[0] < len(self._axes) and \
+               last_x is not None and \
+               last_y is not None and \
+               last_data_x is not None and \
+               last_data_y is not None:
+               
+               profname = self.profiles_info.get(i, {}).get("_current_profile_name", "Unnamed")
+               axisname, axisindx, axisvals, axisunit = self._axes[self._selaxis[0]]
+               prof = TiggerProfile(profname, axisname, axisunit, last_data_x, last_data_y)
+               return (prof, i)
+            return None
         
+        avail_profs = list(filter(lambda x: x is not None,
+                                  map(lambda i: __constructProfileIndex(i),
+                                      filter(lambda i: i != self._currentprofile,
+                                             range(self._static_profile_select.count())))))
+        if len(avail_profs) == 0:
+            QMessageBox.critical(self,
+                                  "No active profiles available",
+                                  "<P> There are currently no active profiles available for selection in any other profile. "
+                                  "You need to use CTRL+ALT+leftclick on another profile to first in order to paste </P>")
+            return
+        
+        selitem, ok = QInputDialog.getItem(self,
+                                           "Paste active profile from",
+                                           "<P>Select from currently defined profiles:</P>",
+                                           list(map(lambda x: x[0].profileName, avail_profs)),
+                                           current=0,
+                                           editable=False)
+        if ok:
+            selprof, iselitem = list(filter(lambda x: x[0].profileName == selitem, avail_profs))[0]
+            dprint(0, f"Pasting active profile from '{selprof.profileName}'")
+            self.addStaticProfile(selprof)
 
 class SkyModelPlotter(QWidget):
     # Selection modes for the various selector functions below.
@@ -1643,7 +1760,7 @@ class SkyModelPlotter(QWidget):
         """Signal slot for closing a dockable widget."""
         list_of_actions = self._menu.actions()
         for ea_action in list_of_actions:
-            if ea_action.text() == '&Show profiles':
+            if ea_action.text().replace("&", "") == 'Show profiles':
                 self._dockable_closed(self._dockable_liveprofile)
                 ea_action.setChecked(False)
         Config.set('liveprofile-show', False)
@@ -1652,7 +1769,7 @@ class SkyModelPlotter(QWidget):
         """Signal slot for closing a dockable widget."""
         list_of_actions = self._menu.actions()
         for ea_action in list_of_actions:
-            if ea_action.text() == 'S&how selected profiles':
+            if ea_action.text().replace("&", "") == 'Show selected profiles':
                 # remove markup from display on close 
                 # but keep the state and positions for retoggle of window
                 self.removeAllSelectedProfileMarkings()

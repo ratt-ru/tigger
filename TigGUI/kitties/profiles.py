@@ -25,6 +25,11 @@ class TiggerProfile:
         self._profilename = profilename
         self._axisname = axisname
         self._axisunit = axisunit
+        self.__verifyArrs(xdata, ydata)
+        self._xdata = xdata.copy()
+        self._ydata = ydata.copy()
+
+    def __verifyArrs(self, xdata, ydata):
         if not isinstance(xdata, np.ndarray):
             raise ValueError("X-data must be ndarray type")
         if not isinstance(ydata, np.ndarray):
@@ -35,8 +40,6 @@ class TiggerProfile:
             raise ValueError("X-data must be 1D")
         if ydata.ndim != 1:
             raise ValueError("Y-data must be 1D")
-        self._xdata = xdata.copy()
-        self._ydata = ydata.copy()
 
     @property
     def xdata(self):
@@ -75,6 +78,47 @@ class TiggerProfile:
             fprof.write(json.dumps(prof))
             
         dprint(0, f"Saved current selected profile as {filename}")
+
+class MutableTiggerProfile(TiggerProfile):
+    """ 
+        Mutable Tigger profile 
+        profilename: A name for this profile
+        axisname: Name for the axis
+        axisunit: Unit for the axis (as taken from FITS CUNIT)
+        xdata: profile x axis data (1D ndarray of shape of ydata)
+        ydata: profile y axis data (1D ndarray)
+    """
+    def __init__(self, profilename, axisname, axisunit, xdata, ydata):
+        TiggerProfile.__init__(self, profilename, axisname, axisunit, xdata, ydata)
+
+    def setAxesData(self, xdata, ydata):
+        self.__verifyArrs(xdata, ydata)
+        self._xdata = xdata.copy()
+        self._ydata = ydata.copy()
+
+    @property
+    def profileName(self):
+        return self._profilename
+
+    @property
+    def axisName(self):
+        return self._axisname
+
+    @property
+    def axisUnit(self):
+        return self._axisunit
+
+    @profileName.setter
+    def profileName(self, name):
+        self._profilename = name
+
+    @axisName.setter
+    def axisName(self, name):
+        self._axisname = name
+
+    @axisUnit.setter
+    def axisUnit(self, unit):
+        self._axisunit = unit
 
 class TiggerProfileFactory:
     def __init__(self, filename):
