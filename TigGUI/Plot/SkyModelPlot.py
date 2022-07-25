@@ -619,7 +619,7 @@ class LiveProfile(ToolDialog):
         self._last_data_x = None
         self._last_data_y = None
         self._selaxis = None
-    
+
     def _setupAxisSelectorLayout(self, lo1):
         lo1.setContentsMargins(0, 0, 0, 0)
         lab = QLabel("Axis: ", self)
@@ -628,7 +628,7 @@ class LiveProfile(ToolDialog):
         lo1.addWidget(lab, 0)
         lo1.addWidget(self._wprofile_axis, 0)
         lo1.addStretch(1)
-                
+
     def _setupPlot(self):
         lo0 = self._lo0
         liveprofile_policy = self._liveprofile_policy
@@ -641,7 +641,7 @@ class LiveProfile(ToolDialog):
             self._profplot.replot()
             self._profplot.setMaximumHeight(256)
             self._profplot.setMinimumHeight(256)
-        else:    
+        else:
             self._profplot = QwtPlot(self)
             self._profplot.setContentsMargins(0, 0, 0, 0)
             self._profplot.enableAxis(QwtPlot.xBottom)
@@ -682,7 +682,7 @@ class LiveProfile(ToolDialog):
         lo0 = QVBoxLayout(self)
         lo0.setSpacing(0)
         self._lo0 = lo0
-        
+
         lo1 = QHBoxLayout()
         lo1.setContentsMargins(0, 0, 0, 0)
         lo0.addLayout(lo1)
@@ -785,9 +785,16 @@ class LiveProfile(ToolDialog):
         # update plots
         self._profplot.replot()
 
+
 class SelectedProfile(LiveProfile):
     """ 'Freezed' profile showing profile for axis at selected cube pierce point """
-    def __init__(self, parent, mainwin, configname="liveprofile", menuname="profiles", show_shortcut=Qt.Key_F4, picker_parent=None):
+    def __init__(self,
+                 parent,
+                 mainwin,
+                 configname="liveprofile",
+                 menuname="profiles",
+                 show_shortcut=Qt.Key_F4,
+                 picker_parent=None):
         self.profiles_info = {}
         self._numprofiles = 0
         self._currentprofile = 0
@@ -798,14 +805,18 @@ class SelectedProfile(LiveProfile):
         LiveProfile.__init__(self, parent, mainwin, configname, menuname, show_shortcut)
         self.addProfile()
         self._parent_picker = picker_parent
-        
+
     def _setupAxisSelectorLayout(self, lo1):
         """ Adds controls for freeze pane profile dialog """
         lo2 = QGridLayout()
         self._menu = QMenu("Selected Profile", self)
+
         def __inputNewName():
-            text, ok = QInputDialog.getText(self, "Set profile name", "<P>Enter new name for profile:</P>", 
-                                 text=self._current_profile_name)
+            text, ok = QInputDialog.getText(
+                self,
+                "Set profile name",
+                "<P>Enter new name for profile:</P>",
+                text=self._current_profile_name)
             if text:
                 self.setProfileName(text)
         self._menu.addAction("Clear profile", self.clearProfile)
@@ -829,7 +840,7 @@ class SelectedProfile(LiveProfile):
         self._add_profile_btn.setToolTip("<P> Click to add another freezed profile </P>")
         lo2.addWidget(self._add_profile_btn, 0, 3, 1, 1)
         self._add_profile_btn.clicked.connect(self.addProfile)
-        
+
         lo3 = QHBoxLayout()
         lo3.setContentsMargins(0, 0, 0, 0)
         lab = QLabel("Axis: ", self)
@@ -837,12 +848,12 @@ class SelectedProfile(LiveProfile):
         self._wprofile_axis.activated[int].connect(self.selectAxis)
         lo3.addWidget(lab, 0)
         lo3.addWidget(self._wprofile_axis, 0)
-        
+
         lo2.addLayout(lo3, 0, 4, 1, 2, alignment=Qt.AlignRight)
 
         lo1.setContentsMargins(0, 0, 0, 0)
         lo1.addLayout(lo2)
-        
+
     def selectProfile(self, i):
         """ event handler for switching profiles """
         self._storeSelectedProfileInfos()
@@ -863,7 +874,7 @@ class SelectedProfile(LiveProfile):
             self._parent_picker.setSelectedProfileIndex(i)
 
     def _profileInfosKeys(self):
-        return ["_lastsel", "_image_id", "_image_hnd", 
+        return ["_lastsel", "_image_id", "_image_hnd",
                 "_last_x", "_last_y",
                 "_last_data_x", "_last_data_y",
                 "_current_profile_name"]
@@ -878,7 +889,7 @@ class SelectedProfile(LiveProfile):
         """ store the profile infos for selected profile switching """
         profiles_info_keys = self._profileInfosKeys()
         self.profiles_info[self._currentprofile] = dict(zip(profiles_info_keys,
-                                                            map(lambda k: getattr(self, k, None), 
+                                                            map(lambda k: getattr(self, k, None),
                                                                 profiles_info_keys)))
 
     def clearProfile(self):
@@ -890,7 +901,7 @@ class SelectedProfile(LiveProfile):
         if self._parent_picker is not None:
             self._parent_picker.removeSelectedProfileMarkings(self._currentprofile,
                                                               purge_history=True)
-        
+
     def setProfileName(self, name):
         self._current_profile_name = name
         self._static_profile_select.setItemText(self._currentprofile, name)
@@ -902,7 +913,7 @@ class SelectedProfile(LiveProfile):
         profiles_info_keys = self._profileInfosKeys()
         self.profiles_info[self._numprofiles-1] = dict(zip(profiles_info_keys,
                                                            [None] * len(profiles_info_keys)))
-        
+
         # switch to newly created profile
         self.selectProfile(self._numprofiles-1)
         self._static_profile_select.setCurrentIndex(self._numprofiles-1)
@@ -916,7 +927,7 @@ class SelectedProfile(LiveProfile):
 
     def selectAxis(self, i, remember=True):
         LiveProfile.selectAxis(self, i, remember=True)
-        self.trackImage(self._image_hnd, self._last_x, self._last_y) 
+        self.trackImage(self._image_hnd, self._last_x, self._last_y)
         # clear profile if no coordinate is set
         if self._last_y is None or self._last_x is None:
             self.clearProfile()
@@ -938,8 +949,8 @@ class SelectedProfile(LiveProfile):
            self._last_data_y is not None:
             if filename is None:
                 if not self._export_profile_dialog:
-                    dialog = self._export_profile_dialog = QFileDialog(self, 
-                                                                    "Export profile data", ".", "*.tigprof")
+                    dialog = self._export_profile_dialog = QFileDialog(
+                        self, "Export profile data", ".", "*.tigprof")
                     dialog.setDefaultSuffix("tigprof")
                     dialog.setFileMode(QFileDialog.AnyFile)
                     dialog.setAcceptMode(QFileDialog.AcceptSave)
@@ -955,8 +966,10 @@ class SelectedProfile(LiveProfile):
             if isinstance(filename, QStringList):
                 filename = filename[0]
             if os.path.exists(filename):
-                ret = QMessageBox.question(self, "Overwrite file?", f"File {filename} exists. Overwrite?", 
-                                     QMessageBox.Yes | QMessageBox.No)
+                ret = QMessageBox.question(
+                    self, "Overwrite file?",
+                    f"File {filename} exists. Overwrite?",
+                    QMessageBox.Yes | QMessageBox.No)
                 if ret == QMessageBox.No:
                     return
             prof = TiggerProfile(self._current_profile_name,
@@ -967,23 +980,24 @@ class SelectedProfile(LiveProfile):
             try:
                 prof.saveProfile(filename)
             except IOError:
-                QMessageBox.critical(self,
-                                  "Could not store profile to disk",
-                                  "<P> An IO error occurred while trying to write out profile. "
-                                  "Check that the location is writable and you have sufficient space </P>")
+                QMessageBox.critical(
+                    self, "Could not store profile to disk",
+                    "<P> An IO error occurred while trying to write out profile. "
+                    "Check that the location is writable and you have sufficient space </P>"
+                )
 
-        else: # no axes selected yet
-            QMessageBox.critical(self,
-                              "Nothing to save",
-                              "<P> Profile is empty. Capture profile using CTRL+ALT+LeftClick "
-                              "somewhere on the image first!</P>")
+        else:  # no axes selected yet
+            QMessageBox.critical(
+                self, "Nothing to save",
+                "<P> Profile is empty. Capture profile using CTRL+ALT+LeftClick "
+                "somewhere on the image first!</P>")
 
     def loadProfile(self, filename=None):
         """ Loads TigProf profile from disk """
         if filename is None:
             if not self._load_profile_dialog:
-                dialog = self._load_profile_dialog = QFileDialog(self, 
-                                                                "Load TigProf profile data", ".", "*.tigprof")
+                dialog = self._load_profile_dialog = QFileDialog(
+                    self, "Load TigProf profile data", ".", "*.tigprof")
                 dialog.setDefaultSuffix("tigprof")
                 dialog.setFileMode(QFileDialog.ExistingFile)
                 dialog.setAcceptMode(QFileDialog.AcceptOpen)
@@ -991,17 +1005,19 @@ class SelectedProfile(LiveProfile):
                 dialog.setModal(True)
                 dialog.filesSelected.connect(self.loadProfile)
             return self._load_profile_dialog.exec_() == QDialog.Accepted
-        
+
         if isinstance(filename, QStringList):
             filename = filename[0]
-        
+
         try:
             prof = TiggerProfileFactory.load(filename)
         except IOError as e:
-            QMessageBox.critical(self, 
-                                 f"Error loading TigProf profile", 
-                                 f"Loading failed with message '{str(e)}'")
-        
+            QMessageBox.critical(
+                self,
+                "Error loading TigProf profile",
+                f"Loading failed with message '{str(e)}'",
+            )
+
 
 class SkyModelPlotter(QWidget):
     # Selection modes for the various selector functions below.
@@ -1590,14 +1606,14 @@ class SkyModelPlotter(QWidget):
     def setSelectedProfileIndex(self, index=0):
         # Invalidate other profile markers
         for k in self._selected_profile_markup:
-            selmarker = self._selected_profile_markup.get(k, {"marker": None, 
+            selmarker = self._selected_profile_markup.get(k, {"marker": None,
                                                               "position": None})["marker"]
             if selmarker is not None:
                 selmarker.setSymbol(self._create_profile_marker_symbol(active=False))
                 selmarker.attach(self.plot)
-    
+
         self._selected_profile_index = index
-        selprof = self._selected_profile_markup.get(index, {"marker": None, 
+        selprof = self._selected_profile_markup.get(index, {"marker": None,
                                                             "position": None})
         # Activate requested marker, if already placed at a position
         if selprof["marker"] is not None:
@@ -1611,9 +1627,9 @@ class SkyModelPlotter(QWidget):
         """ Remove all selected profile markings """
         for k in self._selected_profile_markup:
             self.removeSelectedProfileMarkings(k)
-    
+
     def removeSelectedProfileMarkings(self, index, purge_history=False):
-        """ Remove selected profile marking 
+        """ Remove selected profile marking
             purge_history: remove position and marking from history
         """
         if index in self._selected_profile_markup:
