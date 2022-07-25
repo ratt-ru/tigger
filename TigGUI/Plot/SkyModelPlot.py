@@ -1650,7 +1650,7 @@ class SkyModelPlotter(QWidget):
         """Signal slot for closing a dockable widget."""
         list_of_actions = self._menu.actions()
         for ea_action in list_of_actions:
-            if ea_action.text() == 'Show live zoom && cross-sections':
+            if 'Show live zoom && cross-sections' in ea_action.text():
                 self._dockable_closed(self._dockable_livezoom)
                 ea_action.setChecked(False)
         Config.set('livezoom-show', False)
@@ -1659,7 +1659,7 @@ class SkyModelPlotter(QWidget):
         """Signal slot for closing a dockable widget."""
         list_of_actions = self._menu.actions()
         for ea_action in list_of_actions:
-            if ea_action.text() == '&Show profiles':
+            if 'Show profiles' in ea_action.text():
                 self._dockable_closed(self._dockable_liveprofile)
                 ea_action.setChecked(False)
         Config.set('liveprofile-show', False)
@@ -1668,11 +1668,10 @@ class SkyModelPlotter(QWidget):
         """Signal slot for closing a dockable widget."""
         list_of_actions = self._menu.actions()
         for ea_action in list_of_actions:
-            if ea_action.text() == 'S&how selected profiles':
-                # remove markup from display on close 
+            if 'Show selected profiles' in ea_action.text():
+                # remove markup from display on close
                 # but keep the state and positions for retoggle of window
                 self.removeAllSelectedProfileMarkings()
-                
                 self._dockable_closed(self._dockable_liveprofile_selected)
                 ea_action.setChecked(False)
         Config.set('liveprofileselected-show', False)
