@@ -337,8 +337,8 @@ class TDockWidget(QDockWidget):
         self.title_stylesheet = "QWidget {background: rgb(68,68,68);}"
         self.button_style = "QPushButton:hover:!pressed {background: grey;}"
         from TigGUI.Images.ControlDialog import ImageControlDialog
-        from TigGUI.Plot.SkyModelPlot import ToolDialog
-        from TigGUI.Plot.SkyModelPlot import LiveImageZoom
+        from TigGUI.Plot.ToolDialogs import ToolDialog
+        from TigGUI.Plot.ToolDialogs import LiveImageZoom
         if bind_widget is not None:
             self.bind_widget = bind_widget
         if bind_widget is not None:
