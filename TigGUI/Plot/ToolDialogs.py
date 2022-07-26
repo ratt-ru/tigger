@@ -633,6 +633,8 @@ class SelectedProfile(LiveProfile):
         self._menu.addAction("Save active profile as", self.saveProfile)
         self._menu.addAction("Overlay TigProf static profile from file", self.loadProfile)
         self._menu_opt_paste = self._menu.addAction("Overlay another active profile as static profile", self.pasteActiveProfileAsStatic)
+        def __sepaction(): pass
+        self._menu.addAction("-- Global settings --", __sepaction).setEnabled(False)
         self._menu.addAction("Set active selected profile marker colour", self.setSelProfileMarkerColour)
         self._menu.addAction("Set inactive selected profile marker colour", self.setUnselProfileMarkerColour)
         self._profile_ctrl_btn = QToolButton()
