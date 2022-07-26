@@ -491,11 +491,14 @@ class SkyModelPlotter(QWidget):
         self._markup_color = QColor("cyan")
         self._markup_pen = QPen(self._markup_color, 1)
         self._markup_pen.setStyle(Qt.DotLine)
-        self._markup_symbol_active_pen = QPen(self._stats_color, 1)
-        self._markup_symbol_inactive_pen = QPen(self._markup_color, 1)
+        self._markup_profile_active_color = QColor("red")
+        self._markup_profile_inactive_color = QColor("cyan")
+        self._markup_profile_active_pen = QPen(self._markup_profile_active_color, 1)
+        self._markup_profile_inactive_pen = QPen(self._markup_profile_inactive_color, 1)
+
         self._markup_brush = QBrush(Qt.NoBrush)
-        self._markup_xsymbol = QwtSymbol(QwtSymbol.XCross, self._markup_brush, self._markup_symbol_inactive_pen, QSize(16, 16))
-        self._markup_absymbol = QwtSymbol(QwtSymbol.Ellipse, self._markup_brush, self._markup_symbol_inactive_pen, QSize(4, 4))
+        self._markup_xsymbol = QwtSymbol(QwtSymbol.XCross, self._markup_brush, self._markup_pen, QSize(16, 16))
+        self._markup_absymbol = QwtSymbol(QwtSymbol.Ellipse, self._markup_brush, self._markup_pen, QSize(4, 4))
         self._markup_a_label = QwtText("A")
         self._markup_a_label.setColor(self._markup_color)
         self._markup_b_label = QwtText("B")
@@ -649,11 +652,11 @@ class SkyModelPlotter(QWidget):
     def _create_profile_marker_symbol(self, active=True, isoverlay=False, custompen=None):
         sym = QwtSymbol.Star1 if not isoverlay else QwtSymbol.Ellipse
         if active:
-            pen = custompen if custompen is not None else self._markup_symbol_active_pen
+            pen = custompen if custompen is not None else self._markup_profile_active_pen
             size = QSize(20, 20) if isoverlay else QSize(20, 20)
             return QwtSymbol(sym, self._markup_brush, pen, size)
         else:
-            pen = custompen if custompen is not None else self._markup_symbol_inactive_pen
+            pen = custompen if custompen is not None else self._markup_profile_inactive_pen
             size = QSize(20, 20) if isoverlay else QSize(16, 16)
             return QwtSymbol(sym, self._markup_brush, pen, size)
 
@@ -778,6 +781,27 @@ class SkyModelPlotter(QWidget):
                 del self._selected_profile_markup[index]
             else:
                 self.deactivateAllOverlayMarkersFromCurrentProfile(index)
+
+    @property
+    def activeSelectedProfileMarkerColor(self):
+        return self._markup_profile_active_color
+
+    @property
+    def inactiveSelectedProfileMarkerColor(self):
+        return self._markup_profile_inactive_color
+
+    @activeSelectedProfileMarkerColor.setter
+    def activeSelectedProfileMarkerColor(self, color):
+        self._markup_profile_active_color = color
+        self._markup_profile_active_pen = QPen(self._markup_profile_active_color, 1)
+        self.setSelectedProfileIndex(self._selected_profile_index)
+
+
+    @inactiveSelectedProfileMarkerColor.setter
+    def inactiveSelectedProfileMarkerColor(self, color):
+        self._markup_profile_inactive_color = color
+        self._markup_profile_inactive_pen = QPen(self._markup_profile_inactive_color, 1)
+        self.setSelectedProfileIndex(self._selected_profile_index)
 
     def close(self):
         self._menu.clear()

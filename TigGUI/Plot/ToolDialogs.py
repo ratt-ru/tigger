@@ -633,6 +633,8 @@ class SelectedProfile(LiveProfile):
         self._menu.addAction("Save active profile as", self.saveProfile)
         self._menu.addAction("Overlay TigProf static profile from file", self.loadProfile)
         self._menu_opt_paste = self._menu.addAction("Overlay another active profile as static profile", self.pasteActiveProfileAsStatic)
+        self._menu.addAction("Set active selected profile marker colour", self.setSelProfileMarkerColour)
+        self._menu.addAction("Set inactive selected profile marker colour", self.setUnselProfileMarkerColour)
         self._profile_ctrl_btn = QToolButton()
         self._profile_ctrl_btn.setMenu(self._menu)
         self._profile_ctrl_btn.setToolTip("<P> Click to show options for this profile </P>")
@@ -978,3 +980,26 @@ class SelectedProfile(LiveProfile):
             selprof, iselitem, coord = list(filter(lambda x: x[0].profileName == selitem, avail_profs))[0]
             dprint(0, f"Pasting active profile from '{selprof.profileName}'")
             self.addStaticProfile(selprof, coord=coord)
+
+    def setSelProfileMarkerColour(self, color=None):
+        """ Set marker colour for the selected profile active profile curve """
+        if self._parent_picker is not None:
+            default = self._parent_picker.activeSelectedProfileMarkerColor
+            if color is None:
+                color = QColorDialog.getColor(initial=default,
+                                              parent=self,
+                                              title="Select color for selected active profile marker",)
+            if color.isValid():
+                self._parent_picker.activeSelectedProfileMarkerColor = color
+    
+    def setUnselProfileMarkerColour(self, color=None):
+        """ Set marker colour for the non-selected profile active profile curve """
+        if self._parent_picker is not None:
+            default = self._parent_picker.inactiveSelectedProfileMarkerColor
+            if color is None:
+                color = QColorDialog.getColor(initial=default,
+                                              parent=self,
+                                              title="Select color for selected active profile marker",)
+            if color.isValid():
+                self._parent_picker.inactiveSelectedProfileMarkerColor = color
+        
