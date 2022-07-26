@@ -371,10 +371,14 @@ class RenderControl(QObject):
         if xx1 is not None:
             subset = self.image.image()[xx1:xx2, yy1:yy2]
             subset, mask = self.image.optimalRavel(subset)
-            mmin, mmax = measurements.extrema(subset, labels=mask, index=None if mask is None else False)[:2]
-            mean = measurements.mean(subset, labels=mask, index=None if mask is None else False)
-            std = measurements.standard_deviation(subset, labels=mask, index=None if mask is None else False)
-            ssum = measurements.sum(subset, labels=mask, index=None if mask is None else False)
+            if np.sum(np.logical_not(mask)) != 0: # all nan regions
+                mmin, mmax = measurements.extrema(subset, labels=mask, index=None if mask is None else False)[:2]
+                mean = measurements.mean(subset, labels=mask, index=None if mask is None else False)
+                std = measurements.standard_deviation(subset, labels=mask, index=None if mask is None else False)
+                ssum = measurements.sum(subset, labels=mask, index=None if mask is None else False)
+            else:
+                ssum = 0
+                std = mean = mmin = mmax = np.nan
             return xx1, xx2, yy1, yy2, mmin, mmax, mean, std, ssum, subset.size
         return None
 
