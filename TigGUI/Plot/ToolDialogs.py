@@ -35,7 +35,7 @@ QStringList = list
 
 from TigGUI.Widgets import TiggerPlotCurve
 from TigGUI.init import Config, pixmaps
-from TigGUI.Plot.plottableProfiles import PlottableTiggerProfile
+from TigGUI.Plot.PlottableProfiles import PlottableTiggerProfile
 import TigGUI.kitties.utils
 from TigGUI.kitties.utils import curry
 from TigGUI.kitties.profiles import TiggerProfile, TiggerProfileFactory

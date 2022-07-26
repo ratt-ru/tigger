@@ -47,7 +47,7 @@ from TigGUI.Plot import MouseModes
 from TigGUI.Widgets import (TDockWidget, TigToolTip, TiggerPlotCurve,
                             TiggerPlotMarker)
 from TigGUI.init import Config, pixmaps
-from TigGUI.Plot.plottableProfiles import PlottableTiggerProfile
+from TigGUI.Plot.PlottableProfiles import PlottableTiggerProfile
 import TigGUI.kitties.utils
 from TigGUI.kitties.utils import PersistentCurrier, curry
 from TigGUI.kitties.widgets import BusyIndicator
