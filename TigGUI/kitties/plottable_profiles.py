@@ -17,12 +17,12 @@ class PlottableTiggerProfile(MutableTiggerProfile):
             xdata: profile x axis data (1D ndarray of shape of ydata)
             ydata: profile y axis data (1D ndarray)
             qwtplot: parent plot to which this curve should be added
-            profilecoord: coordinate (pixel) int tuple to from which this profile is drawn, optional
+            profilecoord: coordinate (world) coord tuple to from which this profile is drawn, optional
                           use None to leave unset
         """
         MutableTiggerProfile.__init__(self, profilename, axisname, axisunit, xdata, ydata)
         self._curve_color = QColor("white")
-        self._curve_pen = QPen(self._curve_color)        
+        self._curve_pen = self.createPen()      
         self._curve_pen.setStyle(Qt.DashDotLine)
         self._profcurve = TiggerPlotCurve(profilename)
         self._profcurve.setRenderHint(QwtPlotItem.RenderAntialiased)
@@ -40,6 +40,9 @@ class PlottableTiggerProfile(MutableTiggerProfile):
         self._attached = False
         self.attach()
 
+    def createPen(self):
+        return QPen(self._curve_color)
+
     @property
     def hasAssociatedCoord(self):
         return self._profilecoord is not None
@@ -54,8 +57,8 @@ class PlottableTiggerProfile(MutableTiggerProfile):
         if profilecoord is not None:
             if not (isinstance(profilecoord, tuple) and 
                     len(profilecoord) == 2 and
-                    all(map(lambda x: isinstance(x, int), profilecoord))):
-                raise TypeError("profilecoord should be 2-element pixel coord tuple")
+                    all(map(lambda x: isinstance(x, float), profilecoord))):
+                raise TypeError("profilecoord should be 2-element world coord tuple")
         self._profilecoord = profilecoord
 
     def setCurveColor(self, color):

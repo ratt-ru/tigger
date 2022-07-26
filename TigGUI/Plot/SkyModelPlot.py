@@ -20,6 +20,7 @@
 #
 
 import math
+from multiprocessing import set_start_method
 import re
 import time
 
@@ -75,6 +76,7 @@ Z_Source = 10000
 Z_SelectedSource = 10001
 Z_CurrentSource = 10002
 Z_Markup = 10010
+Z_MarkupOverlays = 10011
 
 # default stepping of grid circles
 DefaultGridStep_ArcSec = 30 * 60
@@ -743,7 +745,7 @@ class LiveProfile(ToolDialog):
             if remember:
                 self._lastsel = name
 
-    def trackImage(self, image, ix, iy):
+    def trackImage(self, image, ix, iy, il, im):
         if not self.isVisible():
             return
         if ix is None or iy is None:
@@ -783,6 +785,8 @@ class LiveProfile(ToolDialog):
             # store profile last update coordinates
             self._last_x = ix
             self._last_y = iy
+            self._last_l = il
+            self._last_m = im
         self._profcurve.setVisible(inrange)
         # update plots
         self._profplot.replot()
@@ -806,6 +810,9 @@ class SelectedProfile(LiveProfile):
         self._export_profile_dialog = None
         self._load_profile_dialog = None
         self._overlay_static_profiles = None
+        self._lastxmin = None
+        self._lastxmax = None
+        self._lastxtitle = None
         LiveProfile.__init__(self, parent, mainwin, configname, menuname, show_shortcut)
         self.addProfile()
         self._parent_picker = picker_parent
@@ -879,7 +886,7 @@ class SelectedProfile(LiveProfile):
             self.selectAxis(axisno)
             self._wprofile_axis.setCurrentIndex(axisno)
         else:
-            self.clearProfile()
+            self.clearProfile(keep_overlays=True)
         # update marker on the SkyPlot
         if self._parent_picker is not None:
             self._parent_picker.setSelectedProfileIndex(i)
@@ -887,12 +894,32 @@ class SelectedProfile(LiveProfile):
         if self._overlay_static_profiles is not None:
             for p in self._overlay_static_profiles:
                 p.attach()
-
+            # restore temporary vmin, vmax and xtitle
+            # if the profile has no active profile
+            # -- other static profiles may have been loaded
+            # to an empty profile
+            if (self._last_data_x is None or \
+                self._last_data_y is None) and \
+               len(self._overlay_static_profiles) > 0:
+                if self._lastxmin is not None and \
+                   self._lastxmax is not None:
+                    self._profplot.setAxisScale(
+                        QwtPlot.xBottom, self._lastxmin, self._lastxmax)
+                    self._profplot.replot()
+                if self._lastxtitle is not None:
+                    title = QwtText(self._lastxtitle)
+                    title.setFont(self._font)
+                    self._profplot.setAxisTitle(QwtPlot.xBottom, title)    
+                    self._profplot.replot()
+        
     def _profileInfosKeys(self):
         return ["_lastsel", "_image_id", "_image_hnd",
                 "_last_x", "_last_y",
+                "_last_l", "_last_m",
                 "_last_data_x", "_last_data_y",
-                "_current_profile_name", "_overlay_static_profiles"]
+                "_lastxmin", "_lastxmax", "_lastxtitle",
+                "_current_profile_name", "_overlay_static_profiles",
+                "_axes", "_selaxis"]
 
     def _restoreSelectedProfileInfos(self):
         """ restores the profile infos for the currently selected profile """
@@ -922,8 +949,9 @@ class SelectedProfile(LiveProfile):
 
         self._setupPlot()
         if self._parent_picker is not None:
-            self._parent_picker.removeSelectedProfileMarkings(self._currentprofile,
-                                                              purge_history=True)
+            if not keep_overlays:
+                self._parent_picker.removeSelectedProfileMarkings(self._currentprofile,
+                                                                  purge_history=True)
 
     def setProfileName(self, name):
         self._current_profile_name = name
@@ -952,7 +980,7 @@ class SelectedProfile(LiveProfile):
 
     def selectAxis(self, i, remember=True):
         LiveProfile.selectAxis(self, i, remember=True)
-        self.trackImage(self._image_hnd, self._last_x, self._last_y)
+        self.trackImage(self._image_hnd, self._last_x, self._last_y, self._last_l, self._last_m)
         # clear profile if no coordinate is set
         if self._last_y is None or self._last_x is None:
             self.clearProfile(keep_overlays=True)
@@ -1077,9 +1105,11 @@ class SelectedProfile(LiveProfile):
             # temporary titles and labels from pasted profiles
             xmin = numpy.nanmin(list(map(lambda x: numpy.nanmin(x.xdata),
                                          self._overlay_static_profiles)))
-            xmax = numpy.nanmax(list(map(lambda x: numpy.nanmax(x.ydata),
+            xmax = numpy.nanmax(list(map(lambda x: numpy.nanmax(x.xdata),
                                          self._overlay_static_profiles)))
-            self._profplot.setAxisScale(QwtPlot.xBottom, xmin, xmax)
+            self._lastxmin = xmin
+            self._lastxmax = xmax
+            self._profplot.setAxisScale(QwtPlot.xBottom, self._lastxmin, self._lastxmax)
             # set custom label if first loaded profile
             if len(self._overlay_static_profiles) == 1:
                 name, ok = QInputDialog.getText(self, 
@@ -1090,30 +1120,43 @@ class SelectedProfile(LiveProfile):
                                                 "Set custom axis unit", 
                                                 "<P> Set custom axis unit for loaded static profile </P>",
                                                 text=self._overlay_static_profiles[0].axisUnit)
-                title = QwtText("%s, %s" % (name, unit) if unit else name)
+                self._lastxtitle = "%s, %s" % (name, unit) if unit else name
+                title = QwtText(self._lastxtitle)
                 title.setFont(self._font)
                 self._profplot.setAxisTitle(QwtPlot.xBottom, title)
         if self._legend is None:
             self._legend = QwtLegend()
             self._profplot.insertLegend(self._legend, QwtPlot.BottomLegend) 
+
+        if self._parent_picker is not None and coord is not None:
+            self._parent_picker.addOverlayMarkerToCurrentProfile(
+                pastedname, coord, plottableprof.createPen(), index=self._currentprofile)
     
     def pasteActiveProfileAsStatic(self):
         def __constructProfileIndex(i):
             last_x = self.profiles_info.get(i, {}).get("_last_x", None)
             last_y = self.profiles_info.get(i, {}).get("_last_y", None)
+            last_l = self.profiles_info.get(i, {}).get("_last_l", None)
+            last_m = self.profiles_info.get(i, {}).get("_last_m", None)
             last_data_x = self.profiles_info.get(i, {}).get("_last_data_x", None)
             last_data_y = self.profiles_info.get(i, {}).get("_last_data_y", None)
+            selaxis = self.profiles_info.get(i, {}).get("_selaxis", None)
+            axes = self.profiles_info.get(i, {}).get("_axes", None)
 
-            if self._selaxis and self._selaxis[0] < len(self._axes) and \
+            if selaxis and selaxis[0] < len(axes) and \
                last_x is not None and \
                last_y is not None and \
+               last_l is not None and \
+               last_m is not None and \
                last_data_x is not None and \
-               last_data_y is not None:
+               last_data_y is not None and \
+               selaxis is not None and \
+               axes is not None:
                
                profname = self.profiles_info.get(i, {}).get("_current_profile_name", "Unnamed")
-               axisname, axisindx, axisvals, axisunit = self._axes[self._selaxis[0]]
+               axisname, axisindx, axisvals, axisunit = axes[selaxis[0]]
                prof = TiggerProfile(profname, axisname, axisunit, last_data_x, last_data_y)
-               return (prof, i, (last_x, last_y))
+               return (prof, i, (last_l, last_m))
             return None
         
         avail_profs = list(filter(lambda x: x is not None,
@@ -1716,47 +1759,138 @@ class SkyModelPlotter(QWidget):
         self.plotShowMessage = None
         self.plotShowErrorMessage = None
 
-    def _create_profile_marker_symbol(self, active=True):
+    def _create_profile_marker_symbol(self, active=True, isoverlay=False, custompen=None):
+        sym = QwtSymbol.Star1 if not isoverlay else QwtSymbol.Ellipse
         if active:
-            return QwtSymbol(QwtSymbol.Star1, self._markup_brush, self._markup_symbol_active_pen, QSize(20, 20))
+            pen = custompen if custompen is not None else self._markup_symbol_active_pen
+            size = QSize(20, 20) if isoverlay else QSize(20, 20)
+            return QwtSymbol(sym, self._markup_brush, pen, size)
         else:
-            return QwtSymbol(QwtSymbol.Star1, self._markup_brush, self._markup_symbol_inactive_pen, QSize(16, 16))
+            pen = custompen if custompen is not None else self._markup_symbol_inactive_pen
+            size = QSize(20, 20) if isoverlay else QSize(16, 16)
+            return QwtSymbol(sym, self._markup_brush, pen, size)
+
+    @classmethod
+    def _giveDefaultSelectedMarkerInfos(cls):
+        return {"active": {"marker": None, "position": None},
+                "overlays" : {}}
 
     def setSelectedProfileIndex(self, index=0):
         # Invalidate other profile markers
         for k in self._selected_profile_markup:
-            selmarker = self._selected_profile_markup.get(k, {"marker": None,
-                                                              "position": None})["marker"]
+            selmarker = self._selected_profile_markup.get(
+                k, SkyModelPlotter._giveDefaultSelectedMarkerInfos())["active"]["marker"]
             if selmarker is not None:
                 selmarker.setSymbol(self._create_profile_marker_symbol(active=False))
                 selmarker.attach(self.plot)
+        # Invalidate overlay profile markers
+        self.deactivateAllOverlayMarkersFromCurrentProfile()
 
         self._selected_profile_index = index
-        selprof = self._selected_profile_markup.get(index, {"marker": None,
-                                                            "position": None})
+        selprof = self._selected_profile_markup.get(
+            index, SkyModelPlotter._giveDefaultSelectedMarkerInfos())
         # Activate requested marker, if already placed at a position
-        if selprof["marker"] is not None:
-            if selprof["position"] is not None:
-                selprof["marker"].setSymbol(self._create_profile_marker_symbol(active=True))
-                selprof["marker"].attach(self.plot)
+        if selprof["active"]["marker"] is not None:
+            if selprof["active"]["position"] is not None:
+                selprof["active"]["marker"].setSymbol(self._create_profile_marker_symbol(active=True))
+                selprof["active"]["marker"].attach(self.plot)
+        # attach also all the overlay markers for the current selected profile
+        for m in selprof["overlays"]:
+            selprof["overlays"][m]["marker"].attach(self.plot)
         # finally make sure to redraw
         self._replot()
+
+    def _addBackAllSelectedProfileMarkers(self, index=0):
+        """ Remove and add back all overlays associated to profiles """
+        markup_items = [self._selected_profile_markup[k]["active"]["marker"]
+                            for k in self._selected_profile_markup]
+        for item in markup_items:
+            if item is not None:
+                item.setZ(Z_Markup)
+        for item in self._selected_profile_markup[index]["overlays"]:
+            self._selected_profile_markup[index]["overlays"][item]["marker"].setZ(Z_MarkupOverlays)
+            markup_items.append(self._selected_profile_markup[index]["overlays"][item]["marker"])
+        QTimer.singleShot(10, self._currier.curry(
+            self._addPlotMarkup, 
+            markup_items))
+
+    def addOverlayMarkerToCurrentProfile(self, name, position, qtpen, index=None):
+        """ Add (or update) named overlay marker for current selected profile """
+        index = self._selected_profile_index if index is None else index
+        if index is None: return
+        def __initoverlaymarker(position=position, qtpen=qtpen):
+            marker = TiggerPlotMarker()
+            marker.setRenderHint(QwtPlotItem.RenderAntialiased)
+            marker.setSymbol(self._create_profile_marker_symbol(
+                active=True, isoverlay=True, custompen=qtpen))
+            l, m = position
+            marker.setValue(l, m)
+            return {"marker": marker, "position": position}
+
+        self._selected_profile_markup.setdefault(
+            index, SkyModelPlotter._giveDefaultSelectedMarkerInfos())
+        # detach any existing markers to set new position or color
+        if name in self._selected_profile_markup[index]["overlays"]:
+            self._selected_profile_markup[index]["overlays"][name]["marker"].detach()
+        
+        self._selected_profile_markup[index]["overlays"][name] = \
+            __initoverlaymarker()
+        self._addBackAllSelectedProfileMarkers(index)
+
+    def removeOverlayMarkerFromCurrentProfile(self, name, index=None):
+        """ Remove named overlay marker from current profile """
+        index = self._selected_profile_index if index is None else index
+        if index is None: return
+        if name in self._selected_profile_markup.get(
+            index, SkyModelPlotter._giveDefaultSelectedMarkerInfos())["overlays"]:
+            self._selected_profile_markup[index]["overlays"][name]["marker"].detach()
+        del self._selected_profile_markup[index]["overlays"][name]
+        self._replot()
+
+    def deactivateOverlayMarkerFromCurrentProfile(self, name, index=None):
+        """ Detach named overlay marker from current profile """
+        index = self._selected_profile_index if index is None else index
+        if index is None: return
+        if name in self._selected_profile_markup.get(
+            index, SkyModelPlotter._giveDefaultSelectedMarkerInfos())["overlays"]:
+            self._selected_profile_markup[index]["overlays"][name]["marker"].detach()
+        self._replot()
+
+    def removeAllOverlayMarkersFromCurrentProfile(self, index=None):
+        """ Remove all overlay markers from current profile """
+        index = self._selected_profile_index if index is None else index
+        if index is None: return
+        for name in list(self._selected_profile_markup.get(
+            index, SkyModelPlotter._giveDefaultSelectedMarkerInfos())["overlays"].keys()):
+            self.removeOverlayMarkerFromCurrentProfile(name, index)
+    
+    def deactivateAllOverlayMarkersFromCurrentProfile(self, index=None):
+        """ Detach all overlay markers from current profile """
+        index = self._selected_profile_index if index is None else index
+        if index is None: return
+        for name in self._selected_profile_markup.get(
+            index, SkyModelPlotter._giveDefaultSelectedMarkerInfos())["overlays"]:
+            self.deactivateOverlayMarkerFromCurrentProfile(name, index)
 
     def removeAllSelectedProfileMarkings(self):
         """ Remove all selected profile markings """
         for k in self._selected_profile_markup:
             self.removeSelectedProfileMarkings(k)
+        self.removeAllOverlayMarkersFromCurrentProfile()
 
     def removeSelectedProfileMarkings(self, index, purge_history=False):
         """ Remove selected profile marking
             purge_history: remove position and marking from history
-        """
+        """        
         if index in self._selected_profile_markup:
-            marker = self._selected_profile_markup[index]['marker']
+            marker = self._selected_profile_markup[index]["active"]['marker']
             if marker is not None:
                 self._removePlotMarkupItem(marker)
             if purge_history:
+                self.removeAllOverlayMarkersFromCurrentProfile(index)
                 del self._selected_profile_markup[index]
+            else:
+                self.deactivateAllOverlayMarkersFromCurrentProfile(index)
 
     def close(self):
         self._menu.clear()
@@ -2361,7 +2495,8 @@ class SkyModelPlotter(QWidget):
     def _removePlotMarkup(self, replot=True):
         """Removes all markup items, and refreshes the plot if replot=True"""
         for item in self._plot_markup:
-            if not item in map(lambda k: self._selected_profile_markup[k]["marker"], 
+            if item is None: continue
+            if not item in map(lambda k: self._selected_profile_markup[k]["active"]["marker"], 
                                self._selected_profile_markup):
                 item.detach()
         if self._plot_markup and replot:
@@ -2422,7 +2557,7 @@ class SkyModelPlotter(QWidget):
         if image is None:
             image = self._imgman and self._imgman.getTopImage()
         if image and x is not None:
-            self._liveprofile_selected.trackImage(image, x, y)
+            self._liveprofile_selected.trackImage(image, x, y, l, m)
             if self._liveprofile_selected.isVisible():
                 # add a marker at the location of the selected profile
                 def __initMarker(markerindex):
@@ -2430,18 +2565,16 @@ class SkyModelPlotter(QWidget):
                     marker.setRenderHint(QwtPlotItem.RenderAntialiased)
                     marker.setLabel(QwtText(str(markerindex + 1)))
                     marker.setSymbol(self._create_profile_marker_symbol(active=True))
-                    return {"marker": marker, "position": None}
-                sel_marker = self._selected_profile_markup.setdefault(self._selected_profile_index,
-                                                                      __initMarker(self._selected_profile_index))
+                    return marker
+                if self._selected_profile_markup.setdefault(
+                    self._selected_profile_index, 
+                    SkyModelPlotter._giveDefaultSelectedMarkerInfos())["active"]["marker"] is None:
+                    self._selected_profile_markup[self._selected_profile_index]["active"]["marker"] = \
+                        __initMarker(self._selected_profile_index)
+                sel_marker = self._selected_profile_markup[self._selected_profile_index]["active"]
                 sel_marker["marker"].setValue(l, m)
                 sel_marker["position"] = (l, m)
-                # remove and add back marker
-                markup_items = [self._selected_profile_markup[k]["marker"]
-                                 for k in self._selected_profile_markup]
-                for item in markup_items:
-                    if item is not None:
-                        item.setZ(Z_Markup)
-                QTimer.singleShot(10, self._currier.curry(self._addPlotMarkup, markup_items))
+                self._addBackAllSelectedProfileMarkers(self._selected_profile_index)
 
     def _trackCoordinatesProfile(self, pos):
         # find the image and projection from pos
@@ -2458,7 +2591,7 @@ class SkyModelPlotter(QWidget):
         if image is None:
             image = self._imgman and self._imgman.getTopImage()
         if image and x is not None:
-            self._liveprofile.trackImage(image, x, y)
+            self._liveprofile.trackImage(image, x, y, l, m)
 
     def _selectSources(self, sources, mode):
         """Helper function to select sources in list"""
