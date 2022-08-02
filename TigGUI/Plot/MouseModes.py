@@ -19,11 +19,11 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-from PyQt5.Qt import QObject, Qt, QActionGroup
+from PyQt5.Qt import QActionGroup, QObject, Qt
 from PyQt5.QtCore import pyqtSignal
 
-import TigGUI.kitties.utils
 from TigGUI.init import Config, ConfigFile, ConfigFileName, pixmaps
+import TigGUI.kitties.utils
 from TigGUI.kitties.utils import PersistentCurrier
 
 _verbosity = TigGUI.kitties.utils.verbosity(name="mmod")
@@ -202,7 +202,6 @@ class MouseModeManager(QObject):
             else:
                 mode.tooltip = "<P>Your current mouse scheme is: \"%s\".</P>" % mode.name
             mode.tooltip += """<P>The following mouse functions are available:</P><BR><TABLE>\n"""
-            patterns = {}
             # get basic patterns
             for func in _AllFuncs:
                 # get pattern
@@ -218,23 +217,23 @@ class MouseModeManager(QObject):
                         try:
                             comps = [x if x in (WHEELUP, WHEELDOWN) else getattr(Qt, x) for x in scomps]
                         except AttributeError:
-                            print(
-                                "WARNING: can't parse '%s' for function '%s' in mode config section '%s', disabling. Check your %s." % (
-                                    pat, func, section, ConfigFileName))
+                            print(f"WARNING: can't parse {pat} for function {func} "
+                                  f"in mode config section {section}, disabling. "
+                                  f"Check your {ConfigFileName}.")
                             continue
                         # append key/button code and sum of modifiers to the key or keyboard pattern list
                         if scomps[-1].startswith("Key_"):
                             if key_pattern:
-                                print(
-                                    "WARNING: more than one key pattern for function '%s' in mode config section '%s', ignoring. Check your %s." % (
-                                        func, section, ConfigFileName))
+                                print(f"WARNING: more than one key pattern for function {func} "
+                                      f"in mode config section {section}, ignoring. "
+                                      f"Check your {ConfigFileName}.")
                             else:
                                 key_pattern = comps[-1], sum(comps[:-1])
                         else:
                             if mouse_pattern:
-                                print(
-                                    "WARNING: more than one mouse pattern for function '%s' in mode config section '%s', ignoring. Check your %s." % (
-                                        func, section, ConfigFileName))
+                                print(f"WARNING: more than one mouse pattern for function {func} "
+                                      f"in mode config section {section},  ignoring. "
+                                      f"Check your {ConfigFileName}.")
                             else:
                                 mouse_pattern = comps[-1], sum(comps[:-1])
                 mode.tooltip += "<TR><TD>%s:&nbsp;&nbsp;</TD><TD>%s</TD></TR>\n" % (pattern, FuncDoc[func])

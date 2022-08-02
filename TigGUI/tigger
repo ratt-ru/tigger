@@ -20,23 +20,22 @@
 # or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 import faulthandler
-import time
-
-from TigGUI.Tools import dependency_check  # checks dependencies are available
-
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPalette
-from PyQt5.QtWidgets import QStyleFactory, QSizePolicy, QStyle, QSplashScreen
-
-faulthandler.enable()
-import sys
-import os
-import traceback
 from optparse import OptionParser
+import os
+import sys
+import time
+import traceback
+
+from TigGUI.Tools import dependency_check
 
 from PyQt5.Qt import QApplication, QColor
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QPalette
+from PyQt5.QtWidgets import QSplashScreen, QStyle, QStyleFactory
 
 from TigGUI.kitties import utils
+
+faulthandler.enable()
 
 
 def main():
@@ -55,6 +54,19 @@ def main():
     parser.add_option("-T", "--timestamps", action="store_true",
                       help="(for debugging Python code) enable timestamps in debug output")
     (options, rem_args) = parser.parse_args()
+
+    # process verbose settings for --debug
+    option_vals = vars(options)
+    # check for verbose options
+    if 'verbose' in option_vals:
+        debug_list = option_vals['verbose']
+        # set debug verbosity levels
+        if debug_list:
+            for item in debug_list:
+                debug_setting = item.split('=')
+                context = debug_setting[0]
+                level = int(debug_setting[1])
+                TigGUI.kitties.utils.verbosity.set_verbosity_level(context, level)
 
     if options.timestamps:
         try:
@@ -147,9 +159,9 @@ def main():
     max_w, max_h = int(usable_screen.width()*0.9), int(usable_screen.height()*0.88)
     mainwin = TigGUI.MainWindow.MainWindow(None, max_width=max_w, max_height=max_h)
     # set minimum size as the height of image control dialog
-    if usable_screen.width() >= 895 <= usable_screen.height():
+    if usable_screen.width() >= 1100 and 895 <= usable_screen.height():
         mainwin.setMinimumHeight(895)
-        mainwin.setMinimumWidth(895)
+        mainwin.setMinimumWidth(1100)
     # centre on screen
     centre = QStyle.alignedRect(Qt.LeftToRight, Qt.AlignHCenter, mainwin.size(), QApplication.desktop().availableGeometry())
     mainwin.setGeometry(centre)

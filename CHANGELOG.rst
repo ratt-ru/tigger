@@ -2,6 +2,23 @@
 Tigger Changelog
 ================
 
+1.6.2
+=====
+
+* Version bump in preparation for release
+* Adds selected profile feature (CTRL+ALT+LeftButton)
+* WCS projection is now optimised for multiple images
+* WCS projection provides 2 modes, switchable via the new WCS Projection menu
+* Adds FITS header and WCS projection viewer
+* Coordinate measurements have been fixed
+* Fixes plot layout handling
+* Fixes dockable widget sizing and placement
+* Fixes historgram mouse wheel movement
+* Fixes issue #139 - Live and selected profiles
+* Fixes issue #140 - WCS projection
+* Fixes issue #141 - flake8 errors
+* Various other minor refactorings and adjustments
+
 1.6.1.2 
 =======
 
@@ -10,7 +27,7 @@ Tigger Changelog
 1.6.1.1
 =====
 
-Minor bug fixes to window and docking config loading upon Tigger startup
+* Minor bug fixes to window and docking config loading upon Tigger startup
 
 1.6.1
 =====

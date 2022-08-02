@@ -20,19 +20,18 @@
 #
 
 import math
-from PyQt5.QtWidgets import *
 
-from PyQt5.Qt import QObject, QHBoxLayout, QFileDialog, pyqtSignal, QLabel, \
-    QLineEdit, QDialog, QDoubleValidator, QVBoxLayout, \
-    QPushButton, Qt, QCheckBox, QMessageBox, QErrorMessage
+from PyQt5.Qt import (QCheckBox, QDialog, QDoubleValidator, QErrorMessage,
+                      QFileDialog, QHBoxLayout, QLabel, QLineEdit, QMessageBox,
+                      QPushButton, QVBoxLayout, Qt)
 
+from TigGUI.Tools import registerTool
+from TigGUI.Widgets import FileSelector
 import TigGUI.kitties.utils
+from TigGUI.kitties.widgets import BusyIndicator
+from Tigger.Tools import Imaging
 
 from astropy.io import fits as pyfits
-
-from TigGUI.kitties.widgets import BusyIndicator
-from TigGUI.Widgets import FileSelector
-from Tigger.Tools import Imaging
 
 DEG = math.pi / 180
 
@@ -126,13 +125,13 @@ class RestoreImageDialog(QDialog):
                 return
             # try to get beam extents
             gx, gy, grot = [header.get(x, None) for x in ('BMAJ', 'BMIN', 'BPA')]
-            if all([x is not None for x in (gx, gy, grot)]):
+            if all(x is not None for x in (gx, gy, grot)):
                 # if beam size is already set, ask before overwriting
                 print([str(x.text()) for x in (self.wbmaj, self.wbmin, self.wbpa)])
-                if any([bool(str(x.text())) for x in (self.wbmaj, self.wbmin, self.wbpa)]) and \
-                        QMessageBox.question(self, "Set restoring beam",
-                                             "Also reset restoring beam size from this FITS file?",
-                                             QMessageBox.Yes | QMessageBox.No) != QMessageBox.Yes:
+                if (any(bool(str(x.text())) for x in (self.wbmaj, self.wbmin, self.wbpa))
+                        and QMessageBox.question(self, "Set restoring beam",
+                                                 "Also reset restoring beam size from this FITS file?",
+                                                 QMessageBox.Yes | QMessageBox.No,) != QMessageBox.Yes):
                     return
                 self.wbmaj.setText("%.2f" % (gx * 3600))
                 self.wbmin.setText("%.2f" % (gy * 3600))
@@ -217,7 +216,5 @@ def restore_into_image(mainwin, model):
     # show dialog
     return dialog.exec_()
 
-
-from TigGUI.Tools import registerTool
 
 registerTool("Restore model into image...", restore_into_image)

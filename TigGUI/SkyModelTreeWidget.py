@@ -20,19 +20,22 @@
 #
 
 import math
-from builtins import chr
 
-from PyQt5.Qt import QWidget, QHBoxLayout, QComboBox, QLabel, QToolButton, QVBoxLayout, \
-    QPushButton, Qt, QTreeWidgetItem, QAbstractItemView, QHeaderView, QTreeWidget, QAction, QEvent, QSize, \
-    QSizePolicy, QTableWidget, QTableWidgetItem, QItemSelectionRange, QItemSelection, QFontMetrics, QFont, \
-    QApplication, QItemSelectionModel
-from Tigger.Models import ModelClasses, PlotStyles
-from Tigger.Models.SkyModel import SkyModel
+from PyQt5 import QtCore
+from PyQt5.Qt import (QAbstractItemView, QAction, QApplication, QComboBox,
+                      QEvent, QFont, QFontMetrics, QHBoxLayout, QHeaderView,
+                      QItemSelection, QItemSelectionModel, QItemSelectionRange,
+                      QLabel, QPushButton, QSize, QSizePolicy, QTableWidget,
+                      QTableWidgetItem, QToolButton, QTreeWidget,
+                      QTreeWidgetItem, QVBoxLayout, QWidget, Qt)
 
 import TigGUI.kitties.utils
-import TigGUI.kitties.widgets
 from TigGUI.kitties.utils import PersistentCurrier
+import TigGUI.kitties.widgets
 from TigGUI.kitties.widgets import BusyIndicator
+
+from Tigger.Models import ModelClasses, PlotStyles
+from Tigger.Models.SkyModel import SkyModel
 
 QString = str
 
@@ -74,7 +77,7 @@ NumColumns = len(ViewColumns)
 DEG = math.pi / 180
 
 # Qt-4.6 and up (PyQt 4.7 and up) has very slow QTreeWidgetItem updates, determine version here
-from PyQt5 import QtCore
+
 
 _SLOW_QTREEWIDGETITEM = QtCore.PYQT_VERSION_STR >= '4.7'
 
@@ -98,8 +101,8 @@ class SkyModelTreeWidget(TigGUI.kitties.widgets.ClickableTreeWidget):
         # set column width modes
         self.header().setStretchLastSection(False)
         self.header().setSectionResizeMode(QHeaderView.ResizeToContents)
-        ## self.setTextAlignment(ColumnR,Qt.AlignRight)
-        ## self.setTextAlignment(ColumnType,Qt.AlignHCenter)
+        # # self.setTextAlignment(ColumnR,Qt.AlignRight)
+        # # self.setTextAlignment(ColumnType,Qt.AlignHCenter)
         # _column_enabled[i] is True if column is available in the model.
         # _column_show[i] is True if column is currently being shown (via a view control)
         self._column_enabled = [True] * NumColumns
@@ -108,7 +111,7 @@ class SkyModelTreeWidget(TigGUI.kitties.widgets.ClickableTreeWidget):
         self.header().show()
         self.setSelectionMode(QTreeWidget.ExtendedSelection)
         self.setAllColumnsShowFocus(True)
-        ## self.setShowToolTips(True)
+        # # self.setShowToolTips(True)
         self._updating_selection = False
         self.setRootIsDecorated(False)
         # connect signals to track selected sources
@@ -139,9 +142,8 @@ class SkyModelTreeWidget(TigGUI.kitties.widgets.ClickableTreeWidget):
             if not hdr.sectionSize(col):
                 hdr.resizeSection(col, self._column_widths[col])
                 hdr.setResizeMode(col, QHeaderView.ResizeToContents)
-        else:
-            if hdr.sectionSize(col):
-                self._column_widths[col] = hdr.sectionSize(col)
+        elif hdr.sectionSize(col):
+            self._column_widths[col] = hdr.sectionSize(col)
 
     def _enableColumn(self, column, enable=True):
         busy = BusyIndicator()
@@ -241,7 +243,7 @@ class SkyModelTreeWidget(TigGUI.kitties.widgets.ClickableTreeWidget):
         if origin is self:
             return
         self._updating_selection = True
-        ## this is very slow because of setSelected()
+        # # this is very slow because of setSelected()
         #    for item in self.iterator():
         #     item.setSelected(item._src.selected)
         selection = QItemSelection()
@@ -400,8 +402,8 @@ class SkyModelTreeWidgetItem(QTreeWidgetItem):
         # Tags. Tags are all extra attributes that do not have a dedicated column (i.e. not Iapp or r), and do not start
         # with "_" (which is reserved for internal attributes)
 
-        ## the complexity below seems entirely unnecessary, since sorting the tag strings automatically puts "_" first,
-        ## "-" second, and alphabet afterwards
+        # # the complexity below seems entirely unnecessary, since sorting the tag strings automatically puts "_" first,
+        # # "-" second, and alphabet afterwards
 
         # truetags = []
         # falsetags = []
@@ -536,8 +538,8 @@ class ModelGroupsTable(QWidget):
         self._setting_model = True  # to ignore cellChanged() signals (in valueChanged())
         # _item_cb is a dict (with row,col keys) containing the widgets (CheckBoxes ComboBoxes) per each cell
         self._item_cb = {}
-        # lists of "list" and "plot" checkboxes per each grouping (excepting the default grouping); each entry is an (row,col,item) tuple.
-        # used as argument to self._showControls()
+        # lists of "list" and "plot" checkboxes per each grouping (excepting the default grouping);
+        # each entry is an (row,col,item) tuple. used as argument to self._showControls()
         self._list_controls = []
         self._plot_controls = []
         # list of selection callbacks (to which signals are connected)
@@ -586,23 +588,23 @@ class ModelGroupsTable(QWidget):
             if group not in (model.curgroup, model.selgroup):
                 item = self._makeCheckItem("", group, "show_list")
                 self.table.setItem(irow, self.ColList, item)
-                item.setToolTip("""<P>If checked, sources in this grouping will be listed in the source table. If un-checked, sources will be
-            excluded from the table. If partially checked, then the default list/no list setting of "all sources" will be in effect.
-            </P>""")
+                item.setToolTip("""<P>If checked, sources in this grouping will be listed in the source table.
+                                If un-checked, sources will be excluded from the table. If partially checked,
+                                then the default list/no list setting of "all sources" will be in effect. </P>""")
             # "plot" checkbox (not for the current grouping, since that's always plotted)
             if group is not model.curgroup:
                 item = self._makeCheckItem("", group, "show_plot")
                 self.table.setItem(irow, self.ColPlot, item)
-                item.setToolTip("""<P>If checked, sources in this grouping will be included in the plot. If un-checked, sources will be
-            excluded from the plot. If partially checked, then the default plot/no plot setting of "all sources" will be in effect.
-            </P>""")
+                item.setToolTip("""<P>If checked, sources in this grouping will be included in the plot.
+                                If un-checked, sources will be excluded from the plot. If partially checked,
+                                then the default plot/no plot setting of "all sources" will be in effect. </P>""")
             # custom style control
             # for default, current and selected, this is just a text label
             if group is model.defgroup:
                 item = QTableWidgetItem("default:")
                 item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-                item.setToolTip(
-                    """<P>This is the default plot style used for all sources for which a custom grouping style is not selected.</P>""")
+                item.setToolTip("""<P>This is the default plot style used for all sources
+                                for which a custom grouping style is not selected.</P>""")
                 self.table.setItem(irow, self.ColApply, item)
             elif group is model.curgroup:
                 item = QTableWidgetItem("")
@@ -655,7 +657,8 @@ class ModelGroupsTable(QWidget):
           is enabled via the style control.<P>""" % label)
                 else:
                     cb.setToolTip(
-                        "<P>This is the default %s used for all sources for which a custom style is not specified below.<P>" % label)
+                        "<P>This is the default %s used for all sources for which a custom style is not specified below.<P>"
+                        % label)
         self.table.resizeColumnsToContents()
         # re-enable processing of cellChanged() signals
         self._setting_model = False

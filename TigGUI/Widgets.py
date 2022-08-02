@@ -19,16 +19,17 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-import traceback
 import re
-import os
-from PyQt5.Qt import  QValidator, QWidget, QHBoxLayout, QFileDialog, QComboBox, QLabel, \
-    QLineEdit, QDialog, QIntValidator, QDoubleValidator, QToolButton, QListWidget, QVBoxLayout, \
-    QPushButton, QMessageBox
-from PyQt5.QtGui import QMouseEvent, QFont
-from PyQt5.QtWidgets import QDockWidget, QStyle, QSizePolicy, QToolTip, QApplication
+import traceback
+
+from PyQt5.Qt import (QComboBox, QDialog, QDoubleValidator, QFileDialog,
+                      QHBoxLayout, QIntValidator, QLabel, QLineEdit,
+                      QListWidget, QMessageBox, QPushButton, QToolButton,
+                      QVBoxLayout, QValidator, QWidget)
+from PyQt5.QtCore import QEvent, QSize, QTimer, Qt, pyqtSignal
+from PyQt5.QtGui import QFont, QMouseEvent, QTextOption
+from PyQt5.QtWidgets import QDockWidget, QPlainTextEdit, QSizePolicy, QStyle, QTabWidget
 from PyQt5.Qwt import QwtPlotCurve, QwtPlotMarker
-from PyQt5.QtCore import pyqtSignal, Qt, QEvent, QSize, QTimer
 
 from TigGUI.init import pixmaps
 
@@ -61,7 +62,7 @@ class FloatValidator(QValidator):
         try:
             x = float(_input)
             return QValidator.Acceptable, _input, _pos
-        except:
+        except Exception:
             pass
         if not _input or self.re_intermediate.match(_input):
             return QValidator.Intermediate, _input, _pos
@@ -79,7 +80,7 @@ class ValueTypeEditor(QWidget):
         lo.setSpacing(5)
         # type selector
         self.wtypesel = QComboBox(self)
-        for i, tp in enumerate(self.ValueTypes):
+        for tp in self.ValueTypes:
             self.wtypesel.addItem(tp.__name__)
         self.wtypesel.activated[int].connect(self._selectTypeNum)
         typesel_lab = QLabel("&Type:", self)
@@ -127,13 +128,12 @@ class ValueTypeEditor(QWidget):
         tp = self.ValueTypes[self.wtypesel.currentIndex()]
         if tp is bool:
             return bool(self.wbool.currentIndex())
-        else:
-            try:
-                return tp(self.wvalue.text())
-            except:
-                print("Error converting input to type ", tp.__name__)
-                traceback.print_exc()
-                return None
+        try:
+            return tp(self.wvalue.text())
+        except Exception:
+            print("Error converting input to type ", tp.__name__)
+            traceback.print_exc()
+            return None
 
 
 class FileSelector(QWidget):
@@ -417,7 +417,7 @@ class TDockWidget(QDockWidget):
             if isinstance(bind_widget, ToolDialog):
                 self.setAllowedAreas(Qt.AllDockWidgetAreas)
             elif isinstance(bind_widget, ImageControlDialog):
-                self.setAllowedAreas(Qt.RightDockWidgetArea | Qt.LeftDockWidgetArea)
+                self.setAllowedAreas(Qt.RightDockWidgetArea)
         self.setTitleBarWidget(self.dock_title_bar)
         self.setFloating(False)
         # get current sizeHints()
@@ -445,11 +445,13 @@ class TDockWidget(QDockWidget):
             label = self.childAt(event.pos())
             if not label:
                 return super(TDockWidget, self).eventFilter(source, event)
-            if isinstance(label, QLabel):
-                if not self.isFloating():
-                    fake_mouse_event = QMouseEvent(QEvent.MouseButtonRelease, event.pos(), event.button(), event.buttons(), event.modifiers())
-                    super(TDockWidget, self).event(fake_mouse_event)
-                    return True
+            if isinstance(label, QLabel) and not self.isFloating():
+                fake_mouse_event = QMouseEvent(QEvent.MouseButtonRelease,
+                                               event.pos(), event.button(),
+                                               event.buttons(),
+                                               event.modifiers())
+                super(TDockWidget, self).event(fake_mouse_event)
+                return True
         return super(TDockWidget, self).eventFilter(source, event)
 
 
@@ -498,3 +500,63 @@ class TigToolTip(QLabel):
                 self._qtimer.stop()
             self.close()
         return super(TigToolTip, self).eventFilter(source, event)
+
+
+class WCSViewer(QDialog):
+    def __init__(self, parent, _image, _projection=None, modal=False):
+        super().__init__(parent)
+        self.setModal(modal)
+        self.setWindowTitle(f"{_image.name}")
+        self.layout = QVBoxLayout()
+        f = QFont()
+        f.setFamily("Monospace")
+        f.setPointSize(10)
+        f.setFixedPitch(True)
+
+        # Create header viewer
+        self.fits_info = QPlainTextEdit()
+        self.fits_info.setMinimumWidth(650)
+        self.fits_info.setMinimumHeight(600)
+        self.fits_info.setWordWrapMode(QTextOption.NoWrap)
+        self.fits_info.setLineWrapMode(QPlainTextEdit.NoWrap)
+        self.fits_info.setTabStopWidth(40)
+        self.fits_info.setFont(f)
+        self.fits_info.setReadOnly(True)
+        self.fits_info.setPlainText(_image.fits_header.tostring(sep='\n', padding=True))
+
+        # Create projection viewer
+        self.proj_info = QPlainTextEdit()
+        self.proj_info.setMinimumWidth(650)
+        self.proj_info.setMinimumHeight(600)
+        self.proj_info.setWordWrapMode(QTextOption.NoWrap)
+        self.proj_info.setLineWrapMode(QPlainTextEdit.NoWrap)
+        self.proj_info.setTabStopWidth(40)
+        self.proj_info.setFont(f)
+        self.proj_info.setReadOnly(True)
+        if _projection:
+            self.proj_info.setPlainText(repr(_projection))
+        else:
+            self.proj_info.setPlainText("Projection optimisation failed for this image")
+
+        # Initialize tab screen
+        self.tabs = QTabWidget()
+        self.wcs_tab = QWidget()
+        self.proj_tab = QWidget()
+
+        # Add tabs
+        self.tabs.addTab(self.wcs_tab, "FITS Header")
+        self.tabs.addTab(self.proj_tab, "Plot WCS Projection")
+
+        # Create header tab
+        self.wcs_tab.layout = QVBoxLayout(self)
+        self.wcs_tab.layout.addWidget(self.fits_info)
+        self.wcs_tab.setLayout(self.wcs_tab.layout)
+
+        # Create projection tab
+        self.proj_tab.layout = QVBoxLayout(self)
+        self.proj_tab.layout.addWidget(self.proj_info)
+        self.proj_tab.setLayout(self.proj_tab.layout)
+
+        # Add tabs to widget
+        self.layout.addWidget(self.tabs)
+        self.setLayout(self.layout)

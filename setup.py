@@ -4,7 +4,7 @@ from __future__ import print_function
 from setuptools import setup, find_packages
 from pathlib import Path
 
-__version__ = "1.6.1.2"
+__version__ = "1.6.2"
 
 # PyQt (5.15.x) has not been added here are it needs to be installed via apt-get instead to support Qwt.
 # requirements below do not have versions for upstream packaging processes, but tested and compatible versions are given
@@ -15,6 +15,7 @@ requirements = [
     'astropy',  # tested with 4.1, 4.2 and 5.0.4
     'astro_tigger_lsm==1.7.2',  # PyQt5 version of astro-tigger-lsm
     'configparser',  # tested with version 5.0.1 and 5.2.0
+    'reproject',  # tested with version 0.8
 ]
 
 scripts = [

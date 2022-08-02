@@ -20,28 +20,47 @@
 #
 
 import math
+from multiprocessing import set_start_method
 import re
 import time
 
-import numpy
 from PyQt5 import QtGui
-from PyQt5.Qt import QWidget, QHBoxLayout, QFileDialog, QComboBox, QLabel, \
-    QDialog, QToolButton, QVBoxLayout, QAction, QEvent, QSize, QMouseEvent, \
-    QSizePolicy, QApplication, QColor, QImage, QPixmap, QPainter, QToolTip, \
-    QBrush, QTimer, QCheckBox, QMenu, QPen, QRect, QClipboard, \
-    QInputDialog, QActionGroup, QRectF, QPointF, QPoint, QMessageBox, QTransform, QToolBar, QCoreApplication
-from PyQt5.QtCore import *
+from PyQt5.Qt import (QAction, QActionGroup, QApplication, QBrush, QCheckBox,
+                      QClipboard, QColor, QComboBox, QCoreApplication, QDialog,
+                      QEvent, QFileDialog, QHBoxLayout, QImage, QInputDialog,
+                      QLabel, QMenu, QMessageBox, QPainter, QPen, QPixmap,
+                      QPoint, QPointF, QRectF, QSize, QSizePolicy, QTimer,
+                      QToolBar, QToolButton, QTransform, QVBoxLayout, QWidget, QPushButton,
+                      QGridLayout, QColorDialog)
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtGui import QPolygon, QFont, QPalette
-from PyQt5.QtWidgets import QDockWidget, QPushButton, QStyle, QSpacerItem
-from PyQt5.Qwt import QwtPlot, QwtPlotPicker, QwtText, QwtPlotItem, QwtPlotCurve, QwtPicker, QwtEventPattern, \
-    QwtSymbol, QwtPlotZoomer, QwtScaleEngine, QwtPickerMachine, QwtPickerClickRectMachine, QwtPickerClickPointMachine, \
-    QwtPickerPolygonMachine, QwtPickerDragRectMachine, QwtPickerDragLineMachine, QwtPlotCanvas, QwtPickerTrackerMachine
+from PyQt5.QtWidgets import QDockWidget, QLayout
+from PyQt5.Qwt import (QwtEventPattern, QwtPicker, QwtPickerClickPointMachine,
+                       QwtPickerClickRectMachine, QwtPickerDragLineMachine,
+                       QwtPickerDragRectMachine, QwtPickerTrackerMachine,
+                       QwtPlot, QwtPlotCurve, QwtPlotItem, QwtPlotPicker,
+                       QwtPlotZoomer, QwtScaleEngine, QwtSymbol, QwtText,
+                       QwtLegend)
 
+from TigGUI.Images.ControlDialog import ImageControlDialog
+from TigGUI.Plot import MouseModes
+from TigGUI.Widgets import (TDockWidget, TigToolTip, TiggerPlotCurve,
+                            TiggerPlotMarker)
+from TigGUI.init import Config, pixmaps
+from TigGUI.kitties.plottable_profiles import PlottableTiggerProfile
 import TigGUI.kitties.utils
-from TigGUI.kitties.utils import curry, PersistentCurrier
+from TigGUI.kitties.utils import PersistentCurrier, curry
 from TigGUI.kitties.widgets import BusyIndicator
+
+from Tigger import Coordinates
+from Tigger.Coordinates import Projection
+from Tigger.Models import ModelClasses
+from Tigger.Models.SkyModel import SkyModel
+
+from TigGUI.kitties.profiles import TiggerProfile, TiggerProfileFactory
+
+import numpy
+import os
 
 QStringList = list
 
@@ -49,14 +68,6 @@ _verbosity = TigGUI.kitties.utils.verbosity(name="plot")
 dprint = _verbosity.dprint
 dprintf = _verbosity.dprintf
 
-from TigGUI.init import pixmaps, Config
-from Tigger.Models import ModelClasses
-from Tigger import Coordinates
-from Tigger.Coordinates import Projection
-from Tigger.Models.SkyModel import SkyModel
-from TigGUI.Widgets import TiggerPlotCurve, TiggerPlotMarker, TDockWidget, TigToolTip
-from TigGUI.Plot import MouseModes
-from TigGUI.Images.ControlDialog import ImageControlDialog
 
 # plot Z depths for various classes of objects
 Z_Image = 1000
@@ -65,6 +76,7 @@ Z_Source = 10000
 Z_SelectedSource = 10001
 Z_CurrentSource = 10002
 Z_Markup = 10010
+Z_MarkupOverlays = 10011
 
 # default stepping of grid circles
 DefaultGridStep_ArcSec = 30 * 60
@@ -241,10 +253,11 @@ def makeDualColorPen(color1, color2, width=3):
 class ToolDialog(QDialog):
     signalIsVisible = pyqtSignal(bool)
 
-    def __init__(self, parent, configname, menuname, show_shortcut=None):
+    def __init__(self, parent, mainwin, configname, menuname, show_shortcut=None):
         QDialog.__init__(self, parent)
         self.setModal(False)
         self.setFocusPolicy(Qt.NoFocus)
+        self.mainwin = mainwin
         self.hide()
         self._configname = configname
         self._geometry = None
@@ -267,7 +280,8 @@ class ToolDialog(QDialog):
         return self._qa_show
 
     def makeAvailable(self, available=True):
-        """Makes the tool available (or unavailable)-- shows/hides the "show" control, and shows/hides the dialog according to this control."""
+        """Makes the tool available (or unavailable)-- shows/hides the "show" control,
+        and shows/hides the dialog according to this control."""
         self._qa_show.setVisible(available)
         self.setVisible(self._qa_show.isChecked() if available else False)
 
@@ -318,42 +332,55 @@ class ToolDialog(QDialog):
         if visible and not self.parent().isVisible():
             self.parent().setGeometry(self.geometry())
             self.parent().setVisible(True)
-            if self.parent().main_win.windowState() != Qt.WindowMaximized:
-                if not self.get_docked_widget_size(self.parent()):
-                    geo = self.parent().main_win.geometry()
-                    geo.setWidth(self.parent().main_win.width() + self.width())
+            _area = self.mainwin.dockWidgetArea(self.parent())  # in right dock area
+            if self.mainwin.windowState() != Qt.WindowMaximized:
+                if not self.get_docked_widget_size(self.parent(), _area):
+                    geo = self.mainwin.geometry()
+                    geo.setWidth(self.mainwin.width() + self.parent().width())
                     center = geo.center()
-                    geo.moveCenter(QPoint(center.x() - self.width(), geo.y()))
-                    self.parent().main_win.setGeometry(geo)
+                    if self.mainwin.dockWidgetArea(self.parent()) == 2:  # in right dock area
+                        geo.moveCenter(QPoint(center.x() + self.parent().width(), geo.y()))
+                    elif self.mainwin.dockWidgetArea(self.parent()) == 1:
+                        geo.moveCenter(QPoint(center.x() - self.width(), geo.y()))
+                    self.mainwin.setGeometry(geo)
+            if _area == 2 and isinstance(self.parent().bind_widget, TigGUI.Plot.SkyModelPlot.LiveImageZoom):
+                self.mainwin.addDockWidgetToArea(self.parent(), _area)
+            else:
+                self.mainwin.addDockWidgetToArea(self.parent(), _area)
         elif not visible and self.parent().isVisible():
-            if self.parent().main_win.windowState() != Qt.WindowMaximized:
-                if not self.get_docked_widget_size(self.parent()):
-                    geo = self.parent().main_win.geometry()
-                    geo.setWidth(self.parent().main_win.width() - self.width())
+            _area = self.mainwin.dockWidgetArea(self.parent())  # in right dock area
+            if self.mainwin.windowState() != Qt.WindowMaximized:
+                if not self.get_docked_widget_size(self.parent(), _area):
+                    geo = self.mainwin.geometry()
+                    geo.setWidth(self.mainwin.width() - self.parent().width())
                     center = geo.center()
-                    geo.moveCenter(QPoint(center.x() + self.width(), geo.y()))
-                    self.parent().main_win.setGeometry(geo)
+                    if self.mainwin.dockWidgetArea(self.parent()) == 1:  # in left dock area
+                        geo.moveCenter(QPoint(center.x() + self.parent().width(), geo.y()))
+                    self.mainwin.setGeometry(geo)
             self.parent().setVisible(False)
+            self.mainwin.restoreDockArea(_area)
 
-    def get_docked_widget_size(self, _dockable):
-        widget_list = self.parent().main_win.findChildren(QDockWidget)
+    def get_docked_widget_size(self, _dockable, _area):
+        widget_list = self.mainwin.findChildren(QDockWidget)
         size_list = []
         if _dockable:
             for widget in widget_list:
-                if not isinstance(widget.bind_widget, ImageControlDialog):
-                    if widget.bind_widget != _dockable.bind_widget:
-                        if not widget.isWindow() and not widget.isFloating() and widget.isVisible():
+                if self.mainwin.dockWidgetArea(widget) == _area:
+                    if widget is not _dockable:
+                        if (not widget.isWindow() and not widget.isFloating()
+                                and widget.isVisible()):
                             size_list.append(widget.bind_widget.width())
         if size_list:
             return max(size_list)
         else:
             return size_list
 
+
 class LiveImageZoom(ToolDialog):
     livezoom_resize_signal = pyqtSignal(QSize)
 
-    def __init__(self, parent, radius=10, factor=12):
-        ToolDialog.__init__(self, parent, configname="livezoom", menuname="live zoom & cross-sections",
+    def __init__(self, parent, mainwin, radius=10, factor=12):
+        ToolDialog.__init__(self, parent, mainwin, configname="livezoom", menuname="live zoom & cross-sections",
                             show_shortcut=Qt.Key_F2)
         self.setWindowTitle("Zoom & Cross-sections")
         radius = Config.getint("livezoom-radius", radius)
@@ -364,6 +391,7 @@ class LiveImageZoom(ToolDialog):
         self.setSizePolicy(livezoom_policy)
         # add plots
         self._lo0 = lo0 = QVBoxLayout(self)
+        self._lo0.setSizeConstraint(QLayout.SetFixedSize)
         lo1 = QHBoxLayout()
         lo1.setContentsMargins(0, 0, 0, 0)
         lo1.setSpacing(0)
@@ -390,8 +418,11 @@ class LiveImageZoom(ToolDialog):
         self._has_zoom = self._has_xcs = self._has_ycs = False
         # setup zoom plot
         font = QApplication.font()
+        font.setPointSize(8)
+        axis_font = QApplication.font()
+        axis_font.setBold(True)
+        axis_font.setPointSize(10)
         self._zoomplot = QwtPlot(self)
-        #    self._zoomplot.setSizePolicy(QSizePolicy.Fixed,QSizePolicy.Fixed)
         self._zoomplot.setContentsMargins(5, 5, 5, 5)
         axes = {QwtPlot.xBottom: "X pixel coordinate",
                 QwtPlot.yLeft: "Y pixel coordinate",
@@ -402,11 +433,14 @@ class LiveImageZoom(ToolDialog):
             self._zoomplot.setAxisScale(axis, 0, 1)
             self._zoomplot.setAxisFont(axis, font)
             self._zoomplot.setAxisMaxMajor(axis, 3)
-            self._zoomplot.axisWidget(axis).setMinBorderDist(16, 16)
+            self._zoomplot.axisWidget(axis).setMinBorderDist(5, 5)
             self._zoomplot.axisWidget(axis).show()
             text = QwtText(title)
             text.setFont(font)
             self._zoomplot.axisWidget(axis).setTitle(text.text())
+            axis_text = QwtText(title)
+            axis_text.setFont(axis_font)
+            self._zoomplot.setAxisTitle(axis, axis_text)
         self._zoomplot.setAxisLabelRotation(QwtPlot.yLeft, -90)
         self._zoomplot.setAxisLabelAlignment(QwtPlot.yLeft, Qt.AlignVCenter)
         self._zoomplot.setAxisLabelRotation(QwtPlot.yRight, 90)
@@ -426,7 +460,6 @@ class LiveImageZoom(ToolDialog):
             curve.attach(self._zoomplot)
             curve.setZ(1)
         # setup cross-section curves
-        pen = makeDualColorPen("navy", "yellow")
         self._xcs = TiggerPlotCurve()
         self._xcs.setRenderHint(QwtPlotItem.RenderAntialiased)
         self._ycs = TiggerPlotCurve()
@@ -463,10 +496,10 @@ class LiveImageZoom(ToolDialog):
             self._ycs.setVisible(False)
 
     def _enlarge(self):
-        self.setPlotSize(self._radius * 2, self._magfac)
+        self.setPlotSize(int(self._radius * 2), self._magfac)
 
     def _shrink(self):
-        self.setPlotSize(self._radius / 2, self._magfac)
+        self.setPlotSize(int(self._radius / 2), self._magfac)
 
     def setPlotSize(self, radius, factor):
         Config.set('livezoom-radius', radius)
@@ -575,67 +608,103 @@ class LiveImageZoom(ToolDialog):
 
 
 class LiveProfile(ToolDialog):
-    def __init__(self, parent):
-        ToolDialog.__init__(self, parent, configname="liveprofile", menuname="profiles", show_shortcut=Qt.Key_F3)
+    def __init__(self, parent, mainwin, configname="liveprofile", menuname="profiles", show_shortcut=Qt.Key_F3):
+        ToolDialog.__init__(self, parent, mainwin, configname=configname, menuname=menuname, show_shortcut=show_shortcut)
         self.setWindowTitle("Profiles")
-        # create size policy for live profile
-        liveprofile_policy = QSizePolicy()
-        liveprofile_policy.setHorizontalPolicy(QSizePolicy.MinimumExpanding)
-        liveprofile_policy.setVerticalPolicy(QSizePolicy.Fixed)
-        self.setSizePolicy(liveprofile_policy)
-        # add plots
-        lo0 = QVBoxLayout(self)
-        lo0.setSpacing(0)
-        lo1 = QHBoxLayout()
+        self._profplot = None
+        self._setupLayout()
+        self._axes = []
+        self._lastsel = None
+        self._image_id = None
+        self._image_hnd = None
+        self._last_x = None
+        self._last_y = None
+        self._parent_picker = None
+        self._last_data_x = None
+        self._last_data_y = None
+        self._selaxis = None
+
+    def _setupAxisSelectorLayout(self, lo1):
         lo1.setContentsMargins(0, 0, 0, 0)
-        lo0.addLayout(lo1)
         lab = QLabel("Axis: ", self)
         self._wprofile_axis = QComboBox(self)
         self._wprofile_axis.activated[int].connect(self.selectAxis)
         lo1.addWidget(lab, 0)
         lo1.addWidget(self._wprofile_axis, 0)
         lo1.addStretch(1)
-        # add profile plot
+
+    def _setupPlot(self):
+        lo0 = self._lo0
+        liveprofile_policy = self._liveprofile_policy
         self._font = font = QApplication.font()
-        self._profplot = QwtPlot(self)
-        self._profplot.setContentsMargins(0, 0, 0, 0)
-        self._profplot.enableAxis(QwtPlot.xBottom)
-        self._profplot.enableAxis(QwtPlot.yLeft)
-        self._profplot.setAxisFont(QwtPlot.xBottom, font)
-        self._profplot.setAxisFont(QwtPlot.yLeft, font)
-        #    self._profplot.setAxisMaxMajor(QwtPlot.xBottom,3)
-        self._profplot.setAxisAutoScale(QwtPlot.yLeft)
-        self._profplot.setAxisMaxMajor(QwtPlot.yLeft, 3)
-        self._profplot.axisWidget(QwtPlot.yLeft).setMinBorderDist(16, 16)
-        self._profplot.setAxisLabelRotation(QwtPlot.yLeft, -90)
-        self._profplot.setAxisLabelAlignment(QwtPlot.yLeft, Qt.AlignVCenter)
-        self._profplot.plotLayout().setAlignCanvasToScales(True)
-        lo0.addWidget(self._profplot, 0)
-        self._profplot.setMaximumHeight(256)
-        self._profplot.setMinimumHeight(56)
-        # self._profplot.setMinimumWidth(256)
-        # self._profplot.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
-        self._profplot.setSizePolicy(liveprofile_policy)
-        # and profile curve
-        self._profcurve = TiggerPlotCurve()
-        self._profcurve.setRenderHint(QwtPlotItem.RenderAntialiased)
-        self._ycs = TiggerPlotCurve()
-        self._ycs.setRenderHint(QwtPlotItem.RenderAntialiased)
-        self._profcurve.setPen(QPen(QColor("white")))
-        self._profcurve.setStyle(QwtPlotCurve.Lines)
-        self._profcurve.setOrientation(Qt.Horizontal)
-        self._profcurve.attach(self._profplot)
+
+        # detach and release plots if already initialized
+        if self._profplot is not None:
+            self._profcurve.setData([0, 0], [0, 0])
+            self._profcurve.setVisible(True)
+            self._profplot.replot()
+            self._profplot.setMaximumHeight(256)
+            self._profplot.setMinimumHeight(256)
+        else:
+            self._profplot = QwtPlot(self)
+            self._profplot.setContentsMargins(0, 0, 0, 0)
+            self._profplot.enableAxis(QwtPlot.xBottom)
+            self._profplot.enableAxis(QwtPlot.yLeft)
+            self._profplot.setAxisFont(QwtPlot.xBottom, font)
+            self._profplot.setAxisFont(QwtPlot.yLeft, font)
+            #    self._profplot.setAxisMaxMajor(QwtPlot.xBottom,3)
+            self._profplot.setAxisAutoScale(QwtPlot.yLeft)
+            self._profplot.setAxisMaxMajor(QwtPlot.yLeft, 3)
+            self._profplot.axisWidget(QwtPlot.yLeft).setMinBorderDist(16, 16)
+            self._profplot.setAxisLabelRotation(QwtPlot.yLeft, -90)
+            self._profplot.setAxisLabelAlignment(QwtPlot.yLeft, Qt.AlignVCenter)
+            self._profplot.plotLayout().setAlignCanvasToScales(True)
+            self._profplot.setMaximumHeight(256)
+            self._profplot.setMinimumHeight(56)
+            # self._profplot.setMinimumWidth(256)
+            # self._profplot.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+            self._profplot.setSizePolicy(liveprofile_policy)
+            lo0.addWidget(self._profplot, 0)
+            # and new profile curve
+            self._profcurve = TiggerPlotCurve("Active")
+            self._profcurve.setRenderHint(QwtPlotItem.RenderAntialiased)
+            self._ycs = TiggerPlotCurve()
+            self._ycs.setRenderHint(QwtPlotItem.RenderAntialiased)
+            self._profcurve.setPen(QPen(QColor("white")))
+            self._profcurve.setStyle(QwtPlotCurve.Lines)
+            self._profcurve.setOrientation(Qt.Horizontal)
+            self._profcurve.attach(self._profplot)
+
+    def _setupLayout(self):
+        # create size policy for live profile
+        liveprofile_policy = QSizePolicy()
+        liveprofile_policy.setHorizontalPolicy(QSizePolicy.MinimumExpanding)
+        liveprofile_policy.setVerticalPolicy(QSizePolicy.Fixed)
+        self._liveprofile_policy = liveprofile_policy
+        self.setSizePolicy(liveprofile_policy)
+        # add plots
+        lo0 = QVBoxLayout(self)
+        lo0.setSpacing(0)
+        self._lo0 = lo0
+
+        lo1 = QHBoxLayout()
+        lo1.setContentsMargins(0, 0, 0, 0)
+        lo0.addLayout(lo1)
+        self._setupAxisSelectorLayout(lo1)
+        # add profile plot
+        self._setupPlot()
         # config geometry
         if not self.initGeometry():
             self.resize(300, 192)
-        self._axes = []
-        self._lastsel = None
-        self._image_id = None
 
-    def setImage(self, image):
-        if id(image) == self._image_id:
+    def setImage(self, image, force_repopulate=False):
+        if image is None:
+            return
+        if id(image) == self._image_id and not force_repopulate:
             return
         self._image_id = id(image)
+        self._image_hnd = image
+
         # build list of axes -- first X and Y
         self._axes = []
         for n, label in enumerate(("X", "Y")):
@@ -663,6 +732,8 @@ class LiveProfile(ToolDialog):
         self.selectAxis(axis, remember=False)
 
     def selectAxis(self, i, remember=True):
+        if i is None:
+            return
         if i < len(self._axes):
             name, iaxis, values, unit = self._axes[i]
             self._selaxis = iaxis, values
@@ -674,9 +745,12 @@ class LiveProfile(ToolDialog):
             if remember:
                 self._lastsel = name
 
-    def trackImage(self, image, ix, iy):
+    def trackImage(self, image, ix, iy, il, im):
         if not self.isVisible():
             return
+        if ix is None or iy is None:
+            return
+
         nx, ny = image.imageDims()
         inrange = ix < nx and ix >= 0 and iy < ny and iy >= 0
         if inrange:
@@ -705,10 +779,407 @@ class LiveProfile(ToolDialog):
             yval = numpy.ma.filled(yval[i0:i1], fill_value=0.0)
             xval = numpy.ma.filled(xval[i0:i1], fill_value=0.0)
             self._profcurve.setData(xval, yval)
+            # store the data slice for the last pixel coordinate
+            self._last_data_x = xval
+            self._last_data_y = yval
+            # store profile last update coordinates
+            self._last_x = ix
+            self._last_y = iy
+            self._last_l = il
+            self._last_m = im
         self._profcurve.setVisible(inrange)
         # update plots
         self._profplot.replot()
 
+
+class SelectedProfile(LiveProfile):
+    """ 'Freezed' profile showing profile for axis at selected cube pierce point """
+    def __init__(self,
+                 parent,
+                 mainwin,
+                 configname="liveprofile",
+                 menuname="profiles",
+                 show_shortcut=Qt.Key_F4,
+                 picker_parent=None):
+        self.profiles_info = {}
+        self._legend = None
+        self._numprofiles = 0
+        self._currentprofile = 0
+        self._parent_picker = None
+        self._current_profile_name = None
+        self._export_profile_dialog = None
+        self._load_profile_dialog = None
+        self._overlay_static_profiles = None
+        self._lastxmin = None
+        self._lastxmax = None
+        self._lastxtitle = None
+        LiveProfile.__init__(self, parent, mainwin, configname, menuname, show_shortcut)
+        self.addProfile()
+        self._parent_picker = picker_parent
+
+    def _setupAxisSelectorLayout(self, lo1):
+        """ Adds controls for freeze pane profile dialog """
+        lo2 = QGridLayout()
+        self._menu = QMenu("Selected Profile", self)
+
+        def __inputNewName():
+            text, ok = QInputDialog.getText(
+                self,
+                "Set profile name",
+                "<P>Enter new name for profile:</P>",
+                text=self._current_profile_name)
+            if text:
+                self.setProfileName(text)
+        self._menu.addAction("Clear profile", self.clearProfile)
+        self._menu.addAction("Set profile name", __inputNewName)
+        self._menu.addAction("Save active profile as", self.saveProfile)
+        self._menu.addAction("Overlay TigProf static profile from file", self.loadProfile)
+        self._menu_opt_paste = self._menu.addAction("Overlay another active profile as static profile", self.pasteActiveProfileAsStatic)
+        self._profile_ctrl_btn = QToolButton()
+        self._profile_ctrl_btn.setMenu(self._menu)
+        self._profile_ctrl_btn.setToolTip("<P> Click to show options for this profile </P>")
+        self._profile_ctrl_btn.setIcon(pixmaps.raise_up.icon())
+        lo2.addWidget(self._profile_ctrl_btn, 0, 0, 1, 1)
+
+        lab = QLabel("Selected profile: ")
+        lo2.addWidget(lab, 0, 1, 1, 1)
+        self._static_profile_select = QComboBox(self)
+        lo2.addWidget(self._static_profile_select, 0, 2, 1, 1)
+
+        self._static_profile_select.activated[int].connect(self.selectProfile)
+        self._add_profile_btn = QToolButton()
+        self._add_profile_btn.setIcon(pixmaps.big_plus.icon())
+        self._add_profile_btn.setToolTip("<P> Click to add another freezed profile </P>")
+        lo2.addWidget(self._add_profile_btn, 0, 3, 1, 1)
+        self._add_profile_btn.clicked.connect(self.addProfile)
+
+        lo3 = QHBoxLayout()
+        lo3.setContentsMargins(0, 0, 0, 0)
+        lab = QLabel("Axis: ", self)
+        self._wprofile_axis = QComboBox(self)
+        self._wprofile_axis.activated[int].connect(self.selectAxis)
+        lo3.addWidget(lab, 0)
+        lo3.addWidget(self._wprofile_axis, 0)
+
+        lo2.addLayout(lo3, 0, 4, 1, 2, alignment=Qt.AlignRight)
+
+        lo1.setContentsMargins(0, 0, 0, 0)
+        lo1.addLayout(lo2)
+
+    def selectProfile(self, i):
+        """ event handler for switching profiles """
+        self._storeSelectedProfileInfos()
+        # detach overlay profiles for previous profile
+        if self._overlay_static_profiles is not None:
+            for p in self._overlay_static_profiles:
+                p.detach()
+        # pick new state from the stack and restore
+        self._currentprofile = i
+        self._restoreSelectedProfileInfos()
+        self._wprofile_axis.clear()
+        # switch to corresponding image and set the axis
+        self.setImage(self._image_hnd, force_repopulate=True)
+        if self._lastsel is not None:
+            names = [name for name, iaxis, vals, unit in self._axes]
+            axisno = names.index(self._lastsel)
+            # select axis, which in turn redraws the plot
+            self.selectAxis(axisno)
+            self._wprofile_axis.setCurrentIndex(axisno)
+        else:
+            self.clearProfile(keep_overlays=True)
+        # update marker on the SkyPlot
+        if self._parent_picker is not None:
+            self._parent_picker.setSelectedProfileIndex(i)
+        # overlay other static plots for current profile
+        if self._overlay_static_profiles is not None:
+            for p in self._overlay_static_profiles:
+                p.attach()
+            # restore temporary vmin, vmax and xtitle
+            # if the profile has no active profile
+            # -- other static profiles may have been loaded
+            # to an empty profile
+            if (self._last_data_x is None or \
+                self._last_data_y is None) and \
+               len(self._overlay_static_profiles) > 0:
+                if self._lastxmin is not None and \
+                   self._lastxmax is not None:
+                    self._profplot.setAxisScale(
+                        QwtPlot.xBottom, self._lastxmin, self._lastxmax)
+                    self._profplot.replot()
+                if self._lastxtitle is not None:
+                    title = QwtText(self._lastxtitle)
+                    title.setFont(self._font)
+                    self._profplot.setAxisTitle(QwtPlot.xBottom, title)    
+                    self._profplot.replot()
+        
+    def _profileInfosKeys(self):
+        return ["_lastsel", "_image_id", "_image_hnd",
+                "_last_x", "_last_y",
+                "_last_l", "_last_m",
+                "_last_data_x", "_last_data_y",
+                "_lastxmin", "_lastxmax", "_lastxtitle",
+                "_current_profile_name", "_overlay_static_profiles",
+                "_axes", "_selaxis"]
+
+    def _restoreSelectedProfileInfos(self):
+        """ restores the profile infos for the currently selected profile """
+        profiles_info_keys = self._profileInfosKeys()
+        for k in profiles_info_keys:
+            setattr(self, k, self.profiles_info[self._currentprofile].get(k))
+
+    def _storeSelectedProfileInfos(self):
+        """ store the profile infos for selected profile switching """
+        profiles_info_keys = self._profileInfosKeys()
+        self.profiles_info[self._currentprofile] = dict(zip(profiles_info_keys,
+                                                            map(lambda k: getattr(self, k, None),
+                                                                profiles_info_keys)))
+
+    def clearProfile(self, keep_overlays=False):
+        self._last_x = None
+        self._last_y = None
+        self._last_data_x = None
+        self._last_data_y = None
+        if not keep_overlays:
+            if self._overlay_static_profiles is not None:
+                for p in self._overlay_static_profiles:
+                    p.detach()
+            self._overlay_static_profiles = None
+        if self._legend is not None:
+            self._legend = None
+
+        self._setupPlot()
+        if self._parent_picker is not None:
+            if not keep_overlays:
+                self._parent_picker.removeSelectedProfileMarkings(self._currentprofile,
+                                                                  purge_history=True)
+
+    def setProfileName(self, name):
+        self._current_profile_name = name
+        self._static_profile_select.setItemText(self._currentprofile, name)
+
+    def addProfile(self):
+        """ event handler for adding new selected profiles """
+        self._numprofiles += 1
+        self._static_profile_select.addItems(["tmp"])
+
+        profiles_info_keys = self._profileInfosKeys()
+        self.profiles_info[self._numprofiles-1] = dict(zip(profiles_info_keys,
+                                                           [None] * len(profiles_info_keys)))
+
+        # switch to newly created profile
+        self.selectProfile(self._numprofiles-1)
+        self._static_profile_select.setCurrentIndex(self._numprofiles-1)
+        self._wprofile_axis.clear()
+        # refresh profile for blank profile
+        self.clearProfile()
+        self._overlay_static_profiles = None
+        # reinitialize axes
+        self.setImage(self._image_hnd, force_repopulate=False)
+
+        self.setProfileName(f"Profile {self._numprofiles}")
+
+    def selectAxis(self, i, remember=True):
+        LiveProfile.selectAxis(self, i, remember=True)
+        self.trackImage(self._image_hnd, self._last_x, self._last_y, self._last_l, self._last_m)
+        # clear profile if no coordinate is set
+        if self._last_y is None or self._last_x is None:
+            self.clearProfile(keep_overlays=True)
+
+    def setImage(self, image, force_repopulate=False):
+        if self._image_id != id(image):
+            self._wprofile_axis.clear()
+        LiveProfile.setImage(self, image, force_repopulate=force_repopulate)
+
+    def setVisible(self, visible, emit=True):
+        LiveProfile.setVisible(self, visible, emit=emit)
+        if self._parent_picker is not None:
+            if visible:
+                self._parent_picker.setSelectedProfileIndex(self._currentprofile)
+            else:
+                self._parent_picker.removeAllSelectedProfileMarkings()
+
+    def saveProfile(self, filename=None):
+        """ Saves current profile to disk """
+        if self._selaxis and self._selaxis[0] < len(self._axes) and \
+           self._last_x is not None and \
+           self._last_y is not None and \
+           self._last_data_x is not None and \
+           self._last_data_y is not None:
+            if filename is None:
+                if not self._export_profile_dialog:
+                    dialog = self._export_profile_dialog = QFileDialog(
+                        self, "Export profile data", ".", "*.tigprof")
+                    dialog.setDefaultSuffix("tigprof")
+                    dialog.setFileMode(QFileDialog.AnyFile)
+                    dialog.setAcceptMode(QFileDialog.AcceptSave)
+                    dialog.setNameFilter("Tigger profile files (*.tigprof)")
+                    dialog.setModal(True)
+                    dialog.filesSelected.connect(self.saveProfile)
+                return self._export_profile_dialog.exec_() == QDialog.Accepted
+
+            axisname, axisindx, axisvals, axisunit = self._axes[self._selaxis[0]]
+
+            if isinstance(filename, QStringList):
+                filename = filename[0]
+            if os.path.exists(filename):
+                ret = QMessageBox.question(
+                    self, "Overwrite file?",
+                    f"File {filename} exists. Overwrite?",
+                    QMessageBox.Yes | QMessageBox.No)
+                if ret == QMessageBox.No:
+                    return
+            prof = TiggerProfile(self._current_profile_name,
+                                 axisname,
+                                 axisunit,
+                                 self._last_data_x,
+                                 self._last_data_y)
+            try:
+                prof.saveProfile(filename)
+            except IOError:
+                QMessageBox.critical(
+                    self, "Could not store profile to disk",
+                    "<P> An IO error occurred while trying to write out profile. "
+                    "Check that the location is writable and you have sufficient space </P>"
+                )
+
+        else:  # no axes selected yet
+            QMessageBox.critical(
+                self, "Nothing to save",
+                "<P> Profile is empty. Capture profile using CTRL+ALT+LeftClick "
+                "somewhere on the image first!</P>")
+
+    def loadProfile(self, filename=None):
+        """ Loads TigProf profile from disk """
+        if filename is None:
+            if not self._load_profile_dialog:
+                dialog = self._load_profile_dialog = QFileDialog(
+                    self, "Load TigProf profile data", ".", "*.tigprof")
+                dialog.setDefaultSuffix("tigprof")
+                dialog.setFileMode(QFileDialog.ExistingFile)
+                dialog.setAcceptMode(QFileDialog.AcceptOpen)
+                dialog.setNameFilter("Tigger profile files (*.tigprof)")
+                dialog.setModal(True)
+                dialog.filesSelected.connect(self.loadProfile)
+            return self._load_profile_dialog.exec_() == QDialog.Accepted
+
+        if isinstance(filename, QStringList):
+            filename = filename[0]
+
+        try:
+            prof = TiggerProfileFactory.load(filename)
+        except IOError as e:
+            QMessageBox.critical(
+                self,
+                "Error loading TigProf profile",
+                f"Loading failed with message '{str(e)}'"
+            )
+        self.addStaticProfile(prof)
+
+    def addStaticProfile(self, prof, curvecol=None, coord=None):
+        pastedname, ok = QInputDialog.getText(self, 
+                                              "Set pasted profile name", 
+                                              "<P> Set name of pasted profile </P>",
+                                              text=prof.profileName)
+        plottableprof = PlottableTiggerProfile(pastedname,
+                                               prof.axisName,
+                                               prof.axisUnit,
+                                               prof.xdata,
+                                               prof.ydata,
+                                               qwtplot=self._profplot,
+                                               profilecoord=coord)
+        if curvecol is None:
+            curvecol = QColorDialog.getColor(initial=Qt.white,
+                                             parent=self,
+                                             title="Select color for loaded TigProf profile",)
+        if curvecol.isValid():
+            plottableprof.setCurveColor(curvecol)
+
+        if self._overlay_static_profiles is None:
+            self._overlay_static_profiles = []
+        self._overlay_static_profiles.append(plottableprof)
+        if (self._last_data_x is None or 
+            self._last_data_y is None or 
+            self._last_data_x is None or 
+            self._last_data_y is None) and \
+           len(self._overlay_static_profiles) > 0:
+            # temporary titles and labels from pasted profiles
+            xmin = numpy.nanmin(list(map(lambda x: numpy.nanmin(x.xdata),
+                                         self._overlay_static_profiles)))
+            xmax = numpy.nanmax(list(map(lambda x: numpy.nanmax(x.xdata),
+                                         self._overlay_static_profiles)))
+            self._lastxmin = xmin
+            self._lastxmax = xmax
+            self._profplot.setAxisScale(QwtPlot.xBottom, self._lastxmin, self._lastxmax)
+            # set custom label if first loaded profile
+            if len(self._overlay_static_profiles) == 1:
+                name, ok = QInputDialog.getText(self, 
+                                                "Set custom axis name", 
+                                                "<P> Set custom axis name for loaded static profile </P>",
+                                                text=self._overlay_static_profiles[0].axisName)
+                unit, ok = QInputDialog.getText(self, 
+                                                "Set custom axis unit", 
+                                                "<P> Set custom axis unit for loaded static profile </P>",
+                                                text=self._overlay_static_profiles[0].axisUnit)
+                self._lastxtitle = "%s, %s" % (name, unit) if unit else name
+                title = QwtText(self._lastxtitle)
+                title.setFont(self._font)
+                self._profplot.setAxisTitle(QwtPlot.xBottom, title)
+        if self._legend is None:
+            self._legend = QwtLegend()
+            self._profplot.insertLegend(self._legend, QwtPlot.BottomLegend) 
+
+        if self._parent_picker is not None and coord is not None:
+            self._parent_picker.addOverlayMarkerToCurrentProfile(
+                pastedname, coord, plottableprof.createPen(), index=self._currentprofile)
+    
+    def pasteActiveProfileAsStatic(self):
+        def __constructProfileIndex(i):
+            last_x = self.profiles_info.get(i, {}).get("_last_x", None)
+            last_y = self.profiles_info.get(i, {}).get("_last_y", None)
+            last_l = self.profiles_info.get(i, {}).get("_last_l", None)
+            last_m = self.profiles_info.get(i, {}).get("_last_m", None)
+            last_data_x = self.profiles_info.get(i, {}).get("_last_data_x", None)
+            last_data_y = self.profiles_info.get(i, {}).get("_last_data_y", None)
+            selaxis = self.profiles_info.get(i, {}).get("_selaxis", None)
+            axes = self.profiles_info.get(i, {}).get("_axes", None)
+
+            if selaxis and selaxis[0] < len(axes) and \
+               last_x is not None and \
+               last_y is not None and \
+               last_l is not None and \
+               last_m is not None and \
+               last_data_x is not None and \
+               last_data_y is not None and \
+               selaxis is not None and \
+               axes is not None:
+               
+               profname = self.profiles_info.get(i, {}).get("_current_profile_name", "Unnamed")
+               axisname, axisindx, axisvals, axisunit = axes[selaxis[0]]
+               prof = TiggerProfile(profname, axisname, axisunit, last_data_x, last_data_y)
+               return (prof, i, (last_l, last_m))
+            return None
+        
+        avail_profs = list(filter(lambda x: x is not None,
+                                  map(lambda i: __constructProfileIndex(i),
+                                      filter(lambda i: i != self._currentprofile,
+                                             range(self._static_profile_select.count())))))
+        if len(avail_profs) == 0:
+            QMessageBox.critical(self,
+                                  "No active profiles available",
+                                  "<P> There are currently no active profiles available for selection in any other profile. "
+                                  "You need to use CTRL+ALT+leftclick on another profile to first in order to paste </P>")
+            return
+        
+        selitem, ok = QInputDialog.getItem(self,
+                                           "Paste active profile from",
+                                           "<P>Select from currently defined profiles:</P>",
+                                           list(map(lambda x: x[0].profileName, avail_profs)),
+                                           current=0,
+                                           editable=False)
+        if ok:
+            selprof, iselitem, coord = list(filter(lambda x: x[0].profileName == selitem, avail_profs))[0]
+            dprint(0, f"Pasting active profile from '{selprof.profileName}'")
+            self.addStaticProfile(selprof, coord=coord)
 
 class SkyModelPlotter(QWidget):
     # Selection modes for the various selector functions below.
@@ -846,10 +1317,7 @@ class SkyModelPlotter(QWidget):
             if track_callback is not None:
                 self.moved[QPointF].connect(self._track_callback)
 
-            if label:
-                self._label = QwtText(label)
-            else:
-                self._label = QwtText("")
+            self._label = QwtText(label) if label else QwtText("")
             self._fixed_aspect = False
             self._dczoom_button = self._dczoom_modifiers = None
             # maintain a separate stack of  "desired" (as opposed to actual) zoom rects. When a resize of the plot happens,
@@ -900,8 +1368,8 @@ class SkyModelPlotter(QWidget):
             dprint(2, "zoom stack is now", self.zoomRectIndex(), self.maxStackDepth())
 
         def adjustRect(self, rect):
-            """Adjusts rectangle w.r.t. aspect ratio settings. That is, if a fixed aspect ratio is in effect, adjusts the rectangle to match
-      the aspect ratio of the plot canvas. Returns adjusted version."""
+            """Adjusts rectangle w.r.t. aspect ratio settings. That is, if a fixed aspect ratio is in effect,
+            adjusts the rectangle to match the aspect ratio of the plot canvas. Returns adjusted version."""
             if self._fixed_aspect:
                 dprint(2, "adjusting rect to canvas size:", self.canvas().size(), rect)
                 aspect0 = self.canvas().width() / float(self.canvas().height()) if self.canvas().height() else 1
@@ -990,8 +1458,8 @@ class SkyModelPlotter(QWidget):
         def __init__(self, canvas, label, color="red", select_callback=None, track_callback=None,
                      mode=QwtPickerClickRectMachine(), rubber_band=QwtPicker.RectRubberBand,
                      text_bg=None):
-            QwtPlotPicker.__init__(self, QwtPlot.xBottom, QwtPlot.yLeft, rubber_band, QwtPicker.AlwaysOff,
-                                       canvas)
+            QwtPlotPicker.__init__(self, QwtPlot.xBottom, QwtPlot.yLeft,
+                                   rubber_band, QwtPicker.AlwaysOff, canvas)
             self.installEventFilter(self)
             self.setRubberBand(rubber_band)
             # setup appearance
@@ -1015,6 +1483,9 @@ class SkyModelPlotter(QWidget):
                 elif track_callback.__name__ == "_trackCoordinates":
                     dprint(2, "PlotPicker adding _trackCoordinates")
                     self.moved[QPointF].connect(self._track_callback)
+                elif track_callback.__name__ == "_trackCoordinatesProfile":
+                    dprint(2, "PlotPicker adding _trackCoordinatesProfile")
+                    self.moved[QPointF].connect(self._track_callback)
             # setup select_callbacks
             if select_callback:
                 dprint(2, f"PlotPicker select_callback {select_callback.__name__}")
@@ -1023,20 +1494,20 @@ class SkyModelPlotter(QWidget):
                 if select_callback.__name__ == '_measureRuler':
                     self.setStateMachine(mode)
                     self.moved.connect(select_callback)
-                    dprint(2, f"PlotPicker mode PickerPolygon _measureRuler")
+                    dprint(2, "PlotPicker mode PickerPolygon _measureRuler")
                 elif isinstance(mode, QwtPickerClickRectMachine):
                     self.setStateMachine(mode)
                     self.selected[QRectF].connect(select_callback)
-                    dprint(2, f"PlotPicker mode PickerClickRect")
+                    dprint(2, "PlotPicker mode PickerClickRect")
                 elif isinstance(mode, QwtPickerClickPointMachine):
                     self.setStateMachine(mode)
                     self.selected[QPointF].connect(select_callback)
-                    dprint(2, f"PlotPicker mode PickerClickPoint")
+                    dprint(2, "PlotPicker mode PickerClickPoint")
                 else:
                     # handle unrecognised state machine modes
                     self.setStateMachine(mode)
                     self.selected[QPointF].connect(select_callback)
-                    dprint(2, f"PlotPicker mode unknown")
+                    dprint(2, "PlotPicker mode unknown")
             else:
                 # handle pickers that have no callbacks
                 self.setStateMachine(mode)
@@ -1080,6 +1551,13 @@ class SkyModelPlotter(QWidget):
     # this is __init__ for SkyModelPlotter
     def __init__(self, parent, mainwin, *args):
         QWidget.__init__(self, parent, *args)
+        # "Active selected profile marker"
+        self._selected_profile_index = 0
+        # stack of positions - one per selected ("static frame") profile
+        # will contain "marker" object and "position" (l, m) tupple
+        # on the first click to set position
+        self._selected_profile_markup = {}
+
         self._mainwin = mainwin
         self.tigToolTip = TigToolTip()
         self._ruler_timer = QTimer()
@@ -1126,36 +1604,61 @@ class SkyModelPlotter(QWidget):
         self._markup_color = QColor("cyan")
         self._markup_pen = QPen(self._markup_color, 1)
         self._markup_pen.setStyle(Qt.DotLine)
-        self._markup_symbol_pen = QPen(self._markup_color, 1)
+        self._markup_symbol_active_pen = QPen(self._stats_color, 1)
+        self._markup_symbol_inactive_pen = QPen(self._markup_color, 1)
         self._markup_brush = QBrush(Qt.NoBrush)
-        self._markup_xsymbol = QwtSymbol(QwtSymbol.XCross, self._markup_brush, self._markup_symbol_pen, QSize(16, 16))
-        self._markup_absymbol = QwtSymbol(QwtSymbol.Ellipse, self._markup_brush, self._markup_symbol_pen, QSize(4, 4))
+        self._markup_xsymbol = QwtSymbol(QwtSymbol.XCross, self._markup_brush, self._markup_symbol_inactive_pen, QSize(16, 16))
+        self._markup_absymbol = QwtSymbol(QwtSymbol.Ellipse, self._markup_brush, self._markup_symbol_inactive_pen, QSize(4, 4))
         self._markup_a_label = QwtText("A")
         self._markup_a_label.setColor(self._markup_color)
         self._markup_b_label = QwtText("B")
         self._markup_b_label.setColor(self._markup_color)
         # init live zoomers
-        self._livezoom = LiveImageZoom(self)
+        self._livezoom = LiveImageZoom(self, self._mainwin)
         self._livezoom.setObjectName('livezoom')
-        self._liveprofile = LiveProfile(self)
+        self._liveprofile = LiveProfile(self, self._mainwin)
+        self._liveprofile_selected = SelectedProfile(
+            self,
+            self._mainwin,
+            configname="liveprofileselected",
+            menuname="selected profiles",
+            show_shortcut=Qt.Key_F4,
+            picker_parent=self)
         self._liveprofile.setObjectName('liveprofile')
+        self._liveprofile_selected.setObjectName('liveprofileselected')
         # get current sizeHints()
         self.live_zoom_size = self._livezoom.sizeHint()
         self.live_profile_size = self._liveprofile.sizeHint()
         # setup dockable widgets
-        self._dockable_liveprofile = TDockWidget(title="Profiles", parent=mainwin, bind_widget=self._liveprofile,
-                                                 close_slot=self.liveprofile_dockwidget_closed,
-                                                 toggle_slot=self.liveprofile_dockwidget_toggled)
-        self._dockable_livezoom = TDockWidget(title="Zoom & Cross-sections", parent=mainwin, bind_widget=self._livezoom,
-                                              close_slot=self.livezoom_dockwidget_closed,
-                                              toggle_slot=self.livezoom_dockwidget_toggled)
+        self._dockable_liveprofile = TDockWidget(
+            title="Profiles",
+            parent=mainwin,
+            bind_widget=self._liveprofile,
+            close_slot=self.liveprofile_dockwidget_closed,
+            toggle_slot=self.liveprofile_dockwidget_toggled)
+        self._dockable_liveprofile_selected = TDockWidget(
+            title="Selected Profiles",
+            parent=mainwin,
+            bind_widget=self._liveprofile_selected,
+            close_slot=self.liveprofile_selected_dockwidget_closed,
+            toggle_slot=self.liveprofile_selected_dockwidget_toggled)
+        self._dockable_livezoom = TDockWidget(
+            title="Zoom & Cross-sections",
+            parent=mainwin,
+            bind_widget=self._livezoom,
+            close_slot=self.livezoom_dockwidget_closed,
+            toggle_slot=self.livezoom_dockwidget_toggled)
+        self._mainwin.right_dock_max_width = self._dockable_livezoom.width()
         # add dock widgets to main window and set to hidden
-        self._mainwin.addDockWidget(Qt.LeftDockWidgetArea, self._dockable_livezoom)
+        self._mainwin.addDockWidget(Qt.RightDockWidgetArea, self._dockable_livezoom)
         self._mainwin.addDockWidget(Qt.LeftDockWidgetArea, self._dockable_liveprofile)
+        self._mainwin.addDockWidget(Qt.LeftDockWidgetArea, self._dockable_liveprofile_selected)
         self._livezoom.setVisible(False)
         self._liveprofile.setVisible(False)
+        self._liveprofile_selected.setVisible(False)
         self._dockable_livezoom.setVisible(False)
         self._dockable_liveprofile.setVisible(False)
+        self._dockable_liveprofile_selected.setVisible(False)
 
         # other internal init
         self.projection = None
@@ -1195,6 +1698,13 @@ class SkyModelPlotter(QWidget):
         self._mousemodes = MouseModes.MouseModeManager(self, mouse_menu, self._wtoolbar)
         self._mousemodes.setMouseMode.connect(self._setMouseMode)
         self._setMouseMode(self._mousemodes.currentMode())
+        # WCS projection menu
+        wcs_menu = self._menu.addMenu("WCS Projection")
+        self._qa_wcs_proj = qa_wcs_menu = wcs_menu.addAction("Mean reference coordinate")
+        qa_wcs_menu.setCheckable(True)
+        qa_wcs_menu.triggered[bool].connect(self._currier.curry(Config.set, "wcs-ref-coord"))
+        qa_wcs_menu.setChecked(Config.getbool("wcs-ref-coord", True))
+        # zoom colour map into subset menu
         self._qa_colorzoom = self._wtoolbar.addAction(pixmaps.zoom_colours.icon(), "Zoom colourmap into subset",
                                                       self._colourZoomIntoSubset)
         self._qa_colorzoom.setShortcut(Qt.SHIFT + Qt.Key_F4)
@@ -1202,6 +1712,7 @@ class SkyModelPlotter(QWidget):
         self._menu.addAction(self._qa_colorzoom)
         # hide/show tools
         self._menu.addAction(self._dockable_liveprofile.widget().getShowQAction())
+        self._menu.addAction(self._dockable_liveprofile_selected.widget().getShowQAction())
         self._menu.addAction(self._dockable_livezoom.widget().getShowQAction())
         # fixed aspect
         qa = self._menu.addAction("Fix aspect ratio")
@@ -1248,94 +1759,255 @@ class SkyModelPlotter(QWidget):
         self.plotShowMessage = None
         self.plotShowErrorMessage = None
 
+    def _create_profile_marker_symbol(self, active=True, isoverlay=False, custompen=None):
+        sym = QwtSymbol.Star1 if not isoverlay else QwtSymbol.Ellipse
+        if active:
+            pen = custompen if custompen is not None else self._markup_symbol_active_pen
+            size = QSize(20, 20) if isoverlay else QSize(20, 20)
+            return QwtSymbol(sym, self._markup_brush, pen, size)
+        else:
+            pen = custompen if custompen is not None else self._markup_symbol_inactive_pen
+            size = QSize(20, 20) if isoverlay else QSize(16, 16)
+            return QwtSymbol(sym, self._markup_brush, pen, size)
+
+    @classmethod
+    def _giveDefaultSelectedMarkerInfos(cls):
+        return {"active": {"marker": None, "position": None},
+                "overlays" : {}}
+
+    def setSelectedProfileIndex(self, index=0):
+        # Invalidate other profile markers
+        for k in self._selected_profile_markup:
+            selmarker = self._selected_profile_markup.get(
+                k, SkyModelPlotter._giveDefaultSelectedMarkerInfos())["active"]["marker"]
+            if selmarker is not None:
+                selmarker.setSymbol(self._create_profile_marker_symbol(active=False))
+                selmarker.attach(self.plot)
+        # Invalidate overlay profile markers
+        self.deactivateAllOverlayMarkersFromCurrentProfile()
+
+        self._selected_profile_index = index
+        selprof = self._selected_profile_markup.get(
+            index, SkyModelPlotter._giveDefaultSelectedMarkerInfos())
+        # Activate requested marker, if already placed at a position
+        if selprof["active"]["marker"] is not None:
+            if selprof["active"]["position"] is not None:
+                selprof["active"]["marker"].setSymbol(self._create_profile_marker_symbol(active=True))
+                selprof["active"]["marker"].attach(self.plot)
+        # attach also all the overlay markers for the current selected profile
+        for m in selprof["overlays"]:
+            selprof["overlays"][m]["marker"].attach(self.plot)
+        # finally make sure to redraw
+        self._replot()
+
+    def _addBackAllSelectedProfileMarkers(self, index=0):
+        """ Remove and add back all overlays associated to profiles """
+        markup_items = [self._selected_profile_markup[k]["active"]["marker"]
+                            for k in self._selected_profile_markup]
+        for item in markup_items:
+            if item is not None:
+                item.setZ(Z_Markup)
+        for item in self._selected_profile_markup[index]["overlays"]:
+            self._selected_profile_markup[index]["overlays"][item]["marker"].setZ(Z_MarkupOverlays)
+            markup_items.append(self._selected_profile_markup[index]["overlays"][item]["marker"])
+        QTimer.singleShot(10, self._currier.curry(
+            self._addPlotMarkup, 
+            markup_items))
+
+    def addOverlayMarkerToCurrentProfile(self, name, position, qtpen, index=None):
+        """ Add (or update) named overlay marker for current selected profile """
+        index = self._selected_profile_index if index is None else index
+        if index is None: return
+        def __initoverlaymarker(position=position, qtpen=qtpen):
+            marker = TiggerPlotMarker()
+            marker.setRenderHint(QwtPlotItem.RenderAntialiased)
+            marker.setSymbol(self._create_profile_marker_symbol(
+                active=True, isoverlay=True, custompen=qtpen))
+            l, m = position
+            marker.setValue(l, m)
+            return {"marker": marker, "position": position}
+
+        self._selected_profile_markup.setdefault(
+            index, SkyModelPlotter._giveDefaultSelectedMarkerInfos())
+        # detach any existing markers to set new position or color
+        if name in self._selected_profile_markup[index]["overlays"]:
+            self._selected_profile_markup[index]["overlays"][name]["marker"].detach()
+        
+        self._selected_profile_markup[index]["overlays"][name] = \
+            __initoverlaymarker()
+        self._addBackAllSelectedProfileMarkers(index)
+
+    def removeOverlayMarkerFromCurrentProfile(self, name, index=None):
+        """ Remove named overlay marker from current profile """
+        index = self._selected_profile_index if index is None else index
+        if index is None: return
+        if name in self._selected_profile_markup.get(
+            index, SkyModelPlotter._giveDefaultSelectedMarkerInfos())["overlays"]:
+            self._selected_profile_markup[index]["overlays"][name]["marker"].detach()
+        del self._selected_profile_markup[index]["overlays"][name]
+        self._replot()
+
+    def deactivateOverlayMarkerFromCurrentProfile(self, name, index=None):
+        """ Detach named overlay marker from current profile """
+        index = self._selected_profile_index if index is None else index
+        if index is None: return
+        if name in self._selected_profile_markup.get(
+            index, SkyModelPlotter._giveDefaultSelectedMarkerInfos())["overlays"]:
+            self._selected_profile_markup[index]["overlays"][name]["marker"].detach()
+        self._replot()
+
+    def removeAllOverlayMarkersFromCurrentProfile(self, index=None):
+        """ Remove all overlay markers from current profile """
+        index = self._selected_profile_index if index is None else index
+        if index is None: return
+        for name in list(self._selected_profile_markup.get(
+            index, SkyModelPlotter._giveDefaultSelectedMarkerInfos())["overlays"].keys()):
+            self.removeOverlayMarkerFromCurrentProfile(name, index)
+    
+    def deactivateAllOverlayMarkersFromCurrentProfile(self, index=None):
+        """ Detach all overlay markers from current profile """
+        index = self._selected_profile_index if index is None else index
+        if index is None: return
+        for name in self._selected_profile_markup.get(
+            index, SkyModelPlotter._giveDefaultSelectedMarkerInfos())["overlays"]:
+            self.deactivateOverlayMarkerFromCurrentProfile(name, index)
+
+    def removeAllSelectedProfileMarkings(self):
+        """ Remove all selected profile markings """
+        for k in self._selected_profile_markup:
+            self.removeSelectedProfileMarkings(k)
+        self.removeAllOverlayMarkersFromCurrentProfile()
+
+    def removeSelectedProfileMarkings(self, index, purge_history=False):
+        """ Remove selected profile marking
+            purge_history: remove position and marking from history
+        """        
+        if index in self._selected_profile_markup:
+            marker = self._selected_profile_markup[index]["active"]['marker']
+            if marker is not None:
+                self._removePlotMarkupItem(marker)
+            if purge_history:
+                self.removeAllOverlayMarkersFromCurrentProfile(index)
+                del self._selected_profile_markup[index]
+            else:
+                self.deactivateAllOverlayMarkersFromCurrentProfile(index)
+
     def close(self):
         self._menu.clear()
         self._wtoolbar.clear()
         self._livezoom.close()
         self._liveprofile.close()
+        self._liveprofile_selected.close()
 
     def livezoom_dockwidget_closed(self):
+        """Signal slot for closing a dockable widget."""
         list_of_actions = self._menu.actions()
         for ea_action in list_of_actions:
-            if ea_action.text() == 'Show live zoom && cross-sections':
-                self._dockable_livezoom.setVisible(False)
-                if self._mainwin.windowState() != Qt.WindowMaximized:
-                    if not self.get_docked_widget_size(self._dockable_livezoom):
-                        if not self._dockable_livezoom.isFloating():
-                            geo = self._mainwin.geometry()
-                            geo.setWidth(self._mainwin.width() - self._dockable_livezoom.width())
-                            center = geo.center()
-                            geo.moveCenter(QPoint(center.x() + self._dockable_livezoom.width(), geo.y()))
-                            self._mainwin.setGeometry(geo)
+            if 'Show live zoom  cross-sections' in ea_action.text().replace("&", ""):
+                self._dockable_closed(self._dockable_livezoom)
                 ea_action.setChecked(False)
         Config.set('livezoom-show', False)
 
     def liveprofile_dockwidget_closed(self):
+        """Signal slot for closing a dockable widget."""
         list_of_actions = self._menu.actions()
         for ea_action in list_of_actions:
-            if ea_action.text() == 'Show profiles':
-                self._dockable_liveprofile.setVisible(False)
-                if self._mainwin.windowState() != Qt.WindowMaximized:
-                    if not self.get_docked_widget_size(self._dockable_liveprofile):
-                        if not self._dockable_liveprofile.isFloating():
-                            geo = self._mainwin.geometry()
-                            geo.setWidth(self._mainwin.width() - self._dockable_liveprofile.width())
-                            center = geo.center()
-                            geo.moveCenter(QPoint(center.x() + self._dockable_liveprofile.width(), geo.y()))
-                            self._mainwin.setGeometry(geo)
+            if 'Show profiles' in ea_action.text().replace("&", ""):
+                self._dockable_closed(self._dockable_liveprofile)
                 ea_action.setChecked(False)
         Config.set('liveprofile-show', False)
 
+    def liveprofile_selected_dockwidget_closed(self):
+        """Signal slot for closing a dockable widget."""
+        list_of_actions = self._menu.actions()
+        for ea_action in list_of_actions:
+            if 'Show selected profiles' in ea_action.text().replace("&", ""):
+                # remove markup from display on close
+                # but keep the state and positions for retoggle of window
+                self.removeAllSelectedProfileMarkings()
+                self._dockable_closed(self._dockable_liveprofile_selected)
+                ea_action.setChecked(False)
+        Config.set('liveprofileselected-show', False)
+
     def liveprofile_dockwidget_toggled(self):
-        if self._dockable_liveprofile.isVisible():
-            if self._dockable_liveprofile.isWindow():
-                self._dockable_liveprofile.setFloating(False)
-                if self._mainwin.windowState() != Qt.WindowMaximized:
-                    if not self.get_docked_widget_size(self._dockable_liveprofile):
-                        geo = self._mainwin.geometry()
-                        geo.setWidth(self._mainwin.width() + self._dockable_liveprofile.width())
-                        center = geo.center()
-                        geo.moveCenter(QPoint(center.x() - self._dockable_liveprofile.width(), geo.y()))
-                        self._mainwin.setGeometry(geo)
-            else:
-                self._dockable_liveprofile.setFloating(True)
-                if self._mainwin.windowState() != Qt.WindowMaximized:
-                    if not self.get_docked_widget_size(self._dockable_liveprofile):
-                        geo = self._mainwin.geometry()
-                        geo.setWidth(self._mainwin.width() - self._dockable_liveprofile.width())
-                        center = geo.center()
-                        geo.moveCenter(QPoint(center.x() + self._dockable_liveprofile.width(), geo.y()))
-                        self._mainwin.setGeometry(geo)
+        """Signal slot for toggling a dockable widget between a floating or a docked window."""
+        self._dockable_toggled(self._dockable_liveprofile)
+
+    def liveprofile_selected_dockwidget_toggled(self):
+        """Signal slot for toggling a dockable widget between a floating or a docked window."""
+        self._dockable_toggled(self._dockable_liveprofile_selected)
+        self.setSelectedProfileIndex(self._selected_profile_index)
 
     def livezoom_dockwidget_toggled(self):
-        if self._dockable_livezoom.isVisible():
-            if self._dockable_livezoom.isWindow():
-                self._dockable_livezoom.setFloating(False)
-                if self._mainwin.windowState() != Qt.WindowMaximized:
-                    if not self.get_docked_widget_size(self._dockable_livezoom):
-                        geo = self._mainwin.geometry()
-                        geo.setWidth(self._mainwin.width() + self._dockable_livezoom.width())
-                        center = geo.center()
-                        geo.moveCenter(QPoint(center.x() - self._dockable_livezoom.width(), geo.y()))
-                        self._mainwin.setGeometry(geo)
-            else:
-                self._dockable_livezoom.setFloating(True)
-                if self._mainwin.windowState() != Qt.WindowMaximized:
-                    if not self.get_docked_widget_size(self._dockable_livezoom):
-                        geo = self._mainwin.geometry()
-                        geo.setWidth(self._mainwin.width() - self._dockable_livezoom.width())
-                        center = geo.center()
-                        geo.moveCenter(QPoint(center.x() + self._dockable_livezoom.width(), geo.y()))
-                        self._mainwin.setGeometry(geo)
+        """Signal slot for toggling a dockable widget between a floating or a docked window."""
+        self._dockable_toggled(self._dockable_livezoom)
 
-    def get_docked_widget_size(self, _dockable):
+    def _dockable_closed(self, _dockable):
+        _dockable.setVisible(False)
+        _area = self._mainwin.dockWidgetArea(_dockable)
+        if self._mainwin.windowState() != Qt.WindowMaximized:
+            if not self.get_docked_widget_size(_dockable, _area):
+                if not _dockable.isFloating():
+                    geo = self._mainwin.geometry()
+                    geo.setWidth(self._mainwin.width() - _dockable.width())
+                    center = geo.center()
+                    if self._mainwin.dockWidgetArea(_dockable) == 1:  # in left dock area
+                        geo.moveCenter(QPoint(center.x() + _dockable.width(), geo.y()))
+                    self._mainwin.setGeometry(geo)
+        self._mainwin.restoreDockArea(_area)
+
+    def _dockable_toggled(self, _dockable):
+        if _dockable.isVisible():
+            if _dockable.isWindow():
+                _dockable.setFloating(False)
+                _area = self._mainwin.dockWidgetArea(_dockable)
+                if self._mainwin.windowState() != Qt.WindowMaximized:
+                    if not self.get_docked_widget_size(_dockable, _area):
+                        geo = self.expand_mainwindow_dockable(_dockable)
+                        if self._mainwin.dockWidgetArea(_dockable) == 1:  # in left dock area
+                            geo = self.center_mainwindow_left(geo, _dockable)
+                        self._mainwin.setGeometry(geo)
+                self._mainwin.addDockWidgetToArea(_dockable, _area)
+            else:
+                _dockable.setFloating(True)
+                _area = self._mainwin.dockWidgetArea(_dockable)
+                if self._mainwin.windowState() != Qt.WindowMaximized:
+                    if not self.get_docked_widget_size(_dockable, _area):
+                        geo = self.shrink_mainwindow_dockable(_dockable)
+                        if self._mainwin.dockWidgetArea(_dockable) == 1:  # in left dock area
+                            geo = self.center_mainwindow_right(geo, _dockable)
+                        self._mainwin.setGeometry(geo)
+                self._mainwin.restoreDockArea(_area)
+
+    def shrink_mainwindow_dockable(self, _dockable):
+        _geo = self._mainwin.geometry()
+        _geo.setWidth(self._mainwin.width() - _dockable.width())
+        return _geo
+
+    def expand_mainwindow_dockable(self, _dockable):
+        _geo = self._mainwin.geometry()
+        _geo.setWidth(self._mainwin.width() + _dockable.width())
+        return _geo
+
+    def center_mainwindow_left(self, _geo, _dockable):
+        center = _geo.center()
+        _geo.moveCenter(QPoint(center.x() - _dockable.width(), _geo.y()))
+        return _geo
+
+    def center_mainwindow_right(self, _geo, _dockable):
+        center = _geo.center()
+        _geo.moveCenter(QPoint(center.x() + _dockable.width(), _geo.y()))
+        return _geo
+
+    def get_docked_widget_size(self, _dockable, _area):
         widget_list = self._mainwin.findChildren(QDockWidget)
         size_list = []
         if _dockable:
             for widget in widget_list:
-                if not isinstance(widget.bind_widget, ImageControlDialog):
-                    if widget.bind_widget != _dockable.bind_widget:
-                        if not widget.isWindow() and not widget.isFloating() and widget.isVisible():
+                if self._mainwin.dockWidgetArea(widget) == _area:
+                    if widget is not _dockable:
+                        if (not widget.isWindow() and not widget.isFloating()
+                                and widget.isVisible()):
                             size_list.append(widget.bind_widget.width())
         if size_list:
             return max(size_list)
@@ -1366,6 +2038,8 @@ class SkyModelPlotter(QWidget):
         im.enableImageBorders(self._image_pen, self._grid_color, self._bg_brush)
         im.imagesChanged.connect(self._currier.curry(self.postUpdateEvent, self.UpdateImages))
         im.imagePlotRaised.connect(self._imageRaised)
+        # Connect WCS projection menu item
+        self._qa_wcs_proj.toggled[bool].connect(self._imgman.setWCSRefCoord)
 
     class UpdateEvent(QEvent):
         def __init__(self, serial):
@@ -1402,16 +2076,21 @@ class SkyModelPlotter(QWidget):
         self._tracker = self.PlotPicker(self.plot.canvas(), "", mode=QwtPickerTrackerMachine(),
                                         track_callback=self._trackCoordinates)
         self._tracker.setTrackerMode(QwtPicker.AlwaysOn)
-        self._tracker.setTrackerPen(QColor('white'))  # TODO - adjust the colour of the coordinate tracker according to image colour map.
+        # TODO - adjust the colour of the coordinate tracker according to image colour map.
+        self._tracker.setTrackerPen(QColor('white'))
         # this pricker provides the profile on click
-        self._tracker_profile = self.PlotPicker(self.plot.canvas(), "", mode=QwtPickerClickPointMachine(),
-                                        select_callback=self._trackCoordinatesProfile)
+        self._tracker_click_profile = self.PlotPicker(self.plot.canvas(), "", mode=QwtPickerClickPointMachine(),
+                                                      select_callback=self._selectCoordinatesProfile)
+        # set profile click to use Alt key modifier to avoid conflicting with zoomer
+        self._tracker_click_profile.setMousePattern(QwtEventPattern.MouseSelect1, Qt.LeftButton, Qt.AltModifier | Qt.ControlModifier)
+        self._tracker_profile = self.PlotPicker(self.plot.canvas(), "", mode=QwtPickerTrackerMachine(),
+                                                track_callback=self._trackCoordinatesProfile)
         # zoom picker
         self._zoomer = self.PlotZoomer(self.plot.canvas(), self.plot.getUpdateSignal(), label="zoom")
         self._zoomer_pen = makeDualColorPen("navy", "yellow")
         self._zoomer.setRubberBandPen(self._zoomer_pen)
         self._zoomer.setTrackerPen(QColor("yellow"))
-        self._zoomer.zoomed[QRectF].connect(self._plotZoomed)
+        self._zoomer.zoomed.connect(self._plotZoomed)
         self._zoomer.provisionalZoom.connect(self._plotProvisionalZoom)
         self._zoomer_box = TiggerPlotCurve()
         self._zoomer_box.setRenderHint(QwtPlotItem.RenderAntialiased)
@@ -1436,9 +2115,9 @@ class SkyModelPlotter(QWidget):
 
         # ruler picker for measurement mode
         self._ruler = self.PlotPicker(self.plot.canvas(), "measure", "cyan", select_callback=self._measureRuler,
-                                     mode=QwtPickerDragLineMachine(),
-                                     rubber_band=QwtPicker.PolygonRubberBand,
-                                     track_callback=self._trackRulerStartPoint)
+                                      mode=QwtPickerDragLineMachine(),
+                                      rubber_band=QwtPicker.PolygonRubberBand,
+                                      track_callback=self._trackRulerStartPoint)
 
         # this is the initial position of the ruler -- None if ruler is not tracking
         self._ruler_start_point = None
@@ -1453,7 +2132,10 @@ class SkyModelPlotter(QWidget):
         self._picker4 = self.PlotPicker(self.plot.canvas(), "", "green", self._selectNearestSource,
                                         mode=QwtPickerClickPointMachine())
         for picker in self._zoomer, self._ruler, self._picker1, self._picker2, self._picker3, self._picker4:
-            for sel in QwtEventPattern.MouseSelect1, QwtEventPattern.MouseSelect2, QwtEventPattern.MouseSelect3, QwtEventPattern.MouseSelect4:
+            for sel in (QwtEventPattern.MouseSelect1,
+                        QwtEventPattern.MouseSelect2,
+                        QwtEventPattern.MouseSelect3,
+                        QwtEventPattern.MouseSelect4):
                 picker.setMousePattern(sel, 0)
             picker.setTrackerMode(QwtPicker.AlwaysOff)
 
@@ -1465,6 +2147,8 @@ class SkyModelPlotter(QWidget):
         if self._qa_mwzoom.isChecked():
             tooltip += """<P>You also have mouse-wheel zoom enabled. Rolling the wheel up will zoom in at the current zoom point.
       Rolling the wheel down will zoom back out.</P>"""
+        tooltip += """<P>With the 'Show selected profiles' option, you can select spectra using CNTL+ALT+LeftButton.
+        Selected spectra will be marked with a star.</P>"""
         QMessageBox.information(self, "Quick mouse reference", tooltip)
 
     #    self._showCoordinateToolTip(self._mousemodes.currentMode().tooltip,rect=False)  # TODO - check why commented out
@@ -1527,80 +2211,98 @@ class SkyModelPlotter(QWidget):
                 return mindist[1].src
         return None
 
-    def _convertCoordinatesRuler(self, _pos):
-        # get ra/dec coordinates of point
-        pos = self.plot.screenPosToLm(_pos)
-        l, m = pos.x(), pos.y()
-        ra, dec = self.projection.radec(l, m)
-        rh, rm, rs = ModelClasses.Position.ra_hms_static(ra)
-        dsign, dd, dm, ds = ModelClasses.Position.dec_sdms_static(dec)
-        dist, pa = Coordinates.angular_dist_pos_angle(self.projection.ra0, self.projection.dec0, ra, dec)
-        Rd, Rm, Rs = ModelClasses.Position.dec_dms_static(dist)
-        PAd = pa * 180 / math.pi
-        if PAd < 0:
-            PAd += 360
-        # if we have an image, add pixel coordinates
-        x = y = val = flag = None
-        image = self._imgman and self._imgman.getTopImage()
-        if image:
-            x, y = list(map(int, list(map(round, image.lmToPix(l, m)))))
-            nx, ny = image.imageDims()
-            if x >= 0 and x < nx and y >= 0 and y < ny:
-                #        text += "<BR>x=%d y=%d"%(round(x),round(y))
-                val, flag = image.imagePixel(x, y)
-            else:
-                x = y = None
-        return l, m, ra, dec, dist, pa, rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd, x, y, val, flag
+    def findImageFromPos(self, pos):
+        """Find if the current mouse pos is related to an image that failed when optimisning WCS projection."""
+        _projection = None
+        image = None
+        # If there are images that failed to use the optimised WCS,
+        # then find the corresponding image and projection for the current pos.
+        if self._imgman._failed_wcs_images:
+            for ic in self._imgman._imagecons:
+                if ic.image.boundingRect().contains(pos):
+                    # Only process failed images.
+                    if ic in self._imgman._failed_wcs_images:
+                        image = ic.image
+                        _projection = ic.image.orig_projection
+                        # Check if image selected has intersects with other images.
+                        for c in self._imgman._imagecons:
+                            if image is not c.image and image.boundingRect().intersects(
+                                    c.image.boundingRect()):
+                                intersect = image.boundingRect().intersected(c.image.boundingRect())
+                                # Check if pos is within the intersect and
+                                # select the image that is at the top.
+                                if intersect.contains(pos):
+                                    if c.image is self._imgman.getTopImage():
+                                        image = c.image
+                                        _projection = c.image.orig_projection
+        return _projection, image
 
-    def _convertCoordinates(self, _pos):
-        """This method is used to calculate coordinates from the GUI position."""
+    def _convertCoordinates(self, _pos, _projection=None, _image=None):
+        """This method is used to calculate coordinates from the GUI position.
+        Optionally, it can use a particular projection and image to calculate coordinates."""
+        if _projection is None:
+            # set projection from centered image
+            _projection = self.projection
+        if _image is None:
+            # set default image
+            _image = self._image
+
         # get ra/dec coordinates of point
         l, m = _pos.x(), _pos.y()
-        ra, dec = self.projection.radec(l, m)
+        ra, dec = _projection.radec(l, m)
+        if numpy.isnan(ra):
+            ra = _projection.ra0
+        if numpy.isnan(dec):
+            dec = _projection.dec0
         rh, rm, rs = ModelClasses.Position.ra_hms_static(ra)
         dsign, dd, dm, ds = ModelClasses.Position.dec_sdms_static(dec)
-        dist, pa = Coordinates.angular_dist_pos_angle(self.projection.ra0, self.projection.dec0, ra, dec)
+        dist, pa = Coordinates.angular_dist_pos_angle(_projection.ra0, _projection.dec0, ra, dec)
         Rd, Rm, Rs = ModelClasses.Position.dec_dms_static(dist)
         PAd = pa * 180 / math.pi
         if PAd < 0:
             PAd += 360
         # if we have an image, add pixel coordinates
         x = y = val = flag = None
-        image = self._imgman and self._imgman.getTopImage()
-        if image:
-            x, y = list(map(int, list(map(round, image.lmToPix(l, m)))))
-            nx, ny = image.imageDims()
+        if not _image:
+            _image = self._imgman and self._imgman.getTopImage()
+        if _image:
+            x, y = list(map(int, list(map(round, _image.lmToPix(l, m)))))
+            nx, ny = _image.imageDims()
             if x >= 0 and x < nx and y >= 0 and y < ny:
                 #        text += "<BR>x=%d y=%d"%(round(x),round(y))
-                val, flag = image.imagePixel(x, y)
+                val, flag = _image.imagePixel(x, y)
             else:
                 x = y = None
         return l, m, ra, dec, dist, pa, rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd, x, y, val, flag
 
     def _trackRulerStartPoint(self, pos):
-        if not self.projection and not pos:
+        """Provides measurement marker on plot and
+        stores the first point when ruler-drag is initiated"""
+        if not pos:
             return
-        # store first point when ruler-drag is initiated
+        # find the image and projection from pos
+        _projection, image = self.findImageFromPos(pos)
+        if _projection is None:
+            image = None
         pos0 = pos
         if pos0 != self._ruler_start_point:
             self._ruler_start_point = pos0
             if (self._ruler_start_point - pos0).manhattanLength() <= 1:
                 l, m, ra, dec, dist, pa, rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd, x, y, val, flag = self._convertCoordinates(
-                    self._ruler_start_point)
-                # make tooltip text with HTML, make console (and cliboard) text w/o HTML
-                tiptext = "<NOBR>"
+                    self._ruler_start_point, _projection=_projection, _image=image)
+                # make console (and cliboard) text
+                _deg = u'\N{DEGREE SIGN}'
                 msgtext = ""
-                if self.projection.has_projection():
-                    tiptext += "X: %02dh%02dm%05.2fs %s%02d&deg;%02d'%05.2f\"  &nbsp;  r<sub>0</sub>=%d&deg;%02d'%05.2f\"   &nbsp;  PA<sub>0</sub>=%06.2f&deg;" % (
-                        rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd)
-                    msgtext += "X: %2dh%02dm%05.2fs %s%02d\u00B0%02d'%05.2f\" (%.6f\u00B0 %.6f\u00B0)  r=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0" % (
-                        rh, rm, rs, dsign, dd, dm, ds, ra * 180 / math.pi, dec * 180 / math.pi, Rd, Rm, Rs,
-                        dist * 180 / math.pi, PAd)
+                if _projection is None:
+                    # set default projection from centered image
+                    _projection = self._imgman.getCenterImage().projection
+                if _projection.has_projection():
+                    msgtext += (f"X: {rh:02}h{rm:02}m{rs:05.2f}s {dsign}{dd:02}{_deg}{dm:02}'{ds:05.2f}\" "
+                                f"({ra * 180 / math.pi:.6f}{_deg} {dec * 180 / math.pi:.6f}{_deg})  "
+                                f"r={Rd}{_deg}{Rm:02}'{Rs:05.2f}\" ({dist * 180 / math.pi:.6f}{_deg}) "
+                                f"PA={PAd:06.2f}{_deg}")
                 if x is not None:
-                    tiptext += " &nbsp;  x=%d y=%d value=blank" % (x, y) if flag else " &nbsp;  x=%d y=%d value=%g" % (
-                        x, y, val)
-                    msgtext += "   x=%d y=%d value=blank" % (x, y) if flag else "   x=%d y=%d value=%g" % (x, y, val)
-                tiptext += "</NOBR>"
+                    msgtext += f"   x={x} y={y} value=blank" if flag else f"   x={x} y={y} value={val:.6g}"
                 # make marker
                 marker = TiggerPlotMarker()
                 marker.setRenderHint(QwtPlotItem.RenderAntialiased)
@@ -1624,28 +2326,6 @@ class SkyModelPlotter(QWidget):
                 print(msgtext)
                 return QwtText(msgtext)
 
-    """def _trackRuler(self, pos):
-        if not self.projection and self._ruler_start_point is None:
-            return None
-        if self._ruler_start_point is not None and (pos - self._ruler_start_point).manhattanLength() > 1:
-            # find first point details
-            l, m, ra, dec, dist, pa, rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd, x, y, val, flag = self._convertCoordinatesRuler(self._ruler_start_point)
-            # find second point details
-            l1, m1, ra1, dec1, dist1, pa1, rh1, rm1, rs1, dsign1, dd1, dm1, ds1, Rd1, Rm1, Rs1, PAd1, x1, y1, val1, flag1 = self._convertCoordinates(pos)
-            # distance measurement
-            dist2, pa2 = Coordinates.angular_dist_pos_angle(ra, dec, ra1, dec1)
-            Rd2, Rm2, Rs2 = ModelClasses.Position.dec_dms_static(dist2)
-            pa2 *= 180 / math.pi
-            pa2 += 360 * (pa2 < 0)
-            # send current point B and ruler length AB to GUI display
-            msgtext = ""
-            msgtext += "\nB: %2dh%02dm%05.2fs %s%02d\u00B0%02d'%05.2f\" (%.6f\u00B0 %.6f\u00B0)  r=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0" % (
-                rh1, rm1, rs1, dsign1, dd1, dm1, ds1, ra1 * 180 / math.pi, dec1 * 180 / math.pi, Rd1, Rm1, Rs1,
-                dist1 * 180 / math.pi, PAd1)
-            msgtext += "\n|AB|=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0" % (
-                Rd2, Rm2, Rs2, dist2 * 180 / math.pi, pa2)
-            self.plotShowMessage.emit(msgtext, 3000)"""
-
     def _measureRuler(self, pos):
         if not self.projection or pos is None or self._ruler_start_point is None:
             return
@@ -1654,48 +2334,57 @@ class SkyModelPlotter(QWidget):
         pos1 = pos
         # get point coords
         if pos0 != pos1:
+            # find the image and projection from pos0
+            _projection, image = self.findImageFromPos(pos0)
+            if _projection is None:
+                _projection = self.projection
+                image = None
             l, m, ra, dec, dist, pa, rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd, x, y, val, flag = self._convertCoordinates(
-                pos0)
+                pos0, _projection=_projection, _image=image)
+            # find the image and projection from pos1
+            _projection1, image1 = self.findImageFromPos(pos1)
+            if _projection1 is None:
+                _projection1 = self.projection
+                image1 = None
             l1, m1, ra1, dec1, dist1, pa1, rh1, rm1, rs1, dsign1, dd1, dm1, ds1, Rd1, Rm1, Rs1, PAd1, x1, y1, val1, flag1 = self._convertCoordinates(
-                pos1)
+                pos1, _projection=_projection1, _image=image1)
             # make tooltip text with HTML, and console/clipboard text without HTML
             tiptext = "<NOBR>"
             msgtext = ""
             statustext = ""
-            if self.projection.has_projection():
-                tiptext += "A: %02dh%02dm%05.2fs %s%02d&deg;%02d'%05.2f\"  &nbsp; r<sub>0</sub>=%d&deg;%02d'%05.2f\"   &nbsp;  PA<sub>0</sub>=%06.2f&deg;" % (
-                    rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd)
-                msgtext += "A: %2dh%02dm%05.2fs %s%02d\u00B0%02d'%05.2f\" (%.6f\u00B0 %.6f\u00B0)  r=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%06.2f\u00B0" % (
-                    rh, rm, rs, dsign, dd, dm, ds, ra * 180 / math.pi, dec * 180 / math.pi, Rd, Rm, Rs,
-                    dist * 180 / math.pi, PAd)
+            _deg = u'\N{DEGREE SIGN}'
+            if _projection.has_projection():
+                tiptext += (f"A: {rh:02}h{rm:02}m{rs:05.2f}s {dsign}{dd:02}&deg;{dm:02}'{ds:05.2f}\"  "
+                            f"&nbsp; r<sub>0</sub>={Rd}&deg;{Rm:02}'{Rs:05.2f}\"   "
+                            f"&nbsp;  PA<sub>0</sub>={PAd:06.2f}&deg;")
+                msgtext += (f"A: {rh:02}h{rm:02}m{rs:05.2f}s {dsign}{dd:02}{_deg}{dm:02}'{ds:05.2f}\" "
+                            f"({ra * 180 / math.pi:.6f}{_deg} {dec * 180 / math.pi:.6f}{_deg})  "
+                            f"r={Rd}{_deg}{Rm:02}'{Rs:05.2f}\" ({dist * 180 / math.pi:.6f}{_deg}) "
+                            f"PA={PAd:06.2f}{_deg}")
             if x is not None:
-                tiptext += " &nbsp; x=%d y=%d value=blank" % (x, y) if flag else " &nbsp; x=%d y=%d value=%g" % (
-                    x, y, val)
-                msgtext += "   x=%d y=%d value=blank" % (x, y) if flag else "   x=%d y=%d value=%g" % (x, y, val)
+                tiptext += f" &nbsp; x={x} y={y} value=blank" if flag else f" &nbsp; x={x} y={y} value={val:.6g}"
+                msgtext += f"   x={x} y={y} value=blank" if flag else f"   x={x} y={y} value={val:.6g}"
             tiptext += "</NOBR><BR><NOBR>"
-            if self.projection.has_projection():
-                tiptext += "B: %02dh%02dm%05.2fs %s%02d&deg;%02d'%05.2f\" &nbsp;  r<sub>0</sub>=%d&deg;%02d'%05.2f\"  &nbsp;  PA<sub>0</sub>=%06.2f&deg;" % (
-                rh1, rm1, rs1, dsign1, dd1, dm1, ds1, Rd1, Rm1, Rs1, PAd1)
-                msgtext += "\nB: %2dh%02dm%05.2fs %s%02d\u00B0%02d'%05.2f\" (%.6f\u00B0 %.6f\u00B0)  r=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0" % (
-                    rh1, rm1, rs1, dsign1, dd1, dm1, ds1, ra1 * 180 / math.pi, dec1 * 180 / math.pi, Rd1, Rm1, Rs1,
-                    dist1 * 180 / math.pi, PAd1)
+            if _projection.has_projection():
+                tiptext += (f"B: {rh1:02}h{rm1:02}m{rs1:05.2f}s {dsign}{dd1:02}&deg;{dm1:02}'{ds1:05.2f}\"  "
+                            f"&nbsp; r<sub>0</sub>={Rd1}&deg;{Rm1:02}'{Rs1:05.2f}\"   "
+                            f"&nbsp;  PA<sub>0</sub>={PAd1:06.2f}&deg;")
+                msgtext += (f"\nB: {rh1:02}h{rm1:02}m{rs1:05.2f}s {dsign}{dd1:02}{_deg}{dm1:02}'{ds1:05.2f}\" "
+                            f"({ra1 * 180 / math.pi:.6f}{_deg} {dec1 * 180 / math.pi:.6f}{_deg})  "
+                            f"r={Rd1}{_deg}{Rm1:02}'{Rs1:05.2f}\" ({dist1 * 180 / math.pi:.6f}{_deg}) "
+                            f"PA={PAd1:06.2f}{_deg}")
             if x1 is not None:
-                tiptext += " &nbsp; x=%d y=%d value=blank" % (x1, y1) if flag1 else " &nbsp; x=%d y=%d value=%g" % (
-                x1, y1, val1)
-                msgtext += "   x=%d y=%d value=blank" % (x1, y1) if flag1 else "   x=%d y=%d value=%g" % (
-                x1, y1, val1)
+                tiptext += f" &nbsp; x={x1} y={y1} value=blank" if flag else f" &nbsp; x={x1} y={y1} value={val1:.6g}"
+                msgtext += f"   x={x1} y={y1} value=blank" if flag else f"   x={x1} y={y1} value={val1:.6g}"
             tiptext += "</NOBR><BR>"
             # distance measurement
             dist2, pa2 = Coordinates.angular_dist_pos_angle(ra, dec, ra1, dec1)
             Rd2, Rm2, Rs2 = ModelClasses.Position.dec_dms_static(dist2)
             pa2 *= 180 / math.pi
             pa2 += 360 * (pa2 < 0)
-            tiptext += "<NOBR>|AB|=%d&deg;%02d'%05.2f\" &nbsp; PA<sub>AB</sub>=%06.2f&deg;</NOBR>" % (
-            Rd2, Rm2, Rs2, pa2)
-            msgtext += "\n|AB|=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0" % (
-                Rd2, Rm2, Rs2, dist2 * 180 / math.pi, pa2)
-            statustext += "\n|AB|=%d\u00B0%02d'%05.2f\" (%.6f\u00B0) PA=%6.2f\u00B0" % (
-                Rd2, Rm2, Rs2, dist2 * 180 / math.pi, pa2)
+            tiptext += f"<NOBR>|AB|={Rd2}&deg;{Rm2:02}'{Rs2:05.2f}\" &nbsp; PA<sub>AB</sub>={PAd1:06.2f}&deg;</NOBR>"
+            msgtext += f"\n|AB|={Rd2}{_deg}{Rm2:02}'{Rs2:05.2f}\" ({dist2 * 180 / math.pi:.6f}{_deg}) PA={pa2:06.2f}{_deg}"
+            statustext += f"\n|AB|={Rd2}{_deg}{Rm2:02}'{Rs2:05.2f}\" ({dist2 * 180 / math.pi:.6f}{_deg}) PA={pa2:06.2f}{_deg}"
             # make markers
             marka, markb = TiggerPlotMarker(), TiggerPlotMarker()
             marka.setRenderHint(QwtPlotItem.RenderAntialiased)
@@ -1747,8 +2436,6 @@ class SkyModelPlotter(QWidget):
         dprint(2, text)
         location = self.plot.mapToGlobal((QPoint(0, 0)))
         if rect:
-            # old line
-            # QToolTip.showText(self.plot.mapToGlobal(QPoint(0, 0)), text, self.plot, self.plot.rect(), 30000)
             self.tigToolTip.showText(location=location, text=text)
         else:
             self.tigToolTip.showText(location=location, text=text)
@@ -1800,21 +2487,39 @@ class SkyModelPlotter(QWidget):
         """Adds a list of QwtPlotItems to the markup"""
         self._removePlotMarkup(replot=False)
         for item in items:
-            item.attach(self.plot)
+            if item is not None:
+                item.attach(self.plot)
         self._plot_markup = items
         self._replot()
 
     def _removePlotMarkup(self, replot=True):
         """Removes all markup items, and refreshes the plot if replot=True"""
         for item in self._plot_markup:
+            if item is None: continue
+            if not item in map(lambda k: self._selected_profile_markup[k]["active"]["marker"], 
+                               self._selected_profile_markup):
+                item.detach()
+        if self._plot_markup and replot:
+            self.tigToolTip.hideText()
+            self._replot()
+        else:
+            self._plot_markup = []
+
+    def _removePlotMarkupItem(self, item, replot=True):
+        """Removes all markup items, and refreshes the plot if replot=True"""
+        if item in self._plot_markup:
             item.detach()
         if self._plot_markup and replot:
             self.tigToolTip.hideText()
             self._replot()
-        self._plot_markup = []
 
     def _trackCoordinates(self, pos):
-        if not self.projection:
+        # find the image and projection from pos
+        _projection, image = self.findImageFromPos(pos)
+        if _projection is None:
+            _projection = self.projection
+            image = self._imgman.getTopImage()
+        if not _projection:
             return None
         # if Ctrl is pushed, get nearest source and make it "current"
         if QApplication.keyboardModifiers() & (Qt.ControlModifier | Qt.ShiftModifier):
@@ -1823,45 +2528,70 @@ class SkyModelPlotter(QWidget):
                 self.model.setCurrentSource(src)
         # get ra/dec coordinates of point
         l, m, ra, dec, dist, pa, rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd, x, y, val, flag = self._convertCoordinates(
-            pos)
-        #    text = "<P align=\"right\">%2dh%02dm%05.2fs %+2d&deg;%02d'%05.2f\""%(rh,rm,rs,dd,dm,ds)
-        # emit message as well
+            pos, _projection=_projection, _image=image)
         msgtext = ""
-        if self.projection.has_projection():
+        if _projection.has_projection():
             msgtext = "%02dh%02dm%05.2fs %s%02d\u00B0%02d'%05.2f\"  r=%d\u00B0%02d'%05.2f\"  PA=%.2f\u00B0" % (
                 rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd)
         # if we have an image, add pixel coordinates
-        image = self._imgman and self._imgman.getTopImage()
-        if image and x is not None:
+        if image is None:
+            image = self._imgman and self._imgman.getTopImage()
+        if image and x is not None and image is self._imgman.getTopImage():
             msgtext += "   x=%d y=%d value=blank" % (x, y) if flag else "   x=%d y=%d value=%g" % (x, y, val)
             self._livezoom.trackImage(image, x, y)
         self.plotShowMessage[str, int].emit(msgtext, 10000)
         return msgtext
 
-    def _trackCoordinatesProfile(self, pos):
-        if not self.projection:
+    def _selectCoordinatesProfile(self, pos):
+        # find the image and projection from pos
+        _projection, image = self.findImageFromPos(pos)
+        if _projection is None:
+            _projection = self.projection
+            image = self._imgman.getTopImage()
+        if not _projection or image is not self._imgman.getTopImage():
             return None
-        # disabled as it is enabled in _trackCoordinates above.
-        # if Ctrl is pushed, get nearest source and make it "current"
-        #if QApplication.keyboardModifiers() & (Qt.ControlModifier | Qt.ShiftModifier):
-        #    src = self.findNearestSource(pos, world=False, range=range)
-        #    if src:
-        #        self.model.setCurrentSource(src)
         # get ra/dec coordinates of point
         l, m, ra, dec, dist, pa, rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd, x, y, val, flag = self._convertCoordinates(
-            pos)
-        #    text = "<P align=\"right\">%2dh%02dm%05.2fs %+2d&deg;%02d'%05.2f\""%(rh,rm,rs,dd,dm,ds)
-        # emit message as well
-        # leaving commented out as _trackCoordinates already has this
+            pos, _projection=_projection, _image=image)
         msgtext = ""
-        #if self.projection.has_projection():
-        #    msgtext = "%02dh%02dm%05.2fs %s%02d\u00B0%02d'%05.2f\"  r=%d\u00B0%02d'%05.2f\"  PA=%.2f\u00B0" % (
-        #        rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd)
-        # if we have an image, add pixel coordinates
-        image = self._imgman and self._imgman.getTopImage()
+        if image is None:
+            image = self._imgman and self._imgman.getTopImage()
         if image and x is not None:
-            # msgtext += "   x=%d y=%d value=blank" % (x, y) if flag else "   x=%d y=%d value=%g" % (x, y, val)
-            self._liveprofile.trackImage(image, x, y)
+            self._liveprofile_selected.trackImage(image, x, y, l, m)
+            if self._liveprofile_selected.isVisible():
+                # add a marker at the location of the selected profile
+                def __initMarker(markerindex):
+                    marker = TiggerPlotMarker()
+                    marker.setRenderHint(QwtPlotItem.RenderAntialiased)
+                    marker.setLabel(QwtText(str(markerindex + 1)))
+                    marker.setSymbol(self._create_profile_marker_symbol(active=True))
+                    return marker
+                if self._selected_profile_markup.setdefault(
+                    self._selected_profile_index, 
+                    SkyModelPlotter._giveDefaultSelectedMarkerInfos())["active"]["marker"] is None:
+                    self._selected_profile_markup[self._selected_profile_index]["active"]["marker"] = \
+                        __initMarker(self._selected_profile_index)
+                sel_marker = self._selected_profile_markup[self._selected_profile_index]["active"]
+                sel_marker["marker"].setValue(l, m)
+                sel_marker["position"] = (l, m)
+                self._addBackAllSelectedProfileMarkers(self._selected_profile_index)
+
+    def _trackCoordinatesProfile(self, pos):
+        # find the image and projection from pos
+        _projection, image = self.findImageFromPos(pos)
+        if _projection is None:
+            _projection = self.projection
+            image = self._imgman.getTopImage()
+        if not _projection or image is not self._imgman.getTopImage():
+            return None
+        # get ra/dec coordinates of point
+        l, m, ra, dec, dist, pa, rh, rm, rs, dsign, dd, dm, ds, Rd, Rm, Rs, PAd, x, y, val, flag = self._convertCoordinates(
+            pos, _projection=_projection, _image=image)
+        msgtext = ""
+        if image is None:
+            image = self._imgman and self._imgman.getTopImage()
+        if image and x is not None:
+            self._liveprofile.trackImage(image, x, y, l, m)
 
     def _selectSources(self, sources, mode):
         """Helper function to select sources in list"""
@@ -1984,7 +2714,7 @@ class SkyModelPlotter(QWidget):
             self._zoomer.zoom(self._provisional_zoom)
         else:
             self._zoomer._zoom_in_process = False  # zoom wheel lock
-            
+
     def _plotProvisionalZoom(self, x, y, level):
         """Called when mouse wheel is used to zoom in our out"""
         self._provisional_zoom_level += level
@@ -2053,7 +2783,7 @@ class SkyModelPlotter(QWidget):
             match = re.match("([-+]?(\d+(\.\d*)?|\.\d+)([eE][-+]?\d+)?)(d|deg|['\"]|arcmin)?$", text, re.I)
             try:
                 value = float(match.group(1))
-            except:
+            except Exception:
                 QMessageBox.warning(self, "Invalid input", "Invalid input: \"%s\"" % text)
                 return
             if round(value) == value:
@@ -2106,7 +2836,7 @@ class SkyModelPlotter(QWidget):
         self._image = self._imgman and self._imgman.getCenterImage()
         # show/hide live zoomer with image
         if self._image:
-            for tool in self._livezoom, self._liveprofile:
+            for tool in self._livezoom, self._liveprofile, self._liveprofile_selected:
                 tool.makeAvailable(bool(self._image))
         # enable or disable mouse modes as appropriate
         self._mousemodes.setContext(has_image=bool(self._image), has_model=bool(self.model))
@@ -2250,7 +2980,7 @@ class SkyModelPlotter(QWidget):
         dprint(5, "updating zoomer")
         self._zoomer.setZoomStack(zooms, len(zooms) - 1)
         self._updatePsfMarker(None, replot=True)
-        #  self.plot.replot()  # this shouldn't be needed as it is handled in the line above.
+        self.plot.replot()  # this shouldn't be needed as it is handled in the line above.
 
     def setModel(self, model):
         self._source_lm = {}
@@ -2273,6 +3003,7 @@ class SkyModelPlotter(QWidget):
                 dialog.setDefaultSuffix("png")
                 dialog.setFileMode(QFileDialog.AnyFile)
                 dialog.setAcceptMode(QFileDialog.AcceptSave)
+                dialog.setNameFilter("PNG files (*.png)")
                 dialog.setModal(True)
                 dialog.filesSelected.connect(self._exportPlotToPNG)
             return self._export_png_dialog.exec_() == QDialog.Accepted

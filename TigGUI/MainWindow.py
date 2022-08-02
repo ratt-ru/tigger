@@ -22,26 +22,28 @@
 import os
 import sys
 
-import Tigger.Models.Formats
-from PyQt5.Qt import QWidget, QFileDialog, QDialog, QVBoxLayout, \
-    Qt, QSize, QSizePolicy, QApplication, QMenu, QMessageBox, QErrorMessage, QMainWindow, QSplitter
+from PyQt5.Qt import (QApplication, QDialog, QErrorMessage, QFileDialog,
+                      QMainWindow, QMenu, QMessageBox, QSize, QSizePolicy,
+                      QSplitter, QVBoxLayout, QWidget, Qt)
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QDockWidget
-from Tigger.Models import SkyModel
-from Tigger.Models.Formats import ModelHTML
+from PyQt5.QtWidgets import QDockWidget, QLayout
 
-import TigGUI.Tools.source_selector
-import TigGUI.kitties.utils
 from TigGUI import AboutDialog
 from TigGUI import Images
 from TigGUI import Widgets
 from TigGUI.Images.ControlDialog import ImageControlDialog
 from TigGUI.Images.Manager import ImageManager
-from TigGUI.Plot.SkyModelPlot import SkyModelPlotter, PersistentCurrier, LiveImageZoom
-from TigGUI.SkyModelTreeWidget import SkyModelTreeWidget, ModelGroupsTable
-from TigGUI.init import pixmaps, Config
+from TigGUI.Plot.SkyModelPlot import LiveImageZoom, PersistentCurrier, SkyModelPlotter
+from TigGUI.SkyModelTreeWidget import ModelGroupsTable, SkyModelTreeWidget
+import TigGUI.Tools.source_selector
+from TigGUI.init import Config, pixmaps
+import TigGUI.kitties.utils
 from TigGUI.kitties.widgets import BusyIndicator
+
+from Tigger.Models import SkyModel
+import Tigger.Models.Formats
+from Tigger.Models.Formats import ModelHTML
 
 QStringList = list
 
@@ -76,6 +78,7 @@ class MainWindow(QMainWindow):
         self.setWindowIcon(QIcon(pixmaps.purr_logo.pm()))
         # central widget setup
         self.cw = QWidget(self)
+        self.cw.setContentsMargins(10, 10, 10, 10)
         # The actual min width of the control dialog is ~396
         self._ctrl_dialog_min_size = 400  # approx value
         # The actual min width of the profile/zoom windows is ~256
@@ -99,13 +102,14 @@ class MainWindow(QMainWindow):
         spl2.setOpaqueResize(False)
         self._skyplot_stack = QWidget(spl2)
         self._skyplot_stack_lo = QVBoxLayout(self._skyplot_stack)
-        self._skyplot_stack_lo.setContentsMargins(0, 0, 0, 0)
+        self._skyplot_stack_lo.setContentsMargins(5, 5, 5, 5)
 
         # add plot
         self.skyplot = SkyModelPlotter(self._skyplot_stack, self)
         self.skyplot.resize(128, 128)
-        self.skyplot.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
-        self._skyplot_stack_lo.addWidget(self.skyplot, 1000)
+        self.skyplot.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Preferred)
+        self._skyplot_stack_lo.addWidget(self.skyplot)
+        self._skyplot_stack_lo.setSizeConstraint(QLayout.SetMaximumSize)
         self.skyplot.hide()
         self.skyplot.imagesChanged.connect(self._imagesChanged)
         self.skyplot.setupShowMessages(self.signalShowMessage)
@@ -113,7 +117,8 @@ class MainWindow(QMainWindow):
 
         self._grouptab_stack = QWidget(spl2)
         self._grouptab_stack_lo = lo = QVBoxLayout(self._grouptab_stack)
-        self._grouptab_stack_lo.setContentsMargins(0, 0, 0, 0)
+        self._grouptab_stack_lo.setContentsMargins(5, 5, 5, 5)
+        self._grouptab_stack_lo.setSizeConstraint(QLayout.SetMaximumSize)
         # add groupings table
         self.grouptab = ModelGroupsTable(self._grouptab_stack)
         self.grouptab.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
@@ -196,11 +201,16 @@ class MainWindow(QMainWindow):
         self.model = None
         self.filename = None
         self._display_filename = None
-        self._open_file_dialog = self._merge_file_dialog = self._save_as_dialog = self._save_sel_as_dialog = self._open_image_dialog = None
+        self._open_file_dialog = None
+        self._merge_file_dialog = None
+        self._save_as_dialog = None
+        self._save_sel_as_dialog = None
+        self._open_image_dialog = None
         self.isUpdated.emit(False)
         self.hasSkyModel.emit(False)
         self.hasSelection.emit(False)
         self._exiting = False
+        self.right_dock_max_width = 507
 
         # set initial layout
         self._current_layout = None
@@ -214,7 +224,8 @@ class MainWindow(QMainWindow):
     LayoutSplit = "split"
 
     def _getFilenamesFromDropEvent(self, event):
-        """Checks if drop event is valid (i.e. contains a local URL to a FITS file), and returns list of filenames contained therein."""
+        """Checks if drop event is valid (i.e. contains a local URL to a FITS file),
+        and returns list of filenames contained therein."""
         dprint(1, "drop event:", event.mimeData().text())
         if not event.mimeData().hasUrls():
             dprint(1, "drop event: no urls")
@@ -298,10 +309,6 @@ class MainWindow(QMainWindow):
             size_policy.setVerticalPolicy(QSizePolicy.Minimum)
             size_policy.setHorizontalPolicy(QSizePolicy.Expanding)
             self.setSizePolicy(size_policy)
-            # set central widget size - workaround for bug #164
-            # self.cw.setFixedSize(self.max_width - self._ctrl_dialog_min_size - self._profile_and_zoom_widget_min_size, self.max_height)
-            # self.cw.setGeometry(0, self.max_width - self._ctrl_dialog_min_size - self._profile_and_zoom_widget_min_size / 2,
-                               # self.max_width - self._ctrl_dialog_min_size - self._profile_and_zoom_widget_min_size, self.max_height)
         elif layout is self.LayoutEmpty:
             lo = self._skyplot_stack_lo
         else:
@@ -321,11 +328,15 @@ class MainWindow(QMainWindow):
             if Config.getbool('livezoom-show'):
                 self.skyplot._livezoom.setVisible(True)
                 self.skyplot._dockable_livezoom.setVisible(True)
-                self.addDockWidget(Qt.LeftDockWidgetArea, self.skyplot._dockable_livezoom)
+                self.addDockWidget(Qt.RightDockWidgetArea, self.skyplot._dockable_livezoom)
             if Config.getbool('liveprofile-show'):
                 self.skyplot._liveprofile.setVisible(True)
                 self.skyplot._dockable_liveprofile.setVisible(True)
                 self.addDockWidget(Qt.LeftDockWidgetArea, self.skyplot._dockable_liveprofile)
+            if Config.getbool('liveprofileselected-show'):
+                self.skyplot._liveprofile_selected.setVisible(True)
+                self.skyplot._dockable_liveprofile_selected.setVisible(True)
+                self.addDockWidget(Qt.LeftDockWidgetArea, self.skyplot._dockable_liveprofile_selected)
             # resize dock areas
             widget_list = self.findChildren(QDockWidget)
             size_list = []
@@ -526,9 +537,10 @@ class MainWindow(QMainWindow):
         try:
             model = import_func(_filename)
             model.setFilename(_filename)
-        except:
+        except Exception:
             busy.reset_cursor()
-            self.signalShowErrorMessage.emit("""Error loading '%s' file %s: %s""" % (filetype, _filename, str(sys.exc_info()[1])))
+            self.signalShowErrorMessage.emit("""Error loading '%s' file %s: %s""" %
+                                             (filetype, _filename, str(sys.exc_info()[1])))
             return
         else:
             # set the layout
@@ -537,18 +549,19 @@ class MainWindow(QMainWindow):
             # add to content
             if _merge and self.model:
                 self.model.addSources(model.sources)
-                self.signalShowMessage.emit("""Merged in %d sources from '%s' file %s""" % (len(model.sources), filetype, _filename),
-                                 3000)
+                self.signalShowMessage.emit("""Merged in %d sources from '%s' file %s""" %
+                                            (len(model.sources), filetype, _filename), 3000)
                 self.model.emitUpdate(SkyModel.SkyModel.UpdateAll)
             else:
                 print("""Loaded %d sources from '%s' file %s""" % (len(model.sources), filetype, _filename))
-                self.signalShowMessage.emit("""Loaded %d sources from '%s' file %s""" % (len(model.sources), filetype, _filename),
-                                 3000)
+                self.signalShowMessage.emit("""Loaded %d sources from '%s' file %s""" %
+                                            (len(model.sources), filetype, _filename), 3000)
                 self._display_filename = os.path.basename(_filename)
                 self.setModel(model)
                 self._indicateModelUpdated(updated=False)
-                # only set self.filename if an export function is available for this format. Otherwise set it to None, so that trying to save
-                # the file results in a save-as operation (so that we don't save to a file in an unsupported format).
+                # only set self.filename if an export function is available for this format. Otherwise set it to None,
+                # so that trying to save the file results in a save-as operation (so that we don't save to a
+                # file in an unsupported format).
                 self.filename = _filename if export_func else None
         finally:
             busy.reset_cursor()
@@ -566,7 +579,6 @@ class MainWindow(QMainWindow):
         self.closing.emit()
         dprint(1, "invoking os._exit(0)")
         os._exit(0)
-        QMainWindow.closeEvent(self, event)
 
     def _canCloseExistingModel(self):
         # save model if modified
@@ -630,7 +642,7 @@ class MainWindow(QMainWindow):
             try:
                 export_func(self.model, filename)
                 self.model.setFilename(filename)
-            except:
+            except Exception:
                 busy.reset_cursor()
                 self.signalShowErrorMessage.emit("""Error saving model file %s: %s""" % (filename, str(sys.exc_info()[1])))
                 return False
@@ -694,7 +706,7 @@ class MainWindow(QMainWindow):
         busy = BusyIndicator()
         try:
             export_func(self.model, filename, sources=sources)
-        except:
+        except Exception:
             busy.reset_cursor()
             self.signalShowErrorMessage.emit(
                 """Error saving selection to model file %s: %s""" % (filename, str(sys.exc_info()[1])))
@@ -775,3 +787,125 @@ class MainWindow(QMainWindow):
         if self.model:
             self.setWindowTitle(
                 "Tigger - %s%s" % ((self._display_filename or "(unnamed)", " (modified)" if updated else "")))
+
+    def restoreDockArea(self, _area):
+        """Restores the dockable area and untabs dockables if possible."""
+        _dockarea = []
+        widget_list = self.findChildren(QDockWidget)
+        for widget in widget_list:
+            if self.dockWidgetArea(widget) == _area:
+                if widget.isVisible() and not widget.isFloating():
+                    if _area == 2:
+                        if isinstance(widget.bind_widget, ImageControlDialog):
+                            # or isinstance(widget.bind_widget, LiveImageZoom):
+                            _dockarea = []
+                            break
+                    _dockarea.append(widget)
+        if len(_dockarea) > 1:
+            for widget in _dockarea:
+                self.removeDockWidget(widget)
+                self.addDockWidget(_area, widget)
+                widget.setVisible(True)
+        self.resize_docked_widgets(_area)
+
+    def addDockWidgetToArea(self, _dockable, _area):
+        """Add a dockable widget to a dock area in the main window. If other dockable widgets are
+        in place then it will tab the dockables together."""
+        # This needs to itterate through the widgets to find DockWidgets already in the area,
+        # then tabifydockwidget when adding, or add to the area if empty
+        # Find all dockwidgets in the related area
+        _dockarea = self.get_active_dock_widgets(_area, _dockable)
+        # From the dockwidgets found check which widgets are tabbed
+        tabbed_in_area = self.get_tabbed_dock_widgets(_dockarea)
+        dprint(2, f"tabbed dockables {tabbed_in_area}, dockables from area {_area}, {_dockarea}")
+        # If widgegts that are not tabbed, tab them and then add the new dockable
+        if not tabbed_in_area and _dockarea:
+            self.tabify_dock_widgets(_dockarea, _dockable, _area)
+        # If already tabbed just tabify
+        elif tabbed_in_area and not _dockarea:
+            self.tabifyDockWidget(tabbed_in_area[-1], _dockable)
+        # If a mixture of tabbed and untabbed - organise
+        elif tabbed_in_area and _dockarea:
+            self.diff_and_tabify_dock_widgets(tabbed_in_area, _dockarea, _dockable)
+        # If no other dockables found
+        elif not tabbed_in_area and not _dockarea and _area != 0:
+            self.addDockWidget(_area, _dockable)
+        # Resize dockables in this area
+        self.resize_docked_widgets(_area)
+
+    def diff_and_tabify_dock_widgets(self, tabbed_in_area, _dockarea, _dockable):
+        # If equal the all are tabbed
+        if tabbed_in_area == _dockarea:
+            self.tabifyDockWidget(tabbed_in_area[-1], _dockable)
+        else:
+            # Get all that are not tabbed
+            wdiff = set(_dockarea) - set(tabbed_in_area)
+            # Tabify if only one
+            if wdiff and len(wdiff) == 1:
+                self.tabifyDockWidget(list(wdiff)[-1], _dockable)
+            # If more then tabify all before adding dockable
+            elif wdiff and len(wdiff) > 1:
+                wdiff = list(wdiff)
+                base_widget = wdiff.pop()
+                for widget in wdiff:
+                    self.tabifyDockWidget(base_widget, widget)
+                    self.resizeDocks([base_widget, widget],
+                                     [base_widget.bind_widget.width(), widget.bind_widget.width()],
+                                     Qt.Horizontal)
+                # Add dockable after tabifying
+                self.tabifyDockWidget(base_widget, _dockable)
+
+    def tabify_dock_widgets(self, _dockarea, _dockable, _area):
+        # Tabify dockables before adding
+        if len(_dockarea) > 1:
+            base_widget = _dockarea.pop()
+            for widget in _dockarea:
+                self.tabifyDockWidget(base_widget, widget)
+                self.resizeDocks([base_widget, widget],
+                                 [base_widget.bind_widget.width(), widget.bind_widget.width()],
+                                 Qt.Horizontal)
+            # Add dockable after tabifying
+            self.tabifyDockWidget(base_widget, _dockable)
+        else:
+            if len(_dockarea) == 1 and _area == 2:
+                if (isinstance(_dockarea[-1].bind_widget, ImageControlDialog)
+                        or isinstance(_dockable.bind_widget, ImageControlDialog)):
+                    self.tabifyDockWidget(_dockarea[-1], _dockable)
+                else:
+                    self.addDockWidget(_area, _dockable)
+            else:
+                # No need to tabify as there is only 1 other dockable
+                self.addDockWidget(_area, _dockable)
+
+    def get_tabbed_dock_widgets(self, _dockarea):
+        tabbed_in_area = []
+        for widget in _dockarea:
+            _w = self.tabifiedDockWidgets(widget)
+            if _w:
+                tabbed_in_area = tabbed_in_area + _w
+        if tabbed_in_area:
+            tabbed_in_area = list(dict.fromkeys(tabbed_in_area))
+        return tabbed_in_area
+
+    def get_active_dock_widgets(self, _area, _dockable):
+        active_dockables = []
+        widget_list = self.findChildren(QDockWidget)
+        for widget in widget_list:
+            if self.dockWidgetArea(widget) == _area:
+                if widget.isVisible() and not widget.isFloating():
+                    if _dockable is not widget:  # check not itself
+                        # Add dock widget to list
+                        active_dockables.append(widget)
+        return active_dockables
+
+    def resize_docked_widgets(self, _area):
+        """Resize dockables within a given dock widget area."""
+        size_list = []
+        resize_list = []
+        widget_list = self.findChildren(QDockWidget)
+        for widget in widget_list:
+            if self.dockWidgetArea(widget) == _area:
+                if widget.isVisible() and not widget.isFloating():
+                    resize_list.append(widget)
+                    size_list.append(widget.bind_widget.width())
+        self.resizeDocks(resize_list, size_list, Qt.Horizontal)
