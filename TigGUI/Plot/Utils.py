@@ -47,6 +47,7 @@ DefaultGridStep_ArcSec = 30 * 60
 
 DEG = math.pi / 180
 
+
 class SourceMarker:
     """SourceMarker implements a source marker corresponding to a SkyModel source.
   The base class implements a marker at the centre.
@@ -191,6 +192,7 @@ class ImageSourceMarker(SourceMarker):
         label_color = QColor(style.label_color)
         if self.imagecon:
             self.imagecon.setPlotBorderStyle(border_color=symbol_color, label_color=label_color)
+
 
 def makeSourceMarker(src, l, m, size, model, imgman):
     """Creates source marker based on source type"""
