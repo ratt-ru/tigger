@@ -694,7 +694,7 @@ class SkyModelPlotter(QWidget):
             self._selected_profile_markup[index]["overlays"][item]["marker"].setZ(Z_MarkupOverlays)
             markup_items.append(self._selected_profile_markup[index]["overlays"][item]["marker"])
         QTimer.singleShot(10, self._currier.curry(
-            self._addPlotMarkup, 
+            self._addPlotMarkup,
             markup_items))
 
     def addOverlayMarkerToCurrentProfile(self, name, position, qtpen, index=None):
@@ -715,7 +715,7 @@ class SkyModelPlotter(QWidget):
         # detach any existing markers to set new position or color
         if name in self._selected_profile_markup[index]["overlays"]:
             self._selected_profile_markup[index]["overlays"][name]["marker"].detach()
-        
+
         self._selected_profile_markup[index]["overlays"][name] = \
             __initoverlaymarker()
         self._addBackAllSelectedProfileMarkers(index)
@@ -746,7 +746,7 @@ class SkyModelPlotter(QWidget):
         for name in list(self._selected_profile_markup.get(
             index, SkyModelPlotter._giveDefaultSelectedMarkerInfos())["overlays"].keys()):
             self.removeOverlayMarkerFromCurrentProfile(name, index)
-    
+
     def deactivateAllOverlayMarkersFromCurrentProfile(self, index=None):
         """ Detach all overlay markers from current profile """
         index = self._selected_profile_index if index is None else index
@@ -764,7 +764,7 @@ class SkyModelPlotter(QWidget):
     def removeSelectedProfileMarkings(self, index, purge_history=False):
         """ Remove selected profile marking
             purge_history: remove position and marking from history
-        """        
+        """
         if index in self._selected_profile_markup:
             marker = self._selected_profile_markup[index]["active"]['marker']
             if marker is not None:
@@ -1400,7 +1400,7 @@ class SkyModelPlotter(QWidget):
         """Removes all markup items, and refreshes the plot if replot=True"""
         for item in self._plot_markup:
             if item is None: continue
-            if not item in map(lambda k: self._selected_profile_markup[k]["active"]["marker"], 
+            if not item in map(lambda k: self._selected_profile_markup[k]["active"]["marker"],
                                self._selected_profile_markup):
                 item.detach()
         if self._plot_markup and replot:
@@ -1471,7 +1471,7 @@ class SkyModelPlotter(QWidget):
                     marker.setSymbol(self._create_profile_marker_symbol(active=True))
                     return marker
                 if self._selected_profile_markup.setdefault(
-                    self._selected_profile_index, 
+                    self._selected_profile_index,
                     SkyModelPlotter._giveDefaultSelectedMarkerInfos())["active"]["marker"] is None:
                     self._selected_profile_markup[self._selected_profile_index]["active"]["marker"] = \
                         __initMarker(self._selected_profile_index)
