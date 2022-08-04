@@ -29,10 +29,10 @@ from TigGUI.kitties.profiles import MutableTiggerProfile
 
 
 class PlottableTiggerProfile(MutableTiggerProfile):
-    def __init__(self, profilename, axisname, axisunit, xdata, ydata, 
-                 qwtplot=None, 
+    def __init__(self, profilename, axisname, axisunit, xdata, ydata,
+                 qwtplot=None,
                  profilecoord=None):
-        """ 
+        """
             Plottable (Mutable) Tigger Profile
             profilename: A name for this profile
             axisname: Name for the axis
@@ -45,7 +45,7 @@ class PlottableTiggerProfile(MutableTiggerProfile):
         """
         MutableTiggerProfile.__init__(self, profilename, axisname, axisunit, xdata, ydata)
         self._curve_color = QColor("white")
-        self._curve_pen = self.createPen()      
+        self._curve_pen = self.createPen()
         self._curve_pen.setStyle(Qt.DashDotLine)
         self._profcurve = TiggerPlotCurve(profilename)
         self._profcurve.setRenderHint(QwtPlotItem.RenderAntialiased)
@@ -69,16 +69,16 @@ class PlottableTiggerProfile(MutableTiggerProfile):
     @property
     def hasAssociatedCoord(self):
         return self._profilecoord is not None
-    
+
     @property
     def profileAssociatedCoord(self):
-        return (self._profilecoord[0], 
+        return (self._profilecoord[0],
                 self._profilecoord[1])
-    
+
     @profileAssociatedCoord.setter
     def profileAssociatedCoord(self, profilecoord):
         if profilecoord is not None:
-            if not (isinstance(profilecoord, tuple) and 
+            if not (isinstance(profilecoord, tuple) and
                     len(profilecoord) == 2 and
                     all(map(lambda x: isinstance(x, float), profilecoord))):
                 raise TypeError("profilecoord should be 2-element world coord tuple")
@@ -101,7 +101,7 @@ class PlottableTiggerProfile(MutableTiggerProfile):
             self._profcurve.attach(self._parentPlot)
             self._parentPlot.replot()
             self._attached = True
-    
+
     def detach(self):
         if self._attached:
             self._attached = False
