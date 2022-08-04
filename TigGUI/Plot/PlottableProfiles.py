@@ -23,8 +23,10 @@ from PyQt5.Qt import QColor, QPen
 from PyQt5.QtCore import Qt
 from PyQt5.Qwt import QwtPlotCurve, QwtPlotItem
 
-from TigGUI.kitties.profiles import MutableTiggerProfile
 from TigGUI.Widgets import TiggerPlotCurve
+
+from TigGUI.kitties.profiles import MutableTiggerProfile
+
 
 class PlottableTiggerProfile(MutableTiggerProfile):
     def __init__(self, profilename, axisname, axisunit, xdata, ydata, 
