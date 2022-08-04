@@ -144,8 +144,8 @@ class MutableTiggerProfile(TiggerProfile):
 
 class TiggerProfileFactory:
     def __init__(self, filename):
-        raise NotImplemented("Factory cannot be instantiated!")
-    
+        raise NotImplementedError("Factory cannot be instantiated!")
+
     @classmethod
     def load(cls, filename):
         """ Loads a TigProf profile from file """
