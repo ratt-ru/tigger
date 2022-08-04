@@ -60,6 +60,7 @@ _verbosity = TigGUI.kitties.utils.verbosity(name="plot")
 dprint = _verbosity.dprint
 dprintf = _verbosity.dprintf
 
+
 class SkyModelPlotter(QWidget):
     # Selection modes for the various selector functions below.
     # Default is usually Clear+Add
