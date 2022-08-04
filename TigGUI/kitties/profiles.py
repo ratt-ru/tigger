@@ -19,10 +19,11 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-import numpy as np
 import json
+import numpy as np
 
 from TigGUI.kitties.utils import verbosity
+
 _verbosity = verbosity(name="profiles")
 dprint = _verbosity.dprint
 dprintf = _verbosity.dprintf
