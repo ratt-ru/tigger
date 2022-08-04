@@ -47,6 +47,7 @@ _verbosity = TigGUI.kitties.utils.verbosity(name="plot")
 dprint = _verbosity.dprint
 dprintf = _verbosity.dprintf
 
+
 class ToolDialog(QDialog):
     signalIsVisible = pyqtSignal(bool)
 
@@ -631,8 +632,12 @@ class SelectedProfile(LiveProfile):
         self._menu.addAction("Set profile name", __inputNewName)
         self._menu.addAction("Save active profile as", self.saveProfile)
         self._menu.addAction("Overlay TigProf static profile from file", self.loadProfile)
-        self._menu_opt_paste = self._menu.addAction("Overlay another active profile as static profile", self.pasteActiveProfileAsStatic)
-        def __sepaction(): pass
+        self._menu_opt_paste = self._menu.addAction(
+            "Overlay another active profile as static profile",
+            self.pasteActiveProfileAsStatic)
+
+        def __sepaction():
+            pass
         self._menu.addAction("-- Global settings --", __sepaction).setEnabled(False)
         self._menu.addAction("Set active selected profile marker colour", self.setSelProfileMarkerColour)
         self._menu.addAction("Set inactive selected profile marker colour", self.setUnselProfileMarkerColour)
@@ -699,18 +704,16 @@ class SelectedProfile(LiveProfile):
             # if the profile has no active profile
             # -- other static profiles may have been loaded
             # to an empty profile
-            if (self._last_data_x is None or \
-                self._last_data_y is None) and \
-               len(self._overlay_static_profiles) > 0:
-                if self._lastxmin is not None and \
-                   self._lastxmax is not None:
-                    self._profplot.setAxisScale(
-                        QwtPlot.xBottom, self._lastxmin, self._lastxmax)
+            if ((self._last_data_x is None or self._last_data_y is None)
+                    and len(self._overlay_static_profiles) > 0):
+                if self._lastxmin is not None and self._lastxmax is not None:
+                    self._profplot.setAxisScale(QwtPlot.xBottom,
+                                                self._lastxmin, self._lastxmax)
                     self._profplot.replot()
                 if self._lastxtitle is not None:
                     self.setPlotAxisTitle()
                     self._profplot.replot()
-        
+
     def _profileInfosKeys(self):
         return ["_lastsel", "_image_id", "_image_hnd",
                 "_last_x", "_last_y",
@@ -875,8 +878,8 @@ class SelectedProfile(LiveProfile):
         self.addStaticProfile(prof)
 
     def addStaticProfile(self, prof, curvecol=None, coord=None):
-        pastedname, ok = QInputDialog.getText(self, 
-                                              "Set pasted profile name", 
+        pastedname, ok = QInputDialog.getText(self,
+                                              "Set pasted profile name",
                                               "<P> Set name of pasted profile </P>",
                                               text=prof.profileName)
         plottableprof = PlottableTiggerProfile(pastedname,
@@ -896,11 +899,9 @@ class SelectedProfile(LiveProfile):
         if self._overlay_static_profiles is None:
             self._overlay_static_profiles = []
         self._overlay_static_profiles.append(plottableprof)
-        if (self._last_data_x is None or 
-            self._last_data_y is None or 
-            self._last_data_x is None or 
-            self._last_data_y is None) and \
-           len(self._overlay_static_profiles) > 0:
+        if ((self._last_data_x is None or self._last_data_y is None
+             or self._last_data_x is None or self._last_data_y is None)
+                and len(self._overlay_static_profiles) > 0):
             # temporary titles and labels from pasted profiles
             xmin = numpy.nanmin(list(map(lambda x: numpy.nanmin(x.xdata),
                                          self._overlay_static_profiles)))
@@ -911,19 +912,19 @@ class SelectedProfile(LiveProfile):
             self._profplot.setAxisScale(QwtPlot.xBottom, self._lastxmin, self._lastxmax)
             # set custom label if first loaded profile
             if len(self._overlay_static_profiles) == 1:
-                name, ok = QInputDialog.getText(self, 
-                                                "Set custom axis name", 
+                name, ok = QInputDialog.getText(self,
+                                                "Set custom axis name",
                                                 "<P> Set custom axis name for loaded static profile </P>",
                                                 text=self._overlay_static_profiles[0].axisName)
-                unit, ok = QInputDialog.getText(self, 
-                                                "Set custom axis unit", 
+                unit, ok = QInputDialog.getText(self,
+                                                "Set custom axis unit",
                                                 "<P> Set custom axis unit for loaded static profile </P>",
                                                 text=self._overlay_static_profiles[0].axisUnit)
                 self._lastxtitle = "%s, %s" % (name, unit) if unit else name
                 self.setPlotAxisTitle()
         if self._legend is None:
             self._legend = QwtLegend()
-            self._profplot.insertLegend(self._legend, QwtPlot.BottomLegend) 
+            self._profplot.insertLegend(self._legend, QwtPlot.BottomLegend)
 
         if self._parent_picker is not None and coord is not None:
             self._parent_picker.addOverlayMarkerToCurrentProfile(
@@ -945,33 +946,29 @@ class SelectedProfile(LiveProfile):
             selaxis = self.profiles_info.get(i, {}).get("_selaxis", None)
             axes = self.profiles_info.get(i, {}).get("_axes", None)
 
-            if selaxis and selaxis[0] < len(axes) and \
-               last_x is not None and \
-               last_y is not None and \
-               last_l is not None and \
-               last_m is not None and \
-               last_data_x is not None and \
-               last_data_y is not None and \
-               selaxis is not None and \
-               axes is not None:
-               
-               profname = self.profiles_info.get(i, {}).get("_current_profile_name", "Unnamed")
-               axisname, axisindx, axisvals, axisunit = axes[selaxis[0]]
-               prof = TiggerProfile(profname, axisname, axisunit, last_data_x, last_data_y)
-               return (prof, i, (last_l, last_m))
+            if (selaxis and selaxis[0] < len(axes) and last_x is not None
+                    and last_y is not None and last_l is not None
+                    and last_m is not None and last_data_x is not None
+                    and last_data_y is not None and selaxis is not None
+                    and axes is not None):
+                profname = self.profiles_info.get(i, {}).get("_current_profile_name", "Unnamed")
+                axisname, axisindx, axisvals, axisunit = axes[selaxis[0]]
+                prof = TiggerProfile(profname, axisname, axisunit, last_data_x, last_data_y)
+                return (prof, i, (last_l, last_m))
             return None
-        
+
         avail_profs = list(filter(lambda x: x is not None,
                                   map(lambda i: __constructProfileIndex(i),
                                       filter(lambda i: i != self._currentprofile,
                                              range(self._static_profile_select.count())))))
         if len(avail_profs) == 0:
-            QMessageBox.critical(self,
-                                  "No active profiles available",
-                                  "<P> There are currently no active profiles available for selection in any other profile. "
-                                  "You need to use CTRL+ALT+leftclick on another profile to first in order to paste </P>")
+            QMessageBox.critical(
+                self, "No active profiles available",
+                "<P> There are currently no active profiles available for selection in any other profile. "
+                "You need to use CTRL+ALT+leftclick on another profile to first in order to paste </P>"
+            )
             return
-        
+
         selitem, ok = QInputDialog.getItem(self,
                                            "Paste active profile from",
                                            "<P>Select from currently defined profiles:</P>",
@@ -993,7 +990,7 @@ class SelectedProfile(LiveProfile):
                                               title="Select color for selected active profile marker",)
             if color.isValid():
                 self._parent_picker.activeSelectedProfileMarkerColor = color
-    
+
     def setUnselProfileMarkerColour(self, color=None):
         """ Set marker colour for the non-selected profile active profile curve """
         if self._parent_picker is not None:
@@ -1004,4 +1001,3 @@ class SelectedProfile(LiveProfile):
                                               title="Select color for selected active profile marker",)
             if color.isValid():
                 self._parent_picker.inactiveSelectedProfileMarkerColor = color
-        
