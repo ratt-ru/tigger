@@ -19,31 +19,30 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-from PyQt5.Qt import (QAction, QApplication, QCheckBox,
-                      QColor, QComboBox, QDialog,
-                      QFileDialog, QHBoxLayout, QInputDialog,
-                      QLabel, QMenu, QMessageBox, QPen,
-                      QPoint, QRectF, QSize, QSizePolicy,
-                      QToolButton, QTransform, QVBoxLayout,
-                      QGridLayout, QColorDialog)
-from PyQt5.QtCore import Qt
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QDockWidget, QLayout
-from PyQt5.Qwt import (QwtPlot, QwtPlotCurve, QwtPlotItem, QwtText,
-                       QwtLegend)
-QStringList = list
-
-from TigGUI.Widgets import TiggerPlotCurve
-from TigGUI.init import Config, pixmaps
-from TigGUI.Plot.PlottableProfiles import PlottableTiggerProfile
-import TigGUI.kitties.utils
-from TigGUI.kitties.utils import curry
-from TigGUI.kitties.profiles import TiggerProfile, TiggerProfileFactory
-from TigGUI.Plot.Utils import makeSourceMarker, makeDualColorPen
-import numpy 
 import os
+import numpy
+
+from PyQt5.Qt import (QAction, QApplication, QCheckBox, QColor, QColorDialog,
+                      QComboBox, QDialog, QFileDialog, QGridLayout,
+                      QHBoxLayout, QInputDialog, QLabel, QMenu, QMessageBox,
+                      QPen, QPoint, QRectF, QSize, QSizePolicy, QToolButton,
+                      QTransform, QVBoxLayout)
+from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtWidgets import QDockWidget, QLayout
+from PyQt5.Qwt import QwtLegend, QwtPlot, QwtPlotCurve, QwtPlotItem, QwtText
 
 import TigGUI
+from TigGUI.Widgets import TiggerPlotCurve
+from TigGUI.init import Config, pixmaps
+import TigGUI.kitties.utils
+from TigGUI.kitties.utils import curry
+
+from TigGUI.Plot.PlottableProfiles import PlottableTiggerProfile
+from TigGUI.Plot.Utils import makeDualColorPen
+from TigGUI.kitties.profiles import TiggerProfile, TiggerProfileFactory
+QStringList = list
+
+
 _verbosity = TigGUI.kitties.utils.verbosity(name="plot")
 dprint = _verbosity.dprint
 dprintf = _verbosity.dprintf
