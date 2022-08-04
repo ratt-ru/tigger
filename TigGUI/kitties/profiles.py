@@ -153,7 +153,10 @@ class TiggerProfileFactory:
             try:
                 prof = json.load(fprof)
             except json.JSONDecodeError as e:
-                raise IOError(f"TigProf profile '{filename}' corrupted. Not valid json.")
+                raise IOError(
+                    f"TigProf profile '{filename}' corrupted. Not valid json."
+                ) from e
+
             __mandatory = set(["version", "profile_name", "axis",
                                "units", "x_data", "y_data"])
             for c in __mandatory:
