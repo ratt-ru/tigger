@@ -875,7 +875,8 @@ class SelectedProfile(LiveProfile):
                 "Error loading TigProf profile",
                 f"Loading failed with message '{str(e)}'"
             )
-        self.addStaticProfile(prof)
+        else:
+            self.addStaticProfile(prof)
 
     def addStaticProfile(self, prof, curvecol=None, coord=None):
         pastedname, ok = QInputDialog.getText(self,
