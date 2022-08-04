@@ -20,18 +20,16 @@
 #
 
 import math
-from multiprocessing import set_start_method
 import re
 import time
+import numpy
 
-from PyQt5.Qt import (QActionGroup, QApplication, QBrush,
-                      QClipboard, QColor, QCoreApplication, QDialog,
-                      QEvent, QFileDialog, QHBoxLayout, QImage, QInputDialog,
-                      QMenu, QMessageBox, QPainter, QPen, QPixmap,
-                      QPoint, QPointF, QRectF, QSize, QSizePolicy, QTimer,
-                      QToolBar, QWidget)
-from PyQt5.QtCore import Qt
-from PyQt5.QtCore import pyqtSignal
+from PyQt5.Qt import (QActionGroup, QApplication, QBrush, QClipboard, QColor,
+                      QCoreApplication, QDialog, QEvent, QFileDialog,
+                      QHBoxLayout, QInputDialog, QMenu, QMessageBox,
+                      QPainter, QPen, QPixmap, QPoint, QPointF, QRectF, QSize,
+                      QSizePolicy, QTimer, QToolBar, QWidget)
+from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import QDockWidget
 from PyQt5.Qwt import (QwtEventPattern, QwtPicker, QwtPickerClickPointMachine,
                        QwtPickerClickRectMachine, QwtPickerDragLineMachine,
@@ -39,28 +37,22 @@ from PyQt5.Qwt import (QwtEventPattern, QwtPicker, QwtPickerClickPointMachine,
                        QwtPlot, QwtPlotCurve, QwtPlotItem, QwtPlotPicker,
                        QwtPlotZoomer, QwtScaleEngine, QwtSymbol, QwtText)
 
-from TigGUI.Plot.ToolDialogs import (LiveImageZoom, 
-                                LiveProfile, SelectedProfile)
-
-from TigGUI.Images.ControlDialog import ImageControlDialog
-from TigGUI.Plot import MouseModes
-from TigGUI.Widgets import (TDockWidget, TigToolTip, TiggerPlotCurve,
-                            TiggerPlotMarker)
+from TigGUI.Widgets import TDockWidget, TigToolTip, TiggerPlotCurve, TiggerPlotMarker
 from TigGUI.init import Config, pixmaps
-from TigGUI.Plot.PlottableProfiles import PlottableTiggerProfile
 import TigGUI.kitties.utils
 from TigGUI.kitties.utils import PersistentCurrier, curry
 from TigGUI.kitties.widgets import BusyIndicator
-from TigGUI.Plot.Utils import makeSourceMarker, makeDualColorPen
+
 from Tigger import Coordinates
 from Tigger.Coordinates import Projection
 from Tigger.Models import ModelClasses
 from Tigger.Models.SkyModel import SkyModel
-from TigGUI.Plot.Utils import (Z_CurrentSource, Z_Grid, Z_Image, Z_Markup, 
-                               Z_SelectedSource, Z_MarkupOverlays, Z_Source, DefaultGridStep_ArcSec,
-                               DEG)
 
-import numpy
+from TigGUI.Plot import MouseModes
+from TigGUI.Plot.ToolDialogs import LiveImageZoom, LiveProfile, SelectedProfile
+from TigGUI.Plot.Utils import makeDualColorPen, makeSourceMarker
+from TigGUI.Plot.Utils import (DEG, DefaultGridStep_ArcSec, Z_Grid, Z_Image,
+                               Z_Markup, Z_MarkupOverlays)
 
 QStringList = list
 
