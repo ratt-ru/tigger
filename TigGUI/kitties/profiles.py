@@ -172,9 +172,9 @@ class TiggerProfileFactory:
                           f"than supported profile version {supvstr}. " \
                           f"Attempting to convert to version {supvstr}."
                     dprint(0, msg)
-            except:
-                raise IOError("Error parsing TigProf file version")
-            
+            except Exception as exc:
+                raise IOError("Error parsing TigProf file version") from exc
+
             profname = prof["profile_name"]
             axisname = prof["axis"]
             axisunits = prof["units"]
