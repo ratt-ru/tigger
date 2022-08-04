@@ -19,16 +19,16 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-from PyQt5.Qt import (QBrush,QColor, QImage, QPen)
+import math
+
+from PyQt5.Qt import QApplication, QBrush, QColor, QImage, QPen
+from PyQt5.QtCore import Qt
+from PyQt5.Qwt import QwtPlotItem, QwtSymbol, QwtText
+
+import TigGUI
+from TigGUI.Widgets import TiggerPlotMarker
 from Tigger.Models import ModelClasses
 
-from PyQt5.Qt import (QApplication, QBrush,
-                      QColor, QImage, QPen)
-from PyQt5.QtCore import Qt
-from PyQt5.Qwt import (QwtPlotItem,QwtSymbol, QwtText)
-
-from TigGUI.Widgets import TiggerPlotMarker
-import TigGUI
 _verbosity = TigGUI.kitties.utils.verbosity(name="plot")
 dprint = _verbosity.dprint
 dprintf = _verbosity.dprintf
@@ -44,7 +44,7 @@ Z_MarkupOverlays = 10011
 
 # default stepping of grid circles
 DefaultGridStep_ArcSec = 30 * 60
-import math
+
 DEG = math.pi / 180
 
 class SourceMarker:
