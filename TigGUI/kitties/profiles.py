@@ -95,11 +95,11 @@ class TiggerProfile:
             "profile_name": self._profilename,
             "axis": self._axisname,
             "units": self._axisunit,
-            "x_data": list(self._xdata),
-            "y_data": list(self._ydata)
+            "x_data": self._xdata.tolist(),
+            "y_data": self._ydata.tolist()
         }
         with open(filename, "w+") as fprof:
-            fprof.write(json.dumps(prof))
+            json.dump(prof, fprof, indent=4)
 
         dprint(0, f"Saved current selected profile as {filename}")
 
@@ -155,7 +155,8 @@ class TiggerProfileFactory:
         """ Loads a TigProf profile from file """
         with open(filename, "r") as fprof:
             try:
-                prof = json.load(fprof)
+                fprof_content = fprof.read()
+                prof = json.loads(fprof_content)
             except json.JSONDecodeError as e:
                 raise IOError(
                     f"TigProf profile '{filename}' corrupted. Not valid json."
