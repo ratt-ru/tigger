@@ -708,9 +708,7 @@ class SelectedProfile(LiveProfile):
                         QwtPlot.xBottom, self._lastxmin, self._lastxmax)
                     self._profplot.replot()
                 if self._lastxtitle is not None:
-                    title = QwtText(self._lastxtitle)
-                    title.setFont(self._font)
-                    self._profplot.setAxisTitle(QwtPlot.xBottom, title)    
+                    self.setPlotAxisTitle()
                     self._profplot.replot()
         
     def _profileInfosKeys(self):
@@ -922,9 +920,7 @@ class SelectedProfile(LiveProfile):
                                                 "<P> Set custom axis unit for loaded static profile </P>",
                                                 text=self._overlay_static_profiles[0].axisUnit)
                 self._lastxtitle = "%s, %s" % (name, unit) if unit else name
-                title = QwtText(self._lastxtitle)
-                title.setFont(self._font)
-                self._profplot.setAxisTitle(QwtPlot.xBottom, title)
+                self.setPlotAxisTitle()
         if self._legend is None:
             self._legend = QwtLegend()
             self._profplot.insertLegend(self._legend, QwtPlot.BottomLegend) 
@@ -932,7 +928,12 @@ class SelectedProfile(LiveProfile):
         if self._parent_picker is not None and coord is not None:
             self._parent_picker.addOverlayMarkerToCurrentProfile(
                 pastedname, coord, plottableprof.createPen(), index=self._currentprofile)
-    
+
+    def setPlotAxisTitle(self):
+        title = QwtText(self._lastxtitle)
+        title.setFont(self._font)
+        self._profplot.setAxisTitle(QwtPlot.xBottom, title)
+
     def pasteActiveProfileAsStatic(self):
         def __constructProfileIndex(i):
             last_x = self.profiles_info.get(i, {}).get("_last_x", None)
