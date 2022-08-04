@@ -28,12 +28,14 @@ _verbosity = verbosity(name="profiles")
 dprint = _verbosity.dprint
 dprintf = _verbosity.dprintf
 
+
 class TiggerProfile:
     __VER_MAJ__ = 1
     __VER_MIN__ = 0
+
     def __init__(self, profilename, axisname, axisunit, xdata, ydata):
-        """ 
-            Immutable Tigger profile 
+        """
+            Immutable Tigger profile
             profilename: A name for this profile
             axisname: Name for the axis
             axisunit: Unit for the axis (as taken from FITS CUNIT)
@@ -66,7 +68,7 @@ class TiggerProfile:
     @property
     def xdata(self):
         return self._xdata.copy()
-    
+
     @property
     def ydata(self):
         return self._ydata.copy()
@@ -96,14 +98,15 @@ class TiggerProfile:
             "x_data": list(self._xdata),
             "y_data": list(self._ydata)
         }
-        with open(filename, "w+") as fprof:            
+        with open(filename, "w+") as fprof:
             fprof.write(json.dumps(prof))
-            
+
         dprint(0, f"Saved current selected profile as {filename}")
 
+
 class MutableTiggerProfile(TiggerProfile):
-    """ 
-        Mutable Tigger profile 
+    """
+        Mutable Tigger profile
         profilename: A name for this profile
         axisname: Name for the axis
         axisunit: Unit for the axis (as taken from FITS CUNIT)
@@ -142,6 +145,7 @@ class MutableTiggerProfile(TiggerProfile):
     def axisUnit(self, unit):
         self._axisunit = unit
 
+
 class TiggerProfileFactory:
     def __init__(self, filename):
         raise NotImplementedError("Factory cannot be instantiated!")
@@ -162,7 +166,7 @@ class TiggerProfileFactory:
             for c in __mandatory:
                 if c not in prof:
                     print(f"Profile file '{filename}' is missing field '{c}'")
-            
+
             try:
                 vmaj, vmin = prof.get("version", "").split(".")
                 vstr = f"{vmaj}.{vmin}"
@@ -179,13 +183,13 @@ class TiggerProfileFactory:
             axisname = prof["axis"]
             axisunits = prof["units"]
 
-            if not isinstance(prof["x_data"], list) and \
-                not all(map(lambda x: isinstance(x, float), prof["x_data"])):
+            if (not isinstance(prof["x_data"], list) and not all(
+                    map(lambda x: isinstance(x, float), prof["x_data"]))):
                 raise IOError("Stored X data is not list of floats")
             xdata = np.array(prof["x_data"])
-            
-            if not isinstance(prof["y_data"], list) and \
-                not all(map(lambda x: isinstance(x, float), prof["y_data"])):
+
+            if (not isinstance(prof["y_data"], list) and not all(
+                    map(lambda x: isinstance(x, float), prof["y_data"]))):
                 raise IOError("Stored Y data is not list of floats")
             ydata = np.array(prof["y_data"])
 
@@ -197,7 +201,7 @@ class TiggerProfileFactory:
 
             if xdata.size != ydata.size:
                 raise IOError("Stored X data not the same shape as Y data")
-            
+
             # Success
             tigprof = TiggerProfile(profname, axisname, axisunits, xdata, ydata)
             dprint(0, f"Loaded profile from {filename}")
