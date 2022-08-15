@@ -656,7 +656,7 @@ class SkyModelPlotter(QWidget):
     @classmethod
     def _giveDefaultSelectedMarkerInfos(cls):
         return {"active": {"marker": None, "position": None},
-                "overlays" : {}}
+                "overlays": {}}
 
     def setSelectedProfileIndex(self, index=0):
         # Invalidate other profile markers
