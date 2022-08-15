@@ -33,7 +33,7 @@ class TiggerProfile:
     __VER_MAJ__ = 1
     __VER_MIN__ = 0
 
-    def __init__(self, profilename, axisname, axisunit, xdata, ydata):
+    def __init__(self, profilename, axisname, axisunit, xdata, ydata, profilecoord):
         """
             Immutable Tigger profile
             profilename: A name for this profile
@@ -52,6 +52,7 @@ class TiggerProfile:
         self.__verifyArrs(xdata, ydata)
         self._xdata = xdata.copy()
         self._ydata = ydata.copy()
+        self._profilecoord = profilecoord
 
     def __verifyArrs(self, xdata, ydata):
         if not isinstance(xdata, np.ndarray):
@@ -89,10 +90,15 @@ class TiggerProfile:
     def version(self):
         return f"{self._version_maj}.{self._version_min}"
 
+    @property
+    def profilecoord(self):
+        return self._profilecoord
+
     def saveProfile(self, filename):
         prof = {
             "version": self.version,
             "profile_name": self._profilename,
+            "position": self._profilecoord,
             "axis": self._axisname,
             "units": self._axisunit,
             "x_data": self._xdata.tolist(),
@@ -113,8 +119,8 @@ class MutableTiggerProfile(TiggerProfile):
         xdata: profile x axis data (1D ndarray of shape of ydata)
         ydata: profile y axis data (1D ndarray)
     """
-    def __init__(self, profilename, axisname, axisunit, xdata, ydata):
-        TiggerProfile.__init__(self, profilename, axisname, axisunit, xdata, ydata)
+    def __init__(self, profilename, axisname, axisunit, xdata, ydata, profilecoord):
+        TiggerProfile.__init__(self, profilename, axisname, axisunit, xdata, ydata, profilecoord)
 
     def setAxesData(self, xdata, ydata):
         self.__verifyArrs(xdata, ydata)
@@ -133,6 +139,10 @@ class MutableTiggerProfile(TiggerProfile):
     def axisUnit(self):
         return self._axisunit
 
+    @property
+    def profileCoord(self):
+        return self._profilecoord
+
     @profileName.setter
     def profileName(self, name):
         self._profilename = name
@@ -144,6 +154,10 @@ class MutableTiggerProfile(TiggerProfile):
     @axisUnit.setter
     def axisUnit(self, unit):
         self._axisunit = unit
+
+    @profileCoord.setter
+    def profileCoord(self, coords):
+        self._profilecoord = coords
 
 
 class TiggerProfileFactory:
@@ -183,6 +197,7 @@ class TiggerProfileFactory:
             profname = prof["profile_name"]
             axisname = prof["axis"]
             axisunits = prof["units"]
+            profcoord = prof["position"]
 
             if (not isinstance(prof["x_data"], list) and not all(
                     map(lambda x: isinstance(x, float), prof["x_data"]))):
@@ -204,6 +219,6 @@ class TiggerProfileFactory:
                 raise IOError("Stored X data not the same shape as Y data")
 
             # Success
-            tigprof = TiggerProfile(profname, axisname, axisunits, xdata, ydata)
+            tigprof = TiggerProfile(profname, axisname, axisunits, xdata, ydata, profcoord)
             dprint(0, f"Loaded profile from {filename}")
             return tigprof

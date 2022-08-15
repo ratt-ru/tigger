@@ -834,7 +834,8 @@ class SelectedProfile(LiveProfile):
                                  axisname,
                                  axisunit,
                                  self._last_data_x,
-                                 self._last_data_y)
+                                 self._last_data_y,
+                                 self._parent_picker._selected_profile_markup[self._currentprofile]['active']['position'])
             try:
                 prof.saveProfile(filename)
             except IOError:
@@ -879,6 +880,8 @@ class SelectedProfile(LiveProfile):
             self.addStaticProfile(prof)
 
     def addStaticProfile(self, prof, curvecol=None, coord=None):
+        if coord is None and prof.profilecoord is not None:
+            coord = prof.profilecoord
         pastedname, ok = QInputDialog.getText(self,
                                               "Set pasted profile name",
                                               "<P> Set name of pasted profile </P>",
@@ -954,7 +957,7 @@ class SelectedProfile(LiveProfile):
                     and axes is not None):
                 profname = self.profiles_info.get(i, {}).get("_current_profile_name", "Unnamed")
                 axisname, axisindx, axisvals, axisunit = axes[selaxis[0]]
-                prof = TiggerProfile(profname, axisname, axisunit, last_data_x, last_data_y)
+                prof = TiggerProfile(profname, axisname, axisunit, last_data_x, last_data_y, (last_l, last_m))
                 return (prof, i, (last_l, last_m))
             return None
 

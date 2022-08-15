@@ -43,7 +43,7 @@ class PlottableTiggerProfile(MutableTiggerProfile):
             profilecoord: coordinate (world) coord tuple to from which this profile is drawn, optional
                           use None to leave unset
         """
-        MutableTiggerProfile.__init__(self, profilename, axisname, axisunit, xdata, ydata)
+        MutableTiggerProfile.__init__(self, profilename, axisname, axisunit, xdata, ydata, profilecoord)
         self._curve_color = QColor("white")
         self._curve_pen = self.createPen()
         self._curve_pen.setStyle(Qt.SolidLine)
@@ -55,7 +55,7 @@ class PlottableTiggerProfile(MutableTiggerProfile):
         self._profcurve.setStyle(QwtPlotCurve.Lines)
         self._profcurve.setOrientation(Qt.Horizontal)
         self._parentPlot = qwtplot
-        self._profilecoord = None
+        self._profilecoord = profilecoord
         self.profileAssociatedCoord = profilecoord
 
         self._profcurve.setData(xdata, ydata)
@@ -77,11 +77,14 @@ class PlottableTiggerProfile(MutableTiggerProfile):
 
     @profileAssociatedCoord.setter
     def profileAssociatedCoord(self, profilecoord):
+        # JSON does not handle tuples,
+        # instead they are converted to lists
         if profilecoord is not None:
-            if not (isinstance(profilecoord, tuple) and
-                    len(profilecoord) == 2 and
-                    all(map(lambda x: isinstance(x, float), profilecoord))):
-                raise TypeError("profilecoord should be 2-element world coord tuple")
+            if not (isinstance(profilecoord, tuple) or isinstance(
+                    profilecoord, list)) and len(profilecoord) == 2 and all(
+                        map(lambda x: isinstance(x, float), profilecoord)):
+                raise TypeError(
+                    "profilecoord should be 2-element world coord tuple or list")
         self._profilecoord = profilecoord
 
     def setCurveColor(self, color):
