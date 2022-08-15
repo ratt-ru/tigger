@@ -437,7 +437,6 @@ class SkyModelPlotter(QWidget):
         # will contain "marker" object and "position" (l, m) tupple
         # on the first click to set position
         self._selected_profile_markup = {}
-
         self._mainwin = mainwin
         self.tigToolTip = TigToolTip()
         self._ruler_timer = QTimer()
@@ -488,7 +487,6 @@ class SkyModelPlotter(QWidget):
         self._markup_profile_inactive_color = QColor("cyan")
         self._markup_profile_active_pen = QPen(self._markup_profile_active_color, 1)
         self._markup_profile_inactive_pen = QPen(self._markup_profile_inactive_color, 1)
-
         self._markup_brush = QBrush(Qt.NoBrush)
         self._markup_xsymbol = QwtSymbol(QwtSymbol.XCross, self._markup_brush, self._markup_pen, QSize(16, 16))
         self._markup_absymbol = QwtSymbol(QwtSymbol.Ellipse, self._markup_brush, self._markup_pen, QSize(4, 4))
@@ -542,7 +540,6 @@ class SkyModelPlotter(QWidget):
         self._dockable_livezoom.setVisible(False)
         self._dockable_liveprofile.setVisible(False)
         self._dockable_liveprofile_selected.setVisible(False)
-
         # other internal init
         self.projection = None
         self.model = None
@@ -702,7 +699,9 @@ class SkyModelPlotter(QWidget):
     def addOverlayMarkerToCurrentProfile(self, name, position, qtpen, index=None):
         """ Add (or update) named overlay marker for current selected profile """
         index = self._selected_profile_index if index is None else index
-        if index is None: return
+        if index is None:
+            return
+
         def __initoverlaymarker(position=position, qtpen=qtpen):
             marker = TiggerPlotMarker()
             marker.setRenderHint(QwtPlotItem.RenderAntialiased)
@@ -725,9 +724,10 @@ class SkyModelPlotter(QWidget):
     def removeOverlayMarkerFromCurrentProfile(self, name, index=None):
         """ Remove named overlay marker from current profile """
         index = self._selected_profile_index if index is None else index
-        if index is None: return
+        if index is None:
+            return
         if name in self._selected_profile_markup.get(
-            index, SkyModelPlotter._giveDefaultSelectedMarkerInfos())["overlays"]:
+                index, SkyModelPlotter._giveDefaultSelectedMarkerInfos())["overlays"]:
             self._selected_profile_markup[index]["overlays"][name]["marker"].detach()
         del self._selected_profile_markup[index]["overlays"][name]
         self._replot()
@@ -735,26 +735,29 @@ class SkyModelPlotter(QWidget):
     def deactivateOverlayMarkerFromCurrentProfile(self, name, index=None):
         """ Detach named overlay marker from current profile """
         index = self._selected_profile_index if index is None else index
-        if index is None: return
+        if index is None:
+            return
         if name in self._selected_profile_markup.get(
-            index, SkyModelPlotter._giveDefaultSelectedMarkerInfos())["overlays"]:
+                index, SkyModelPlotter._giveDefaultSelectedMarkerInfos())["overlays"]:
             self._selected_profile_markup[index]["overlays"][name]["marker"].detach()
         self._replot()
 
     def removeAllOverlayMarkersFromCurrentProfile(self, index=None):
         """ Remove all overlay markers from current profile """
         index = self._selected_profile_index if index is None else index
-        if index is None: return
+        if index is None:
+            return
         for name in list(self._selected_profile_markup.get(
-            index, SkyModelPlotter._giveDefaultSelectedMarkerInfos())["overlays"].keys()):
+                index, SkyModelPlotter._giveDefaultSelectedMarkerInfos())["overlays"].keys()):
             self.removeOverlayMarkerFromCurrentProfile(name, index)
 
     def deactivateAllOverlayMarkersFromCurrentProfile(self, index=None):
         """ Detach all overlay markers from current profile """
         index = self._selected_profile_index if index is None else index
-        if index is None: return
+        if index is None:
+            return
         for name in self._selected_profile_markup.get(
-            index, SkyModelPlotter._giveDefaultSelectedMarkerInfos())["overlays"]:
+                index, SkyModelPlotter._giveDefaultSelectedMarkerInfos())["overlays"]:
             self.deactivateOverlayMarkerFromCurrentProfile(name, index)
 
     def removeAllSelectedProfileMarkings(self):
@@ -790,7 +793,6 @@ class SkyModelPlotter(QWidget):
         self._markup_profile_active_color = color
         self._markup_profile_active_pen = QPen(self._markup_profile_active_color, 1)
         self.setSelectedProfileIndex(self._selected_profile_index)
-
 
     @inactiveSelectedProfileMarkerColor.setter
     def inactiveSelectedProfileMarkerColor(self, color):
@@ -1475,9 +1477,10 @@ class SkyModelPlotter(QWidget):
                     marker.setLabel(QwtText(str(markerindex + 1)))
                     marker.setSymbol(self._create_profile_marker_symbol(active=True))
                     return marker
+
                 if self._selected_profile_markup.setdefault(
-                    self._selected_profile_index,
-                    SkyModelPlotter._giveDefaultSelectedMarkerInfos())["active"]["marker"] is None:
+                        self._selected_profile_index,
+                        SkyModelPlotter._giveDefaultSelectedMarkerInfos())["active"]["marker"] is None:
                     self._selected_profile_markup[self._selected_profile_index]["active"]["marker"] = \
                         __initMarker(self._selected_profile_index)
                 sel_marker = self._selected_profile_markup[self._selected_profile_index]["active"]
