@@ -46,7 +46,7 @@ class PlottableTiggerProfile(MutableTiggerProfile):
         MutableTiggerProfile.__init__(self, profilename, axisname, axisunit, xdata, ydata)
         self._curve_color = QColor("white")
         self._curve_pen = self.createPen()
-        self._curve_pen.setStyle(Qt.DashDotLine)
+        self._curve_pen.setStyle(Qt.SolidLine)
         self._profcurve = TiggerPlotCurve(profilename)
         self._profcurve.setRenderHint(QwtPlotItem.RenderAntialiased)
         self._ycs = TiggerPlotCurve()
@@ -89,7 +89,7 @@ class PlottableTiggerProfile(MutableTiggerProfile):
             raise TypeError("Color must be QColor object")
         self._curve_color = color
         self._curve_pen = QPen(self._curve_color)
-        self._curve_pen.setStyle(Qt.DashDotLine)
+        self._curve_pen.setStyle(Qt.SolidLine)
         self._profcurve.setPen(self._curve_pen)
         if self._parentPlot is not None:
             if self._attached:
