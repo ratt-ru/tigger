@@ -1,17 +1,41 @@
-import numpy as np
+# Copyright (C) 2002-2022
+# The MeqTree Foundation &
+# ASTRON (Netherlands Foundation for Research in Astronomy)
+# P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <http://www.gnu.org/licenses/>,
+# or write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
+
 import json
+import numpy as np
 
 from TigGUI.kitties.utils import verbosity
+
 _verbosity = verbosity(name="profiles")
 dprint = _verbosity.dprint
 dprintf = _verbosity.dprintf
 
+
 class TiggerProfile:
     __VER_MAJ__ = 1
     __VER_MIN__ = 0
-    def __init__(self, profilename, axisname, axisunit, xdata, ydata):
-        """ 
-            Immutable Tigger profile 
+
+    def __init__(self, profilename, axisname, axisunit, xdata, ydata, profilecoord):
+        """
+            Immutable Tigger profile
             profilename: A name for this profile
             axisname: Name for the axis
             axisunit: Unit for the axis (as taken from FITS CUNIT)
@@ -28,6 +52,7 @@ class TiggerProfile:
         self.__verifyArrs(xdata, ydata)
         self._xdata = xdata.copy()
         self._ydata = ydata.copy()
+        self._profilecoord = profilecoord
 
     def __verifyArrs(self, xdata, ydata):
         if not isinstance(xdata, np.ndarray):
@@ -44,7 +69,7 @@ class TiggerProfile:
     @property
     def xdata(self):
         return self._xdata.copy()
-    
+
     @property
     def ydata(self):
         return self._ydata.copy()
@@ -65,31 +90,37 @@ class TiggerProfile:
     def version(self):
         return f"{self._version_maj}.{self._version_min}"
 
+    @property
+    def profilecoord(self):
+        return self._profilecoord
+
     def saveProfile(self, filename):
         prof = {
             "version": self.version,
             "profile_name": self._profilename,
+            "position": self._profilecoord,
             "axis": self._axisname,
             "units": self._axisunit,
-            "x_data": list(self._xdata),
-            "y_data": list(self._ydata)
+            "x_data": self._xdata.tolist(),
+            "y_data": self._ydata.tolist()
         }
-        with open(filename, "w+") as fprof:            
-            fprof.write(json.dumps(prof))
-            
+        with open(filename, "w+") as fprof:
+            json.dump(prof, fprof, indent=4)
+
         dprint(0, f"Saved current selected profile as {filename}")
 
+
 class MutableTiggerProfile(TiggerProfile):
-    """ 
-        Mutable Tigger profile 
+    """
+        Mutable Tigger profile
         profilename: A name for this profile
         axisname: Name for the axis
         axisunit: Unit for the axis (as taken from FITS CUNIT)
         xdata: profile x axis data (1D ndarray of shape of ydata)
         ydata: profile y axis data (1D ndarray)
     """
-    def __init__(self, profilename, axisname, axisunit, xdata, ydata):
-        TiggerProfile.__init__(self, profilename, axisname, axisunit, xdata, ydata)
+    def __init__(self, profilename, axisname, axisunit, xdata, ydata, profilecoord):
+        TiggerProfile.__init__(self, profilename, axisname, axisunit, xdata, ydata, profilecoord)
 
     def setAxesData(self, xdata, ydata):
         self.__verifyArrs(xdata, ydata)
@@ -108,6 +139,10 @@ class MutableTiggerProfile(TiggerProfile):
     def axisUnit(self):
         return self._axisunit
 
+    @property
+    def profileCoord(self):
+        return self._profilecoord
+
     @profileName.setter
     def profileName(self, name):
         self._profilename = name
@@ -120,24 +155,33 @@ class MutableTiggerProfile(TiggerProfile):
     def axisUnit(self, unit):
         self._axisunit = unit
 
+    @profileCoord.setter
+    def profileCoord(self, coords):
+        self._profilecoord = coords
+
+
 class TiggerProfileFactory:
     def __init__(self, filename):
-        raise NotImplemented("Factory cannot be instantiated!")
-    
+        raise NotImplementedError("Factory cannot be instantiated!")
+
     @classmethod
     def load(cls, filename):
         """ Loads a TigProf profile from file """
         with open(filename, "r") as fprof:
             try:
-                prof = json.load(fprof)
+                fprof_content = fprof.read()
+                prof = json.loads(fprof_content)
             except json.JSONDecodeError as e:
-                raise IOError(f"TigProf profile '{filename}' corrupted. Not valid json.")
+                raise IOError(
+                    f"TigProf profile '{filename}' corrupted. Not valid json."
+                ) from e
+
             __mandatory = set(["version", "profile_name", "axis",
                                "units", "x_data", "y_data"])
             for c in __mandatory:
                 if c not in prof:
                     print(f"Profile file '{filename}' is missing field '{c}'")
-            
+
             try:
                 vmaj, vmin = prof.get("version", "").split(".")
                 vstr = f"{vmaj}.{vmin}"
@@ -147,20 +191,21 @@ class TiggerProfileFactory:
                           f"than supported profile version {supvstr}. " \
                           f"Attempting to convert to version {supvstr}."
                     dprint(0, msg)
-            except:
-                raise IOError("Error parsing TigProf file version")
-            
+            except Exception as exc:
+                raise IOError("Error parsing TigProf file version") from exc
+
             profname = prof["profile_name"]
             axisname = prof["axis"]
             axisunits = prof["units"]
+            profcoord = prof["position"]
 
-            if not isinstance(prof["x_data"], list) and \
-                not all(map(lambda x: isinstance(x, float), prof["x_data"])):
+            if (not isinstance(prof["x_data"], list) and not all(
+                    map(lambda x: isinstance(x, float), prof["x_data"]))):
                 raise IOError("Stored X data is not list of floats")
             xdata = np.array(prof["x_data"])
-            
-            if not isinstance(prof["y_data"], list) and \
-                not all(map(lambda x: isinstance(x, float), prof["y_data"])):
+
+            if (not isinstance(prof["y_data"], list) and not all(
+                    map(lambda x: isinstance(x, float), prof["y_data"]))):
                 raise IOError("Stored Y data is not list of floats")
             ydata = np.array(prof["y_data"])
 
@@ -172,8 +217,8 @@ class TiggerProfileFactory:
 
             if xdata.size != ydata.size:
                 raise IOError("Stored X data not the same shape as Y data")
-            
+
             # Success
-            tigprof = TiggerProfile(profname, axisname, axisunits, xdata, ydata)
+            tigprof = TiggerProfile(profname, axisname, axisunits, xdata, ydata, profcoord)
             dprint(0, f"Loaded profile from {filename}")
             return tigprof

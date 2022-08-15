@@ -1,15 +1,38 @@
+# Copyright (C) 2002-2022
+# The MeqTree Foundation &
+# ASTRON (Netherlands Foundation for Research in Astronomy)
+# P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, see <http://www.gnu.org/licenses/>,
+# or write to the Free Software Foundation, Inc.,
+# 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
+
 from PyQt5.Qt import QColor, QPen
 from PyQt5.QtCore import Qt
 from PyQt5.Qwt import QwtPlotCurve, QwtPlotItem
 
-from TigGUI.kitties.profiles import MutableTiggerProfile
 from TigGUI.Widgets import TiggerPlotCurve
 
+from TigGUI.kitties.profiles import MutableTiggerProfile
+
+
 class PlottableTiggerProfile(MutableTiggerProfile):
-    def __init__(self, profilename, axisname, axisunit, xdata, ydata, 
-                 qwtplot=None, 
+    def __init__(self, profilename, axisname, axisunit, xdata, ydata,
+                 qwtplot=None,
                  profilecoord=None):
-        """ 
+        """
             Plottable (Mutable) Tigger Profile
             profilename: A name for this profile
             axisname: Name for the axis
@@ -20,10 +43,10 @@ class PlottableTiggerProfile(MutableTiggerProfile):
             profilecoord: coordinate (world) coord tuple to from which this profile is drawn, optional
                           use None to leave unset
         """
-        MutableTiggerProfile.__init__(self, profilename, axisname, axisunit, xdata, ydata)
+        MutableTiggerProfile.__init__(self, profilename, axisname, axisunit, xdata, ydata, profilecoord)
         self._curve_color = QColor("white")
-        self._curve_pen = self.createPen()      
-        self._curve_pen.setStyle(Qt.DashDotLine)
+        self._curve_pen = self.createPen()
+        self._curve_pen.setStyle(Qt.SolidLine)
         self._profcurve = TiggerPlotCurve(profilename)
         self._profcurve.setRenderHint(QwtPlotItem.RenderAntialiased)
         self._ycs = TiggerPlotCurve()
@@ -32,7 +55,7 @@ class PlottableTiggerProfile(MutableTiggerProfile):
         self._profcurve.setStyle(QwtPlotCurve.Lines)
         self._profcurve.setOrientation(Qt.Horizontal)
         self._parentPlot = qwtplot
-        self._profilecoord = None
+        self._profilecoord = profilecoord
         self.profileAssociatedCoord = profilecoord
 
         self._profcurve.setData(xdata, ydata)
@@ -46,19 +69,22 @@ class PlottableTiggerProfile(MutableTiggerProfile):
     @property
     def hasAssociatedCoord(self):
         return self._profilecoord is not None
-    
+
     @property
     def profileAssociatedCoord(self):
-        return (self._profilecoord[0], 
+        return (self._profilecoord[0],
                 self._profilecoord[1])
-    
+
     @profileAssociatedCoord.setter
     def profileAssociatedCoord(self, profilecoord):
+        # JSON does not handle tuples,
+        # instead they are converted to lists
         if profilecoord is not None:
-            if not (isinstance(profilecoord, tuple) and 
-                    len(profilecoord) == 2 and
-                    all(map(lambda x: isinstance(x, float), profilecoord))):
-                raise TypeError("profilecoord should be 2-element world coord tuple")
+            if not (isinstance(profilecoord, tuple) or isinstance(
+                    profilecoord, list)) and len(profilecoord) == 2 and all(
+                        map(lambda x: isinstance(x, float), profilecoord)):
+                raise TypeError(
+                    "profilecoord should be 2-element world coord tuple or list")
         self._profilecoord = profilecoord
 
     def setCurveColor(self, color):
@@ -66,7 +92,7 @@ class PlottableTiggerProfile(MutableTiggerProfile):
             raise TypeError("Color must be QColor object")
         self._curve_color = color
         self._curve_pen = QPen(self._curve_color)
-        self._curve_pen.setStyle(Qt.DashDotLine)
+        self._curve_pen.setStyle(Qt.SolidLine)
         self._profcurve.setPen(self._curve_pen)
         if self._parentPlot is not None:
             if self._attached:
@@ -78,7 +104,7 @@ class PlottableTiggerProfile(MutableTiggerProfile):
             self._profcurve.attach(self._parentPlot)
             self._parentPlot.replot()
             self._attached = True
-    
+
     def detach(self):
         if self._attached:
             self._attached = False
