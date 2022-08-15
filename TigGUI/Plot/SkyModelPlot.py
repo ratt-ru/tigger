@@ -685,8 +685,10 @@ class SkyModelPlotter(QWidget):
 
     def _addBackAllSelectedProfileMarkers(self, index=0):
         """ Remove and add back all overlays associated to profiles """
-        markup_items = [self._selected_profile_markup[k]["active"]["marker"]
-                            for k in self._selected_profile_markup]
+        markup_items = [
+            self._selected_profile_markup[k]["active"]["marker"]
+            for k in self._selected_profile_markup
+        ]
         for item in markup_items:
             if item is not None:
                 item.setZ(Z_Markup)
@@ -1399,9 +1401,12 @@ class SkyModelPlotter(QWidget):
     def _removePlotMarkup(self, replot=True):
         """Removes all markup items, and refreshes the plot if replot=True"""
         for item in self._plot_markup:
-            if item is None: continue
-            if not item in map(lambda k: self._selected_profile_markup[k]["active"]["marker"],
-                               self._selected_profile_markup):
+            if item is None:
+                continue
+            if item not in map(
+                    lambda k: self._selected_profile_markup[k]["active"]["marker"],
+                    self._selected_profile_markup,
+            ):
                 item.detach()
         if self._plot_markup and replot:
             self.tigToolTip.hideText()
