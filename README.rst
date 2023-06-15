@@ -20,7 +20,7 @@ Installing Tigger
 Ubuntu package
 --------------
 
-Enable the KERN repository <https://kernsuite.info> and install the ``tigger`` package.
+Enable the KERN-8 repository <https://kernsuite.info> and install the ``tigger`` package.
 
 From source with Ubuntu LTS
 ---------------------------
